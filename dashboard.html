@@ -1583,7 +1583,11 @@ function domainKeyFromFilename(filename) {
   if (LEGACY_FILENAME_ALIASES[kebab]) return LEGACY_FILENAME_ALIASES[kebab];
   const schema = getSchema();
   for (const key of Object.keys(schema.datadomeinen)) {
-    if (kebabKey(key) === kebab) return key;
+    // normKey strips alles behalve letters en cijfers, zodat zowel
+    // "lessen-inzichten" als "lessen_inzichten" op de registrysleutel
+    // matcht. De registry gebruikt underscores; een met de hand gemaakte
+    // export volgt vaak die sleutelnamen letterlijk.
+    if (normKey(key) === normKey(base)) return key;
   }
   return null;
 }
