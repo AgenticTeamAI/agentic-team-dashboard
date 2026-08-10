@@ -7,9 +7,8 @@ iets. Alle gegevens komen uit een lokale databundel die de klant al heeft:
 een Excel-werkboek, een `data/`-map met JSON-bestanden, of een Notion-export
 die de Coördinator wegschrijft.
 
-Vult backlogkaart **f4**. Bouwspecificatie: zie het ontwerpdocument dat aan
-deze build voorafging (niet in deze repo — dat is een intern werkdocument
-van Obeya Insights, geen onderdeel van dit publieke dashboard).
+Het onderliggende ontwerpdocument is intern en maakt geen deel uit van deze
+repo.
 
 ## Snel starten
 
@@ -209,7 +208,7 @@ van live Notion-koppeling. Dat klopt, en de derde route is dus terecht:
   store the token in your source code or commit it in version control" —
   een client-side pagina die het token nodig heeft, is al in strijd met die
   eigen richtlijn.
-- Ik heb **geen expliciete zin** in de officiële Notion-documentatie
+- Er is **geen expliciete zin** in de officiële Notion-documentatie
   gevonden die letterlijk "wij ondersteunen geen CORS" zegt — dat wil ik
   hier niet groter maken dan het is.
 - Wel bevestigd, herhaaldelijk, in issues op de **officiële** SDK-repo
@@ -291,9 +290,8 @@ vóór dit naar een klant gaat, is nog aan te raden.
 
 - **Echte visuele/browsertest** (zie §Getest) — deze sessie had geen
   werkende Chrome-koppeling.
-- **Licentie ontbreekt.** Deze repo is publiek bedoeld maar heeft nog geen
-  LICENSE-bestand — dat is een keuze voor Yoram/Tijmen, niet iets wat ik
-  hier heb ingevuld.
+- **Licentie ontbreekt.** Deze repo is publiek maar heeft nog geen
+  LICENSE-bestand.
 - **Bedrijfscontext-schema moet landen in `core/agents.json`** (f13/S17) —
   daarna kan de uitzondering in §Bedrijfscontext hierboven vervallen.
 - **Notion-exportmechanisme moet nog gebouwd worden** aan de kant van de
