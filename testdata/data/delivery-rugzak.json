@@ -1,0 +1,35 @@
+{
+  "_schema": "Delivery Rugzak - Naam; Type; Status; Beschrijving; Wanneer inzetten; Benodigdheden; Segment; Bron.",
+  "items": [
+    {
+      "Naam": "Intakeformulier plantenwand",
+      "Type": "Template / Tool",
+      "Status": "Gereed",
+      "Beschrijving": "Vragenlijst voor lichtinval, ruimte en onderhoudsvoorkeur.",
+      "Wanneer inzetten": "Bij elke nieuwe klant",
+      "Benodigdheden": "",
+      "Segment": [],
+      "Bron": ""
+    },
+    {
+      "Naam": "Seizoenschecklist",
+      "Type": "Werkvorm / Oefening",
+      "Status": "In ontwikkeling",
+      "Beschrijving": "Checklist voor plantwissel per seizoen.",
+      "Wanneer inzetten": "Bij seizoensovergang",
+      "Benodigdheden": "",
+      "Segment": [],
+      "Bron": ""
+    },
+    {
+      "Naam": "Rust-in-de-wachtruimte model",
+      "Type": "Model / Framework",
+      "Status": "💡 Idee",
+      "Beschrijving": "Raamwerk voor inrichting van wachtruimtes in de zorg.",
+      "Wanneer inzetten": "Bij zorginstellingen",
+      "Benodigdheden": "",
+      "Segment": [],
+      "Bron": ""
+    }
+  ]
+}

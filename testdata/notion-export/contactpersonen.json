@@ -1,0 +1,62 @@
+{
+  "_schema": "Contactpersonen - Naam; Functie; E-mail; LinkedIn URL; Warmte; Outreach Status; Rol in besluitvorming; Laatste Contact; Notities.",
+  "_geexporteerd_op": "2026-08-09",
+  "_database_id": "notion-db-fictief-contactpersonen",
+  "items": [
+    {
+      "Naam": "Renate Bosman",
+      "Functie": "Office Manager",
+      "E-mail": "r.bosman@kantoorparkdelinde-fictief.nl",
+      "LinkedIn URL": "",
+      "Warmte": "Heet",
+      "Outreach Status": "In gesprek",
+      "Rol in besluitvorming": "Champion",
+      "Laatste Contact": "2026-08-05",
+      "Notities": "Erg enthousiast, wil uitbreiden."
+    },
+    {
+      "Naam": "Farid Al-Amin",
+      "Functie": "Directiesecretaresse",
+      "E-mail": "f.alamin@burohelder-fictief.nl",
+      "LinkedIn URL": "",
+      "Warmte": "Warm",
+      "Outreach Status": "Gereageerd",
+      "Rol in besluitvorming": "Gatekeeper",
+      "Laatste Contact": "2026-08-02",
+      "Notities": "Wil offerte voor 2 verdiepingen."
+    },
+    {
+      "Naam": "Els Timmerman",
+      "Functie": "Locatiemanager",
+      "E-mail": "",
+      "LinkedIn URL": "",
+      "Warmte": "Koud",
+      "Outreach Status": "Niet benaderd",
+      "Rol in besluitvorming": "Decision Maker",
+      "Laatste Contact": "",
+      "Notities": "Nog niet benaderd sinds de beurs."
+    },
+    {
+      "Naam": "Petra van Es",
+      "Functie": "Facilitair coördinator",
+      "E-mail": "p.vanes@vredehof-fictief.nl",
+      "LinkedIn URL": "",
+      "Warmte": "Warm",
+      "Outreach Status": "In gesprek",
+      "Rol in besluitvorming": "Influencer",
+      "Laatste Contact": "2026-07-21",
+      "Notities": "Wacht op akkoord van bestuur."
+    },
+    {
+      "Naam": "Joost Rademaker",
+      "Functie": "Ex-locatiemanager",
+      "E-mail": "",
+      "LinkedIn URL": "",
+      "Warmte": "Koud",
+      "Outreach Status": "Niet reageren",
+      "Rol in besluitvorming": "Decision Maker",
+      "Laatste Contact": "2025-11-23",
+      "Notities": "Gaf aan geen interesse meer te hebben."
+    }
+  ]
+}

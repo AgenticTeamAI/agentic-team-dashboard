@@ -1,0 +1,48 @@
+{
+  "_schema": "Product Catalogus - Productnaam; Status; Type; Prijs; Prijsmodel; Plek in ladder; Segment; Beschrijving; USP; Notities.",
+  "items": [
+    {
+      "Productnaam": "Basis Plantenabonnement",
+      "Status": "Actief",
+      "Type": "Abonnement",
+      "Prijs": 89,
+      "Prijsmodel": "Per maand",
+      "Plek in ladder": "Activatie",
+      "Segment": [
+        "Kantoren <50 medewerkers"
+      ],
+      "Beschrijving": "Maandelijks onderhoud van 5 planten.",
+      "USP": "Geen zorgen, wij verzorgen.",
+      "Notities": ""
+    },
+    {
+      "Productnaam": "Plantenwand op maat",
+      "Status": "Actief",
+      "Type": "Advies",
+      "Prijs": 0,
+      "Prijsmodel": "Op maat",
+      "Plek in ladder": "Verdieping",
+      "Segment": [
+        "Kantoren 50-250 medewerkers",
+        "Zorginstellingen"
+      ],
+      "Beschrijving": "Ontwerp en plaatsing van een groene wand.",
+      "USP": "Statement piece voor de ontvangstruimte.",
+      "Notities": ""
+    },
+    {
+      "Productnaam": "Seizoensscan",
+      "Status": "In creatie",
+      "Type": "Assessment",
+      "Prijs": 0,
+      "Prijsmodel": "Vast",
+      "Plek in ladder": "Diagnose",
+      "Segment": [
+        "Coworking spaces"
+      ],
+      "Beschrijving": "Eenmalige scan van lichtinval en klimaat.",
+      "USP": "",
+      "Notities": "Nog in ontwikkeling."
+    }
+  ]
+}

@@ -1,0 +1,2384 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Team Dashboard</title>
+<style>
+:root {
+  --navy: #1A1A2E;
+  --panel: #2D2D44;
+  --mint: #4ADE80;
+  --mint-light: #86EFAC;
+  --white: #FFFFFF;
+  --grey: #9CA3AF;
+  --rood: #F87171;
+  --rood-rand: #EF4444;
+  --oranje: #FBBF24;
+  --groen-status: #34D399;
+  --grijs-status: #6B7280;
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  /* Terugkerend merkmotief: een subtiel hexagonaal node-patroon op de
+     achtergrond (zie ontwerp §6) — puur decoratief, laag contrast, nooit
+     drager van betekenis (dat doen de signaalkleuren). */
+  background-image:
+    radial-gradient(circle at 10% 15%, rgba(74,222,128,0.05) 0, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(74,222,128,0.04) 0, transparent 40%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='146' viewBox='0 0 84 146'%3E%3Cg fill='none' stroke='%234ADE80' stroke-opacity='0.055' stroke-width='1.2'%3E%3Cpath d='M42 0 L84 24 L84 73 L42 97 L0 73 L0 24 Z'/%3E%3Cpath d='M42 49 L84 73 L84 122 L42 146 L0 122 L0 73 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: 0 0, 0 0, 0 0;
+  background-repeat: no-repeat, no-repeat, repeat;
+  min-height: 100vh;
+  padding-bottom: 3rem;
+}
+
+a { color: var(--mint-light); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
+
+header.top {
+  padding: 1.75rem 0 1.25rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 1.5rem;
+}
+header.top h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--mint);
+  margin: 0 0 0.15rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+header.top .sub { color: var(--grey); font-size: 0.9rem; margin: 0; }
+
+.hex-bg {
+  position: absolute; inset: 0; z-index: -1; opacity: 0.35; pointer-events: none;
+}
+
+.controls-row {
+  display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;
+  margin-top: 1rem;
+}
+
+.bundle-picker {
+  display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+  background: var(--panel); border-radius: 10px; padding: 0.75rem 1rem;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.bundle-picker .label { font-size: 0.78rem; color: var(--grey); margin-right: 0.25rem; }
+
+button, .btn {
+  font-family: var(--font); font-weight: 600; font-size: 0.85rem;
+  background: transparent; color: var(--mint); border: 1px solid var(--mint);
+  border-radius: 8px; padding: 0.5rem 0.9rem; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+button:hover, .btn:hover { background: var(--mint); color: var(--navy); }
+input[type="file"] { display: none; }
+
+select#period-select {
+  background: var(--panel); color: var(--white); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; padding: 0.45rem 0.6rem; font-family: var(--font); font-size: 0.85rem;
+}
+
+.last-used { font-size: 0.78rem; color: var(--grey); }
+
+.empty-state {
+  text-align: center; padding: 5rem 1rem; color: var(--grey);
+}
+.empty-state h2 { color: var(--white); font-size: 1.15rem; }
+
+section.zone {
+  background: var(--panel);
+  border-radius: 14px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+}
+section.zone.hidden-zone { display: none; }
+
+.zone-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+.zone-header h2 {
+  font-size: 1.05rem; font-weight: 700; color: var(--mint); margin: 0;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.zone-header .decision { font-size: 0.78rem; color: var(--grey); font-style: italic; }
+
+.grid-9 {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;
+}
+
+.card {
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 4px solid var(--grijs-status);
+  min-width: 0;
+}
+.card .kop { font-size: 0.72rem; color: var(--grey); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.3rem; display:flex; align-items:center; gap:0.35rem;}
+.card .getal { font-size: 1.7rem; font-weight: 700; color: var(--mint); line-height: 1.1; }
+.card .detail { font-size: 0.78rem; color: var(--grey); margin-top: 0.25rem; }
+.card .stempel { font-size: 0.68rem; color: var(--grey); margin-top: 0.5rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 0.35rem; }
+
+.card.signaal-rood { border-left-color: var(--rood-rand); }
+.card.signaal-rood .getal { color: var(--rood); }
+.card.signaal-oranje { border-left-color: var(--oranje); }
+.card.signaal-oranje .getal { color: var(--oranje); }
+.card.signaal-groen { border-left-color: var(--groen-status); }
+.card.signaal-grijs {
+  border-left-color: var(--grijs-status);
+  border-left-style: dashed;
+  opacity: 0.55;
+}
+.card.signaal-grijs .getal { color: var(--grey); }
+
+.signaal-icoon { font-size: 0.85rem; }
+.badge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.68rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.badge.rood { background: rgba(248,113,113,0.15); color: var(--rood); border: 1px solid var(--rood-rand); }
+.badge.oranje { background: rgba(251,191,36,0.15); color: var(--oranje); }
+.badge.groen { background: rgba(52,211,153,0.15); color: var(--groen-status); }
+.badge.grijs { background: rgba(107,114,128,0.15); color: var(--grey); border: 1px dashed var(--grey); }
+
+.attention-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.attention-list li {
+  display: flex; align-items: flex-start; gap: 0.6rem;
+  background: rgba(255,255,255,0.03); border-radius: 8px; padding: 0.6rem 0.8rem;
+  border-left: 4px solid var(--grijs-status);
+}
+.attention-list li.rood { border-left-color: var(--rood-rand); }
+.attention-list li.oranje { border-left-color: var(--oranje); }
+.attention-list li.grijs { border-left-color: var(--grijs-status); opacity: 0.75; }
+
+.module-block { margin-bottom: 1.1rem; }
+.module-block h3 {
+  font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--grey);
+  margin: 0 0 0.5rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.agent-row {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.2rem;
+  font-size: 0.86rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.agent-row .emoji { font-size: 1.05rem; width: 1.4rem; text-align: center; }
+.agent-row .naam { flex: 0 0 190px; }
+.agent-row .spoor { color: var(--grey); font-size: 0.8rem; }
+.agent-row .spoor.geen { font-style: italic; color: var(--grey); }
+.agent-row .spoor.actief { color: var(--mint-light); }
+
+.footnote { font-size: 0.75rem; color: var(--grey); margin-top: 0.75rem; line-height: 1.45; }
+.footnote.warn { color: var(--oranje); }
+
+.timestamp { font-size: 0.7rem; color: var(--grey); }
+.timestamp.stale { color: var(--oranje); }
+
+footer.app-footer {
+  max-width: 1180px; margin: 2rem auto 0; padding: 1rem 1.5rem;
+  color: var(--grey); font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);
+  line-height: 1.6;
+}
+
+.warnings-box {
+  background: rgba(251,191,36,0.08); border: 1px solid var(--oranje);
+  border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem;
+}
+.warnings-box .kop { color: var(--oranje); font-weight: 700; margin-bottom: 0.35rem; }
+
+.bar-mini {
+  display: flex; align-items: flex-end; gap: 3px; height: 34px; margin-top: 0.4rem;
+}
+.bar-mini .bar { background: var(--mint); border-radius: 2px 2px 0 0; flex: 1; min-width: 4px; }
+.bar-mini .bar.stale { background: var(--grijs-status); }
+
+@media (max-width: 700px) {
+  .agent-row .naam { flex-basis: 130px; }
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>🔮 Agentic Team Dashboard</h1>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel.</p>
+
+    <div class="controls-row">
+      <div class="bundle-picker">
+        <span class="label">Bundel kiezen:</span>
+        <button id="btn-excel" type="button">📊 Excel-werkboek</button>
+        <button id="btn-json" type="button">🗂️ data-map (JSON)</button>
+        <button id="btn-notion" type="button">🧩 Notion-export-map</button>
+        <input type="file" id="input-excel" accept=".xlsx">
+        <input type="file" id="input-json" multiple webkitdirectory>
+        <input type="file" id="input-notion" multiple webkitdirectory>
+      </div>
+      <div class="bundle-picker">
+        <span class="label">Periode:</span>
+        <select id="period-select">
+          <option value="7">7 dagen</option>
+          <option value="30" selected>30 dagen</option>
+          <option value="90">90 dagen</option>
+        </select>
+      </div>
+    </div>
+    <p class="last-used" id="last-used"></p>
+    <p class="last-used" id="status-line"></p>
+    <p class="last-used" id="bundle-info"></p>
+  </header>
+
+  <div id="empty-state" class="empty-state">
+    <h2>Nog geen bundel geladen</h2>
+    <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
+    Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
+  </div>
+
+  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
+
+  <div id="zones" style="display:none;">
+    <section class="zone" id="zone1">
+      <div class="zone-header">
+        <h2>🎯 1 · Aandacht</h2>
+        <span class="decision">Beslissing: waar besteed ik vandaag mijn halfuur aan?</span>
+      </div>
+      <div id="zone1-body"></div>
+    </section>
+
+    <section class="zone" id="zone2">
+      <div class="zone-header">
+        <h2>🧭 2 · Contextgezondheid</h2>
+        <span class="decision">Beslissing: moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?</span>
+      </div>
+      <div id="zone2-body"></div>
+    </section>
+
+    <section class="zone" id="zone3">
+      <div class="zone-header">
+        <h2>👥 3 · Gebruik</h2>
+        <span class="decision">Beslissing: welke agent laat ik links liggen, en waarom?</span>
+      </div>
+      <div id="zone3-body"></div>
+    </section>
+
+    <section class="zone" id="zone4">
+      <div class="zone-header">
+        <h2>📈 4 · Opbrengst</h2>
+        <span class="decision">Beslissing: levert dit team genoeg op om het te blijven betalen?</span>
+      </div>
+      <div id="zone4-body"></div>
+    </section>
+
+    <section class="zone" id="zone5">
+      <div class="zone-header">
+        <h2>💡 5 · Leren</h2>
+        <span class="decision">Beslissing: wat weet dit team nu dat het vorige maand niet wist?</span>
+      </div>
+      <div id="zone5-body"></div>
+    </section>
+  </div>
+
+  <footer class="app-footer">
+    Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
+    gekozen bundelroute en bestandsnaam wordt onthouden (lokaal, in je browser) om je te herinneren wat je de vorige
+    keer opende. Gegenereerd uit registryVersion 1.18.0 van AgenticTeamAI/agent-architecture.
+  </footer>
+</div>
+
+<script>
+// GEGENEREERD BESTAND - NIET HANDMATIG BEWERKEN.
+//
+// Gegenereerd door scripts/extract-schema.py uit
+// AgenticTeamAI/agent-architecture, core/agents.json.
+//   registryVersion : 1.18.0
+//   registry updated: 2026-08-09
+//   bron-commit     : 882f544a0c3e1263c5e1d517dcccec9fee869994
+//   geextraheerd op : 2026-08-10T08:15:22Z
+//
+// Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
+// draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
+// Typ deze structuur nooit met de hand over - dat is precies de tweede bron
+// van waarheid die de registry-koppeling (Stream B) moest voorkomen.
+window.AGENTIC_TEAM_SCHEMA = {
+  "registryVersion": "1.18.0",
+  "registryUpdated": "2026-08-09",
+  "sourceCommit": "882f544a0c3e1263c5e1d517dcccec9fee869994",
+  "extractedAt": "2026-08-10T08:15:22Z",
+  "modules": {
+    "core": {
+      "naam": "Core",
+      "altijdInbegrepen": true
+    },
+    "growth": {
+      "naam": "Growth"
+    },
+    "visibility": {
+      "naam": "Visibility"
+    },
+    "sales": {
+      "naam": "Sales"
+    },
+    "delivery": {
+      "naam": "Delivery"
+    },
+    "strategy": {
+      "naam": "Strategy"
+    },
+    "backoffice": {
+      "naam": "Backoffice"
+    }
+  },
+  "agents": [
+    {
+      "slug": "orchestrator",
+      "displayName": "Coördinator",
+      "emoji": "🔮",
+      "module": "core",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "management-assistent",
+      "displayName": "Management Assistent",
+      "emoji": "📌",
+      "module": "core",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "quality-control",
+      "displayName": "Quality Control",
+      "emoji": "🛡️",
+      "module": "core",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "gids",
+      "displayName": "Gids",
+      "emoji": "🧭",
+      "module": "core",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "ceo-agent",
+      "displayName": "CEO Agent",
+      "emoji": "🌟",
+      "module": "strategy",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "coo-agent",
+      "displayName": "COO Agent",
+      "emoji": "🏛️",
+      "module": "backoffice",
+      "team": "gedeeld"
+    },
+    {
+      "slug": "marktmaker",
+      "displayName": "Marktmaker",
+      "emoji": "🎯",
+      "module": "growth",
+      "team": "ceo"
+    },
+    {
+      "slug": "researcher",
+      "displayName": "Researcher",
+      "emoji": "🔍",
+      "module": "growth",
+      "team": "ceo"
+    },
+    {
+      "slug": "pipeline-manager",
+      "displayName": "Pipeline Manager",
+      "emoji": "📊",
+      "module": "growth",
+      "team": "ceo"
+    },
+    {
+      "slug": "product-designer",
+      "displayName": "Product Designer",
+      "emoji": "🧪",
+      "module": "strategy",
+      "team": "ceo"
+    },
+    {
+      "slug": "outreach-specialist",
+      "displayName": "Outreach Specialist",
+      "emoji": "📨",
+      "module": "sales",
+      "team": "ceo"
+    },
+    {
+      "slug": "dealmaker",
+      "displayName": "Dealmaker",
+      "emoji": "🤝",
+      "module": "sales",
+      "team": "ceo"
+    },
+    {
+      "slug": "content-strateeg",
+      "displayName": "Content Strateeg",
+      "emoji": "✍️",
+      "module": "visibility",
+      "team": "ceo"
+    },
+    {
+      "slug": "de-stem",
+      "displayName": "De Stem",
+      "emoji": "🎙️",
+      "module": "visibility",
+      "team": "ceo"
+    },
+    {
+      "slug": "delivery-architect",
+      "displayName": "Delivery Architect",
+      "emoji": "🎒",
+      "module": "delivery",
+      "team": "ceo"
+    },
+    {
+      "slug": "controller",
+      "displayName": "Controller",
+      "emoji": "📊",
+      "module": "backoffice",
+      "team": "coo"
+    },
+    {
+      "slug": "jurist",
+      "displayName": "Jurist",
+      "emoji": "⚖️",
+      "module": "backoffice",
+      "team": "coo"
+    },
+    {
+      "slug": "administratie",
+      "displayName": "Administratie",
+      "emoji": "📋",
+      "module": "backoffice",
+      "team": "coo"
+    },
+    {
+      "slug": "seo-geo-specialist",
+      "displayName": "SEO/GEO Specialist",
+      "emoji": "🧲",
+      "module": "visibility",
+      "team": "ceo"
+    },
+    {
+      "slug": "customer-success-manager",
+      "displayName": "Customer Success Manager",
+      "emoji": "💚",
+      "module": "delivery",
+      "team": "coo"
+    }
+  ],
+  "datadomeinen": {
+    "organisaties": {
+      "naam": "Organisaties",
+      "module": "core",
+      "emoji": "🏢",
+      "velden": [
+        {
+          "naam": "Naam",
+          "type": "titel"
+        },
+        {
+          "naam": "Fase",
+          "type": "select",
+          "opties": [
+            "Prospect",
+            "Lead",
+            "Actieve klant",
+            "Voormalig klant",
+            "Partner"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Omvang FTE",
+          "type": "select",
+          "opties": [
+            "<50",
+            "50-100",
+            "100-250",
+            "250-500",
+            "500-1000",
+            "1000-5000",
+            "5000+"
+          ]
+        },
+        {
+          "naam": "Lead Bron",
+          "type": "select",
+          "opties": [
+            "Netwerk",
+            "LinkedIn",
+            "Event",
+            "Referral",
+            "AI Research",
+            "Inbound"
+          ]
+        },
+        {
+          "naam": "Signaal",
+          "type": "tekst"
+        },
+        {
+          "naam": "Signaal Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Website",
+          "type": "url"
+        },
+        {
+          "naam": "LinkedIn",
+          "type": "url"
+        },
+        {
+          "naam": "Vestigingsplaats",
+          "type": "tekst"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "mensen"
+        },
+        {
+          "naam": "KvK-nummer",
+          "type": "tekst"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "contactpersonen": {
+      "naam": "Contactpersonen",
+      "module": "core",
+      "emoji": "👤",
+      "velden": [
+        {
+          "naam": "Naam",
+          "type": "titel"
+        },
+        {
+          "naam": "Functie",
+          "type": "tekst"
+        },
+        {
+          "naam": "E-mail",
+          "type": "email"
+        },
+        {
+          "naam": "LinkedIn URL",
+          "type": "url"
+        },
+        {
+          "naam": "Warmte",
+          "type": "select",
+          "opties": [
+            "Koud",
+            "Lauw",
+            "Warm",
+            "Heet"
+          ]
+        },
+        {
+          "naam": "Outreach Status",
+          "type": "select",
+          "opties": [
+            "Niet benaderd",
+            "Benaderd",
+            "Gereageerd",
+            "In gesprek",
+            "Niet reageren"
+          ]
+        },
+        {
+          "naam": "Rol in besluitvorming",
+          "type": "select",
+          "opties": [
+            "Champion",
+            "Decision Maker",
+            "Influencer",
+            "Gatekeeper"
+          ]
+        },
+        {
+          "naam": "Laatste Contact",
+          "type": "datum"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "interacties": {
+      "naam": "Interacties",
+      "module": "sales",
+      "emoji": "💬",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "LinkedIn bericht",
+            "E-mail",
+            "Telefoongesprek",
+            "Meeting",
+            "Demo",
+            "Event",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Richting",
+          "type": "select",
+          "opties": [
+            "Uitgaand",
+            "Inkomend"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Samenvatting",
+          "type": "tekst"
+        },
+        {
+          "naam": "Sentiment",
+          "type": "select",
+          "opties": [
+            "Positief",
+            "Neutraal",
+            "Negatief",
+            "Geen reactie"
+          ]
+        },
+        {
+          "naam": "Volgende Actie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Actie Deadline",
+          "type": "datum"
+        }
+      ]
+    },
+    "sales_funnel": {
+      "naam": "Sales Funnel",
+      "module": "core",
+      "emoji": "📊",
+      "velden": [
+        {
+          "naam": "Deal Naam",
+          "type": "titel"
+        },
+        {
+          "naam": "Fase",
+          "type": "select",
+          "opties": [
+            "Targeting (10%)",
+            "Discovery (20%)",
+            "Probleemdefinitie (30%)",
+            "Visievorming (50%)",
+            "Oplossingsrichting (70%)",
+            "Besluitvorming (85%)",
+            "Contractering (95%)",
+            "After-sales (100%)"
+          ]
+        },
+        {
+          "naam": "Opvolg Status",
+          "type": "select",
+          "opties": [
+            "Actie Vereist",
+            "In afwachting",
+            "Op schema",
+            "Gewonnen",
+            "Verloren",
+            "Gepauzeerd"
+          ]
+        },
+        {
+          "naam": "Verwachte Omzet",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Probability",
+          "type": "getal",
+          "format": "percent"
+        },
+        {
+          "naam": "Verwachte Sluitdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Volgende Actie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Volgende Actie Deadline",
+          "type": "datum"
+        },
+        {
+          "naam": "Laatste Contact",
+          "type": "datum"
+        },
+        {
+          "naam": "Lead Bron",
+          "type": "select",
+          "opties": [
+            "Netwerk",
+            "LinkedIn",
+            "Event",
+            "Referral",
+            "AI Research",
+            "Inbound"
+          ]
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "mensen"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "projecten": {
+      "naam": "Projecten",
+      "module": "delivery",
+      "emoji": "📁",
+      "velden": [
+        {
+          "naam": "Projectnaam",
+          "type": "titel"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Opstarten",
+            "Actief",
+            "Afgerond",
+            "Gepauzeerd",
+            "Geannuleerd"
+          ]
+        },
+        {
+          "naam": "Startdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Einddatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Contractwaarde",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Gefactureerd",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "mensen"
+        },
+        {
+          "naam": "Gedeelde Pagina",
+          "type": "url"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "offertes": {
+      "naam": "Offertes",
+      "module": "sales",
+      "emoji": "📄",
+      "velden": [
+        {
+          "naam": "Offertenummer",
+          "type": "titel"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Concept",
+            "Verstuurd",
+            "In bespreking",
+            "Geaccepteerd",
+            "Afgewezen",
+            "Verlopen"
+          ]
+        },
+        {
+          "naam": "Bedrag excl. BTW",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "BTW bedrag",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Geldig tot",
+          "type": "datum"
+        },
+        {
+          "naam": "Verstuurd op",
+          "type": "datum"
+        },
+        {
+          "naam": "Getekend op",
+          "type": "datum"
+        },
+        {
+          "naam": "Offerte URL",
+          "type": "url"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "product_catalogus": {
+      "naam": "Product Catalogus",
+      "module": "strategy",
+      "emoji": "🧩",
+      "velden": [
+        {
+          "naam": "Productnaam",
+          "type": "titel"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Actief",
+            "In creatie",
+            "Archief"
+          ]
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Advies",
+            "Training",
+            "Coaching",
+            "Assessment",
+            "E-learning",
+            "Abonnement",
+            "Template",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Prijs",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Prijsmodel",
+          "type": "select",
+          "opties": [
+            "Vast",
+            "Per dag",
+            "Per deelnemer",
+            "Per maand",
+            "Per kwartaal",
+            "Op maat"
+          ]
+        },
+        {
+          "naam": "Plek in ladder",
+          "type": "select",
+          "opties": [
+            "Awareness",
+            "Diagnose",
+            "Activatie",
+            "Verdieping",
+            "Verankering",
+            "Evenement"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "multi_select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Beschrijving",
+          "type": "tekst"
+        },
+        {
+          "naam": "USP",
+          "type": "tekst"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "content_kalender": {
+      "naam": "Content Kalender",
+      "module": "visibility",
+      "emoji": "📅",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Idee",
+            "In productie",
+            "Klaar voor review",
+            "Gepland",
+            "Gepubliceerd",
+            "Archief"
+          ]
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "LinkedIn post",
+            "Artikel",
+            "E-mail template",
+            "Case study",
+            "Persbericht",
+            "Podcast",
+            "Video",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Publicatiedatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Kanaal",
+          "type": "multi_select",
+          "opties": [
+            "LinkedIn",
+            "Website",
+            "E-mail",
+            "Instagram",
+            "YouTube",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Hook A",
+          "type": "tekst"
+        },
+        {
+          "naam": "Hook B",
+          "type": "tekst"
+        },
+        {
+          "naam": "Concept Tekst",
+          "type": "tekst"
+        },
+        {
+          "naam": "Campagne",
+          "type": "tekst"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "mensen"
+        }
+      ]
+    },
+    "lessen_inzichten": {
+      "naam": "Lessen & Inzichten",
+      "module": "core",
+      "emoji": "💡",
+      "velden": [
+        {
+          "naam": "Les",
+          "type": "titel"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "Strategie & Koers",
+            "Marketing & Positionering",
+            "Sales Pipeline",
+            "Sales & Conversie",
+            "Content & Communicatie",
+            "Reputatie & PR",
+            "Markt & Prospects",
+            "Outreach & Acquisitie",
+            "Product & Portfolio",
+            "Operations & Finance",
+            "Finance & Fiscaal",
+            "Juridisch & Compliance",
+            "Administratie & Facturatie",
+            "Delivery & Uitvoering",
+            "Kwaliteit & Review",
+            "Team Coördinatie",
+            "Dagelijks Ritme",
+            "Content & Zichtbaarheid",
+            "Klantsucces & Retentie"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Actie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Open",
+            "In uitvoering",
+            "Afgerond",
+            "Vervallen"
+          ]
+        },
+        {
+          "naam": "Impact",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Medium",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Verwerkt in prompt?",
+          "type": "checkbox"
+        }
+      ]
+    },
+    "dagverslagen": {
+      "naam": "Dagverslagen",
+      "module": "core",
+      "emoji": "📓",
+      "velden": [
+        {
+          "naam": "Naam",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Dagverslag",
+            "Weekoverzicht",
+            "Maandoverzicht"
+          ]
+        },
+        {
+          "naam": "Dag",
+          "type": "datum"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Te doen",
+            "In uitvoering",
+            "Afgerond"
+          ]
+        },
+        {
+          "naam": "Persoon",
+          "type": "mensen"
+        }
+      ]
+    },
+    "delivery_rugzak": {
+      "naam": "Delivery Rugzak",
+      "module": "delivery",
+      "emoji": "🎒",
+      "velden": [
+        {
+          "naam": "Naam",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Model / Framework",
+            "Theorie / Concept",
+            "Werkvorm / Oefening",
+            "Template / Tool",
+            "Facilitatietechniek",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "💡 Idee",
+            "In ontwikkeling",
+            "Gereed",
+            "Archief"
+          ]
+        },
+        {
+          "naam": "Beschrijving",
+          "type": "tekst"
+        },
+        {
+          "naam": "Wanneer inzetten",
+          "type": "tekst"
+        },
+        {
+          "naam": "Benodigdheden",
+          "type": "tekst"
+        },
+        {
+          "naam": "Segment",
+          "type": "multi_select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Bron",
+          "type": "url"
+        }
+      ]
+    },
+    "tijdregistratie": {
+      "naam": "Tijdregistratie",
+      "module": "backoffice",
+      "emoji": "⏱️",
+      "velden": [
+        {
+          "naam": "Beschrijving",
+          "type": "titel"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Uren",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Billable",
+            "Intern",
+            "Marketing",
+            "Overhead"
+          ]
+        },
+        {
+          "naam": "Uurtarief",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Gefactureerd",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Persoon",
+          "type": "mensen"
+        }
+      ]
+    },
+    "acties": {
+      "naam": "Acties",
+      "module": "core",
+      "emoji": "✅",
+      "velden": [
+        {
+          "naam": "Actie",
+          "type": "titel"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "tekst"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Deadline",
+          "type": "datum"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Open",
+            "Bezig",
+            "Klaar"
+          ]
+        }
+      ]
+    },
+    "klantsucces": {
+      "naam": "Klantsucces",
+      "module": "delivery",
+      "emoji": "💚",
+      "velden": [
+        {
+          "naam": "Klantnaam",
+          "type": "titel"
+        },
+        {
+          "naam": "Fase",
+          "type": "select",
+          "opties": [
+            "Onboarding",
+            "Actief",
+            "Risico",
+            "Verlenging",
+            "Verloren"
+          ]
+        },
+        {
+          "naam": "Health",
+          "type": "select",
+          "opties": [
+            "Groen",
+            "Oranje",
+            "Rood"
+          ]
+        },
+        {
+          "naam": "Verlengdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Laatste check",
+          "type": "datum"
+        },
+        {
+          "naam": "Signalen",
+          "type": "tekst"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "tekst"
+        }
+      ]
+    },
+    "productbacklog": {
+      "naam": "Productbacklog",
+      "module": "core",
+      "emoji": "🗂️",
+      "velden": [
+        {
+          "naam": "Item",
+          "type": "titel"
+        },
+        {
+          "naam": "Herkomst",
+          "type": "tekst"
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "select",
+          "opties": [
+            "Product Designer",
+            "Delivery Architect"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "To do",
+            "Doing",
+            "Ter validatie",
+            "Done"
+          ]
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Besluit",
+          "type": "tekst"
+        }
+      ]
+    }
+  }
+};
+
+</script>
+<script>
+/* Minimale, dependency-vrije ZIP + XLSX-lezer voor de browser (en Node voor
+ * tests). Geen externe library nodig: XLSX is een ZIP van XML-bestanden, en
+ * moderne browsers kunnen 'deflate-raw' decomprimeren via de ingebouwde
+ * DecompressionStream — daarmee is een eigen inflate-implementatie
+ * overbodig. Werkt zonder netwerk, dus ook prima onder file://.
+ */
+
+async function inflateRaw(bytes) {
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+
+function readUInt32LE(dv, off) { return dv.getUint32(off, true); }
+function readUInt16LE(dv, off) { return dv.getUint16(off, true); }
+
+/** Leest de centrale directory van een ZIP-bestand en geeft per entry de
+ * ruwe (nog gecomprimeerde) data terug. */
+async function parseZipEntries(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  const dv = new DataView(arrayBuffer);
+  // Zoek EOCD-record (0x06054b50) vanaf het einde.
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= 0 && i >= bytes.length - 22 - 65557; i--) {
+    if (readUInt32LE(dv, i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd === -1) throw new Error("Geen geldig ZIP-bestand (EOCD niet gevonden) — is dit echt een .xlsx?");
+
+  const totalEntries = readUInt16LE(dv, eocd + 10);
+  const cdOffset = readUInt32LE(dv, eocd + 16);
+
+  const entries = {};
+  let ptr = cdOffset;
+  for (let i = 0; i < totalEntries; i++) {
+    if (readUInt32LE(dv, ptr) !== 0x02014b50) throw new Error("Centrale ZIP-directory is beschadigd of onverwacht formaat.");
+    const compMethod = readUInt16LE(dv, ptr + 10);
+    const compSize = readUInt32LE(dv, ptr + 20);
+    const uncompSize = readUInt32LE(dv, ptr + 24);
+    const nameLen = readUInt16LE(dv, ptr + 28);
+    const extraLen = readUInt16LE(dv, ptr + 30);
+    const commentLen = readUInt16LE(dv, ptr + 32);
+    const localHeaderOffset = readUInt32LE(dv, ptr + 42);
+    const nameBytes = bytes.slice(ptr + 46, ptr + 46 + nameLen);
+    const filename = new TextDecoder("utf-8").decode(nameBytes);
+
+    entries[filename] = { compMethod, compSize, uncompSize, localHeaderOffset };
+    ptr += 46 + nameLen + extraLen + commentLen;
+  }
+
+  const result = {};
+  for (const [filename, meta] of Object.entries(entries)) {
+    const lh = meta.localHeaderOffset;
+    if (readUInt32LE(dv, lh) !== 0x04034b50) throw new Error(`Lokale ZIP-header ontbreekt voor ${filename}.`);
+    const lNameLen = readUInt16LE(dv, lh + 26);
+    const lExtraLen = readUInt16LE(dv, lh + 28);
+    const dataStart = lh + 30 + lNameLen + lExtraLen;
+    const compData = bytes.slice(dataStart, dataStart + meta.compSize);
+    let raw;
+    if (meta.compMethod === 0) {
+      raw = compData;
+    } else if (meta.compMethod === 8) {
+      raw = await inflateRaw(compData);
+    } else {
+      throw new Error(`Onbekende ZIP-compressiemethode (${meta.compMethod}) voor ${filename} — kan dit bestand niet lezen.`);
+    }
+    result[filename] = raw;
+  }
+  return result;
+}
+
+function xmlText(bytes) {
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
+/** Zeer beperkte XML-attribuutlezer — geen volwaardige XML-parser nodig
+ * voor de paar tags die xlsx-sheets gebruiken. */
+function parseXmlLite(xml) {
+  return new DOMParser().parseFromString(xml, "application/xml");
+}
+
+function colLetterToIndex(ref) {
+  const m = ref.match(/^([A-Z]+)/);
+  const letters = m[1];
+  let n = 0;
+  for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
+  return n - 1;
+}
+
+/** Excel-datumserienummer (dagen sinds 1899-12-30) naar ISO-datumstring. */
+function excelSerialToISO(serial) {
+  const epoch = Date.UTC(1899, 11, 30);
+  const ms = epoch + serial * 86400000;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/** Parseert een xlsx ArrayBuffer naar { sheetNaam: [[cel,...], ...] }.
+ * Eerste rij van elke sheet is de header-rij. dateFieldNames is een Set met
+ * kolomnamen (headers) die als 'datum' bekendstaan uit het schema — alleen
+ * daarvoor wordt een numerieke cel als Excel-datumserienummer geïnterpreteerd. */
+async function parseXlsx(arrayBuffer) {
+  const files = await parseZipEntries(arrayBuffer);
+  if (!files["xl/workbook.xml"]) throw new Error("Geen xl/workbook.xml gevonden — dit lijkt geen geldig .xlsx-bestand.");
+
+  const workbookXml = parseXmlLite(xmlText(files["xl/workbook.xml"]));
+  const relsXml = files["xl/_rels/workbook.xml.rels"]
+    ? parseXmlLite(xmlText(files["xl/_rels/workbook.xml.rels"]))
+    : null;
+
+  const relMap = {};
+  if (relsXml) {
+    for (const rel of relsXml.getElementsByTagName("Relationship")) {
+      relMap[rel.getAttribute("Id")] = rel.getAttribute("Target");
+    }
+  }
+
+  const sheets = [];
+  for (const sheetEl of workbookXml.getElementsByTagName("sheet")) {
+    const name = sheetEl.getAttribute("name");
+    const rId = sheetEl.getAttribute("r:id") || sheetEl.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+    let target = relMap[rId];
+    if (!target) continue;
+    if (!target.startsWith("worksheets/")) target = "worksheets/" + target.split("/").pop();
+    sheets.push({ name, path: "xl/" + target });
+  }
+
+  let sharedStrings = [];
+  if (files["xl/sharedStrings.xml"]) {
+    const ssXml = parseXmlLite(xmlText(files["xl/sharedStrings.xml"]));
+    for (const si of ssXml.getElementsByTagName("si")) {
+      // <si> kan meerdere <t> hebben bij rich text (per run) — concateneren.
+      const parts = [];
+      for (const t of si.getElementsByTagName("t")) parts.push(t.textContent);
+      sharedStrings.push(parts.join(""));
+    }
+  }
+
+  const out = {};
+  for (const { name, path } of sheets) {
+    if (!files[path]) continue;
+    const sheetXml = parseXmlLite(xmlText(files[path]));
+    const rows = [];
+    for (const rowEl of sheetXml.getElementsByTagName("row")) {
+      const row = [];
+      for (const c of rowEl.getElementsByTagName("c")) {
+        const ref = c.getAttribute("r");
+        const idx = ref ? colLetterToIndex(ref) : row.length;
+        const type = c.getAttribute("t");
+        let value = "";
+        const vEl = c.getElementsByTagName("v")[0];
+        const isEl = c.getElementsByTagName("is")[0];
+        if (type === "s" && vEl) {
+          value = sharedStrings[parseInt(vEl.textContent, 10)] ?? "";
+        } else if (type === "str" && vEl) {
+          value = vEl.textContent;
+        } else if (type === "inlineStr" && isEl) {
+          const t = isEl.getElementsByTagName("t")[0];
+          value = t ? t.textContent : "";
+        } else if (type === "b" && vEl) {
+          value = vEl.textContent === "1";
+        } else if (vEl) {
+          value = vEl.textContent === "" ? "" : Number(vEl.textContent);
+        }
+        while (row.length < idx) row.push("");
+        row[idx] = value;
+      }
+      rows.push(row);
+    }
+    out[name] = rows;
+  }
+  return out;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { parseZipEntries, parseXlsx, colLetterToIndex, excelSerialToISO };
+}
+
+
+/* Hulpfuncties rond schema/schema.generated.js (window.AGENTIC_TEAM_SCHEMA).
+ * Puur, geen DOM-afhankelijkheid — apart getest. */
+
+function normKey(s) {
+  return String(s ?? "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function kebabKey(key) {
+  return key.replace(/_/g, "-");
+}
+
+// Bekende oudere/alternatieve bestandsnamen die niet (meer) letterlijk de
+// registry-domeinsleutel volgen. Gevonden in clients/demo-fictief (een
+// client-demo die dateert van vóór de registry-koppeling in Stream B) en in
+// de voorbeeldnamen die het bron-intake-fase in core/base/orchestrator/
+// prompt.md noemt ("lessen.json"). Puur voor herkenning bij het inlezen —
+// het schema zelf blijft de registry-naam.
+const LEGACY_FILENAME_ALIASES = {
+  "prospects": "organisaties",
+  "lessen": "lessen_inzichten",
+  "content-pipeline": "content_kalender",
+  "content-kalender": "content_kalender",
+  "sales-funnel": "sales_funnel",
+};
+
+function domainKeyFromFilename(filename) {
+  const base = filename.replace(/\.[a-z0-9]+$/i, "");
+  const kebab = base.toLowerCase();
+  if (LEGACY_FILENAME_ALIASES[kebab]) return LEGACY_FILENAME_ALIASES[kebab];
+  const schema = getSchema();
+  for (const key of Object.keys(schema.datadomeinen)) {
+    if (kebabKey(key) === kebab) return key;
+  }
+  return null;
+}
+
+function getSchema() {
+  if (typeof window !== "undefined" && window.AGENTIC_TEAM_SCHEMA) return window.AGENTIC_TEAM_SCHEMA;
+  if (typeof globalThis !== "undefined" && globalThis.AGENTIC_TEAM_SCHEMA) return globalThis.AGENTIC_TEAM_SCHEMA;
+  throw new Error("Schema niet geladen (window.AGENTIC_TEAM_SCHEMA ontbreekt) — schema/schema.generated.js is niet ingeladen.");
+}
+
+/** Vindt een domeinsleutel op basis van een Excel-tabbladnaam (exacte match
+ * op de registry "naam", of via headerherkenning als terugval). */
+function domainKeyFromSheetName(sheetName) {
+  const schema = getSchema();
+  for (const [key, domein] of Object.entries(schema.datadomeinen)) {
+    if (domein.naam === sheetName) return key;
+  }
+  return null;
+}
+
+/** Als de tabbladnaam niet 1-op-1 matcht: welk domein heeft de grootste
+ * overlap met deze headerrij? Nodig omdat we de parser willen baseren op
+ * wat we zien, niet alleen op de verwachte tabbladnaam. */
+function domainKeyFromHeaders(headers) {
+  const schema = getSchema();
+  const normHeaders = new Set(headers.map(normKey));
+  let best = null, bestScore = 0;
+  for (const [key, domein] of Object.entries(schema.datadomeinen)) {
+    const velden = domein.velden.map(v => normKey(v.naam));
+    const overlap = velden.filter(v => normHeaders.has(v)).length;
+    const score = overlap / velden.length;
+    if (score > bestScore) { bestScore = score; best = key; }
+  }
+  return bestScore >= 0.5 ? best : null;
+}
+
+/** Zoekt een veldwaarde op in een rij-object, eerst exact, dan genormaliseerd
+ * (spaties/hoofdletters/underscores genegeerd) — zodat kleine afwijkingen in
+ * kolomnamen (handmatig Excel-werk, oudere bestandsvorm) het lezen niet
+ * meteen blokkeren. */
+function getField(row, canonicalName) {
+  if (row == null) return undefined;
+  if (Object.prototype.hasOwnProperty.call(row, canonicalName)) return row[canonicalName];
+  if (!row.__normCache) {
+    const cache = {};
+    for (const k of Object.keys(row)) cache[normKey(k)] = row[k];
+    Object.defineProperty(row, "__normCache", { value: cache, enumerable: false });
+  }
+  return row.__normCache[normKey(canonicalName)];
+}
+
+/** Bouwt een opzoektabel van allerlei schrijfwijzen van een agent (slug,
+ * naam, "emoji naam") naar de canonieke slug — Notion/Excel-select-velden
+ * kunnen de weergavenaam bevatten, niet per se de slug. */
+function buildAgentLookup() {
+  const schema = getSchema();
+  const lookup = {};
+  for (const agent of schema.agents) {
+    const variants = [
+      agent.slug,
+      agent.displayName,
+      `${agent.emoji} ${agent.displayName}`,
+      agent.displayName.replace(/\s+/g, "-"),
+    ];
+    for (const v of variants) lookup[normKey(v)] = agent.slug;
+  }
+  return lookup;
+}
+
+function matchAgentValue(raw, lookup) {
+  if (!raw) return null;
+  return lookup[normKey(raw)] || null;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    normKey, kebabKey, domainKeyFromFilename, domainKeyFromSheetName,
+    domainKeyFromHeaders, getField, buildAgentLookup, matchAgentValue, getSchema,
+    LEGACY_FILENAME_ALIASES,
+  };
+}
+
+
+/* Leest de drie bundelformaten in tot één uniforme structuur:
+ *
+ * bundle = {
+ *   source: "excel" | "json" | "notion",
+ *   sourceLabel: string,          // voor UI, bv. bestandsnaam
+ *   domains: {
+ *     [domainKey]: {
+ *       aanwezig: true,
+ *       rows: [ {...veld: waarde} ],
+ *       staleAt: Date | null,     // wanneer dit specifieke domein "van" is
+ *       herkomstLabel: string,    // bv. sheetnaam of bestandsnaam
+ *     }
+ *   },
+ *   bedrijfscontext: null | "niet-ondersteund-door-bundel" | {...},
+ *   waarschuwingen: [string],     // dingen die niet zeker herkend zijn
+ * }
+ *
+ * "Niet aanwezig" (domein ontbreekt uit domains) betekent: dit dashboard
+ * toont er niets over, in plaats van een leeg paneel te tonen — conform het
+ * ontwerp ("toon wat je in de data vindt").
+ */
+
+function emptyBundle(source, sourceLabel) {
+  return { source, sourceLabel, domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+}
+
+// ── Route 1: Excel-werkboek ────────────────────────────────────────────
+async function loadExcelBundle(file) {
+  const buf = await file.arrayBuffer();
+  const sheets = await parseXlsx(buf);
+  const bundle = emptyBundle("excel", file.name);
+  const staleAt = new Date(file.lastModified);
+
+  for (const [sheetName, rows] of Object.entries(sheets)) {
+    if (sheetName === "_schema") continue;
+    if (sheetName.toLowerCase() === "bedrijfscontext") {
+      bundle.bedrijfscontext = rowsToBedrijfscontext(rows, staleAt);
+      continue;
+    }
+    if (!rows.length) continue;
+    const headers = rows[0].map(String);
+    let domainKey = domainKeyFromSheetName(sheetName);
+    if (!domainKey) domainKey = domainKeyFromHeaders(headers);
+    if (!domainKey) {
+      bundle.waarschuwingen.push(`Tabblad "${sheetName}" kon niet aan een bekend datadomein gekoppeld worden — genegeerd.`);
+      continue;
+    }
+    const dataRows = rows.slice(1).filter(r => r.some(c => c !== "" && c !== undefined));
+    const objRows = dataRows.map(r => headerRowToObject(headers, r));
+    bundle.domains[domainKey] = {
+      aanwezig: true,
+      rows: objRows,
+      staleAt,
+      herkomstLabel: `${file.name} — tabblad "${sheetName}"`,
+    };
+  }
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+function headerRowToObject(headers, dataRow) {
+  const obj = {};
+  headers.forEach((h, i) => {
+    if (!h) return;
+    obj[h] = dataRow[i] ?? "";
+  });
+  return obj;
+}
+
+function rowsToBedrijfscontext(rows, fallbackStaleAt) {
+  // Verwacht formaat: twee kolommen (sleutel, waarde) — vrij formaat, want
+  // dit domein staat niet in de registry (zie S17). Beste-poging-lezer.
+  const obj = {};
+  for (const row of rows.slice(1)) {
+    if (row[0]) obj[String(row[0])] = row[1];
+  }
+  obj.staleAt = obj.Laatst_bijgewerkt ? new Date(obj.Laatst_bijgewerkt) : fallbackStaleAt;
+  return obj;
+}
+
+// ── Route 2 & 3: data/*.json en notion-export/*.json ───────────────────
+// Zelfde bestandsvorm ({_schema, items:[...]} of een kale array), alleen de
+// herkomst en het staleness-veld verschillen.
+async function loadJsonLikeBundle(fileList, source) {
+  const bundle = emptyBundle(source, source === "notion" ? "Notion-export" : "data/-map");
+  for (const file of fileList) {
+    if (!file.name.toLowerCase().endsWith(".json")) continue;
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch (e) {
+      bundle.waarschuwingen.push(`${file.name} is geen geldige JSON — genegeerd (${e.message}).`);
+      continue;
+    }
+
+    const isBedrijfscontext = file.name.replace(/\.json$/i, "").toLowerCase() === "bedrijfscontext";
+    if (isBedrijfscontext) {
+      // Voorkeursvolgorde voor "hoe oud is dit": het inhoudelijke veld
+      // Laatst_bijgewerkt (het echte moment waarop iemand de context bijwerkte)
+      // gaat boven het exportmoment, dat op zijn beurt boven de kale
+      // bestandsdatum gaat.
+      const staleAt = parsed.Laatst_bijgewerkt
+        ? new Date(parsed.Laatst_bijgewerkt)
+        : parsed._geexporteerd_op
+          ? new Date(parsed._geexporteerd_op)
+          : new Date(file.lastModified);
+      bundle.bedrijfscontext = { ...parsed, staleAt };
+      continue;
+    }
+
+    const domainKey = domainKeyFromFilename(file.name);
+    if (!domainKey) {
+      // Terugval: kijk of de inhoud zelf op basis van velden herkenbaar is.
+      const items = Array.isArray(parsed) ? parsed : parsed.items;
+      if (items && items.length) {
+        const guessed = domainKeyFromHeaders(Object.keys(items[0]));
+        if (guessed) {
+          registerJsonDomain(bundle, guessed, parsed, file, source);
+          continue;
+        }
+      }
+      bundle.waarschuwingen.push(`${file.name} kon niet aan een bekend datadomein gekoppeld worden — genegeerd.`);
+      continue;
+    }
+    registerJsonDomain(bundle, domainKey, parsed, file, source);
+  }
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+function registerJsonDomain(bundle, domainKey, parsed, file, source) {
+  const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
+  let staleAt = new Date(file.lastModified);
+  if (source === "notion" && parsed._geexporteerd_op) {
+    staleAt = new Date(parsed._geexporteerd_op);
+  }
+  bundle.domains[domainKey] = {
+    aanwezig: true,
+    rows: items,
+    staleAt,
+    herkomstLabel: file.name,
+  };
+}
+
+function loadJsonBundle(fileList) { return loadJsonLikeBundle(fileList, "json"); }
+function loadNotionExportBundle(fileList) { return loadJsonLikeBundle(fileList, "notion"); }
+
+if (typeof module !== "undefined") {
+  module.exports = { loadExcelBundle, loadJsonBundle, loadNotionExportBundle, emptyBundle };
+}
+
+
+/* Berekent de vijf zones uit één bundle (zie bundle-loaders.js). Puur —
+ * geen DOM. "Vandaag" is injecteerbaar zodat dit reproduceerbaar te testen
+ * is; in de app zelf is dat gewoon new Date(). */
+
+const STALE_DAYS = 30; // drempel "verouderd" — zie ontwerp §12 (dertig dagen als standaard ritme)
+const CONTEXT_ROOD_DAYS = 180;
+const CONTEXT_ORANJE_DAYS = 90;
+
+function daysBetween(a, b) {
+  return Math.round((a.getTime() - b.getTime()) / 86400000);
+}
+
+function parseDateField(v) {
+  if (!v) return null;
+  const dt = new Date(v);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+function isStale(staleAt, today, thresholdDays = STALE_DAYS) {
+  if (!staleAt) return true;
+  return daysBetween(today, staleAt) > thresholdDays;
+}
+
+function domain(bundle, key) {
+  return bundle.domains[key];
+}
+function rows(bundle, key) {
+  const dom = domain(bundle, key);
+  return dom ? dom.rows : null; // null = domein ontbreekt (i.p.v. lege array)
+}
+
+// ── Zone 2 — Contextgezondheid ─────────────────────────────────────────
+// Beslissing: moet ik mijn bedrijfscontext bijwerken voordat ik het team
+// weer aan het werk zet?
+function computeZone2(bundle, today) {
+  const ctx = bundle.bedrijfscontext;
+  if (ctx === "niet-ondersteund-door-bundel" || ctx === null) {
+    return {
+      signaal: "grijs",
+      reden: "onbekend-niet-in-bundel",
+      tekst: "Geen bedrijfscontext-gegevens gevonden in deze bundel. Dit onderdeel van de registry is nog niet uitgewerkt (zie S17/f13) — dit dashboard kan daarom niet zien of jouw team je bedrijf nog kent.",
+      staleAt: null,
+    };
+  }
+  const bron = ctx.Bron || ctx.bron;
+  const staleAt = ctx.staleAt || null;
+  const open = ctx.Placeholders_open || ctx.placeholders_open || [];
+  const kopieDatum = parseDateField(ctx.Projectkennis_kopie_laatst_bijgewerkt || ctx.projectkennis_kopie_laatst_bijgewerkt);
+
+  if (!bron) {
+    return { signaal: "rood", reden: "context-ontbreekt", tekst: "Er is een bedrijfscontext-sectie in de bundel, maar zonder bron ingevuld — het team weet niet waar je bedrijfscontext staat.", staleAt };
+  }
+
+  const ageDays = staleAt ? daysBetween(today, staleAt) : null;
+  const kopieOuderDanBron = kopieDatum && staleAt && kopieDatum < staleAt;
+
+  let signaal = "groen";
+  const redenen = [];
+  if (ageDays === null) { signaal = "grijs"; redenen.push("geen datum van laatste update bekend"); }
+  else if (ageDays > CONTEXT_ROOD_DAYS) { signaal = "rood"; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
+  else if (ageDays > CONTEXT_ORANJE_DAYS) { signaal = signaal === "groen" ? "oranje" : signaal; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
+
+  if (open.length > 0) { signaal = signaal === "rood" ? "rood" : "oranje"; redenen.push(`${open.length} placeholder(s) nog niet ingevuld: ${open.join(", ")}`); }
+  if (kopieOuderDanBron) { signaal = signaal === "rood" ? "rood" : "oranje"; redenen.push("de kopie in projectkennis is ouder dan de bron"); }
+
+  return {
+    signaal,
+    reden: redenen.join("; ") || "bron aanwezig en actueel",
+    tekst: redenen.length ? redenen.join("; ") : "Bedrijfscontext aanwezig en actueel.",
+    staleAt,
+    bron,
+    open,
+  };
+}
+
+// ── Zone 3 — Gebruik ────────────────────────────────────────────────────
+// Beslissing: welke agent laat ik links liggen, en waarom?
+// Sporen: Acties.Agent (proxy-datum: Deadline, want er is geen aanmaakdatum
+// in dit domein) en Lessen & Inzichten.Agent (datum: Datum). Dagverslagen
+// heeft in de huidige registry GEEN Agent-veld (alleen "Persoon", een mens)
+// en wordt daarom bewust NIET gebruikt als gebruikersspoor — zie README.
+function computeZone3(bundle, agentLookup, schema, today, periodDays) {
+  const traces = {}; // slug -> { laatst: Date|null, aantalPeriode: 0, aantalTotaal: 0 }
+  for (const agent of schema.agents) traces[agent.slug] = { laatst: null, aantalPeriode: 0, aantalTotaal: 0 };
+
+  const actiesDomain = domain(bundle, "acties");
+  const lessenDomain = domain(bundle, "lessen_inzichten");
+  const bronnenAanwezig = { acties: !!actiesDomain, lessen: !!lessenDomain, dagverslagen: !!domain(bundle, "dagverslagen") };
+
+  function registreer(slugRaw, datumRaw) {
+    const slug = matchAgentValue(slugRaw, agentLookup);
+    if (!slug || !traces[slug]) return;
+    const dt = parseDateField(datumRaw);
+    traces[slug].aantalTotaal++;
+    if (dt && (!traces[slug].laatst || dt > traces[slug].laatst)) traces[slug].laatst = dt;
+    if (dt && daysBetween(today, dt) <= periodDays && daysBetween(today, dt) >= 0) traces[slug].aantalPeriode++;
+  }
+
+  if (actiesDomain) {
+    for (const row of actiesDomain.rows) registreer(getField(row, "Agent"), getField(row, "Deadline"));
+  }
+  if (lessenDomain) {
+    for (const row of lessenDomain.rows) registreer(getField(row, "Agent"), getField(row, "Datum"));
+  }
+
+  const perModule = {};
+  for (const agent of schema.agents) {
+    const mod = agent.module;
+    if (!perModule[mod]) perModule[mod] = [];
+    const t = traces[agent.slug];
+    perModule[mod].push({
+      slug: agent.slug, displayName: agent.displayName, emoji: agent.emoji,
+      geenSpoor: t.aantalTotaal === 0,
+      laatst: t.laatst, aantalPeriode: t.aantalPeriode, aantalTotaal: t.aantalTotaal,
+    });
+  }
+
+  return { perModule, bronnenAanwezig, geenEnkeleBron: !bronnenAanwezig.acties && !bronnenAanwezig.lessen };
+}
+
+// ── Zone 4 — Opbrengst ──────────────────────────────────────────────────
+// Beslissing: levert dit team genoeg op om het te blijven betalen?
+// Let op: de bundel is een momentopname, geen gebeurtenislog. "Trend" kan
+// dus alleen komen uit datumvelden BINNEN de bundel (bv. Publicatiedatum),
+// nooit uit vergelijking met een vorige keer openen (dat zou een cache
+// vereisen, en dat mag dit dashboard niet hebben). Waar geen datumveld
+// bestaat, tonen we de huidige stand — expliciet gelabeld als zodanig.
+function computeZone4(bundle, today, periodDays) {
+  const out = {};
+
+  const acties = rows(bundle, "acties");
+  if (acties) {
+    out.acties = {
+      totaal: acties.length,
+      afgerond: acties.filter(r => getField(r, "Status") === "Klaar").length,
+      opmerking: "Totaal = alle acties in de bundel (geen aanmaakdatum beschikbaar in dit domein om op periode te filteren).",
+    };
+  }
+
+  const sf = rows(bundle, "sales_funnel");
+  if (sf) {
+    const perFase = {};
+    for (const r of sf) {
+      const fase = getField(r, "Fase") || "Onbekend";
+      perFase[fase] = (perFase[fase] || 0) + 1;
+    }
+    out.salesFunnel = {
+      perFase,
+      totaalVerwachteOmzet: sf.reduce((s, r) => s + (Number(getField(r, "Verwachte Omzet")) || 0), 0),
+      opmerking: "Huidige verdeling — de bundel bevat geen wijzigingsgeschiedenis, dus geen trend van deals die van fase wisselden.",
+    };
+  }
+
+  const ck = rows(bundle, "content_kalender");
+  if (ck) {
+    const inPeriode = ck.filter(r => {
+      const dt = parseDateField(getField(r, "Publicatiedatum"));
+      return dt && Math.abs(daysBetween(today, dt)) <= periodDays;
+    });
+    out.content = {
+      gepubliceerd: ck.filter(r => getField(r, "Status") === "Gepubliceerd").length,
+      geplandInPeriode: inPeriode.filter(r => ["Gepland", "Gepubliceerd"].includes(getField(r, "Status"))).length,
+      totaal: ck.length,
+    };
+  }
+
+  const ks = rows(bundle, "klantsucces");
+  if (ks) {
+    out.klantsucces = { inOnboarding: ks.filter(r => getField(r, "Fase") === "Onboarding").length, totaal: ks.length };
+  }
+
+  const backlog = rows(bundle, "productbacklog");
+  if (backlog) {
+    out.backlog = {
+      besloten: backlog.filter(r => (getField(r, "Besluit") || "").trim() !== "").length,
+      done: backlog.filter(r => getField(r, "Status") === "Done").length,
+      totaal: backlog.length,
+    };
+  }
+
+  return out;
+}
+
+// ── Zone 5 — Leren ──────────────────────────────────────────────────────
+// Beslissing: wat weet dit team nu dat het vorige maand niet wist?
+function computeZone5(bundle, today, periodDays) {
+  const lessen = rows(bundle, "lessen_inzichten");
+  if (lessen === null) return { aanwezig: false };
+  if (lessen.length === 0) return { aanwezig: true, leeg: true };
+
+  const perCategorie = {};
+  let open = 0;
+  for (const r of lessen) {
+    const cat = getField(r, "Categorie") || "Onbekend";
+    perCategorie[cat] = (perCategorie[cat] || 0) + 1;
+    if (getField(r, "Status") === "Open") open++;
+  }
+  const inPeriode = lessen.filter(r => {
+    const dt = parseDateField(getField(r, "Datum"));
+    return dt && daysBetween(today, dt) >= 0 && daysBetween(today, dt) <= periodDays;
+  }).length;
+
+  return { aanwezig: true, leeg: false, totaal: lessen.length, perCategorie, open, inPeriode };
+}
+
+// ── Zone 1 — Aandacht ────────────────────────────────────────────────────
+// Beslissing: waar besteed ik vandaag mijn halfuur aan?
+// Verzamelt uitsluitend wat al uit de andere zones/domeinen komt — geen
+// nieuwe databron.
+function computeZone1(bundle, agentLookup, today) {
+  const items = [];
+
+  const acties = rows(bundle, "acties");
+  if (acties) {
+    const qcOpen = acties.filter(r => matchAgentValue(getField(r, "Agent"), agentLookup) === "quality-control" && getField(r, "Status") !== "Klaar");
+    if (qcOpen.length) items.push({ type: "qc", ernst: "rood", label: `${qcOpen.length} QC-bevinding(en) die een menselijke blik vragen`, rows: qcOpen });
+
+    const overDeadline = acties.filter(r => {
+      const dt = parseDateField(getField(r, "Deadline"));
+      return dt && daysBetween(today, dt) < 0 && getField(r, "Status") !== "Klaar";
+    });
+    if (overDeadline.length) items.push({ type: "acties-deadline", ernst: "rood", label: `${overDeadline.length} actie(s) over de deadline`, rows: overDeadline });
+  }
+
+  const ks = rows(bundle, "klantsucces");
+  if (ks) {
+    const risico = ks.filter(r => ["Oranje", "Rood"].includes(getField(r, "Health")));
+    if (risico.length) items.push({ type: "klantsucces", ernst: risico.some(r => getField(r, "Health") === "Rood") ? "rood" : "oranje", label: `${risico.length} klant(en) op oranje of rood in Klantsucces`, rows: risico });
+  }
+
+  const sf = rows(bundle, "sales_funnel");
+  if (sf) {
+    const stil = sf.filter(r => {
+      const dt = parseDateField(getField(r, "Volgende Actie Deadline"));
+      const status = getField(r, "Opvolg Status");
+      return dt && daysBetween(today, dt) < 0 && !["Gewonnen", "Verloren"].includes(status);
+    });
+    if (stil.length) items.push({ type: "deals-stil", ernst: "oranje", label: `${stil.length} deal(s) met een verlopen vervolgactie`, rows: stil });
+  }
+
+  const verouderdeDomeinen = Object.entries(bundle.domains)
+    .filter(([, d]) => isStale(d.staleAt, today))
+    .map(([key]) => key);
+  if (verouderdeDomeinen.length) {
+    items.push({ type: "verouderd", ernst: "grijs", label: `${verouderdeDomeinen.length} domein(en) met data ouder dan ${STALE_DAYS} dagen`, domeinen: verouderdeDomeinen });
+  }
+
+  const order = { rood: 0, grijs: 1, oranje: 2, groen: 3 };
+  items.sort((a, b) => order[a.ernst] - order[b.ernst]);
+  return items;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
+    daysBetween, parseDateField, isStale,
+    computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
+  };
+}
+
+
+/* Rendering — vertaalt de pure zone-berekeningen (zones.js) naar DOM.
+ * Bewust gescheiden van de berekening zelf, zodat de logica zonder browser
+ * te testen is (zie test-scripts in scripts/). */
+
+function esc(s) {
+  const div = document.createElement("div");
+  div.textContent = String(s ?? "");
+  return div.innerHTML;
+}
+
+function fmtDate(dt) {
+  if (!dt || isNaN(dt.getTime())) return "onbekend";
+  return dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function relAge(dt, today) {
+  if (!dt || isNaN(dt.getTime())) return "";
+  const days = daysBetween(today, dt);
+  if (days === 0) return "vandaag";
+  if (days > 0) return `${days} dag${days === 1 ? "" : "en"} geleden`;
+  return `over ${Math.abs(days)} dag${Math.abs(days) === 1 ? "" : "en"}`;
+}
+
+const SIGNAAL_ICOON = { rood: "🚨", oranje: "⚠️", groen: "✅", grijs: "❔" };
+const SIGNAAL_LABEL = { rood: "Aandacht nu", oranje: "Binnenkort aandacht", groen: "Op koers", grijs: "Onbekend / verouderd" };
+
+function badgeHtml(signaal) {
+  return `<span class="badge ${signaal}">${SIGNAAL_ICOON[signaal] || ""} ${SIGNAAL_LABEL[signaal] || signaal}</span>`;
+}
+
+function stempelHtml(staleAt, today) {
+  if (!staleAt) return `<div class="stempel">Geen tijdstempel bekend</div>`;
+  const stale = isStale(staleAt, today);
+  return `<div class="stempel${stale ? " timestamp stale" : " timestamp"}">Stand van ${fmtDate(staleAt)} (${relAge(staleAt, today)})${stale ? " — verouderd" : ""}</div>`;
+}
+
+// ── Zone 1 ────────────────────────────────────────────────────────────
+function renderZone1(el, items) {
+  if (!items.length) {
+    el.innerHTML = `<p style="font-size:1rem;color:var(--white);margin:0.5rem 0;">✅ Niets vraagt vandaag om aandacht in de aangesloten domeinen.</p>
+      <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron.</p>`;
+    return;
+  }
+  const lis = items.map(it => {
+    let detail = "";
+    if (it.rows && it.rows.length) {
+      const names = it.rows.slice(0, 4).map(r => esc(getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || getField(r, "Actie") || "")).filter(Boolean);
+      if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
+    }
+    if (it.domeinen) {
+      detail = `<div class="detail" style="margin-top:0.25rem;">${it.domeinen.join(", ")}</div>`;
+    }
+    return `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
+  }).join("");
+  el.innerHTML = `<ul class="attention-list">${lis}</ul>
+    <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
+}
+
+// ── Zone 2 ────────────────────────────────────────────────────────────
+function renderZone2(el, z2, today) {
+  const cardClass = `signaal-${z2.signaal}`;
+  let extra = "";
+  if (z2.bron) extra += `<div class="detail">Bron: ${esc(z2.bron)}</div>`;
+  if (z2.open && z2.open.length) extra += `<div class="detail">Nog open: ${esc(z2.open.join(", "))}</div>`;
+  el.innerHTML = `
+    <div class="card ${cardClass}" style="max-width:640px;">
+      <div class="kop">Bedrijfscontext</div>
+      ${badgeHtml(z2.signaal)}
+      <div class="detail" style="margin-top:0.5rem;">${esc(z2.tekst)}</div>
+      ${extra}
+      ${z2.staleAt ? stempelHtml(z2.staleAt, today) : ""}
+    </div>
+    <p class="footnote">Herkomst: het (nog niet in de registry gestandaardiseerde) bedrijfscontext-onderdeel van de bundel — zie S17/BESLUIT-s17-bron-van-waarheid-bedrijfscontext.md. Ontbreekt dit onderdeel volledig uit de bundel, dan tonen we "onbekend" en niet "rood": we weten dan niet of het een ontbrekende context is of een bundel die dit onderdeel nog niet meeneemt.</p>`;
+}
+
+// ── Zone 3 ────────────────────────────────────────────────────────────
+function renderZone3(el, z3, schema, today, periodDays) {
+  if (z3.geenEnkeleBron) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geen sporen</div><div class="detail">Geen Acties- of Lessen &amp; Inzichten-domein aanwezig in deze bundel — dit dashboard kan niets over gebruik zeggen.</div></div>`;
+    return;
+  }
+  const blocks = Object.entries(z3.perModule).map(([modKey, agents]) => {
+    const modNaam = (schema.modules[modKey] && schema.modules[modKey].naam) || modKey;
+    const rows = agents.map(a => {
+      const spoor = a.geenSpoor
+        ? `<span class="spoor geen">geen spoor gevonden</span>`
+        : `<span class="spoor actief">laatst ${fmtDate(a.laatst)} (${relAge(a.laatst, today)}) · ${a.aantalPeriode}× in ${periodDays}d · ${a.aantalTotaal}× totaal in bundel</span>`;
+      return `<div class="agent-row"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${spoor}</div>`;
+    }).join("");
+    return `<div class="module-block"><h3>${esc(modNaam)}</h3>${rows}</div>`;
+  }).join("");
+  el.innerHTML = blocks + `
+    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip bij gebrek aan beter via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). Dagverslagen heeft in de huidige registry geen Agent-veld en is daarom niet gebruikt. "Geen spoor gevonden" ≠ "0 keer gebruikt": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+    <p class="footnote warn">Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module hieronder nergens een spoor, kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt. Vergelijk desgewenst met je factuur.</p>`;
+}
+
+// ── Zone 4 ────────────────────────────────────────────────────────────
+function renderZone4(el, z4, periodDays) {
+  const cards = [];
+  if (z4.acties) {
+    cards.push(card("Acties", `${z4.acties.afgerond} / ${z4.acties.totaal}`, "afgerond / totaal in de bundel", z4.acties.opmerking));
+  }
+  if (z4.salesFunnel) {
+    const faseTekst = Object.entries(z4.salesFunnel.perFase).map(([f, n]) => `${f}: ${n}`).join(" · ");
+    cards.push(card("Sales Funnel", `€ ${z4.salesFunnel.totaalVerwachteOmzet.toLocaleString("nl-NL")}`, faseTekst, z4.salesFunnel.opmerking));
+  }
+  if (z4.content) {
+    cards.push(card("Content Kalender", `${z4.content.gepubliceerd}`, `gepubliceerd · ${z4.content.geplandInPeriode} gepland binnen ${periodDays}d · ${z4.content.totaal} totaal`, ""));
+  }
+  if (z4.klantsucces) {
+    cards.push(card("Klantsucces", `${z4.klantsucces.inOnboarding}`, `in onboarding, van ${z4.klantsucces.totaal} klant(en)`, ""));
+  }
+  if (z4.backlog) {
+    cards.push(card("Productbacklog", `${z4.backlog.besloten}`, `besloten (Besluit ingevuld) · ${z4.backlog.done} status Done · ${z4.backlog.totaal} totaal`, ""));
+  }
+  if (!cards.length) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geen domeinen</div><div class="detail">Geen van de opbrengst-domeinen (Acties, Sales Funnel, Content Kalender, Klantsucces, Productbacklog) is aanwezig in deze bundel.</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="grid-9">${cards.join("")}</div>
+    <p class="footnote">Deze bundel is een momentopname, geen gebeurtenislog: waar geen bruikbaar datumveld bestaat, tonen we de huidige stand in plaats van een trend — dat staat per kaart aangegeven. Geen omzet-attributie: dit dashboard verbindt geen agent aan een gewonnen deal.</p>`;
+
+  function card(kop, getal, detail, opm) {
+    return `<div class="card"><div class="kop">${esc(kop)}</div><div class="getal">${getal}</div><div class="detail">${esc(detail)}</div>${opm ? `<div class="footnote" style="margin-top:0.4rem;">${esc(opm)}</div>` : ""}</div>`;
+  }
+}
+
+// ── Zone 5 ────────────────────────────────────────────────────────────
+function renderZone5(el, z5, periodDays) {
+  if (!z5.aanwezig) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geen domein</div><div class="detail">Lessen &amp; Inzichten staat niet in deze bundel — geen uitspraak mogelijk over wat het team heeft geleerd.</div></div>`;
+    return;
+  }
+  if (z5.leeg) {
+    el.innerHTML = `<div class="card signaal-oranje"><div class="kop">Geen lessen vastgelegd</div><div class="getal">0</div><div class="detail">Dit is een bevinding, geen leeg paneel: de leerloop draait niet.</div></div>`;
+    return;
+  }
+  const catRows = Object.entries(z5.perCategorie).sort((a, b) => b[1] - a[1])
+    .map(([c, n]) => `<div class="agent-row"><span class="naam" style="flex-basis:230px;">${esc(c)}</span><span class="spoor actief">${n}</span></div>`).join("");
+  el.innerHTML = `
+    <div class="grid-9">
+      <div class="card"><div class="kop">Totaal lessen</div><div class="getal">${z5.totaal}</div><div class="detail">in de bundel</div></div>
+      <div class="card signaal-oranje"><div class="kop">Nog open</div><div class="getal">${z5.open}</div><div class="detail">nog te verwerken</div></div>
+      <div class="card"><div class="kop">Binnen periode</div><div class="getal">${z5.inPeriode}</div><div class="detail">laatste ${periodDays} dagen</div></div>
+    </div>
+    <div style="margin-top:1rem;">${catRows}</div>
+    <p class="footnote">Herkomst: domein Lessen &amp; Inzichten, velden Categorie, Status en Datum.</p>`;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { renderZone1, renderZone2, renderZone3, renderZone4, renderZone5, fmtDate, relAge, badgeHtml, esc };
+}
+
+
+/* Wiring: bestandskeuze, periodeschakelaar, laden -> berekenen -> tonen.
+ * Schrijft nooit iets terug behalve, optioneel, welke bundelroute en
+ * bestandsnaam je de laatste keer koos (geen bundelinhoud) — zie
+ * rememberChoice()/renderLastUsed() onderaan. */
+
+const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
+
+let currentBundle = null;
+let currentPeriod = 30;
+
+function rememberChoice(route, label) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({ route, label, when: new Date().toISOString() }));
+  } catch (e) { /* privémodus of quota — dan onthouden we het gewoon niet */ }
+}
+
+function renderLastUsed() {
+  const el = document.getElementById("last-used");
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) { el.textContent = ""; return; }
+    const { route, label, when } = JSON.parse(raw);
+    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map" }[route] || route;
+    el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
+  } catch (e) { el.textContent = ""; }
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById("status-line");
+  el.textContent = msg || "";
+  el.style.color = isError ? "var(--rood)" : "var(--grey)";
+}
+
+async function handleBundle(bundle, route, label) {
+  currentBundle = bundle;
+  rememberChoice(route, label);
+  renderLastUsed();
+  renderAll();
+}
+
+function renderAll() {
+  const bundle = currentBundle;
+  const emptyStateEl = document.getElementById("empty-state");
+  const zonesEl = document.getElementById("zones");
+  if (!bundle) {
+    emptyStateEl.style.display = "";
+    zonesEl.style.display = "none";
+    return;
+  }
+  emptyStateEl.style.display = "none";
+  zonesEl.style.display = "";
+
+  const schema = getSchema();
+  const agentLookup = buildAgentLookup();
+  const today = new Date();
+
+  const z1 = computeZone1(bundle, agentLookup, today);
+  const z2 = computeZone2(bundle, today);
+  const z3 = computeZone3(bundle, agentLookup, schema, today, currentPeriod);
+  const z4 = computeZone4(bundle, today, currentPeriod);
+  const z5 = computeZone5(bundle, today, currentPeriod);
+
+  renderZone1(document.getElementById("zone1-body"), z1);
+  renderZone2(document.getElementById("zone2-body"), z2, today);
+  renderZone3(document.getElementById("zone3-body"), z3, schema, today, currentPeriod);
+  renderZone4(document.getElementById("zone4-body"), z4, currentPeriod);
+  renderZone5(document.getElementById("zone5-body"), z5, currentPeriod);
+
+  const warnEl = document.getElementById("warnings-box");
+  if (bundle.waarschuwingen.length) {
+    warnEl.style.display = "";
+    warnEl.innerHTML = `<div class="kop">Niet alles kon gelezen worden</div><ul style="margin:0;padding-left:1.1rem;">${bundle.waarschuwingen.map(w => `<li>${esc(w)}</li>`).join("")}</ul>`;
+  } else {
+    warnEl.style.display = "none";
+  }
+
+  document.getElementById("bundle-info").textContent =
+    `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+}
+
+function wireInputs() {
+  const excelInput = document.getElementById("input-excel");
+  const jsonInput = document.getElementById("input-json");
+  const notionInput = document.getElementById("input-notion");
+
+  document.getElementById("btn-excel").addEventListener("click", () => excelInput.click());
+  document.getElementById("btn-json").addEventListener("click", () => jsonInput.click());
+  document.getElementById("btn-notion").addEventListener("click", () => notionInput.click());
+
+  excelInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setStatus(`${file.name} wordt gelezen…`);
+    try {
+      const bundle = await loadExcelBundle(file);
+      await handleBundle(bundle, "excel", file.name);
+      setStatus(`${file.name} geladen.`);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Kon ${file.name} niet lezen: ${err.message}`, true);
+    }
+  });
+
+  jsonInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setStatus(`${files.length} bestand(en) worden gelezen…`);
+    try {
+      const bundle = await loadJsonBundle(files);
+      const label = files[0].webkitRelativePath ? files[0].webkitRelativePath.split("/")[0] : `${files.length} bestanden`;
+      await handleBundle(bundle, "json", label);
+      setStatus(`${label} geladen.`);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Kon de data-map niet lezen: ${err.message}`, true);
+    }
+  });
+
+  notionInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setStatus(`${files.length} bestand(en) worden gelezen…`);
+    try {
+      const bundle = await loadNotionExportBundle(files);
+      const label = files[0].webkitRelativePath ? files[0].webkitRelativePath.split("/")[0] : `${files.length} bestanden`;
+      await handleBundle(bundle, "notion", label);
+      setStatus(`${label} geladen.`);
+    } catch (err) {
+      console.error(err);
+      setStatus(`Kon de Notion-export niet lezen: ${err.message}`, true);
+    }
+  });
+
+  document.getElementById("period-select").addEventListener("change", (e) => {
+    currentPeriod = parseInt(e.target.value, 10);
+    if (currentBundle) renderAll();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  wireInputs();
+  renderLastUsed();
+  renderAll();
+});
+
+</script>
+</body>
+</html>

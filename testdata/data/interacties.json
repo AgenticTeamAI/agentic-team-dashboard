@@ -1,0 +1,45 @@
+{
+  "_schema": "Interacties - Onderwerp; Type; Richting; Datum; Samenvatting; Sentiment; Volgende Actie; Actie Deadline.",
+  "items": [
+    {
+      "Onderwerp": "Kennismaking plantenwand",
+      "Type": "Meeting",
+      "Richting": "Uitgaand",
+      "Datum": "2026-08-05",
+      "Samenvatting": "Renate wil offerte voor ontvangstruimte + 2 vergaderzalen.",
+      "Sentiment": "Positief",
+      "Volgende Actie": "Offerte opstellen",
+      "Actie Deadline": "2026-08-12"
+    },
+    {
+      "Onderwerp": "Vervolgvraag abonnementsvormen",
+      "Type": "E-mail",
+      "Richting": "Inkomend",
+      "Datum": "2026-08-02",
+      "Samenvatting": "Farid vraagt naar prijsverschil vast vs. per kwartaal.",
+      "Sentiment": "Neutraal",
+      "Volgende Actie": "Prijsoverzicht sturen",
+      "Actie Deadline": "2026-08-07"
+    },
+    {
+      "Onderwerp": "Beursgesprek Werkplek Vakbeurs",
+      "Type": "Event",
+      "Richting": "Inkomend",
+      "Datum": "2026-07-11",
+      "Samenvatting": "Kort gesprek bij de stand, visitekaartje uitgewisseld.",
+      "Sentiment": "Neutraal",
+      "Volgende Actie": "Opvolgmail sturen",
+      "Actie Deadline": "2026-07-16"
+    },
+    {
+      "Onderwerp": "Update wachtruimtes",
+      "Type": "Telefoongesprek",
+      "Richting": "Uitgaand",
+      "Datum": "2026-07-21",
+      "Samenvatting": "Petra meldt dat bestuur nog moet beslissen over budget.",
+      "Sentiment": "Neutraal",
+      "Volgende Actie": "Over 2 weken terugbellen",
+      "Actie Deadline": "2026-08-04"
+    }
+  ]
+}

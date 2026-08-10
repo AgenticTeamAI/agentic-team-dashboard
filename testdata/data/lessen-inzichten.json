@@ -1,0 +1,65 @@
+{
+  "_schema": "Lessen & Inzichten - Les; Agent; Categorie; Datum; Actie; Status; Impact; Verwerkt in prompt?.",
+  "items": [
+    {
+      "Les": "Outreachmails naar zorginstellingen werken beter met concreet rustvoorbeeld dan met prijs vooraan.",
+      "Agent": "outreach-specialist",
+      "Categorie": "Outreach & Acquisitie",
+      "Datum": "2026-07-01",
+      "Actie": "Sjabloon aangepast voor zorgsegment.",
+      "Status": "Afgerond",
+      "Impact": "Medium",
+      "Verwerkt in prompt?": true
+    },
+    {
+      "Les": "Klanten in Coworking-segment reageren traag op e-mail, wel snel op telefoon.",
+      "Agent": "researcher",
+      "Categorie": "Markt & Prospects",
+      "Datum": "2026-07-08",
+      "Actie": "Belscript toevoegen aan playbook.",
+      "Status": "Open",
+      "Impact": "Medium",
+      "Verwerkt in prompt?": false
+    },
+    {
+      "Les": "Facturatie liep vertraging op doordat contractwaarde niet was ingevuld bij projectstart.",
+      "Agent": "controller",
+      "Categorie": "Operations & Finance",
+      "Datum": "2026-06-11",
+      "Actie": "Verplicht veld bij intake benoemen.",
+      "Status": "In uitvoering",
+      "Impact": "Hoog",
+      "Verwerkt in prompt?": false
+    },
+    {
+      "Les": "QC signaleerde tweemaal een outreachmail met verkeerd ingevuld segment - bronveld stond niet aan het begin van de playbook-fase.",
+      "Agent": "quality-control",
+      "Categorie": "Kwaliteit & Review",
+      "Datum": "2026-08-08",
+      "Actie": "Werkwijze vooraan in outreach-playbook zetten.",
+      "Status": "Open",
+      "Impact": "Hoog",
+      "Verwerkt in prompt?": false
+    },
+    {
+      "Les": "Klantsuccescheck bij Vredehof te laat ingepland na signaal van dalende tevredenheid.",
+      "Agent": "customer-success-manager",
+      "Categorie": "Klantsucces & Retentie",
+      "Datum": "2026-07-26",
+      "Actie": "Escalatiedrempel health-status verlagen.",
+      "Status": "Open",
+      "Impact": "Hoog",
+      "Verwerkt in prompt?": false
+    },
+    {
+      "Les": "Contentkalender liep leeg in juli door vakantie - geen vervangend proces.",
+      "Agent": "content-strateeg",
+      "Categorie": "Content & Zichtbaarheid",
+      "Datum": "2026-07-16",
+      "Actie": "Back-up eigenaar aanwijzen voor kalender.",
+      "Status": "Vervallen",
+      "Impact": "Laag",
+      "Verwerkt in prompt?": false
+    }
+  ]
+}

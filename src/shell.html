@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic Team Dashboard</title>
+<style>
+__STYLES__
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>🔮 Agentic Team Dashboard</h1>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel.</p>
+
+    <div class="controls-row">
+      <div class="bundle-picker">
+        <span class="label">Bundel kiezen:</span>
+        <button id="btn-excel" type="button">📊 Excel-werkboek</button>
+        <button id="btn-json" type="button">🗂️ data-map (JSON)</button>
+        <button id="btn-notion" type="button">🧩 Notion-export-map</button>
+        <input type="file" id="input-excel" accept=".xlsx">
+        <input type="file" id="input-json" multiple webkitdirectory>
+        <input type="file" id="input-notion" multiple webkitdirectory>
+      </div>
+      <div class="bundle-picker">
+        <span class="label">Periode:</span>
+        <select id="period-select">
+          <option value="7">7 dagen</option>
+          <option value="30" selected>30 dagen</option>
+          <option value="90">90 dagen</option>
+        </select>
+      </div>
+    </div>
+    <p class="last-used" id="last-used"></p>
+    <p class="last-used" id="status-line"></p>
+    <p class="last-used" id="bundle-info"></p>
+  </header>
+
+  <div id="empty-state" class="empty-state">
+    <h2>Nog geen bundel geladen</h2>
+    <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
+    Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
+  </div>
+
+  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
+
+  <div id="zones" style="display:none;">
+    <section class="zone" id="zone1">
+      <div class="zone-header">
+        <h2>🎯 1 · Aandacht</h2>
+        <span class="decision">Beslissing: waar besteed ik vandaag mijn halfuur aan?</span>
+      </div>
+      <div id="zone1-body"></div>
+    </section>
+
+    <section class="zone" id="zone2">
+      <div class="zone-header">
+        <h2>🧭 2 · Contextgezondheid</h2>
+        <span class="decision">Beslissing: moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?</span>
+      </div>
+      <div id="zone2-body"></div>
+    </section>
+
+    <section class="zone" id="zone3">
+      <div class="zone-header">
+        <h2>👥 3 · Gebruik</h2>
+        <span class="decision">Beslissing: welke agent laat ik links liggen, en waarom?</span>
+      </div>
+      <div id="zone3-body"></div>
+    </section>
+
+    <section class="zone" id="zone4">
+      <div class="zone-header">
+        <h2>📈 4 · Opbrengst</h2>
+        <span class="decision">Beslissing: levert dit team genoeg op om het te blijven betalen?</span>
+      </div>
+      <div id="zone4-body"></div>
+    </section>
+
+    <section class="zone" id="zone5">
+      <div class="zone-header">
+        <h2>💡 5 · Leren</h2>
+        <span class="decision">Beslissing: wat weet dit team nu dat het vorige maand niet wist?</span>
+      </div>
+      <div id="zone5-body"></div>
+    </section>
+  </div>
+
+  <footer class="app-footer">
+    Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
+    gekozen bundelroute en bestandsnaam wordt onthouden (lokaal, in je browser) om je te herinneren wat je de vorige
+    keer opende. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van AgenticTeamAI/agent-architecture.
+  </footer>
+</div>
+
+<script>
+__SCHEMA__
+</script>
+<script>
+__APP__
+</script>
+</body>
+</html>

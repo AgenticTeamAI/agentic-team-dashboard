@@ -1,0 +1,37 @@
+{
+  "_schema": "Productbacklog - Item; Herkomst; Eigenaar; Status; Prioriteit; Besluit.",
+  "items": [
+    {
+      "Item": "Automatische seizoensattendering (plantwissel voorjaar/winter)",
+      "Herkomst": "Klantsucces-signalen",
+      "Eigenaar": "Product Designer",
+      "Status": "Doing",
+      "Prioriteit": "Hoog",
+      "Besluit": "Opgenomen in Q3-planning."
+    },
+    {
+      "Item": "Losse consultafspraak zonder abonnement",
+      "Herkomst": "Lead-gesprekken",
+      "Eigenaar": "Product Designer",
+      "Status": "Ter validatie",
+      "Prioriteit": "Midden",
+      "Besluit": ""
+    },
+    {
+      "Item": "Kwartaalabonnement voor coworking-segment",
+      "Herkomst": "Sales-signalen",
+      "Eigenaar": "Delivery Architect",
+      "Status": "To do",
+      "Prioriteit": "Laag",
+      "Besluit": ""
+    },
+    {
+      "Item": "Duurzaamheidsrapportage per klant",
+      "Herkomst": "Klantvraag Vredehof",
+      "Eigenaar": "Product Designer",
+      "Status": "Done",
+      "Prioriteit": "Hoog",
+      "Besluit": "Gebouwd en uitgerold in juni."
+    }
+  ]
+}

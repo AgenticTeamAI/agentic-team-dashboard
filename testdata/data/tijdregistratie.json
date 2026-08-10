@@ -1,0 +1,41 @@
+{
+  "_schema": "Tijdregistratie - Beschrijving; Datum; Uren; Type; Uurtarief; Gefactureerd; Persoon.",
+  "items": [
+    {
+      "Beschrijving": "Inrichting ontvangstruimte De Linde",
+      "Datum": "2026-08-04",
+      "Uren": 4.5,
+      "Type": "Billable",
+      "Uurtarief": 65,
+      "Gefactureerd": true,
+      "Persoon": "Nina de Groot"
+    },
+    {
+      "Beschrijving": "Voorbereiding offerte Vredehof",
+      "Datum": "2026-07-21",
+      "Uren": 2.0,
+      "Type": "Billable",
+      "Uurtarief": 65,
+      "Gefactureerd": false,
+      "Persoon": "Nina de Groot"
+    },
+    {
+      "Beschrijving": "Interne planning augustus",
+      "Datum": "2026-08-07",
+      "Uren": 3.0,
+      "Type": "Intern",
+      "Uurtarief": 0,
+      "Gefactureerd": false,
+      "Persoon": "Sam Kuiper"
+    },
+    {
+      "Beschrijving": "Contentkalender vullen",
+      "Datum": "2026-08-09",
+      "Uren": 1.5,
+      "Type": "Marketing",
+      "Uurtarief": 0,
+      "Gefactureerd": false,
+      "Persoon": "Nina de Groot"
+    }
+  ]
+}

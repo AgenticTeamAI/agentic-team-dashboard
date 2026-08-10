@@ -1,0 +1,15 @@
+{
+  "_schema_opmerking": "VOORLOPIG - dit domein staat nog niet in core/agents.json -> datadomeinen. Formaat hangt af van de S17/f13-uitwerking (zie BESLUIT-s17). Dit dashboard toont deze sectie als ze aanwezig is, maar behandelt haar expliciet als 'nog niet gestandaardiseerd' als ze ontbreekt (zie zone 2 in de UI).",
+  "Bron": "Notion-pagina 'GroenBuro - Bedrijfscontext' (intern gedeeld met het team)",
+  "Laatst_bijgewerkt": "2026-08-06",
+  "Placeholders_ingevuld": [
+    "BEDRIJFSNAAM",
+    "DOELGROEP",
+    "SEGMENT_1",
+    "SEGMENT_2",
+    "SEGMENT_3",
+    "POSITIONERING"
+  ],
+  "Placeholders_open": [],
+  "Projectkennis_kopie_laatst_bijgewerkt": "2026-08-06"
+}

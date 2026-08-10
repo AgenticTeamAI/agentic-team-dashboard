@@ -1,0 +1,80 @@
+{
+  "_schema": "Organisaties - Naam; Fase; Segment; Omvang FTE; Lead Bron; Signaal; Signaal Datum; Website; LinkedIn; Vestigingsplaats; Eigenaar; KvK-nummer; Notities.",
+  "items": [
+    {
+      "Naam": "Kantoorpark De Linde",
+      "Fase": "Actieve klant",
+      "Segment": "Kantoren 50-250 medewerkers",
+      "Omvang FTE": "100-250",
+      "Lead Bron": "Netwerk",
+      "Signaal": "Nieuw pand betrokken, wil plantenwand in ontvangstruimte",
+      "Signaal Datum": "2026-04-12",
+      "Website": "https://kantoorparkdelinde-fictief.nl",
+      "LinkedIn": "",
+      "Vestigingsplaats": "Amersfoort",
+      "Eigenaar": "Nina de Groot",
+      "KvK-nummer": "61234501",
+      "Notities": "Loopt sinds 2025, tevreden klant."
+    },
+    {
+      "Naam": "Buro Helder Advocaten",
+      "Fase": "Lead",
+      "Segment": "Kantoren <50 medewerkers",
+      "Omvang FTE": "<50",
+      "Lead Bron": "LinkedIn",
+      "Signaal": "Directiesecretaresse vroeg naar abonnementsvormen",
+      "Signaal Datum": "2026-07-27",
+      "Website": "https://burohelder-fictief.nl",
+      "LinkedIn": "https://linkedin.com/company/burohelder-fictief",
+      "Vestigingsplaats": "Utrecht",
+      "Eigenaar": "Nina de Groot",
+      "KvK-nummer": "61234502",
+      "Notities": "Eerste gesprek gepland."
+    },
+    {
+      "Naam": "CoWorkPlek Zuid",
+      "Fase": "Prospect",
+      "Segment": "Coworking spaces",
+      "Omvang FTE": "50-100",
+      "Lead Bron": "Event",
+      "Signaal": "Ontmoet op Werkplek Vakbeurs, zoekt frisse uitstraling",
+      "Signaal Datum": "2026-07-11",
+      "Website": "",
+      "LinkedIn": "",
+      "Vestigingsplaats": "Rotterdam",
+      "Eigenaar": "Sam Kuiper",
+      "KvK-nummer": "",
+      "Notities": "Nog geen vervolgcontact geweest."
+    },
+    {
+      "Naam": "Zorggroep Vredehof",
+      "Fase": "Actieve klant",
+      "Segment": "Zorginstellingen",
+      "Omvang FTE": "250-500",
+      "Lead Bron": "Referral",
+      "Signaal": "Wil groen in 3 wachtruimtes voor rust bij bezoekers",
+      "Signaal Datum": "2026-01-22",
+      "Website": "https://vredehof-fictief.nl",
+      "LinkedIn": "",
+      "Vestigingsplaats": "Zwolle",
+      "Eigenaar": "Nina de Groot",
+      "KvK-nummer": "61234504",
+      "Notities": "Contract loopt door tot 2027."
+    },
+    {
+      "Naam": "StartupHub Noord",
+      "Fase": "Voormalig klant",
+      "Segment": "Coworking spaces",
+      "Omvang FTE": "<50",
+      "Lead Bron": "Inbound",
+      "Signaal": "Abonnement opgezegd na verhuizing",
+      "Signaal Datum": "2025-11-23",
+      "Website": "",
+      "LinkedIn": "",
+      "Vestigingsplaats": "Groningen",
+      "Eigenaar": "Sam Kuiper",
+      "KvK-nummer": "",
+      "Notities": "Mogelijk terug bij nieuwe locatie."
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "_schema": "Projecten - Projectnaam; Status; Startdatum; Einddatum; Contractwaarde; Gefactureerd; Eigenaar; Gedeelde Pagina; Notities.",
+  "items": [
+    {
+      "Projectnaam": "De Linde - inrichting ontvangstruimte",
+      "Status": "Actief",
+      "Startdatum": "2026-07-01",
+      "Einddatum": "2026-08-30",
+      "Contractwaarde": 4200,
+      "Gefactureerd": 2100,
+      "Eigenaar": "Nina de Groot",
+      "Gedeelde Pagina": "",
+      "Notities": "Fase 1 opgeleverd."
+    },
+    {
+      "Projectnaam": "Vredehof - 3 wachtruimtes",
+      "Status": "Opstarten",
+      "Startdatum": "2026-08-20",
+      "Einddatum": "2026-10-19",
+      "Contractwaarde": 6800,
+      "Gefactureerd": 0,
+      "Eigenaar": "Nina de Groot",
+      "Gedeelde Pagina": "",
+      "Notities": "Wacht op bestuursbesluit."
+    },
+    {
+      "Projectnaam": "StartupHub Noord - onderhoud 2025",
+      "Status": "Afgerond",
+      "Startdatum": "2025-07-06",
+      "Einddatum": "2025-11-23",
+      "Contractwaarde": 1200,
+      "Gefactureerd": 1200,
+      "Eigenaar": "Sam Kuiper",
+      "Gedeelde Pagina": "",
+      "Notities": "Contract niet verlengd."
+    }
+  ]
+}
