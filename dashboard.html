@@ -209,6 +209,90 @@ footer.app-footer {
   .agent-row .naam { flex-basis: 130px; }
 }
 
+/* ══ Homepage: KPI-tegels, grafieken, adoptiescore-balken, doorklik ══ */
+
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.kpi-tile {
+  background: var(--panel); border-radius: 14px; padding: 1.1rem 1.25rem;
+  border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.kpi-tile:hover, .kpi-tile:focus-visible { border-color: var(--mint); transform: translateY(-1px); outline: none; }
+.kpi-getal { font-size: 2.1rem; font-weight: 700; color: var(--mint); line-height: 1.05; }
+.kpi-kop { font-size: 0.78rem; color: var(--white); font-weight: 600; margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.kpi-label { font-size: 0.76rem; color: var(--grey); margin-top: 0.35rem; line-height: 1.4; }
+.kpi-som { font-size: 0.74rem; color: var(--mint-light); margin-top: 0.3rem; font-family: "SFMono-Regular", Consolas, monospace; }
+.minuten-input-label { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.3rem; cursor: default; }
+.minuten-input-label input {
+  width: 3.2rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; color: var(--white); font-family: var(--font); font-size: 0.78rem; padding: 0.15rem 0.35rem;
+}
+
+section.panel {
+  background: var(--panel); border-radius: 14px; padding: 1.4rem 1.5rem;
+  margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.06);
+}
+.panel-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+.panel-header h2 { font-size: 1.05rem; font-weight: 700; color: var(--mint); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+.panel-header .decision { font-size: 0.78rem; color: var(--grey); font-style: italic; }
+
+.chart-legend { display: flex; flex-wrap: wrap; gap: 0.9rem; margin-top: 0.5rem; }
+.chart-legend-item { font-size: 0.75rem; color: var(--grey); display: inline-flex; align-items: center; gap: 0.35rem; }
+.chart-legend-item .dot { width: 0.6rem; height: 0.6rem; border-radius: 2px; display: inline-block; }
+
+.detail-link {
+  display: inline-block; margin-top: 0.75rem; font-size: 0.8rem; font-weight: 600;
+  color: var(--mint-light); text-decoration: none; cursor: pointer;
+}
+.detail-link:hover { text-decoration: underline; }
+
+.subscore-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1.25rem; }
+.subscore-col { min-width: 0; }
+.subscore-naam { font-size: 0.78rem; color: var(--grey); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.4rem; }
+.subscore-bar-track {
+  height: 10px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; position: relative;
+}
+.subscore-bar-fill { height: 100%; background: var(--mint); border-radius: 999px; }
+.subscore-bar-track.subscore-onbekend { border: 1px dashed var(--grijs-status); background: transparent; }
+.subscore-bar-stub { height: 100%; width: 100%; background: repeating-linear-gradient(135deg, rgba(107,114,128,0.25) 0 6px, transparent 6px 12px); }
+.subscore-waarde { font-size: 1.3rem; font-weight: 700; color: var(--mint); margin-top: 0.4rem; }
+.subscore-waarde-onbekend { font-size: 0.85rem; font-weight: 600; color: var(--grey); font-style: italic; }
+.subscore-reden { font-size: 0.74rem; color: var(--grey); margin-top: 0.2rem; line-height: 1.4; }
+
+.aandacht-leeg { font-size: 1rem; color: var(--white); margin: 0.5rem 0; }
+
+.grijs-blok {
+  border: 1px dashed var(--grijs-status); border-radius: 10px; padding: 1rem 1.1rem;
+  background: rgba(107,114,128,0.08); opacity: 0.85;
+}
+.grijs-kop { color: var(--grey); font-weight: 700; margin-bottom: 0.35rem; }
+.grijs-tekst { color: var(--grey); font-size: 0.85rem; line-height: 1.5; }
+
+.detail-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
+.btn-terug {
+  display: inline-block; font-size: 0.85rem; font-weight: 600; color: var(--mint);
+  text-decoration: none; border: 1px solid var(--mint); border-radius: 8px; padding: 0.5rem 0.9rem;
+}
+.btn-terug:hover { background: var(--mint); color: var(--navy); }
+.detail-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.detail-nav a {
+  font-size: 0.76rem; color: var(--grey); text-decoration: none; padding: 0.35rem 0.6rem;
+  border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);
+}
+.detail-nav a.actief { color: var(--navy); background: var(--mint); border-color: var(--mint); font-weight: 700; }
+.detail-nav a:hover:not(.actief) { border-color: var(--mint); color: var(--mint-light); }
+
+.detail-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.82rem; }
+.detail-table th, .detail-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.detail-table th { color: var(--grey); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.03em; }
+
+@media (max-width: 700px) {
+  .kpi-getal { font-size: 1.7rem; }
+}
+
 </style>
 </head>
 <body>
@@ -230,9 +314,9 @@ footer.app-footer {
       <div class="bundle-picker">
         <span class="label">Periode:</span>
         <select id="period-select">
-          <option value="7">7 dagen</option>
-          <option value="30" selected>30 dagen</option>
-          <option value="90">90 dagen</option>
+          <option value="8">8 weken</option>
+          <option value="12" selected>12 weken</option>
+          <option value="24">24 weken</option>
         </select>
       </div>
     </div>
@@ -249,52 +333,57 @@ footer.app-footer {
 
   <div id="warnings-box" class="warnings-box" style="display:none;"></div>
 
-  <div id="zones" style="display:none;">
-    <section class="zone" id="zone1">
-      <div class="zone-header">
-        <h2>🎯 1 · Aandacht</h2>
-        <span class="decision">Beslissing: waar besteed ik vandaag mijn halfuur aan?</span>
+  <!-- ══ Homepage: grafieken en aandacht — tekst en uitleg zitten achter de doorklik ══ -->
+  <div id="home-view" style="display:none;">
+    <section class="kpi-grid" id="kpi-grid"></section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📈 Activiteit per week</h2>
+        <span class="decision">Interacties, dagverslagen, lessen en content — per week, inclusief de weken zonder spoor.</span>
       </div>
-      <div id="zone1-body"></div>
+      <div id="panel-activiteit-body"></div>
     </section>
 
-    <section class="zone" id="zone2">
-      <div class="zone-header">
-        <h2>🧭 2 · Contextgezondheid</h2>
-        <span class="decision">Beslissing: moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📊 Waar de adoptiescore vandaan komt</h2>
+        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot de adoptiescore hierboven.</span>
       </div>
-      <div id="zone2-body"></div>
+      <div id="panel-adoptie-body"></div>
     </section>
 
-    <section class="zone" id="zone3">
-      <div class="zone-header">
-        <h2>👥 3 · Gebruik</h2>
-        <span class="decision">Beslissing: welke agent laat ik links liggen, en waarom?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>🎯 Vraagt je aandacht</h2>
+        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf, samengevat uit de andere zones.</span>
       </div>
-      <div id="zone3-body"></div>
+      <div id="panel-aandacht-body"></div>
     </section>
 
-    <section class="zone" id="zone4">
-      <div class="zone-header">
-        <h2>📈 4 · Opbrengst</h2>
-        <span class="decision">Beslissing: levert dit team genoeg op om het te blijven betalen?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>👥 Gebruik per agent</h2>
+        <span class="decision">Welke agent laat ik links liggen, en waarom?</span>
       </div>
-      <div id="zone4-body"></div>
+      <div id="panel-gebruik-body"></div>
     </section>
+  </div>
 
-    <section class="zone" id="zone5">
-      <div class="zone-header">
-        <h2>💡 5 · Leren</h2>
-        <span class="decision">Beslissing: wat weet dit team nu dat het vorige maand niet wist?</span>
-      </div>
-      <div id="zone5-body"></div>
-    </section>
+  <!-- ══ Detail: de volledige, uitgeschreven zone-inhoud — bereikbaar via elke tegel/grafiek ══ -->
+  <div id="detail-view" style="display:none;">
+    <div class="detail-toolbar">
+      <a href="#/" id="btn-terug" class="btn-terug">← Terug naar dashboard</a>
+      <nav id="detail-nav" class="detail-nav"></nav>
+    </div>
+    <div id="detail-body"></div>
   </div>
 
   <footer class="app-footer">
     Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
-    gekozen bundelroute en bestandsnaam wordt onthouden (lokaal, in je browser) om je te herinneren wat je de vorige
-    keer opende. Gegenereerd uit registryVersion 1.18.0 van AgenticTeamAI/agent-architecture.
+    gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling worden onthouden (lokaal, in je browser) om
+    je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion 1.18.0 van
+    AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -2075,11 +2164,213 @@ function computeZone1(bundle, agentLookup, today) {
   return items;
 }
 
+// Voegt zone 2 (Contextgezondheid) toe aan de aandachtlijst wanneer die rood
+// is - dat hoort volgens het ontwerp (zone 1: "alles wat rood of grijs is
+// uit de andere vier zones komt hier samen") bij zone 1, maar zone 2 kende
+// zichzelf nog niet aan computeZone1 toe. Puur tekstueel samenvoegen, geen
+// nieuwe databron: leest alleen het al berekende zone 2-resultaat.
+function voegContextToeAanAandacht(items, z2) {
+  if (z2 && z2.signaal === "rood") {
+    return [{ type: "context", ernst: "rood", label: `Bedrijfscontext vraagt aandacht: ${z2.reden}`, rows: null }, ...items];
+  }
+  return items;
+}
+
+// -- Homepage - Activiteit per week --------------------------------------
+// Vier series, elk uit hun eigen datumveld. Weken zonder een van de vier
+// series blijven in de output staan met totaal 0 (leeg=true) - nooit
+// weggelaten, want het gat is het signaal.
+const RITME_BRONNEN = ["dagverslagen", "lessen_inzichten", "interacties", "content_kalender"];
+const RITME_DATUMVELD = { dagverslagen: "Dag", lessen_inzichten: "Datum", interacties: "Datum", content_kalender: "Publicatiedatum" };
+const RITME_SERIE_LABEL = { interacties: "Interacties", dagverslagen: "Dagverslagen", lessen_inzichten: "Lessen", content_kalender: "Content" };
+
+// Vandaag zelf hoort bij de laatste (meest recente) week-bucket, ook als de
+// dagentelling die precies op de rand van "buiten de periode" zou plaatsen.
+function bucketIndexVoorDatum(d, periodStart, weeks) {
+  if (!d || d < periodStart) return -1;
+  let idx = Math.floor(daysBetween(d, periodStart) / 7);
+  if (idx >= weeks) idx = weeks - 1;
+  return idx;
+}
+
+function computeActiviteitPerWeek(bundle, today, weeks = 12) {
+  const periodStart = new Date(today.getTime() - weeks * 7 * 86400000);
+  const aanwezigeBronnen = RITME_BRONNEN.filter(b => domain(bundle, b));
+  const buckets = [];
+  for (let i = 0; i < weeks; i++) {
+    buckets.push({ index: i, values: { interacties: 0, dagverslagen: 0, lessen_inzichten: 0, content_kalender: 0 } });
+  }
+  for (const bron of RITME_BRONNEN) {
+    const dom = domain(bundle, bron);
+    if (!dom) continue;
+    const veld = RITME_DATUMVELD[bron];
+    for (const row of dom.rows) {
+      const d = parseDateField(getField(row, veld));
+      if (!d || d > today) continue; // toekomstige/geplande datum (bv. content) is nog niet "gebeurd"
+      const idx = bucketIndexVoorDatum(d, periodStart, weeks);
+      if (idx < 0) continue;
+      buckets[idx].values[bron]++;
+    }
+  }
+  for (const b of buckets) {
+    b.totaal = RITME_BRONNEN.reduce((s, k) => s + b.values[k], 0);
+    b.leeg = b.totaal === 0;
+    const weekStart = new Date(periodStart.getTime() + b.index * 7 * 86400000);
+    b.weekStart = weekStart;
+    b.label = weekStart.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit" });
+  }
+  return { buckets, aanwezigeBronnen, geenEnkeleBron: aanwezigeBronnen.length === 0, weeks, periodStart };
+}
+
+// -- Adoptiescore - exact de formule uit het ontwerp ----------------------
+// Ritme = weken met minstens een spoor / aantal weken in de periode.
+function computeRitme(bundle, today, weeks = 12) {
+  const aanwezigeBronnen = RITME_BRONNEN.filter(b => domain(bundle, b));
+  if (aanwezigeBronnen.length === 0) {
+    return {
+      berekenbaar: false,
+      reden: "Geen van de vier brondomeinen (Dagverslagen, Lessen & Inzichten, Interacties, Content Kalender) is aanwezig in deze bundel.",
+    };
+  }
+  const { buckets } = computeActiviteitPerWeek(bundle, today, weeks);
+  const wekenMetSpoor = buckets.filter(b => !b.leeg).length;
+  return {
+    berekenbaar: true,
+    waarde: (wekenMetSpoor / weeks) * 100,
+    wekenMetSpoor, weken: weeks,
+    aanwezigeBronnen,
+    ontbrekendeBronnen: RITME_BRONNEN.filter(b => !aanwezigeBronnen.includes(b)),
+  };
+}
+
+// Breedte = domeinen met minstens een rij / 15 canonieke domeinen. Altijd
+// berekenbaar: een ontbrekend domein telt gewoon mee als "geen inhoud" - dat
+// is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
+// en opvolging, die een specifiek brondomein nodig hebben om te draaien).
+function computeBreedte(bundle, schema) {
+  const domeinen = Object.keys(schema.datadomeinen);
+  const metInhoud = domeinen.filter(k => { const r = rows(bundle, k); return r && r.length > 0; });
+  return {
+    berekenbaar: true,
+    waarde: (metInhoud.length / domeinen.length) * 100,
+    metInhoud: metInhoud.length,
+    totaalDomeinen: domeinen.length,
+    domeinenLijst: metInhoud,
+  };
+}
+
+// Opvolging = acties met verstreken deadline en status "Klaar" / acties met
+// verstreken deadline. Geen enkele actie met een verstreken deadline (of
+// geen Acties-domein) -> geen noemer -> niet te berekenen, nooit 0.
+function computeOpvolging(bundle, today) {
+  const acties = rows(bundle, "acties");
+  if (!acties) {
+    return { berekenbaar: false, reden: "Geen Acties-domein aanwezig in deze bundel." };
+  }
+  const verstreken = acties.filter(r => {
+    const dt = parseDateField(getField(r, "Deadline"));
+    return dt && daysBetween(today, dt) > 0; // deadline ligt voor vandaag
+  });
+  if (verstreken.length === 0) {
+    return {
+      berekenbaar: false,
+      reden: "Geen enkele actie met een verstreken deadline in deze bundel - er is geen noemer om op te rekenen.",
+    };
+  }
+  const klaar = verstreken.filter(r => getField(r, "Status") === "Klaar");
+  return { berekenbaar: true, waarde: (klaar.length / verstreken.length) * 100, klaar: klaar.length, verstreken: verstreken.length };
+}
+
+// De adoptiescore is het gemiddelde van de AFGERONDE percentages van de
+// componenten die berekenbaar zijn (nooit een ontbrekende bron als 0
+// meetellen). Rond eerst elk component af naar een heel percentage - dat is
+// ook het getal dat op het scherm staat - en middel dan die getallen. Zo is
+// de uitkomst met de hand na te rekenen vanaf wat je op het scherm ziet.
+function computeAdoptiescore(bundle, schema, today, weeks = 12) {
+  const ritme = computeRitme(bundle, today, weeks);
+  const breedte = computeBreedte(bundle, schema);
+  const opvolging = computeOpvolging(bundle, today);
+  const componenten = [
+    { key: "ritme", label: "Ritme", ...ritme },
+    { key: "breedte", label: "Breedte", ...breedte },
+    { key: "opvolging", label: "Opvolging", ...opvolging },
+  ];
+  const berekenbaar = componenten.filter(c => c.berekenbaar);
+  const afgerond = berekenbaar.map(c => Math.round(c.waarde));
+  const adoptiescore = afgerond.length ? Math.round(afgerond.reduce((s, v) => s + v, 0) / afgerond.length) : null;
+  return { componenten, adoptiescore, aantalBerekenbaar: berekenbaar.length, aantalComponenten: componenten.length, weken: weeks };
+}
+
+// -- Geschatte tijdwinst - nooit een meting, altijd een zichtbare som -----
+function computeTijdwinst(bundle, minutenPerActie = 25) {
+  const acties = rows(bundle, "acties");
+  const afgerond = acties ? acties.filter(r => getField(r, "Status") === "Klaar").length : 0;
+  const totaal = acties ? acties.length : 0;
+  const minuten = afgerond * minutenPerActie;
+  return { berekenbaar: !!acties, afgerond, totaal, minutenPerActie, minuten, uren: minuten / 60 };
+}
+
+// -- Gebruik per agent - gerangschikte lijst voor de homepage-grafiek -----
+// Zelfde sporen als zone 3 (Acties.Agent, Lessen & Inzichten.Agent), maar
+// hier expliciet gecontroleerd of het veld Agent uberhaupt gevuld voorkomt
+// in de data. In de eerste echte klantbundel bestaat dat veld wel in de
+// registry maar niet in de data (0 van de acties heeft een Agent) - dat is
+// een ander geval dan "elke agent 0 keer gebruikt" en moet dat ook tonen.
+function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays) {
+  const actiesDomain = domain(bundle, "acties");
+  const lessenDomain = domain(bundle, "lessen_inzichten");
+  const bronnenAanwezig = !!actiesDomain || !!lessenDomain;
+
+  function heeftAgentWaarde(dom) {
+    if (!dom) return false;
+    return dom.rows.some(r => {
+      const v = getField(r, "Agent");
+      return v !== undefined && v !== null && String(v).trim() !== "";
+    });
+  }
+  const veldAanwezig = heeftAgentWaarde(actiesDomain) || heeftAgentWaarde(lessenDomain);
+
+  if (!bronnenAanwezig) {
+    return { status: "geen-bron", reden: "Geen Acties- of Lessen & Inzichten-domein aanwezig in deze bundel - gebruik per agent is niet af te leiden." };
+  }
+  if (!veldAanwezig) {
+    return {
+      status: "geen-veld",
+      reden: "Het veld Agent komt niet gevuld voor in Acties en Lessen & Inzichten in deze bundel. Gebruik per agent is daardoor niet af te leiden. Zodra dit veld er is, verschijnt de ranglijst vanzelf.",
+    };
+  }
+
+  const traces = {};
+  for (const agent of schema.agents) traces[agent.slug] = { aantalPeriode: 0, aantalTotaal: 0 };
+  function registreer(slugRaw, datumRaw) {
+    const slug = matchAgentValue(slugRaw, agentLookup);
+    if (!slug || !traces[slug]) return;
+    const dt = parseDateField(datumRaw);
+    traces[slug].aantalTotaal++;
+    if (dt) {
+      const diff = daysBetween(today, dt);
+      if (diff >= 0 && diff <= periodDays) traces[slug].aantalPeriode++;
+    }
+  }
+  if (actiesDomain) for (const row of actiesDomain.rows) registreer(getField(row, "Agent"), getField(row, "Deadline"));
+  if (lessenDomain) for (const row of lessenDomain.rows) registreer(getField(row, "Agent"), getField(row, "Datum"));
+
+  const ranking = schema.agents
+    .map(a => ({ slug: a.slug, label: a.displayName, emoji: a.emoji, module: a.module, value: traces[a.slug].aantalPeriode, totaal: traces[a.slug].aantalTotaal }))
+    .sort((a, b) => b.value - a.value || b.totaal - a.totaal);
+
+  return { status: "ok", ranking };
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
+    RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
     daysBetween, parseDateField, isStale,
     computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
+    voegContextToeAanAandacht, computeActiviteitPerWeek,
+    computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
+    computeTijdwinst, computeAgentGebruikRanking,
   };
 }
 
@@ -2238,20 +2529,382 @@ if (typeof module !== "undefined") {
 }
 
 
-/* Wiring: bestandskeuze, periodeschakelaar, laden -> berekenen -> tonen.
- * Schrijft nooit iets terug behalve, optioneel, welke bundelroute en
- * bestandsnaam je de laatste keer koos (geen bundelinhoud) — zie
- * rememberChoice()/renderLastUsed() onderaan. */
+/* Inline SVG-grafieken, met de hand opgebouwd uit data in JS — geen
+ * Chart.js, geen D3, geen canvas-library, geen extern lettertype. Elke
+ * functie geeft een HTML-string terug (SVG + eventueel een HTML-legenda)
+ * op basis van pure data + opties, zodat dit ook zonder DOM te testen is.
+ *
+ * Kleuren volgen het ontwerp: mint + licht mint + twee neutrale tinten voor
+ * series, NOOIT statuskleuren (rood/oranje/groen) — dit zijn hoeveelheden,
+ * geen signalen. */
+
+const CHART_SERIE_KLEUREN = ["#4ADE80", "#86EFAC", "#8189A8", "#5B6178"];
+
+function svgEsc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/**
+ * Gestapelde staafgrafiek. `weeks` = uitvoer van computeActiviteitPerWeek()
+ * (buckets), `seriesKeys`/`seriesLabels` bepalen volgorde en kleur.
+ * Weken zonder activiteit (leeg=true) worden getekend als een gedimd,
+ * gestippeld streepje met het label "geen" erboven — het gat IS het
+ * signaal, dus nooit gewoon leeg laten of weglaten.
+ */
+function buildStackedBarChart({ buckets, seriesKeys, seriesLabels, width = 760, height = 230 }) {
+  const padLeft = 30, padBottom = 30, padTop = 14, padRight = 6;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const n = buckets.length;
+  const gap = Math.max(2, Math.min(8, plotW / n * 0.18));
+  const barW = Math.max(4, (plotW - gap * (n - 1)) / n);
+  const maxTotal = Math.max(1, ...buckets.map(b => b.totaal));
+
+  let bars = "";
+  let axisLabels = "";
+  buckets.forEach((b, i) => {
+    const x = padLeft + i * (barW + gap);
+    if (b.leeg) {
+      const y = padTop + plotH - 8;
+      bars += `<rect x="${x.toFixed(1)}" y="${y}" width="${barW.toFixed(1)}" height="8" fill="none" stroke="#6B7280" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7" rx="2"><title>Week van ${svgEsc(b.label)}: geen activiteit</title></rect>`;
+      axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${padTop + plotH - 14}" text-anchor="middle" font-size="8.5" fill="#9CA3AF" font-style="italic">geen</text>`;
+    } else {
+      let yCursor = padTop + plotH;
+      seriesKeys.forEach((k, si) => {
+        const v = b.values[k] || 0;
+        if (!v) return;
+        const h = (v / maxTotal) * plotH;
+        yCursor -= h;
+        bars += `<rect x="${x.toFixed(1)}" y="${yCursor.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${CHART_SERIE_KLEUREN[si]}"><title>Week van ${svgEsc(b.label)} — ${svgEsc(seriesLabels[si])}: ${v}</title></rect>`;
+      });
+    }
+    axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${height - padBottom + 14}" text-anchor="middle" font-size="8.5" fill="#9CA3AF">${svgEsc(b.label)}</text>`;
+  });
+
+  const axis = `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${padTop + plotH}" stroke="#3f3f5c" stroke-width="1"></line>
+    <line x1="${padLeft}" y1="${(padTop + plotH).toFixed(1)}" x2="${width - padRight}" y2="${(padTop + plotH).toFixed(1)}" stroke="#3f3f5c" stroke-width="1"></line>
+    <text x="${padLeft - 5}" y="${padTop + 4}" text-anchor="end" font-size="9" fill="#9CA3AF">${maxTotal}</text>
+    <text x="${padLeft - 5}" y="${(padTop + plotH).toFixed(1)}" text-anchor="end" font-size="9" fill="#9CA3AF">0</text>`;
+
+  const legend = seriesKeys.map((k, i) =>
+    `<span class="chart-legend-item"><span class="dot" style="background:${CHART_SERIE_KLEUREN[i]}"></span>${svgEsc(seriesLabels[i])}</span>`
+  ).join("");
+
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Activiteit per week, gestapeld per bron">${axis}${bars}${axisLabels}</svg>
+    <div class="chart-legend">${legend}</div>`;
+}
+
+/** Gerangschikte horizontale staafgrafiek. `items` = [{label, emoji, value, totaal}],
+ * al gesorteerd (hoogste eerst). Gebruikt mint als hoeveelheids-kleur (geen
+ * statuskleur — dit is een ranking, geen oordeel over goed/fout). */
+function buildHorizontalBarChart({ items, width = 680, barHeight = 20, gap = 7 }) {
+  const maxVal = Math.max(1, ...items.map(i => i.value));
+  const labelW = 200;
+  const valueColW = 34;
+  const plotW = width - labelW - valueColW;
+  const height = items.length * (barHeight + gap);
+  let rowsHtml = "";
+  items.forEach((it, i) => {
+    const y = i * (barHeight + gap);
+    const w = it.value > 0 ? Math.max(3, (it.value / maxVal) * plotW) : 0;
+    const titel = it.totaal !== undefined && it.totaal !== it.value
+      ? `${svgEsc(it.label)}: ${it.value} in de gekozen periode (${it.totaal} totaal in de bundel)`
+      : `${svgEsc(it.label)}: ${it.value}`;
+    rowsHtml += `<text x="${labelW - 8}" y="${(y + barHeight / 2 + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#FFFFFF">${svgEsc(it.emoji || "")} ${svgEsc(it.label)}</text>`;
+    if (w > 0) {
+      rowsHtml += `<rect x="${labelW}" y="${y}" width="${w.toFixed(1)}" height="${barHeight}" rx="4" fill="#4ADE80"><title>${titel}</title></rect>`;
+    } else {
+      rowsHtml += `<rect x="${labelW}" y="${y + barHeight / 2 - 1}" width="10" height="2" fill="#6B7280" opacity="0.6"><title>${titel}</title></rect>`;
+    }
+    rowsHtml += `<text x="${labelW + w + 6}" y="${(y + barHeight / 2 + 4).toFixed(1)}" font-size="10.5" fill="#9CA3AF">${it.value}</text>`;
+  });
+  return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gebruik per agent, gerangschikt">${rowsHtml}</svg>`;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { buildStackedBarChart, buildHorizontalBarChart, CHART_SERIE_KLEUREN, svgEsc };
+}
+
+
+/* Homepage: KPI-tegels, grafieken, adoptiescore-balken, aandacht-top-5 en
+ * gebruik-per-agent — plus de doorklik naar het detail (de oude, volledige
+ * zone-inhoud die van de homepage is verhuisd, niet verwijderd). Rendering
+ * only; de berekeningen zelf staan in zones.js (puur, geen DOM) zodat ze
+ * zonder browser te testen zijn. */
+
+const DETAIL_VOLGORDE = [
+  { key: "aandacht", titel: "Vraagt je aandacht", emoji: "🎯" },
+  { key: "context", titel: "Contextgezondheid", emoji: "🧭" },
+  { key: "adoptiescore", titel: "Adoptiescore — herkomst", emoji: "📊" },
+  { key: "activiteit", titel: "Activiteit per week", emoji: "📈" },
+  { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
+  { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
+  { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
+  { key: "leren", titel: "Leren", emoji: "💡" },
+];
+
+function nlGetal(n, decimals = 0) {
+  return Number(n).toLocaleString("nl-NL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// ── KPI-tegels ────────────────────────────────────────────────────────
+function renderKpiTegels(el, ctx) {
+  const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
+
+  const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
+  const adoptieLabel = adopt.adoptiescore === null
+    ? "Geen enkele subscore is te berekenen in deze bundel"
+    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+
+  const uren = nlGetal(tijdwinst.uren, 1);
+  const som = `${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`;
+
+  const actiesGetal = tijdwinst.berekenbaar ? tijdwinst.afgerond : "n.v.t.";
+  const actiesLabel = tijdwinst.berekenbaar
+    ? `van ${tijdwinst.totaal} acties in de bundel (geen aanmaakdatum in dit domein — geen periodefilter mogelijk)`
+    : "Geen Acties-domein aanwezig in deze bundel.";
+
+  const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
+  const tijdwinstSom = tijdwinst.berekenbaar ? som : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
+
+  el.innerHTML = `
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
+      <div class="kpi-getal">${adoptieWaarde}</div>
+      <div class="kpi-kop">Adoptiescore</div>
+      <div class="kpi-label">${esc(adoptieLabel)}</div>
+    </div>
+    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
+      <div class="kpi-getal">${actiesGetal}</div>
+      <div class="kpi-kop">Acties afgerond</div>
+      <div class="kpi-label">${esc(actiesLabel)}</div>
+    </div>
+    <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
+      <div class="kpi-getal">${sporenTotaal}</div>
+      <div class="kpi-kop">Sporen in de periode</div>
+      <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
+    </div>
+    <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
+      <div class="kpi-getal">${tijdwinstGetal}</div>
+      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-som">${esc(tijdwinstSom)}</div>
+      <div class="kpi-label">
+        Schatting op basis van jouw aanname, geen meting ·
+        <label class="minuten-input-label" data-stop-nav="1">
+          min/actie
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${minutenPerActie}">
+        </label>
+      </div>
+    </div>`;
+}
+
+// ── Activiteit per week (gestapelde staafgrafiek) ───────────────────────
+function renderActiviteitPanel(el, activiteit, periodWeeks) {
+  if (activiteit.geenEnkeleBron) {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Geen van de brondomeinen aanwezig</div>
+      <div class="grijs-tekst">Geen van Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender is aanwezig in deze bundel — er is niets om per week te tonen.</div>
+    </div>`;
+    return;
+  }
+  const seriesKeys = ["interacties", "dagverslagen", "lessen_inzichten", "content_kalender"];
+  const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
+  const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels });
+  const ontbrekend = RITME_BRONNEN.filter(b => !activiteit.aanwezigeBronnen.includes(b));
+  el.innerHTML = `${chart}
+    <p class="footnote">Elke serie komt uit zijn eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.</p>
+    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.</p>` : ""}
+    <a class="detail-link" data-goto="activiteit">Bekijk per week in detail →</a>`;
+}
+
+// ── Adoptiescore — drie balken naast elkaar ─────────────────────────────
+function renderAdoptieSubscores(el, adopt) {
+  const kolommen = adopt.componenten.map(c => {
+    if (!c.berekenbaar) {
+      return `<div class="subscore-col">
+        <div class="subscore-naam">${esc(c.label)}</div>
+        <div class="subscore-bar-track subscore-onbekend"><div class="subscore-bar-stub"></div></div>
+        <div class="subscore-waarde subscore-waarde-onbekend">niet te berekenen</div>
+        <div class="subscore-reden">${esc(c.reden)}</div>
+      </div>`;
+    }
+    const pct = Math.round(c.waarde);
+    return `<div class="subscore-col">
+      <div class="subscore-naam">${esc(c.label)}</div>
+      <div class="subscore-bar-track"><div class="subscore-bar-fill" style="width:${Math.min(100, pct)}%"></div></div>
+      <div class="subscore-waarde">${pct}%</div>
+      <div class="subscore-reden">${subscoreDetail(c)}</div>
+    </div>`;
+  }).join("");
+
+  const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
+  const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  const rekenregel = berekenbaar.length
+    ? `De adoptiescore is het gemiddelde van de ${berekenbaar.length} berekenbare subscore(s) hierboven, met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
+    : "Geen van de drie subscores is in deze bundel te berekenen — de adoptiescore blijft daarom leeg (n.v.t.), nooit 0%.";
+
+  el.innerHTML = `<div class="subscore-grid">${kolommen}</div>
+    <p class="footnote">${esc(rekenregel)}</p>
+    <a class="detail-link" data-goto="adoptiescore">Volledige herkomst per subscore →</a>`;
+}
+
+function subscoreDetail(c) {
+  if (c.key === "ritme") return esc(`${c.wekenMetSpoor} van ${c.weken} weken met minstens één spoor`);
+  if (c.key === "breedte") return esc(`${c.metInhoud} van ${c.totaalDomeinen} domeinen met inhoud`);
+  if (c.key === "opvolging") return esc(`${c.klaar} van ${c.verstreken} verlopen acties op tijd afgerond`);
+  return "";
+}
+
+// ── Vraagt je aandacht — top 5 ───────────────────────────────────────────
+function renderAandachtTop5(el, items) {
+  if (!items.length) {
+    el.innerHTML = `<p class="aandacht-leeg">✅ Niets vraagt vandaag om aandacht in de aangesloten domeinen.</p>
+      <p class="footnote">Samenvatting van rood/grijs/oranje uit de andere zones — geen eigen databron.</p>`;
+    return;
+  }
+  const top5 = items.slice(0, 5);
+  const lis = top5.map(it => `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
+  el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
+}
+
+// ── Gebruik per agent ─────────────────────────────────────────────────
+function renderGebruikPanel(el, agentUsage) {
+  if (agentUsage.status !== "ok") {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Niet af te leiden</div>
+      <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
+    </div>
+    <a class="detail-link" data-goto="gebruik">Meer over gebruik per agent →</a>`;
+    return;
+  }
+  const MAX_TONEN = 10;
+  const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
+  const top = agentUsage.ranking.slice(0, MAX_TONEN);
+  const chart = buildHorizontalBarChart({ items: top });
+  el.innerHTML = `${chart}
+    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" in deze grafiek betekent geen spoor gevonden in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
+    <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
+}
+
+// ── Detail-view: dispatcher + secties (verhuisde zone-inhoud) ──────────
+function detailSectionHtml(titel, emoji, decision, innerId) {
+  return `<section class="zone">
+    <div class="zone-header"><h2>${emoji} ${esc(titel)}</h2><span class="decision">${esc(decision)}</span></div>
+    <div id="${innerId}"></div>
+  </section>`;
+}
+
+function renderDetailNav(el, activeKey) {
+  el.innerHTML = DETAIL_VOLGORDE.map(d =>
+    `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
+  ).join("");
+}
+
+function renderDetailAdoptiescore(el, adopt, periodWeeks) {
+  const rows = adopt.componenten.map(c => {
+    if (!c.berekenbaar) {
+      return `<div class="card signaal-grijs"><div class="kop">${esc(c.label)}</div><div class="getal">n.v.t.</div><div class="detail">Niet te berekenen: ${esc(c.reden)}</div></div>`;
+    }
+    return `<div class="card"><div class="kop">${esc(c.label)}</div><div class="getal">${Math.round(c.waarde)}%</div><div class="detail">${subscoreDetail(c)}</div></div>`;
+  }).join("");
+  const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
+  const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  el.innerHTML = `
+    <p>De adoptiescore is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
+    <div class="grid-9">${rows}</div>
+    <p class="footnote"><strong>Formules:</strong><br>
+    Ritme = weken met minstens één spoor (rij met een datum in Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender) ÷ aantal weken in de periode.<br>
+    Breedte = domeinen met minstens één rij ÷ 15 canonieke domeinen uit de registry.<br>
+    Opvolging = acties met verstreken deadline én status "Klaar" ÷ acties met verstreken deadline.</p>
+    <p class="footnote">${berekenbaar.length ? `Met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.` : "Geen van de subscores is berekenbaar in deze bundel."}</p>`;
+}
+
+function renderDetailTijdwinst(el, tijdwinst) {
+  if (!tijdwinst.berekenbaar) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geschatte tijdwinst</div><div class="getal">n.v.t.</div><div class="detail">Geen Acties-domein aanwezig in deze bundel — er zijn geen afgeronde acties om op te tellen.</div></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="card" style="max-width:420px;">
+      <div class="kop">Geschatte tijdwinst</div>
+      <div class="getal">${nlGetal(tijdwinst.uren, 1)} uur</div>
+      <div class="detail">${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min/actie = ${nlGetal(tijdwinst.minuten)} min</div>
+    </div>
+    <p class="footnote"><strong>Dit is een schatting op basis van je eigen aanname, geen meting.</strong> Dit dashboard kan niet zien hoeveel tijd een actie werkelijk kost of zou hebben gekost zonder het team. Het getal is uitsluitend: het aantal afgeronde acties in de bundel, vermenigvuldigd met de minuten-per-actie die jij hierboven instelt (standaard 25). Verzet de instelling gerust — de som past zich meteen aan, zodat je altijd kunt narekenen waar het getal vandaan komt.</p>
+    <p class="footnote">Herkomst: domein Acties, veld Status = "Klaar", totaal in de bundel (geen aanmaakdatum in dit domein om op periode te filteren).</p>`;
+}
+
+function renderDetailActiviteit(el, activiteit, periodWeeks) {
+  if (activiteit.geenEnkeleBron) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geen brondomeinen</div><div class="detail">Geen van Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender aanwezig in deze bundel.</div></div>`;
+    return;
+  }
+  const seriesKeys = ["interacties", "dagverslagen", "lessen_inzichten", "content_kalender"];
+  const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
+  const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels, height: 280 });
+  const tabelRijen = activiteit.buckets.map(b =>
+    `<tr><td>${esc(b.label)}</td><td>${b.values.interacties}</td><td>${b.values.dagverslagen}</td><td>${b.values.lessen_inzichten}</td><td>${b.values.content_kalender}</td><td><strong>${b.totaal}</strong>${b.leeg ? " — geen" : ""}</td></tr>`
+  ).join("");
+  el.innerHTML = `${chart}
+    <table class="detail-table">
+      <thead><tr><th>Week van</th><th>Interacties</th><th>Dagverslagen</th><th>Lessen</th><th>Content</th><th>Totaal</th></tr></thead>
+      <tbody>${tabelRijen}</tbody>
+    </table>
+    <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
+}
+
+function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
+  if (agentUsage.status !== "ok") {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Gebruik per agent niet af te leiden</div>
+      <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
+    </div>`;
+    return;
+  }
+  renderZone3(el, z3, schema, today, periodDays);
+}
+
+// ── Router ────────────────────────────────────────────────────────────
+function bepaalActieveView() {
+  const hash = window.location.hash || "";
+  const m = hash.match(/^#\/?detail\/([a-z]+)/);
+  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
+  return null;
+}
+
+
+/* Wiring: bestandskeuze, periodeschakelaar, laden -> berekenen -> tonen,
+ * en de hash-router tussen de homepage en de detailpagina's. Schrijft nooit
+ * iets terug behalve, optioneel en lokaal, welke bundelroute/bestandsnaam
+ * en welke minuten-per-actie-instelling je de laatste keer koos (geen
+ * bundelinhoud) — zie rememberChoice()/rememberMinuten() onderaan. */
 
 const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
+const LS_MINUTEN_KEY = "agentic-team-dashboard:minuten-per-actie";
 
 let currentBundle = null;
-let currentPeriod = 30;
+let currentPeriodWeeks = 12;
+let currentMinutenPerActie = 25;
 
 function rememberChoice(route, label) {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({ route, label, when: new Date().toISOString() }));
   } catch (e) { /* privémodus of quota — dan onthouden we het gewoon niet */ }
+}
+
+function rememberMinuten(v) {
+  try { localStorage.setItem(LS_MINUTEN_KEY, String(v)); } catch (e) { /* zie hierboven */ }
+}
+
+function restoreMinuten() {
+  try {
+    const raw = localStorage.getItem(LS_MINUTEN_KEY);
+    if (raw) {
+      const n = parseInt(raw, 10);
+      if (!isNaN(n) && n > 0) currentMinutenPerActie = n;
+    }
+  } catch (e) { /* zie hierboven */ }
 }
 
 function renderLastUsed() {
@@ -2275,36 +2928,57 @@ async function handleBundle(bundle, route, label) {
   currentBundle = bundle;
   rememberChoice(route, label);
   renderLastUsed();
+  window.location.hash = ""; // terug naar de homepage bij een nieuw geladen bundel
   renderAll();
+}
+
+// Bouwt eenmalig alle berekeningen voor de huidige bundel/periode. Puur
+// hergebruik van zones.js — deze functie zelf tekent niets.
+function buildContext() {
+  const bundle = currentBundle;
+  const schema = getSchema();
+  const agentLookup = buildAgentLookup();
+  const today = new Date();
+  const periodWeeks = currentPeriodWeeks;
+  const periodDays = periodWeeks * 7;
+
+  const z1ruw = computeZone1(bundle, agentLookup, today);
+  const z2 = computeZone2(bundle, today);
+  const z1 = voegContextToeAanAandacht(z1ruw, z2);
+  const z3 = computeZone3(bundle, agentLookup, schema, today, periodDays);
+  const z4 = computeZone4(bundle, today, periodDays);
+  const z5 = computeZone5(bundle, today, periodDays);
+
+  const activiteit = computeActiviteitPerWeek(bundle, today, periodWeeks);
+  const adopt = computeAdoptiescore(bundle, schema, today, periodWeeks);
+  const tijdwinst = computeTijdwinst(bundle, currentMinutenPerActie);
+  const agentUsage = computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays);
+  const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
+
+  return { bundle, schema, agentLookup, today, periodWeeks, periodDays, z1, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal };
 }
 
 function renderAll() {
   const bundle = currentBundle;
   const emptyStateEl = document.getElementById("empty-state");
-  const zonesEl = document.getElementById("zones");
+  const homeEl = document.getElementById("home-view");
+  const detailEl = document.getElementById("detail-view");
   if (!bundle) {
     emptyStateEl.style.display = "";
-    zonesEl.style.display = "none";
+    homeEl.style.display = "none";
+    detailEl.style.display = "none";
     return;
   }
   emptyStateEl.style.display = "none";
-  zonesEl.style.display = "";
 
-  const schema = getSchema();
-  const agentLookup = buildAgentLookup();
-  const today = new Date();
+  const ctx = buildContext();
+  window.__dashboardCtx = ctx; // alleen al-berekende resultaten, geen nieuwe databron
 
-  const z1 = computeZone1(bundle, agentLookup, today);
-  const z2 = computeZone2(bundle, today);
-  const z3 = computeZone3(bundle, agentLookup, schema, today, currentPeriod);
-  const z4 = computeZone4(bundle, today, currentPeriod);
-  const z5 = computeZone5(bundle, today, currentPeriod);
-
-  renderZone1(document.getElementById("zone1-body"), z1);
-  renderZone2(document.getElementById("zone2-body"), z2, today);
-  renderZone3(document.getElementById("zone3-body"), z3, schema, today, currentPeriod);
-  renderZone4(document.getElementById("zone4-body"), z4, currentPeriod);
-  renderZone5(document.getElementById("zone5-body"), z5, currentPeriod);
+  renderKpiTegels(document.getElementById("kpi-grid"), ctx);
+  renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
+  renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
+  renderAandachtTop5(document.getElementById("panel-aandacht-body"), ctx.z1);
+  renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
 
   const warnEl = document.getElementById("warnings-box");
   if (bundle.waarschuwingen.length) {
@@ -2316,6 +2990,71 @@ function renderAll() {
 
   document.getElementById("bundle-info").textContent =
     `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+
+  route();
+}
+
+function renderDetail(key) {
+  const ctx = window.__dashboardCtx;
+  if (!ctx) return;
+  const meta = DETAIL_VOLGORDE.find(d => d.key === key);
+  document.title = `${meta ? meta.titel : "Detail"} — Agentic Team Dashboard`;
+  renderDetailNav(document.getElementById("detail-nav"), key);
+  const body = document.getElementById("detail-body");
+  body.innerHTML = "";
+
+  const secties = {
+    aandacht: () => [detailSectionHtml("Aandacht", "🎯", "Waar besteed ik vandaag mijn halfuur aan?", "detail-inner"), () => renderZone1(document.getElementById("detail-inner"), ctx.z1)],
+    context: () => [detailSectionHtml("Contextgezondheid", "🧭", "Moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?", "detail-inner"), () => renderZone2(document.getElementById("detail-inner"), ctx.z2, ctx.today)],
+    gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
+    opbrengst: () => [detailSectionHtml("Opbrengst", "💰", "Levert dit team genoeg op om het te blijven betalen?", "detail-inner"), () => renderZone4(document.getElementById("detail-inner"), ctx.z4, ctx.periodDays)],
+    leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
+    adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
+    tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
+  };
+
+  const maker = secties[key];
+  if (!maker) { body.innerHTML = `<p>Onbekende detailpagina.</p>`; return; }
+  const [html, fill] = maker();
+  const wrap = document.createElement("div");
+  wrap.innerHTML = html;
+  body.appendChild(wrap.firstElementChild);
+  fill();
+}
+
+function route() {
+  const bundle = currentBundle;
+  const homeEl = document.getElementById("home-view");
+  const detailEl = document.getElementById("detail-view");
+  if (!bundle) return;
+  const key = bepaalActieveView();
+  if (key) {
+    homeEl.style.display = "none";
+    detailEl.style.display = "";
+    renderDetail(key);
+    window.scrollTo(0, 0);
+  } else {
+    homeEl.style.display = "";
+    detailEl.style.display = "none";
+    document.title = "Agentic Team Dashboard";
+  }
+}
+
+function wireNavigatie() {
+  document.body.addEventListener("click", (e) => {
+    if (e.target.closest("[data-stop-nav]")) return; // bv. het minuten-invoerveld
+    const gotoEl = e.target.closest("[data-goto]");
+    if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
+  });
+  document.body.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("kpi-tile")) {
+      e.preventDefault();
+      const gotoEl = e.target.closest("[data-goto]");
+      if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
+    }
+  });
+  window.addEventListener("hashchange", route);
 }
 
 function wireInputs() {
@@ -2372,13 +3111,26 @@ function wireInputs() {
   });
 
   document.getElementById("period-select").addEventListener("change", (e) => {
-    currentPeriod = parseInt(e.target.value, 10);
+    currentPeriodWeeks = parseInt(e.target.value, 10);
     if (currentBundle) renderAll();
+  });
+
+  document.body.addEventListener("change", (e) => {
+    if (e.target.id === "input-minuten") {
+      const v = parseInt(e.target.value, 10);
+      if (!isNaN(v) && v > 0) {
+        currentMinutenPerActie = v;
+        rememberMinuten(v);
+        if (currentBundle) renderAll();
+      }
+    }
   });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  restoreMinuten();
   wireInputs();
+  wireNavigatie();
   renderLastUsed();
   renderAll();
 });

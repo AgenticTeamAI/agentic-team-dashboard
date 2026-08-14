@@ -22,6 +22,8 @@ JS_MODULES_IN_ORDER = [
     "bundle-loaders.js",
     "zones.js",
     "render.js",
+    "charts.js",
+    "homepage.js",
     "app.js",
 ]
 
