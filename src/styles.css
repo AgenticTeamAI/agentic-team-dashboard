@@ -92,6 +92,17 @@ select#period-select {
 }
 .empty-state h2 { color: var(--white); font-size: 1.15rem; }
 
+/* Onbekende versie of onherkenbaar metricsbestand — geen statuskleur (dit
+   is geen rood/oranje/groen-signaal maar een compatibiliteitsmelding),
+   daarom dezelfde grijze/neutrale behandeling als "onbekend" elders. */
+#version-error {
+  max-width: 640px; margin: 3rem auto; text-align: left; padding: 1.6rem 1.8rem;
+  border: 1px dashed var(--grijs-status); border-radius: 12px; background: rgba(107,114,128,0.08);
+}
+#version-error h2 { color: var(--white); font-size: 1.1rem; margin: 0 0 0.6rem; }
+#version-error p { color: var(--white); line-height: 1.55; margin: 0 0 0.6rem; }
+#version-error .footnote { color: var(--grey); font-size: 0.8rem; line-height: 1.5; }
+
 section.zone {
   background: var(--panel);
   border-radius: 14px;

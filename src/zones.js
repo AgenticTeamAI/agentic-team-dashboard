@@ -256,6 +256,10 @@ function computeZone1(bundle, agentLookup, today) {
 // zichzelf nog niet aan computeZone1 toe. Puur tekstueel samenvoegen, geen
 // nieuwe databron: leest alleen het al berekende zone 2-resultaat.
 function voegContextToeAanAandacht(items, z2) {
+  // Idempotent: bij de metrics-route (Notion) kan de Coördinator zelf al een
+  // context-item in de aangeleverde aandachtlijst hebben gezet. Nooit
+  // dubbel toevoegen.
+  if (items.some(it => it.type === "context")) return items;
   if (z2 && z2.signaal === "rood") {
     return [{ type: "context", ernst: "rood", label: `Bedrijfscontext vraagt aandacht: ${z2.reden}`, rows: null }, ...items];
   }

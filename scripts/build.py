@@ -21,6 +21,7 @@ JS_MODULES_IN_ORDER = [
     "schema-helpers.js",
     "bundle-loaders.js",
     "zones.js",
+    "metrics.js",
     "render.js",
     "charts.js",
     "homepage.js",

@@ -22,7 +22,7 @@ __STYLES__
         <button id="btn-notion" type="button">🧩 Notion-export-map</button>
         <input type="file" id="input-excel" accept=".xlsx">
         <input type="file" id="input-json" multiple webkitdirectory>
-        <input type="file" id="input-notion" multiple webkitdirectory>
+        <input type="file" id="input-notion" multiple webkitdirectory accept=".json">
       </div>
       <div class="bundle-picker">
         <span class="label">Periode:</span>
@@ -41,8 +41,12 @@ __STYLES__
   <div id="empty-state" class="empty-state">
     <h2>Nog geen bundel geladen</h2>
     <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
+    Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
+    metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
     Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
   </div>
+
+  <div id="version-error" style="display:none;"></div>
 
   <div id="warnings-box" class="warnings-box" style="display:none;"></div>
 

@@ -67,3 +67,56 @@ aangevuld met `_geexporteerd_op` (wanneer de Coördinator exporteerde) en
 - Agent **Content Strateeg** heeft in deze bundel wel een actie, maar niet
   binnen de standaardperiode van 30 dagen — test het onderscheid tussen
   "geen spoor" en "spoor buiten de gekozen periode".
+
+## `notion-metrics*/metrics.json` (Notion-route, nieuwe vorm: één metricsbestand)
+
+Sinds `ONTWERP-wekelijkse-dashboardbijwerking.md` levert de Notion-route
+niet langer vijftien bestanden met rijen, maar één klein bestand met
+kant-en-klare uitkomsten (zie de hoofdlijn van dat bestand in `README.md`
+→ "De interne metricsvorm en de Notion-route"). Drie scenario's, elk in
+zijn eigen map omdat de map-picker in het dashboard alle bestanden in de
+gekozen map leest — één bestand per scenario voorkomt dat de map-picker
+per ongeluk het verkeerde pad kiest:
+
+- **`notion-metrics/metrics.json`** — het hoofdscenario: geldig (`"versie": 1`),
+  zelfde fictieve klant GroenBuro, getallen afgeleid van dezelfde
+  onderliggende feiten als de andere drie bundels (zie
+  `scripts/generate-testdata-metrics.py`, dat de domeinlijsten uit
+  `generate-testdata.py` hergebruikt en optelt — precies zoals de
+  Coördinator dat met een aggregatiequery zou doen). Bewuste gaten:
+  - **Geen `agents`-blok** — test het "ontbrekend blok"-pad voor zone 3
+    (Gebruik) en de gebruik-per-agent-grafiek: die tonen "bron ontbreekt",
+    niet twintig agents op nul.
+  - **Eén week zonder enig spoor** in de weekreeks (index 5, een fictieve
+    vakantieweek — zelfde verhaal als de losse les in de andere bundels
+    over de contentkalender die leegliep door vakantie) — het gat blijft
+    zichtbaar in de grafiek, wordt niet weggelaten.
+  - **Domein `delivery_rugzak` is 56 dagen oud** in het domeinen-blok
+    (drempel is 30) — test dat het dashboard zelf, zonder rijen te zien,
+    een "verouderde domeinen"-regel aan de aandachtlijst toevoegt.
+  - **Twee domeinen ontbreken volledig** uit het domeinen-blok
+    (`tijdregistratie`, `product_catalogus`) — zelfde module-gat als de
+    Excel-testdata (geen backoffice/strategy aangeschaft), test Breedte
+    <100%.
+  - **Bedrijfscontext is hier het groene pad** (compleet, vers) — de oude
+    `notion-export/`-bundel hierboven laat al het rode pad zien; deze
+    bundel laat zien dat de metrics-route ook een gezonde context correct
+    meldt.
+- **`notion-metrics-onbekende-versie/metrics.json`** — zelfde inhoud, maar
+  `"versie": 2`. Test dat het dashboard hier NIETS tekent (geen homepage,
+  geen detailpagina's) en in plaats daarvan een duidelijke melding toont
+  met het gevonden en het verwachte versienummer.
+- **`notion-metrics-leeg/metrics.json`** — letterlijk `{}`. Test het "leeg
+  of onherkenbaar bestand"-pad: geen `"versie"`- of `"type"`-sleutel, dus
+  geen enkele aanname over wat er wél in zou kunnen staan — ook hier wordt
+  niets getekend, met een andere (eigen) tekst dan het versie-scenario.
+
+Genereer opnieuw met:
+
+```
+python3 scripts/generate-testdata-metrics.py
+```
+
+**De echte Five Forward-export (zie §Getest in `README.md`) is nooit als
+testdata gebruikt en niets daarvan is naar deze repo gekopieerd** — alle
+drie de scenario's hierboven zijn volledig fictief, "GroenBuro"-stijl.

@@ -41,18 +41,26 @@ src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
   bundle-loaders.js       → leest de drie bundelformaten tot één interne vorm
   zones.js                → alle berekeningen (puur, geen DOM): de vijf zones, de
                              adoptiescore (ritme/breedte/opvolging), activiteit per
-                             week, tijdwinst-som, gebruik-per-agent-ranglijst
-  render.js               → tekent de vijf zoneberekeningen naar DOM (nu: detail-inhoud)
+                             week, tijdwinst-som, gebruik-per-agent-ranglijst — dit
+                             ís de rij-berekening die metrics.js verpakt
+  metrics.js               → de interne metricsvorm (zie §De interne metricsvorm
+                             hieronder): rijen -> metrics (route 1/2, hergebruikt
+                             zones.js) én kant-en-klaar metricsbestand -> metrics
+                             (route 3, inclusief de versiecontrole)
+  render.js               → tekent de vijf zoneberekeningen naar DOM (nu: detail-inhoud),
+                             plus de "onbekende versie"-melding
   charts.js                → inline-SVG-grafiekbouwers (gestapelde staaf, horizontale staaf) — puur, geen DOM
   homepage.js              → KPI-tegels, grafiekpanelen, adoptiescore-balken, detail-router
-  app.js                  → wiring: bestandskeuze, periode (weken), minuten-per-actie, hash-routering
+  app.js                  → wiring: bestandskeuze, periode (weken), minuten-per-actie,
+                             hash-routering, en de keuze tussen de twee Notion-vormen
 schema/
   schema.generated.js     → GEGENEREERD uit core/agents.json — nooit met de hand bewerken
 scripts/
   extract-schema.py       → regenereert schema.generated.js uit een verse clone
-  generate-testdata.py    → genereert de fictieve testbundel in alle 3 formaten
+  generate-testdata.py    → genereert de fictieve testbundel in alle 3 formaten (rijen)
+  generate-testdata-metrics.py → genereert de fictieve metricsbestand-testdata (route 3, nieuwe vorm)
   build.py                → plakt src/ + schema/ samen tot dashboard.html
-testdata/                → fictieve bundel (Excel, JSON, Notion-export) — zie testdata/README.md
+testdata/                → fictieve bundel (Excel, JSON, Notion-export, Notion-metricsbestand) — zie testdata/README.md
 ```
 
 ## De homepage: KPI's, grafieken, adoptiescore, tijdwinst
@@ -136,6 +144,150 @@ expliciet grijs blok met de reden, in plaats van twintig agents op "0". Dit
 is bewust getest tegen een echte, niet-fictieve klantexport waarin het veld
 Agent inderdaad niet voorkomt in Acties en Lessen & Inzichten (zie
 §Getest hieronder) — die export zelf is nooit gecommit of gekopieerd.
+
+## De interne metricsvorm en de Notion-route (versie 1)
+
+Aanleiding: de eerste echte Notion-export (zie
+`ONTWERP-wekelijkse-dashboardbijwerking.md`, intern) kostte 55 minuten en
+173.000 tokens, omdat elke rij van elk domein door het model ging om er een
+paar honderd getallen uit te tellen. Dat is niet nodig — dit dashboard toont
+tellingen en weekreeksen, geen rijen. De Notion-connector kan die tellingen
+met een aggregatiequery aan de bron laten uitrekenen; alleen de uitkomst
+komt terug.
+
+**Eén interne vorm, drie manieren om hem te vullen** (zie `src/metrics.js`):
+
+| Route | Hoe |
+|---|---|
+| Excel-werkboek | `buildMetricsFromRowsBundle()` rekent de metrics zelf uit de rijen — dit is precies `zones.js`, ongewijzigd, nu verpakt onder één naam |
+| `data/*.json` | Idem |
+| Notion | `parseNotionMetricsFile()` leest één al-berekend metricsbestand — geen rij komt ooit in het geheugen |
+
+`app.js` → `buildContext()` is de **enige** plek die weet welke van de twee
+er draaide. Alles daarna (`render.js`, `homepage.js`) ziet uitsluitend het
+platte resultaat: `z1..z5`, `activiteit`, `adopt`, `tijdwinst`,
+`agentUsage`, `sporenTotaal`. Dat was ook al zo vóór deze wijziging (het was
+gewoon de return van `buildContext()`); wat nieuw is, is dat dit stuk een
+naam, een versienummer en een tweede vulmethode heeft gekregen.
+
+### Het metricsbestand (versie 1)
+
+```
+{
+  "type": "agentic-team-metrics", "versie": 1,
+  "bron_label", "gegenereerd_op", "door",
+  "periode": { "van", "tot", "weken" },
+  "minuten_per_actie",
+  "domeinen":   { "<domeinsleutel>": { "rijen", "laatst_bijgewerkt" } },
+  "weekreeks":  { "bronnen": [...], "buckets": [{ "week_start", "label", "waarden": {...}, "totaal" }] },
+  "agents":     { "veld_aanwezig", "per_agent": { "<slug>": { "aantal_periode", "aantal_totaal", "laatst" } } },
+  "acties":     { "totaal", "afgerond", "verstreken", "klaar_verstreken", "opmerking" },
+  "sales_funnel": { "per_fase": {...}, "verwachte_omzet_totaal", "opmerking" },
+  "content":    { "gepubliceerd", "gepland_in_periode", "totaal" },
+  "klantsucces":{ "in_onboarding", "totaal" },
+  "backlog":    { "besloten", "done", "totaal" },
+  "lessen":     { "totaal", "per_categorie": {...}, "open", "in_periode" },
+  "bedrijfscontext": { "bron", "laatst_bijgewerkt", "placeholders_open": [...], "projectkennis_kopie_laatst_bijgewerkt" },
+  "aandacht":   [ { "type", "ernst", "label", "link" } ],   // maximaal vijf, door de Coördinator samengesteld
+  "waarschuwingen": [ "..." ]
+}
+```
+
+Dit volgt het ontwerp-document letterlijk voor `periode`, `weekreeks`,
+`agents`, `domeinen`, `aandacht`, `bedrijfscontext`, `gegenereerd_op`/`door`/
+`versie`. Vier blokken zijn een **eigen toevoeging**, nodig omdat zone 4
+(Opbrengst) en zone 5 (Leren) meer domeinen tonen dan het ontwerp-document
+uitschreef: `sales_funnel`, `content`, `klantsucces`, `backlog`, `lessen`,
+en binnen `acties` de velden `verstreken`/`klaar_verstreken` (nodig voor de
+Opvolging-subscore van de adoptiescore — "hoeveel van de verlopen acties
+zijn alsnog afgerond?"). Zonder die velden zou de metrics-route zone 4/5 en
+een derde van de adoptiescore stil moeten weglaten. Ritme en Breedte worden
+juist **niet** apart aangeleverd: die zijn client-side af te leiden uit
+`weekreeks` resp. `domeinen`, met dezelfde formule als de andere twee
+routes (zie `buildAdoptFromMetrics()` in `metrics.js`) — minder velden om
+mee te sturen, en de rekenregel blijft narekenbaar vanaf wat er in het
+bestand staat.
+
+### Versiecontrole — nooit stil een verkeerd dashboard tekenen
+
+`parseNotionMetricsFile()` herkent uitsluitend `"versie": 1`
+(`METRICS_VERSION` in `metrics.js`). Bij een andere versie — ouder, nieuwer,
+of geen versie te vinden — wordt er **niets berekend en niets getekend**:
+geen homepage, geen detailpagina's, alleen een duidelijke melding
+(`#version-error`, zie `renderVersionError()` in `render.js`) met wat er
+gevonden is, wat dit dashboard verwacht, en wat je eraan kunt doen (bijwerken,
+of een andere export vragen). Een bestand zonder `"versie"`- of `"type"`-
+sleutel (bijvoorbeeld een leeg `{}`, of per ongeluk één bestand uit de oude
+rijenexport) krijgt dezelfde behandeling met een eigen tekst
+("niet herkend als metricsbestand"). Zie §Getest voor de drie geverifieerde
+gevallen (geldig-met-gaten, onbekende versie, leeg bestand).
+
+### Ontbrekende blokken — "bron ontbreekt", nooit nul
+
+Elk blok is optioneel. Ontbreekt het, dan geldt dezelfde regel als bij de
+andere twee routes: het betreffende paneel toont waarom de brongegevens er
+niet zijn, niet een verzonnen nul.
+
+- Geen `agents`-blok → zone 3 (Gebruik) en de gebruik-per-agent-grafiek
+  tonen "bron ontbreekt" (`agentUsage.status === "geen-bron"`), net als
+  wanneer Acties/Lessen & Inzichten ontbreken bij de rij-routes.
+  `agents.veld_aanwezig: false` (blok wél aanwezig, maar het veld Agent
+  staat nergens gevuld) geeft het aparte "geen-veld"-bericht — dezelfde
+  twee toestanden als `computeAgentGebruikRanking()` al onderscheidde.
+- Geen `weekreeks`-blok (of leeg) → activiteitengrafiek en de
+  Ritme-subscore tonen "niet te berekenen"/"geen brondomeinen".
+- Geen `domeinen`-blok → de Breedte-subscore toont "niet te berekenen";
+  er is dan ook geen "verouderde domeinen"-regel mogelijk in zone 1.
+- Geen `lessen`-blok → zone 5 toont "Lessen & Inzichten staat niet in deze
+  bundel" (`z5.aanwezig === false`) — hetzelfde bericht als bij een
+  ontbrekend domein via de andere twee routes.
+- Geen `bedrijfscontext`-blok → zone 2 toont dezelfde grijze
+  "niet-ondersteund-door-bundel"-toestand als de rij-routes
+  (`parseNotionMetricsFile()` roept hiervoor letterlijk dezelfde
+  `computeZone2()` aan, met een tijdelijk object in plaats van rijen).
+- Geen `acties`-blok → geen Opvolging-subscore, geen tijdwinst-KPI, geen
+  Acties-kaart in zone 4.
+
+Een **leeg metricsbestand** (`{}`, geen `"versie"`, geen `"type"`) valt
+onder §Versiecontrole hierboven, niet onder dit punt: dat bestand wordt
+helemaal niet als metricsbestand herkend, dus wordt er niets getekend in
+plaats van een dashboard vol "bron ontbreekt"-panelen.
+
+### Periode en minuten-per-actie bij de metrics-route
+
+De periodeschakelaar (8/12/24 weken) staat **uit** zodra de bundel via de
+metrics-route kwam: de periode ligt vast in het bestand (`periode.weken`),
+gekozen door wie de aggregatiequeries draaide, en dit dashboard kan dat niet
+herberekenen zonder de rijen te zien. De schakelaar toont een `title` met
+de reden. De minuten-per-actie-instelling blijft wél live aanpasbaar: de
+tijdwinst-som heeft alleen `acties.afgerond` nodig (geen rijen), dus die kan
+zonder nieuwe export herrekend worden.
+
+### De oude rij-export (`testdata/notion-export/`, vijftien bestanden)
+
+**Blijft ondersteund**, bewust — niet gemigreerd. Zowel het oude als het
+nieuwe formaat draaien nu naast elkaar in dezelfde `#input-notion`-
+map-picker: het dashboard peilt zelf welke van de twee is gekozen.
+
+Een los `.json`-bestand kán onmogelijk het oude formaat zijn (dat bestaat
+uit vijftien losse domeinbestanden) — dus bij precies één gekozen bestand
+probeert het dashboard eerst de nieuwe metrics-route
+(`looksLikeMetricsPayload()`: heeft het bestand een `"versie"`- of
+`"type"`-sleutel?). Klopt dat niet, of zijn er meerdere bestanden gekozen,
+dan valt het terug op de bestaande rijenlezer
+(`loadNotionExportBundle()`, ongewijzigd) en rekent het dashboard de
+metrics lokaal uit de rijen — exact het gedrag van vóór deze wijziging.
+
+Reden om te blijven ondersteunen in plaats van te migreren: er bestaat nog
+geen canonieke exportbouwer in `agent-architecture` (zie punt 2 in
+§Wat ik bewust anders heb gedaan) — de Coördinator-kant die het
+metricsbestand daadwerkelijk gaat schrijven, is een apart stuk werk. Tot die
+er is en uitgerold is bij bestaande klanten, is de oude rijenexport de enige
+Notion-route die praktisch bestaat. Een route droppen die klanten mogelijk
+al gebruiken, zonder vervanger die al draait, zou zijn wat de opdracht
+expliciet verbiedt: "laat geen route achter die stilletjes half werkt". Elke
+statusmelding (`setStatus()` in `app.js`) zegt er nu ook letterlijk bij
+welke van de twee vormen is gelezen, zodat dat nooit verborgen blijft.
 
 ## Het schema bijwerken
 
@@ -315,6 +467,26 @@ testdata bij dit onderdeel staat.
     waarde" van "geen agent gebruikt is er", en toont in het eerste geval
     een expliciet grijs blok in plaats van een misleidende ranglijst van
     twintig nullen.
+12. **Ritme en Breedte worden bij de metrics-route client-side afgeleid, niet
+    aangeleverd.** Het ontwerp-document schetst het metricsbestand op
+    hoofdlijnen; het schrijft niet voor of de adoptiescore-subscores kant-
+    en-klaar meekomen of lokaal berekend worden. Omdat de bouwstenen
+    (`weekreeks`, `domeinen`) toch al in het bestand staan en dezelfde
+    formule als de rij-routes hergebruikt kan worden, is dat de kleinere
+    toevoeging. Opvolging kán dat niet: "een verstreken deadline" is geen
+    afgeleide van de andere blokken zonder rijen te zien, dus die twee
+    tellers (`acties.verstreken`/`klaar_verstreken`) staan wél expliciet in
+    het bestand.
+13. **Vier extra blokken (`sales_funnel`, `content`, `klantsucces`,
+    `backlog`, `lessen`) bovenop de schets in het ontwerp-document.** Die
+    schets noemt `acties` en `agents`, maar zone 4 (Opbrengst) en zone 5
+    (Leren) tonen in dit dashboard meer dan alleen acties. Zonder deze
+    blokken zou de metrics-route die twee zones grotendeels leeg moeten
+    laten terwijl de rij-routes ze wel vullen — en dat zou de renderlaag
+    per route laten verschillen, precies wat de opdracht uitsluit ("de
+    renderlaag mag niet weten uit welke route de metrics kwamen").
+14. **De oude rijenexport blijft ondersteund, niet gemigreerd** — zie
+    §De oude rij-export hierboven voor de onderbouwing.
 
 ## Vormgeving
 
@@ -400,6 +572,35 @@ dashboardcode zelf is ongewijzigd t.o.v. wat een echte browser draait):
 - Corrupt Excel-bestand / JSON-map met een ongeldig bestand ertussen →
   ongewijzigd gedrag t.o.v. de vorige versie (zie de git-historie): geen
   crash, zichtbaar in het waarschuwingsblok.
+- **Metricsbestand, versie 1, met bewuste gaten** (`testdata/notion-metrics/`,
+  ontbrekend `agents`-blok, een week zonder enig spoor, één verouderd
+  domein) → via dezelfde jsdom-run op de echte `dashboard.html`: home-view
+  zichtbaar, `#version-error` verborgen, periodeschakelaar uitgeschakeld
+  (periode ligt vast op 8 weken), gebruik-per-agent-paneel toont "Niet af
+  te leiden" (niet "0 keer gebruikt"), aandachtlijst toont precies vijf
+  items (de vier door de Coördinator aangeleverde plus de door het
+  dashboard zelf toegevoegde "1 domein met data ouder dan 30 dagen"),
+  adoptiescore/tijdwinst/opbrengst/leren renderen met de aangeleverde
+  tellingen. Minuten-per-actie is live herrekend getest (25 → 60
+  min/actie verandert de tijdwinst-KPI zonder nieuwe export).
+- **Onbekende versie** (`testdata/notion-metrics-onbekende-versie/`,
+  `"versie": 2`) → home-view en detail-view blijven verborgen,
+  `#version-error` toont "Onbekende versie" met het gevonden en het
+  verwachte versienummer. Geen enkel getal getekend.
+- **Leeg bestand** (`testdata/notion-metrics-leeg/`, letterlijk `{}`) →
+  `#version-error` toont "Bestand niet herkend als metricsbestand", met
+  een andere tekst dan het versie-scenario (geen `"versie"`/`"type"`-sleutel
+  gevonden). Ook hier: niets getekend.
+- **Oude rijenexport blijft werken** (`testdata/notion-export/`, vijftien
+  bestanden) → zelfde route als voorheen, `loadNotionExportBundle()`
+  ongewijzigd, lokaal herberekend via `buildMetricsFromRowsBundle()`;
+  15 domeinen gevonden, zone 2 toont het rode pad (verouderde/onvolledige
+  bedrijfscontext), zone 5 toont "geen lessen vastgelegd" (leeg domein) —
+  identiek aan het gedrag vóór deze wijziging.
+- **Eén los bestand uit de oude export gekozen** (bijvoorbeeld alleen
+  `acties.json`) → `looksLikeMetricsPayload()` herkent het terecht niet als
+  metricsbestand (geen `"versie"`/`"type"`-sleutel) en valt terug op de
+  rijenlezer met dat ene bestand — geen crash, geen verkeerde route.
 
 **Extra, tegen een echte klantexport (niet gecommit, niet gekopieerd,
 alleen lokaal gelezen tijdens deze sessie):** de adoptiescore-formule
@@ -430,7 +631,10 @@ door een mens, vóór dit naar een klant gaat, blijft aan te raden.
 1. **Werkt via `file://`, zonder server/internet/tokens** — gehaald. Geen
    `<script src>` naar extern, geen `fetch`, geen login.
 2. **Alle drie routes getest met fictieve bundel, elk minstens één keer
-   echt ingelezen** — gehaald, zie §Getest hierboven.
+   echt ingelezen** — gehaald, zie §Getest hierboven. De Notion-route heeft
+   nu twee vormen (het oude rijenformaat en het nieuwe metricsbestand);
+   beide zijn afzonderlijk ingelezen en getest, plus de twee foutpaden
+   (onbekende versie, leeg bestand).
 3. **Onvolledige bundel → gedeeltelijk dashboard, geen foutmelding** —
    gehaald: ontbrekende domeinen worden overgeslagen (geen paneel, geen
    crash), corrupte bestanden belanden zichtbaar in een waarschuwingsblok.
@@ -470,6 +674,18 @@ door een mens, vóór dit naar een klant gaat, blijft aan te raden.
     een misleidende ranglijst van nullen** — gehaald voor gebruik-per-agent
     (`computeAgentGebruikRanking`), doorgerekend tegen een echte export
     waarin dit zich daadwerkelijk voordeed.
+11. **(nieuw, uit de metrics-route) Eén interne metricsvorm, drie manieren
+    om hem te vullen, renderlaag onwetend van de herkomst** — gehaald: zie
+    §De interne metricsvorm. `render.js`/`homepage.js` zijn in deze
+    wijziging niet aangeraakt op de zone-render-functies zelf; alleen
+    `app.js` → `buildContext()` koos een andere vulmethode.
+12. **(nieuw) Onbekende versie van het metricsbestand tekent niets, met een
+    duidelijke melding** — gehaald, zie §Versiecontrole en §Getest.
+13. **(nieuw) Ontbrekend blok in het metricsbestand toont "bron ontbreekt",
+    nooit nul** — gehaald voor elk van de zes optionele blokken, zie
+    §Ontbrekende blokken.
+14. **(nieuw) Oude rij-export blijft werken, geen route die stilletjes half
+    werkt** — gehaald, zie §De oude rij-export en §Getest.
 
 ## Wat er nog moet gebeuren voor dit naar een klant kan
 
@@ -489,6 +705,20 @@ door een mens, vóór dit naar een klant gaat, blijft aan te raden.
   samengestelde export van een eerste testklant gelezen (zie §Getest), wat
   meer vertrouwen geeft dan alleen de fictieve testdata, maar het is nog
   geen test tegen een export die de Coördinator zelf automatisch produceert.
+- **Idem voor het metricsbestand (versie 1)**: dit dashboard leest het,
+  maar niets in `agent-architecture` schrijft het nog. De vorm in
+  §De interne metricsvorm is dus nog een voorstel van de leeskant, geen
+  bevestigd contract met de schrijfkant — als de Coördinator-implementatie
+  net iets andere veldnamen of structuur kiest, moet één van de twee kanten
+  zich aanpassen. Zolang dat niet is afgestemd, is dit ongetest tegen een
+  echte, door de Coördinator geschreven export (alleen tegen zelf-gebouwde
+  fictieve testdata, zie §Getest).
+- **Geen echte browsertest van de nieuwe "onbekende versie"-melding en de
+  uitgeschakelde periodeschakelaar bij de metrics-route.** Zoals bij de rest
+  van dit dashboard (zie het punt hierboven over de visuele/browsertest):
+  de jsdom-run bevestigt de juiste DOM-inhoud en -status, maar niet hoe het
+  `#version-error`-blok en de `title`-tooltip op de uitgeschakelde
+  periodeschakelaar er in een echte browser uitzien.
 - **Cross-browsertest voor `DecompressionStream`/`Blob.stream()`** op de
   daadwerkelijke doelgroep (MKB-directeuren, waarschijnlijk Chrome/Edge op
   Windows) — functioneel correct verondersteld op basis van
