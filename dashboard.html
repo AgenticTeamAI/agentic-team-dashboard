@@ -1959,6 +1959,9 @@ const STALE_DAYS = 30; // drempel "verouderd" — zie ontwerp §12 (dertig dagen
 const CONTEXT_ROOD_DAYS = 180;
 const CONTEXT_ORANJE_DAYS = 90;
 
+// daysBetween(a, b) = a - b in dagen. Voor "ligt in het verleden" geldt dus
+// daysBetween(today, datum) > 0. Dit stond in zone 1 twee keer omgekeerd,
+// waardoor juist de niet-verlopen items als probleem verschenen.
 function daysBetween(a, b) {
   return Math.round((a.getTime() - b.getTime()) / 86400000);
 }
@@ -2170,7 +2173,7 @@ function computeZone1(bundle, agentLookup, today) {
 
     const overDeadline = acties.filter(r => {
       const dt = parseDateField(getField(r, "Deadline"));
-      return dt && daysBetween(today, dt) < 0 && getField(r, "Status") !== "Klaar";
+      return dt && daysBetween(today, dt) > 0 && getField(r, "Status") !== "Klaar";
     });
     if (overDeadline.length) items.push({ type: "acties-deadline", ernst: "rood", label: `${overDeadline.length} actie(s) over de deadline`, rows: overDeadline });
   }
@@ -2186,7 +2189,7 @@ function computeZone1(bundle, agentLookup, today) {
     const stil = sf.filter(r => {
       const dt = parseDateField(getField(r, "Volgende Actie Deadline"));
       const status = getField(r, "Opvolg Status");
-      return dt && daysBetween(today, dt) < 0 && !["Gewonnen", "Verloren"].includes(status);
+      return dt && daysBetween(today, dt) > 0 && !["Gewonnen", "Verloren"].includes(status);
     });
     if (stil.length) items.push({ type: "deals-stil", ernst: "oranje", label: `${stil.length} deal(s) met een verlopen vervolgactie`, rows: stil });
   }
