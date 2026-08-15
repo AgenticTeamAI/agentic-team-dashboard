@@ -21,7 +21,7 @@
  */
 
 function emptyBundle(source, sourceLabel) {
-  return { source, sourceLabel, domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
 }
 
 // ── Route 1: Excel-werkboek ────────────────────────────────────────────
@@ -145,6 +145,30 @@ function registerJsonDomain(bundle, domainKey, parsed, file, source) {
 function loadJsonBundle(fileList) { return loadJsonLikeBundle(fileList, "json"); }
 function loadNotionExportBundle(fileList) { return loadJsonLikeBundle(fileList, "notion"); }
 
+// ── Route 3, nieuwe vorm: één kant-en-klaar metricsbestand ─────────────
+// Deze functies lezen en herkennen alleen — ze interpreteren niets. De
+// omzetting naar de interne metricsvorm (inclusief de versiecontrole)
+// gebeurt in metrics.js -> parseNotionMetricsFile(), dat na dit bestand
+// geladen wordt. bundle-loaders.js blijft zo een pure lezer, ongeacht
+// welke van de twee Notion-vormen wordt aangeboden.
+async function readJsonFile(file) {
+  const text = await file.text();
+  return JSON.parse(text);
+}
+
+// Beslist, zonder aannames, of een geselecteerde Notion-bestandenset het
+// nieuwe metricsbestand is (route 3: één bestand met een "versie"- of
+// "type"-veld) of het oude rijenformaat (vijftien losse domeinbestanden,
+// zoals in testdata/notion-export/). Puur op vorm, niet op bestandsnaam —
+// zodat een klant die het bestand hernoemt niet per ongeluk de verkeerde
+// route raakt.
+function looksLikeMetricsPayload(raw) {
+  return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { loadExcelBundle, loadJsonBundle, loadNotionExportBundle, emptyBundle };
+  module.exports = {
+    loadExcelBundle, loadJsonBundle, loadNotionExportBundle, emptyBundle,
+    readJsonFile, looksLikeMetricsPayload,
+  };
 }

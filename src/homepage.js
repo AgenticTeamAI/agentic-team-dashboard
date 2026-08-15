@@ -1,0 +1,246 @@
+/* Homepage: KPI-tegels, grafieken, adoptiescore-balken, aandacht-top-5 en
+ * gebruik-per-agent — plus de doorklik naar het detail (de oude, volledige
+ * zone-inhoud die van de homepage is verhuisd, niet verwijderd). Rendering
+ * only; de berekeningen zelf staan in zones.js (puur, geen DOM) zodat ze
+ * zonder browser te testen zijn. */
+
+const DETAIL_VOLGORDE = [
+  { key: "aandacht", titel: "Vraagt je aandacht", emoji: "🎯" },
+  { key: "context", titel: "Contextgezondheid", emoji: "🧭" },
+  { key: "adoptiescore", titel: "Adoptiescore — herkomst", emoji: "📊" },
+  { key: "activiteit", titel: "Activiteit per week", emoji: "📈" },
+  { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
+  { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
+  { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
+  { key: "leren", titel: "Leren", emoji: "💡" },
+];
+
+function nlGetal(n, decimals = 0) {
+  return Number(n).toLocaleString("nl-NL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+// ── KPI-tegels ────────────────────────────────────────────────────────
+function renderKpiTegels(el, ctx) {
+  const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
+
+  const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
+  const adoptieLabel = adopt.adoptiescore === null
+    ? "Geen enkele subscore is te berekenen in deze bundel"
+    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+
+  const uren = nlGetal(tijdwinst.uren, 1);
+  const som = `${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`;
+
+  const actiesGetal = tijdwinst.berekenbaar ? tijdwinst.afgerond : "n.v.t.";
+  const actiesLabel = tijdwinst.berekenbaar
+    ? `van ${tijdwinst.totaal} acties in de bundel (geen aanmaakdatum in dit domein — geen periodefilter mogelijk)`
+    : "Geen Acties-domein aanwezig in deze bundel.";
+
+  const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
+  const tijdwinstSom = tijdwinst.berekenbaar ? som : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
+
+  el.innerHTML = `
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
+      <div class="kpi-getal">${adoptieWaarde}</div>
+      <div class="kpi-kop">Adoptiescore</div>
+      <div class="kpi-label">${esc(adoptieLabel)}</div>
+    </div>
+    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
+      <div class="kpi-getal">${actiesGetal}</div>
+      <div class="kpi-kop">Acties afgerond</div>
+      <div class="kpi-label">${esc(actiesLabel)}</div>
+    </div>
+    <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
+      <div class="kpi-getal">${sporenTotaal}</div>
+      <div class="kpi-kop">Sporen in de periode</div>
+      <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
+    </div>
+    <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
+      <div class="kpi-getal">${tijdwinstGetal}</div>
+      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-som">${esc(tijdwinstSom)}</div>
+      <div class="kpi-label">
+        Schatting op basis van jouw aanname, geen meting ·
+        <label class="minuten-input-label" data-stop-nav="1">
+          min/actie
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${minutenPerActie}">
+        </label>
+      </div>
+    </div>`;
+}
+
+// ── Activiteit per week (gestapelde staafgrafiek) ───────────────────────
+function renderActiviteitPanel(el, activiteit, periodWeeks) {
+  if (activiteit.geenEnkeleBron) {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Geen van de brondomeinen aanwezig</div>
+      <div class="grijs-tekst">Geen van Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender is aanwezig in deze bundel — er is niets om per week te tonen.</div>
+    </div>`;
+    return;
+  }
+  const seriesKeys = ["interacties", "dagverslagen", "lessen_inzichten", "content_kalender"];
+  const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
+  const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels });
+  const ontbrekend = RITME_BRONNEN.filter(b => !activiteit.aanwezigeBronnen.includes(b));
+  el.innerHTML = `${chart}
+    <p class="footnote">Elke serie komt uit zijn eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.</p>
+    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.</p>` : ""}
+    <a class="detail-link" data-goto="activiteit">Bekijk per week in detail →</a>`;
+}
+
+// ── Adoptiescore — drie balken naast elkaar ─────────────────────────────
+function renderAdoptieSubscores(el, adopt) {
+  const kolommen = adopt.componenten.map(c => {
+    if (!c.berekenbaar) {
+      return `<div class="subscore-col">
+        <div class="subscore-naam">${esc(c.label)}</div>
+        <div class="subscore-bar-track subscore-onbekend"><div class="subscore-bar-stub"></div></div>
+        <div class="subscore-waarde subscore-waarde-onbekend">niet te berekenen</div>
+        <div class="subscore-reden">${esc(c.reden)}</div>
+      </div>`;
+    }
+    const pct = Math.round(c.waarde);
+    return `<div class="subscore-col">
+      <div class="subscore-naam">${esc(c.label)}</div>
+      <div class="subscore-bar-track"><div class="subscore-bar-fill" style="width:${Math.min(100, pct)}%"></div></div>
+      <div class="subscore-waarde">${pct}%</div>
+      <div class="subscore-reden">${subscoreDetail(c)}</div>
+    </div>`;
+  }).join("");
+
+  const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
+  const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  const rekenregel = berekenbaar.length
+    ? `De adoptiescore is het gemiddelde van de ${berekenbaar.length} berekenbare subscore(s) hierboven, met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
+    : "Geen van de drie subscores is in deze bundel te berekenen — de adoptiescore blijft daarom leeg (n.v.t.), nooit 0%.";
+
+  el.innerHTML = `<div class="subscore-grid">${kolommen}</div>
+    <p class="footnote">${esc(rekenregel)}</p>
+    <a class="detail-link" data-goto="adoptiescore">Volledige herkomst per subscore →</a>`;
+}
+
+function subscoreDetail(c) {
+  if (c.key === "ritme") return esc(`${c.wekenMetSpoor} van ${c.weken} weken met minstens één spoor`);
+  if (c.key === "breedte") return esc(`${c.metInhoud} van ${c.totaalDomeinen} domeinen met inhoud`);
+  if (c.key === "opvolging") return esc(`${c.klaar} van ${c.verstreken} verlopen acties op tijd afgerond`);
+  return "";
+}
+
+// ── Vraagt je aandacht — top 5 ───────────────────────────────────────────
+function renderAandachtTop5(el, items) {
+  if (!items.length) {
+    el.innerHTML = `<p class="aandacht-leeg">✅ Niets vraagt vandaag om aandacht in de aangesloten domeinen.</p>
+      <p class="footnote">Samenvatting van rood/grijs/oranje uit de andere zones — geen eigen databron.</p>`;
+    return;
+  }
+  const top5 = items.slice(0, 5);
+  const lis = top5.map(it => `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
+  el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
+}
+
+// ── Gebruik per agent ─────────────────────────────────────────────────
+function renderGebruikPanel(el, agentUsage) {
+  if (agentUsage.status !== "ok") {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Niet af te leiden</div>
+      <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
+    </div>
+    <a class="detail-link" data-goto="gebruik">Meer over gebruik per agent →</a>`;
+    return;
+  }
+  const MAX_TONEN = 10;
+  const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
+  const top = agentUsage.ranking.slice(0, MAX_TONEN);
+  const chart = buildHorizontalBarChart({ items: top });
+  el.innerHTML = `${chart}
+    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" in deze grafiek betekent geen spoor gevonden in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
+    <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
+}
+
+// ── Detail-view: dispatcher + secties (verhuisde zone-inhoud) ──────────
+function detailSectionHtml(titel, emoji, decision, innerId) {
+  return `<section class="zone">
+    <div class="zone-header"><h2>${emoji} ${esc(titel)}</h2><span class="decision">${esc(decision)}</span></div>
+    <div id="${innerId}"></div>
+  </section>`;
+}
+
+function renderDetailNav(el, activeKey) {
+  el.innerHTML = DETAIL_VOLGORDE.map(d =>
+    `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
+  ).join("");
+}
+
+function renderDetailAdoptiescore(el, adopt, periodWeeks) {
+  const rows = adopt.componenten.map(c => {
+    if (!c.berekenbaar) {
+      return `<div class="card signaal-grijs"><div class="kop">${esc(c.label)}</div><div class="getal">n.v.t.</div><div class="detail">Niet te berekenen: ${esc(c.reden)}</div></div>`;
+    }
+    return `<div class="card"><div class="kop">${esc(c.label)}</div><div class="getal">${Math.round(c.waarde)}%</div><div class="detail">${subscoreDetail(c)}</div></div>`;
+  }).join("");
+  const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
+  const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  el.innerHTML = `
+    <p>De adoptiescore is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
+    <div class="grid-9">${rows}</div>
+    <p class="footnote"><strong>Formules:</strong><br>
+    Ritme = weken met minstens één spoor (rij met een datum in Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender) ÷ aantal weken in de periode.<br>
+    Breedte = domeinen met minstens één rij ÷ 15 canonieke domeinen uit de registry.<br>
+    Opvolging = acties met verstreken deadline én status "Klaar" ÷ acties met verstreken deadline.</p>
+    <p class="footnote">${berekenbaar.length ? `Met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.` : "Geen van de subscores is berekenbaar in deze bundel."}</p>`;
+}
+
+function renderDetailTijdwinst(el, tijdwinst) {
+  if (!tijdwinst.berekenbaar) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geschatte tijdwinst</div><div class="getal">n.v.t.</div><div class="detail">Geen Acties-domein aanwezig in deze bundel — er zijn geen afgeronde acties om op te tellen.</div></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="card" style="max-width:420px;">
+      <div class="kop">Geschatte tijdwinst</div>
+      <div class="getal">${nlGetal(tijdwinst.uren, 1)} uur</div>
+      <div class="detail">${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min/actie = ${nlGetal(tijdwinst.minuten)} min</div>
+    </div>
+    <p class="footnote"><strong>Dit is een schatting op basis van je eigen aanname, geen meting.</strong> Dit dashboard kan niet zien hoeveel tijd een actie werkelijk kost of zou hebben gekost zonder het team. Het getal is uitsluitend: het aantal afgeronde acties in de bundel, vermenigvuldigd met de minuten-per-actie die jij hierboven instelt (standaard 25). Verzet de instelling gerust — de som past zich meteen aan, zodat je altijd kunt narekenen waar het getal vandaan komt.</p>
+    <p class="footnote">Herkomst: domein Acties, veld Status = "Klaar", totaal in de bundel (geen aanmaakdatum in dit domein om op periode te filteren).</p>`;
+}
+
+function renderDetailActiviteit(el, activiteit, periodWeeks) {
+  if (activiteit.geenEnkeleBron) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Geen brondomeinen</div><div class="detail">Geen van Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender aanwezig in deze bundel.</div></div>`;
+    return;
+  }
+  const seriesKeys = ["interacties", "dagverslagen", "lessen_inzichten", "content_kalender"];
+  const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
+  const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels, height: 280 });
+  const tabelRijen = activiteit.buckets.map(b =>
+    `<tr><td>${esc(b.label)}</td><td>${b.values.interacties}</td><td>${b.values.dagverslagen}</td><td>${b.values.lessen_inzichten}</td><td>${b.values.content_kalender}</td><td><strong>${b.totaal}</strong>${b.leeg ? " — geen" : ""}</td></tr>`
+  ).join("");
+  el.innerHTML = `${chart}
+    <table class="detail-table">
+      <thead><tr><th>Week van</th><th>Interacties</th><th>Dagverslagen</th><th>Lessen</th><th>Content</th><th>Totaal</th></tr></thead>
+      <tbody>${tabelRijen}</tbody>
+    </table>
+    <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
+}
+
+function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
+  if (agentUsage.status !== "ok") {
+    el.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">❔ Gebruik per agent niet af te leiden</div>
+      <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
+    </div>`;
+    return;
+  }
+  renderZone3(el, z3, schema, today, periodDays);
+}
+
+// ── Router ────────────────────────────────────────────────────────────
+function bepaalActieveView() {
+  const hash = window.location.hash || "";
+  const m = hash.match(/^#\/?detail\/([a-z]+)/);
+  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
+  return null;
+}

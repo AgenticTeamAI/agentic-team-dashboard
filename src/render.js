@@ -147,6 +147,26 @@ function renderZone5(el, z5, periodDays) {
     <p class="footnote">Herkomst: domein Lessen &amp; Inzichten, velden Categorie, Status en Datum.</p>`;
 }
 
+// ── Versie/vorm niet herkend — Notion-metricsbestand ────────────────────
+// Wordt getoond in plaats van de hele homepage/detail-view zodra
+// parseNotionMetricsFile() ok:false teruggeeft (onbekende versie, of een
+// bestand dat niet als metricsbestand te herkennen is). Bewust geen
+// gedeeltelijk dashboard: stil een verkeerde grafiek tekenen is erger dan
+// niets tekenen.
+function renderVersionError(el, result, bundle) {
+  const kindLabel = result.kind === "onbekende-versie" ? "Onbekende versie" : "Bestand niet herkend als metricsbestand";
+  let details = "";
+  if (result.kind === "onbekende-versie") {
+    const gevonden = result.versieGevonden === null || result.versieGevonden === undefined ? "geen versienummer" : `versie ${esc(String(result.versieGevonden))}`;
+    details = `<p class="footnote">Gevonden: ${gevonden} · dit dashboard herkent versie ${esc(String(result.versieVerwacht))}.</p>`;
+  }
+  el.innerHTML = `
+    <h2>❔ ${esc(kindLabel)}</h2>
+    <p>${esc(result.tekst)}</p>
+    ${details}
+    <p class="footnote">Bestand: ${esc(bundle.sourceLabel)}. Er is bewust niets getekend op basis van dit bestand. Kies hierboven een andere bundel, werk het dashboard bij, of vraag om een export in het formaat dat deze versie herkent.</p>`;
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { renderZone1, renderZone2, renderZone3, renderZone4, renderZone5, fmtDate, relAge, badgeHtml, esc };
+  module.exports = { renderZone1, renderZone2, renderZone3, renderZone4, renderZone5, renderVersionError, fmtDate, relAge, badgeHtml, esc };
 }

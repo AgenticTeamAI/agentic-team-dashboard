@@ -22,14 +22,14 @@ __STYLES__
         <button id="btn-notion" type="button">🧩 Notion-export-map</button>
         <input type="file" id="input-excel" accept=".xlsx">
         <input type="file" id="input-json" multiple webkitdirectory>
-        <input type="file" id="input-notion" multiple webkitdirectory>
+        <input type="file" id="input-notion" multiple webkitdirectory accept=".json">
       </div>
       <div class="bundle-picker">
         <span class="label">Periode:</span>
         <select id="period-select">
-          <option value="7">7 dagen</option>
-          <option value="30" selected>30 dagen</option>
-          <option value="90">90 dagen</option>
+          <option value="8">8 weken</option>
+          <option value="12" selected>12 weken</option>
+          <option value="24">24 weken</option>
         </select>
       </div>
     </div>
@@ -41,57 +41,66 @@ __STYLES__
   <div id="empty-state" class="empty-state">
     <h2>Nog geen bundel geladen</h2>
     <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
+    Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
+    metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
     Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
   </div>
 
+  <div id="version-error" style="display:none;"></div>
+
   <div id="warnings-box" class="warnings-box" style="display:none;"></div>
 
-  <div id="zones" style="display:none;">
-    <section class="zone" id="zone1">
-      <div class="zone-header">
-        <h2>🎯 1 · Aandacht</h2>
-        <span class="decision">Beslissing: waar besteed ik vandaag mijn halfuur aan?</span>
+  <!-- ══ Homepage: grafieken en aandacht — tekst en uitleg zitten achter de doorklik ══ -->
+  <div id="home-view" style="display:none;">
+    <section class="kpi-grid" id="kpi-grid"></section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📈 Activiteit per week</h2>
+        <span class="decision">Interacties, dagverslagen, lessen en content — per week, inclusief de weken zonder spoor.</span>
       </div>
-      <div id="zone1-body"></div>
+      <div id="panel-activiteit-body"></div>
     </section>
 
-    <section class="zone" id="zone2">
-      <div class="zone-header">
-        <h2>🧭 2 · Contextgezondheid</h2>
-        <span class="decision">Beslissing: moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📊 Waar de adoptiescore vandaan komt</h2>
+        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot de adoptiescore hierboven.</span>
       </div>
-      <div id="zone2-body"></div>
+      <div id="panel-adoptie-body"></div>
     </section>
 
-    <section class="zone" id="zone3">
-      <div class="zone-header">
-        <h2>👥 3 · Gebruik</h2>
-        <span class="decision">Beslissing: welke agent laat ik links liggen, en waarom?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>🎯 Vraagt je aandacht</h2>
+        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf, samengevat uit de andere zones.</span>
       </div>
-      <div id="zone3-body"></div>
+      <div id="panel-aandacht-body"></div>
     </section>
 
-    <section class="zone" id="zone4">
-      <div class="zone-header">
-        <h2>📈 4 · Opbrengst</h2>
-        <span class="decision">Beslissing: levert dit team genoeg op om het te blijven betalen?</span>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>👥 Gebruik per agent</h2>
+        <span class="decision">Welke agent laat ik links liggen, en waarom?</span>
       </div>
-      <div id="zone4-body"></div>
+      <div id="panel-gebruik-body"></div>
     </section>
+  </div>
 
-    <section class="zone" id="zone5">
-      <div class="zone-header">
-        <h2>💡 5 · Leren</h2>
-        <span class="decision">Beslissing: wat weet dit team nu dat het vorige maand niet wist?</span>
-      </div>
-      <div id="zone5-body"></div>
-    </section>
+  <!-- ══ Detail: de volledige, uitgeschreven zone-inhoud — bereikbaar via elke tegel/grafiek ══ -->
+  <div id="detail-view" style="display:none;">
+    <div class="detail-toolbar">
+      <a href="#/" id="btn-terug" class="btn-terug">← Terug naar dashboard</a>
+      <nav id="detail-nav" class="detail-nav"></nav>
+    </div>
+    <div id="detail-body"></div>
   </div>
 
   <footer class="app-footer">
     Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
-    gekozen bundelroute en bestandsnaam wordt onthouden (lokaal, in je browser) om je te herinneren wat je de vorige
-    keer opende. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van AgenticTeamAI/agent-architecture.
+    gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling worden onthouden (lokaal, in je browser) om
+    je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van
+    AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
