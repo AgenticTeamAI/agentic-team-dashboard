@@ -37,7 +37,7 @@ function renderLastUsed() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { el.textContent = ""; return; }
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map" }[route] || route;
+    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map", werkruimte: "Werkruimte (daglink)" }[route] || route;
     el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { el.textContent = ""; }
 }
@@ -163,7 +163,7 @@ function renderAll() {
       `Bundel: ${meta.bronLabel} (Notion — metricsbestand v${METRICS_VERSION}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -229,7 +229,19 @@ function wireNavigatie() {
       if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
     }
   });
-  window.addEventListener("hashchange", route);
+  window.addEventListener("hashchange", () => {
+    // Een daglink aanklikken terwijl deze pagina al openstaat wijzigt alleen
+    // het #fragment — de browser herlaadt dan niet. Zonder dit pad zou een
+    // verse daglink op een open tabblad stilletjes niets doen.
+    const daglink = parseDaglinkFragment(window.location.hash);
+    if (daglink) {
+      try { sessionStorage.setItem(DAGLINK_SS_KEY, JSON.stringify(daglink)); } catch (e) { /* privémodus */ }
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      laadWerkruimte(daglink);
+      return;
+    }
+    route();
+  });
 }
 
 function wireInputs() {
@@ -331,10 +343,29 @@ function wireInputs() {
   });
 }
 
+/* Route 4: opent iemand deze pagina via een daglink (of herlaadt hij binnen
+ * dezelfde sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets
+ * te kiezen, de link wijst al naar zijn eigen instantie. De bestandsknoppen
+ * blijven gewoon werken als alternatief. */
+async function laadWerkruimte(daglink) {
+  setStatus("Live gegevens uit je werkruimte worden opgehaald…");
+  try {
+    const bundle = await loadWerkruimteBundle(daglink);
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
+    setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
+  } catch (err) {
+    console.error(err);
+    if (err.daglinkVerlopen) vergeetDaglink();
+    setStatus(err.message, true);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
   renderLastUsed();
   renderAll();
+  const daglink = restoreDaglink();
+  if (daglink) laadWerkruimte(daglink);
 });

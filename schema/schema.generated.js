@@ -2,42 +2,49 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.18.0
-//   registry updated: 2026-08-09
-//   bron-commit     : 882f544a0c3e1263c5e1d517dcccec9fee869994
-//   geextraheerd op : 2026-08-10T08:15:22Z
+//   registryVersion : 1.24.1
+//   registry updated: 2026-08-21
+//   bron-commit     : fce4b7aff8cef87f98555071b211d48a32d2353b
+//   geextraheerd op : 2026-08-22T09:03:35Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.18.0",
-  "registryUpdated": "2026-08-09",
-  "sourceCommit": "882f544a0c3e1263c5e1d517dcccec9fee869994",
-  "extractedAt": "2026-08-10T08:15:22Z",
+  "registryVersion": "1.24.1",
+  "registryUpdated": "2026-08-21",
+  "sourceCommit": "fce4b7aff8cef87f98555071b211d48a32d2353b",
+  "extractedAt": "2026-08-22T09:03:35Z",
   "modules": {
     "core": {
       "naam": "Core",
-      "altijdInbegrepen": true
+      "altijdInbegrepen": true,
+      "aantalAgents": 4
     },
     "growth": {
-      "naam": "Growth"
+      "naam": "Growth",
+      "aantalAgents": 3
     },
     "visibility": {
-      "naam": "Visibility"
+      "naam": "Visibility",
+      "aantalAgents": 3
     },
     "sales": {
-      "naam": "Sales"
+      "naam": "Sales",
+      "aantalAgents": 2
     },
     "delivery": {
-      "naam": "Delivery"
+      "naam": "Delivery",
+      "aantalAgents": 2
     },
     "strategy": {
-      "naam": "Strategy"
+      "naam": "Strategy",
+      "aantalAgents": 2
     },
     "backoffice": {
-      "naam": "Backoffice"
+      "naam": "Backoffice",
+      "aantalAgents": 4
     }
   },
   "agents": [
@@ -802,6 +809,88 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Verwerkt in prompt?",
           "type": "checkbox"
+        }
+      ]
+    },
+    "bedrijfscontext": {
+      "naam": "Bedrijfscontext",
+      "module": "core",
+      "emoji": "📋",
+      "velden": [
+        {
+          "naam": "Onderdeel",
+          "type": "titel"
+        },
+        {
+          "naam": "Inhoud",
+          "type": "tekst"
+        },
+        {
+          "naam": "Versie",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Bijgewerkt",
+          "type": "datum"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Concept",
+            "Vastgesteld",
+            "Verouderd"
+          ]
+        }
+      ]
+    },
+    "logboek": {
+      "naam": "Logboek",
+      "module": "core",
+      "emoji": "📔",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Sessielog",
+            "Werkstuk"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Lopend",
+            "Afgerond",
+            "Archief"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Resultaat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Link",
+          "type": "url"
+        },
+        {
+          "naam": "Vervolg",
+          "type": "tekst"
         }
       ]
     },

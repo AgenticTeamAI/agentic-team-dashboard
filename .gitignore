@@ -3,3 +3,7 @@ __pycache__/
 .DS_Store
 node_modules/
 *.tmp
+
+# Vercel-buildoutput (vercel.json)
+out/
+.vercel/

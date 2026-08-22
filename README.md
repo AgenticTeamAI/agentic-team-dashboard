@@ -1,11 +1,16 @@
 # Agentic Team Dashboard
 
-Eén zelfstandig HTML-bestand (`dashboard.html`) dat een klant lokaal opent of
-zelf host, en dat laat zien hoe zijn Agentic Team ervoor staat. Het dashboard
-**bevat geen data** — het leest, toont en rekent, en is nooit de bron van
-iets. Alle gegevens komen uit een lokale databundel die de klant al heeft:
-een Excel-werkboek, een `data/`-map met JSON-bestanden, of een Notion-export
-die de Coördinator wegschrijft.
+Eén zelfstandig HTML-bestand (`dashboard.html`) dat laat zien hoe een
+Agentic Team ervoor staat. Het staat als vaste pagina op
+**dashboard.agentic-team.ai** (f15 — deze repo heeft een eigen
+Vercel-project, zie §Eén bron hieronder) en blijft daarnaast als los
+bestand beschikbaar voor offline of privacy-strikt gebruik (f4). Het
+dashboard **bevat geen data** — het leest, toont en rekent, en is nooit de
+bron van iets. Alle gegevens komen uit een databundel die de klant al
+heeft: een Excel-werkboek, een `data/`-map met JSON-bestanden, een
+Notion-export die de Coördinator wegschrijft — of, voor teams met een
+hosted werkruimte (f18), live uit de eigen werkruimte-instantie via een
+daglink van de Coördinator.
 
 **De homepage is een dashboard, geen rapport.** Bovenaan vier KPI-tegels, een
 gestapelde staafgrafiek van activiteit per week, drie balken die de
@@ -22,12 +27,14 @@ repo.
 
 ## Snel starten
 
-Open `dashboard.html` gewoon in een browser (dubbelklikken volstaat — geen
-server, geen build, geen internet nodig). Klik op één van de drie
-bundelknoppen en kies het Excel-bestand, de `data/`-map, of de
-Notion-export-map. Wil je het meteen met voorbeelddata proberen: gebruik de
-bestanden in `testdata/` (zie `testdata/README.md` voor wat daar bewust wel
-en niet in staat).
+Ga naar `dashboard.agentic-team.ai`, of open `dashboard.html` gewoon in
+een browser (dubbelklikken volstaat — geen server, geen build, geen internet
+nodig). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
+`data/`-map, of de Notion-export-map. Heeft je team een hosted werkruimte,
+dan geeft de Coördinator je bij de dagstart een daglink die de pagina met je
+gegevens er al in opent. Wil je het meteen met voorbeelddata proberen:
+gebruik de bestanden in `testdata/` (zie `testdata/README.md` voor wat daar
+bewust wel en niet in staat).
 
 ## Wat er in deze repo staat
 
@@ -38,7 +45,9 @@ src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
   styles.css              → huisstijl (zie §Vormgeving)
   zip-xlsx.js             → ZIP + xlsx-lezer (geen library — zie §Waarom geen SheetJS)
   schema-helpers.js       → matching van sheets/bestanden/agents op het schema
-  bundle-loaders.js       → leest de drie bundelformaten tot één interne vorm
+  bundle-loaders.js       → leest de drie bestands-bundelformaten tot één interne vorm
+  werkruimte-loader.js    → route 4: leest dezelfde interne vorm live uit de eigen
+                             werkruimte-instantie, via een daglink (zie §Route 4)
   zones.js                → alle berekeningen (puur, geen DOM): de vijf zones, de
                              adoptiescore (ritme/breedte/opvolging), activiteit per
                              week, tijdwinst-som, gebruik-per-agent-ranglijst — dit
@@ -162,6 +171,7 @@ komt terug.
 | Excel-werkboek | `buildMetricsFromRowsBundle()` rekent de metrics zelf uit de rijen — dit is precies `zones.js`, ongewijzigd, nu verpakt onder één naam |
 | `data/*.json` | Idem |
 | Notion | `parseNotionMetricsFile()` leest één al-berekend metricsbestand — geen rij komt ooit in het geheugen |
+| Werkruimte (daglink) | `loadWerkruimteBundle()` haalt de rijen live op uit de eigen instantie en levert dezelfde rows-bundel als Excel/JSON — daarna is het `buildMetricsFromRowsBundle()`, ongewijzigd |
 
 `app.js` → `buildContext()` is de **enige** plek die weet welke van de twee
 er draaide. Alles daarna (`render.js`, `homepage.js`) ziet uitsluitend het
@@ -626,10 +636,60 @@ DOM-inhoud (aantal SVG-elementen, tekstinhoud van grijze blokken,
 lay-out, overlap of leesbaarheid op een scherm. Een korte visuele controle
 door een mens, vóór dit naar een klant gaat, blijft aan te raden.
 
+## Route 4: live uit de werkruimte, via een daglink (f15/f18)
+
+Voor teams met een hosted werkruimte (f18) bestaat er naast de drie
+bestandsroutes een vierde: de Coördinator genereert met de MCP-tool
+`werkruimte_dashboard_link` (in `agentic-team-werkruimte`) een kortlevend,
+alleen-lezen token en deelt bij de dagstart een prefilled URL:
+
+```text
+https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
+```
+
+Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
+
+- **Het token staat in het `#fragment`** en wordt dus nooit naar een server
+  meegestuurd — het belandt in geen enkel access log, niet bij ons en niet
+  bij de hostingprovider. Bij het laden verhuist het naar `sessionStorage`
+  (herladen = verversen, tabblad dicht = weg) en wordt het meteen uit de
+  adresbalk gehaald (`history.replaceState`).
+- **De browser praat rechtstreeks met de instantie** (`/dashboard/overzicht`
+  en `/dashboard/entries?domein=…` op de instantie-URL, met het token als
+  Bearer) — de backend van agentic-team.ai zit er niet tussen, conform de
+  harde grens van f15: klantdata raakt onze servers nooit. De instantie
+  accepteert deze route alleen met CORS vanaf de dashboardpagina.
+- **Het token kan alleen lezen en verloopt na 24 uur.** Een verlopen link
+  geeft de melding "Vraag je Coördinator om een nieuwe" en de pagina valt
+  terug op de gewone bestandsknoppen. Dit is bewust een minimale voorloper
+  van OAuth (p10, GA-voorwaarde) — geen weggegooid werk.
+- **Zelfde interne vorm.** De loader levert een gewone rows-bundel
+  (entries → `rows`, `bijgewerkt` → `staleAt`, bedrijfscontext-entries →
+  het zone 2-object); alles stroomafwaarts weet niet dat de data live is.
+  Domeinen die de werkruimte wél kent maar deze dashboardversie niet,
+  belanden zichtbaar in het waarschuwingenblok — nooit stil genegeerd.
+
+### Eén bron: deze repo heeft zijn eigen Vercel-project
+
+`dashboard.agentic-team.ai` is een eigen Vercel-project op deze repo —
+bewust niet ondergebracht in `agentic-team-site`, zodat er geen tweede
+kopie van het artefact bestaat die uit de pas kan lopen. Bij deploy bouwt
+Vercel de pagina vers uit `src/` (zie `vercel.json`: hetzelfde
+`scripts/build.py` als lokaal, artefact wordt `index.html`) en serveert
+hem met een strakke CSP: geen extern script of analytics, en `connect-src`
+beperkt tot de instantie-domeinen — de pagina kán technisch nergens anders
+heen praten, ook niet naar agentic-team.ai zelf. Wisselt de
+instantie-provider (nu Azure Container Apps), dan moet de CSP in
+`vercel.json` mee veranderen. Het gecommitte `dashboard.html` in de
+repo-root blijft het losse offline-bestand (f4): zelfde bron, zelfde build.
+
 ## Acceptatiecriteria (§11 van het ontwerp)
 
 1. **Werkt via `file://`, zonder server/internet/tokens** — gehaald. Geen
-   `<script src>` naar extern, geen `fetch`, geen login.
+   `<script src>` naar extern, geen login. Het enige `fetch`-pad is route 4
+   (daglink, sinds f15) en dat gaat uitsluitend, en alleen op initiatief
+   van de gebruiker zelf, naar zijn eigen werkruimte-instantie; zonder
+   daglink doet dit bestand geen enkele netwerkaanroep.
 2. **Alle drie routes getest met fictieve bundel, elk minstens één keer
    echt ingelezen** — gehaald, zie §Getest hierboven. De Notion-route heeft
    nu twee vormen (het oude rijenformaat en het nieuwe metricsbestand);
@@ -723,8 +783,11 @@ door een mens, vóór dit naar een klant gaat, blijft aan te raden.
   daadwerkelijke doelgroep (MKB-directeuren, waarschijnlijk Chrome/Edge op
   Windows) — functioneel correct verondersteld op basis van
   MDN-compatibiliteitsdata, niet zelf getest op elk platform.
-- **Downloadmechanisme vanaf de accountpagina** (ontwerp §8) — buiten scope
-  van deze repo; dat is werk in `agentic-team-site`.
+- **Downloadmechanisme vanaf de accountpagina** (ontwerp §8) — vervallen
+  met f15: het dashboard staat als vaste pagina op
+  `dashboard.agentic-team.ai`, dus er valt niets meer te downloaden of
+  bij te werken. Het losse bestand blijft bestaan voor offline of
+  privacy-strikt gebruik (f4), maar is niet langer het distributiekanaal.
 - **Adoptiescore drift over tijd.** Bij een "vandaag"-gebaseerde
   berekening (in plaats van een vaste peildatum) verschuift de
   Opvolging-subscore geleidelijk terwijl er niets aan de brondata

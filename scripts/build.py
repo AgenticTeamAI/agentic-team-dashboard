@@ -20,6 +20,7 @@ JS_MODULES_IN_ORDER = [
     "zip-xlsx.js",
     "schema-helpers.js",
     "bundle-loaders.js",
+    "werkruimte-loader.js",
     "zones.js",
     "metrics.js",
     "render.js",

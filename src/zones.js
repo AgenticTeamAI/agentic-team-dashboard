@@ -341,7 +341,11 @@ function computeRitme(bundle, today, weeks = 12) {
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).
 function computeBreedte(bundle, schema) {
-  const domeinen = Object.keys(schema.datadomeinen);
+  // bedrijfscontext staat sinds registry 1.24.1 wél in datadomeinen, maar
+  // komt in de bundel nooit in domains{} terecht (het gaat naar
+  // bundle.bedrijfscontext en heeft zone 2 als eigen meetlat) — meetellen
+  // zou het domein permanent als "geen inhoud" laten scoren.
+  const domeinen = Object.keys(schema.datadomeinen).filter(k => k !== "bedrijfscontext");
   const metInhoud = domeinen.filter(k => { const r = rows(bundle, k); return r && r.length > 0; });
   return {
     berekenbaar: true,
