@@ -44,6 +44,29 @@ for (const f of readdirSync(DATA_DIR)) {
   }))
 }
 
+// f24-testvarianten voor het dashboard_metrics-domein:
+//   MOCK_METRICS=vers|oud|kapot|versie2   (weggelaten = geen metrics-entry)
+//   MOCK_ALLEEN_GEHEUGEN=1                (alleen logboek+bedrijfscontext als
+//                                          rows — simuleert een klant met
+//                                          werkdata buiten de werkruimte)
+const MOCK_METRICS = process.env.MOCK_METRICS ?? ''
+if (MOCK_METRICS) {
+  const basis = JSON.parse(readFileSync(join(REPO, 'testdata', 'notion-metrics', 'metrics.json'), 'utf8'))
+  if (MOCK_METRICS === 'vers') basis.gegenereerd_op = new Date().toISOString()
+  if (MOCK_METRICS === 'versie2') basis.versie = 2
+  const inhoud = MOCK_METRICS === 'kapot' ? '{dit is geen json' : JSON.stringify(basis)
+  domeinen.dashboard_metrics = [{
+    domein: 'dashboard_metrics', entryId: 'metrics',
+    data: { Titel: `Dashboardmetrics ${String(basis.gegenereerd_op).slice(0, 10)}`, Inhoud: inhoud },
+    aangemaakt: '2026-08-01T08:00:00Z', bijgewerkt: String(basis.gegenereerd_op),
+  }]
+}
+if (process.env.MOCK_ALLEEN_GEHEUGEN === '1') {
+  for (const naam of Object.keys(domeinen)) {
+    if (!['bedrijfscontext', 'dashboard_metrics'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
+  }
+}
+
 // Zelfde CORS-gedrag als de echte instantie (http.ts -> dashboardRoute):
 // alleen de dashboard-origin mag deze routes vanuit de browser aanroepen.
 const DASHBOARD_ORIGIN = process.env.DASHBOARD_ORIGIN ?? 'http://localhost:3000'

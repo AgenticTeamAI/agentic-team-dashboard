@@ -101,13 +101,82 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
   return obj;
 }
 
+/* f24: teams met werkdata buiten de werkruimte (Notion, eigen systeem)
+ * krijgen hun cijfers via het domein dashboard_metrics — één entry met het
+ * metricsbestand (contract v1) als JSON-string, dagelijks overschreven door
+ * de Coördinator. Dit domein is nooit een rows-domein: het staat bewust
+ * niet in het dashboard-schema (opslag=werkruimte-filter in
+ * extract-schema.py) en wordt hier bij naam overgeslagen als tweede
+ * vangrail. Werkgeheugen-domeinen tellen niet als werkdata voor de
+ * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
+const METRICS_DOMEIN = "dashboard_metrics";
+const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+
+function isVanVandaag(isoTekst, vandaag) {
+  const dt = isoTekst ? new Date(isoTekst) : null;
+  if (!dt || isNaN(dt.getTime())) return false;
+  return dt.getFullYear() === vandaag.getFullYear()
+    && dt.getMonth() === vandaag.getMonth()
+    && dt.getDate() === vandaag.getDate();
+}
+
+/* Haalt de metrics-entry op en geeft {payload, gegenereerdOp} of null.
+ * Onleesbaar (geen JSON, of niet de vorm van een metricsbestand) telt als
+ * "geen metrics", met een zichtbare waarschuwing — nooit stil negeren. */
+async function haalMetricsEntry(daglink, bundle) {
+  const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
+  const entries = body.entries || [];
+  const entry = entries.find(e => e.entryId === "metrics")
+    || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
+  if (!entry) return null;
+  let payload;
+  try {
+    payload = JSON.parse(String(entry.data && entry.data.Inhoud));
+  } catch (e) {
+    bundle.waarschuwingen.push("De dashboard_metrics-entry in je werkruimte bevat geen geldige JSON — de rijenroute wordt gebruikt. Vraag je Coördinator de dagstart opnieuw te draaien.");
+    return null;
+  }
+  if (!looksLikeMetricsPayload(payload)) {
+    bundle.waarschuwingen.push("De dashboard_metrics-entry in je werkruimte heeft niet de vorm van een metricsbestand — de rijenroute wordt gebruikt.");
+    return null;
+  }
+  return { payload, gegenereerdOp: payload.gegenereerd_op || entry.bijgewerkt };
+}
+
 async function loadWerkruimteBundle(daglink) {
   const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   const schema = getSchema();
 
-  const metInhoud = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  const werkdataDomeinen = gevuld.filter(d => d.domein !== METRICS_DOMEIN && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1);
+
+  // Voorrangsregels (f24): verse metrics winnen; oude metrics naast echte
+  // werkdata-rijen worden genegeerd; oude metrics zonder werkdata worden
+  // getoond mét verouderd-waarschuwing (iets ouds met stempel is beter dan
+  // een leeg dashboard).
+  if (gevuld.some(d => d.domein === METRICS_DOMEIN)) {
+    const metrics = await haalMetricsEntry(daglink, bundle);
+    if (metrics) {
+      const vers = isVanVandaag(metrics.gegenereerdOp, new Date());
+      const datumLabel = String(metrics.gegenereerdOp).slice(0, 10);
+      if (vers || werkdataDomeinen.length === 0) {
+        if (vers && werkdataDomeinen.length > 0) {
+          bundle.waarschuwingen.push("Je werkruimte bevat ook werkdata-rijen; het dashboard toont het vandaag aangeleverde metricsbestand.");
+        }
+        if (!vers) {
+          bundle.waarschuwingen.push(`Deze cijfers zijn gegenereerd op ${datumLabel} en mogelijk verouderd — vraag je Coördinator om een dagstart voor verse cijfers.`);
+        }
+        bundle.kind = "metrics";
+        bundle.metricsRaw = metrics.payload;
+        return bundle;
+      }
+      bundle.waarschuwingen.push(`Verouderde metrics-entry (van ${datumLabel}) genegeerd — het dashboard rekent live uit de werkdata-rijen in je werkruimte.`);
+    }
+  }
+
+  const metInhoud = gevuld.filter(d => d.domein !== METRICS_DOMEIN);
   const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
     domein: d.domein,
     body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),

@@ -76,7 +76,15 @@ def main():
         "extractedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "modules": registry.get("modules", {}),
         "agents": agents,
-        "datadomeinen": registry.get("datadomeinen", {}),
+        # opslag=werkruimte-domeinen (bv. dashboard_metrics) zijn afgeleide
+        # data die alleen in de werkruimte-instantie leeft - geen bundel-
+        # domein, telt niet mee in breedte/volledigheid. werkruimte-loader.js
+        # heeft daarnaast een eigen slug-skip als tweede vangrail.
+        "datadomeinen": {
+            slug: domein
+            for slug, domein in registry.get("datadomeinen", {}).items()
+            if domein.get("opslag") != "werkruimte"
+        },
     }
 
     out_path = Path(args.output)
