@@ -12,7 +12,8 @@ __STYLES__
 <div class="wrap">
   <header class="top">
     <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel.</p>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel of, via een daglink, live uit je eigen werkruimte.</p>
+    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: alles wat je hier kiest of laadt, blijft in je browser. Open je deze pagina via een daglink van je Coördinator, dan haalt je browser de gegevens rechtstreeks op uit je eigen werkruimte-instantie — ook dan komt er niets bij ons terecht.</p>
 
     <div class="controls-row">
       <div class="bundle-picker">
@@ -43,7 +44,10 @@ __STYLES__
     <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
     Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
     metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
-    Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
+    Gebruikt je team een hosted werkruimte? Vraag je Coördinator om een daglink — die opent deze pagina
+    met je gegevens er al in.<br>
+    Niets wordt opgeslagen of verstuurd — dit dashboard leest lokaal in je browser, of via een daglink
+    rechtstreeks uit je eigen werkruimte.</p>
   </div>
 
   <div id="version-error" style="display:none;"></div>
@@ -97,10 +101,12 @@ __STYLES__
   </div>
 
   <footer class="app-footer">
-    Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
-    gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling worden onthouden (lokaal, in je browser) om
-    je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van
-    AgenticTeamAI/agent-architecture.
+    Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
+    pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
+    nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
+    worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
+    (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
+    __REGISTRY_VERSION__ van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 

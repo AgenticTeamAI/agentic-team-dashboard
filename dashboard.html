@@ -310,7 +310,8 @@ section.panel {
 <div class="wrap">
   <header class="top">
     <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel.</p>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel of, via een daglink, live uit je eigen werkruimte.</p>
+    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: alles wat je hier kiest of laadt, blijft in je browser. Open je deze pagina via een daglink van je Coördinator, dan haalt je browser de gegevens rechtstreeks op uit je eigen werkruimte-instantie — ook dan komt er niets bij ons terecht.</p>
 
     <div class="controls-row">
       <div class="bundle-picker">
@@ -341,7 +342,10 @@ section.panel {
     <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
     Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
     metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
-    Niets wordt opgeslagen of verstuurd — dit dashboard leest alleen lokaal, in je browser.</p>
+    Gebruikt je team een hosted werkruimte? Vraag je Coördinator om een daglink — die opent deze pagina
+    met je gegevens er al in.<br>
+    Niets wordt opgeslagen of verstuurd — dit dashboard leest lokaal in je browser, of via een daglink
+    rechtstreeks uit je eigen werkruimte.</p>
   </div>
 
   <div id="version-error" style="display:none;"></div>
@@ -395,10 +399,12 @@ section.panel {
   </div>
 
   <footer class="app-footer">
-    Agentic Team Dashboard — bevat geen data, roept geen netwerk aan, bewaart niets van je bundel. Alleen de laatst
-    gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling worden onthouden (lokaal, in je browser) om
-    je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion 1.18.0 van
-    AgenticTeamAI/agent-architecture.
+    Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
+    pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
+    nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
+    worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
+    (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
+    1.24.1 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -407,42 +413,49 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.18.0
-//   registry updated: 2026-08-09
-//   bron-commit     : 882f544a0c3e1263c5e1d517dcccec9fee869994
-//   geextraheerd op : 2026-08-10T08:15:22Z
+//   registryVersion : 1.24.1
+//   registry updated: 2026-08-21
+//   bron-commit     : fce4b7aff8cef87f98555071b211d48a32d2353b
+//   geextraheerd op : 2026-08-22T09:03:35Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.18.0",
-  "registryUpdated": "2026-08-09",
-  "sourceCommit": "882f544a0c3e1263c5e1d517dcccec9fee869994",
-  "extractedAt": "2026-08-10T08:15:22Z",
+  "registryVersion": "1.24.1",
+  "registryUpdated": "2026-08-21",
+  "sourceCommit": "fce4b7aff8cef87f98555071b211d48a32d2353b",
+  "extractedAt": "2026-08-22T09:03:35Z",
   "modules": {
     "core": {
       "naam": "Core",
-      "altijdInbegrepen": true
+      "altijdInbegrepen": true,
+      "aantalAgents": 4
     },
     "growth": {
-      "naam": "Growth"
+      "naam": "Growth",
+      "aantalAgents": 3
     },
     "visibility": {
-      "naam": "Visibility"
+      "naam": "Visibility",
+      "aantalAgents": 3
     },
     "sales": {
-      "naam": "Sales"
+      "naam": "Sales",
+      "aantalAgents": 2
     },
     "delivery": {
-      "naam": "Delivery"
+      "naam": "Delivery",
+      "aantalAgents": 2
     },
     "strategy": {
-      "naam": "Strategy"
+      "naam": "Strategy",
+      "aantalAgents": 2
     },
     "backoffice": {
-      "naam": "Backoffice"
+      "naam": "Backoffice",
+      "aantalAgents": 4
     }
   },
   "agents": [
@@ -1210,6 +1223,88 @@ window.AGENTIC_TEAM_SCHEMA = {
         }
       ]
     },
+    "bedrijfscontext": {
+      "naam": "Bedrijfscontext",
+      "module": "core",
+      "emoji": "📋",
+      "velden": [
+        {
+          "naam": "Onderdeel",
+          "type": "titel"
+        },
+        {
+          "naam": "Inhoud",
+          "type": "tekst"
+        },
+        {
+          "naam": "Versie",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Bijgewerkt",
+          "type": "datum"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Concept",
+            "Vastgesteld",
+            "Verouderd"
+          ]
+        }
+      ]
+    },
+    "logboek": {
+      "naam": "Logboek",
+      "module": "core",
+      "emoji": "📔",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Sessielog",
+            "Werkstuk"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Lopend",
+            "Afgerond",
+            "Archief"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Resultaat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Link",
+          "type": "url"
+        },
+        {
+          "naam": "Vervolg",
+          "type": "tekst"
+        }
+      ]
+    },
     "dagverslagen": {
       "naam": "Dagverslagen",
       "module": "core",
@@ -1951,6 +2046,151 @@ if (typeof module !== "undefined") {
 }
 
 
+/* Route 4: live uit de eigen werkruimte-instantie, via een daglink (f15/f18).
+ *
+ * De Coördinator geeft de klant bij de dagstart een prefilled URL:
+ *   https://www.agentic-team.ai/werkruimte#t=<token>&i=<instantie-url>
+ * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
+ * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
+ * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
+ * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
+ * aan te pas, en de CSP van de pagina staat ook geen ander verkeer toe.
+ *
+ * Deze module levert dezelfde uniforme bundelvorm als bundle-loaders.js
+ * (kind "rows"), zodat alles stroomafwaarts (zones, metrics, render) niet
+ * hoeft te weten dat de rijen live zijn opgehaald in plaats van gekozen.
+ */
+
+const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
+
+/* Herkent de daglink-parameters in het fragment. Detailroutes ("#/detail/…")
+ * beginnen met "#/" en blijven buiten schot. Geeft null bij alles wat geen
+ * geldige daglink is — de pagina gedraagt zich dan als de gewone f4-variant. */
+function parseDaglinkFragment(hash) {
+  if (!hash || hash.startsWith("#/")) return null;
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const token = params.get("t");
+  const instantieRaw = params.get("i");
+  if (!token || !instantieRaw) return null;
+  let url;
+  try { url = new URL(instantieRaw); } catch (e) { return null; }
+  // https verplicht; alleen localhost mag http (lokaal testen tegen een
+  // mock-instantie — browsers behandelen localhost ook als secure context).
+  const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalhost)) return null;
+  return { token, instantieUrl: url.origin };
+}
+
+/* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen
+ * zodat het niet in de history of in een per ongeluk gedeelde URL belandt. */
+function restoreDaglink() {
+  const uitFragment = parseDaglinkFragment(window.location.hash);
+  if (uitFragment) {
+    try { sessionStorage.setItem(DAGLINK_SS_KEY, JSON.stringify(uitFragment)); } catch (e) { /* privémodus */ }
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    return uitFragment;
+  }
+  try {
+    const raw = sessionStorage.getItem(DAGLINK_SS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* privémodus of kapotte waarde — dan geen daglink */ }
+  return null;
+}
+
+function vergeetDaglink() {
+  try { sessionStorage.removeItem(DAGLINK_SS_KEY); } catch (e) { /* zie boven */ }
+}
+
+async function fetchWerkruimte(daglink, pad) {
+  let res;
+  try {
+    res = await fetch(daglink.instantieUrl + pad, {
+      headers: { Authorization: "Bearer " + daglink.token },
+    });
+  } catch (e) {
+    throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding of vraag je Coördinator om een nieuwe daglink.");
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* geen JSON — valt hieronder in de foutpaden */ }
+  if (res.status === 401) {
+    const err = new Error((body && body.fout) || "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok || body === null) {
+    throw new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
+  }
+  return body;
+}
+
+function maxBijgewerkt(entries) {
+  let laatst = null;
+  for (const e of entries) {
+    const dt = e && e.bijgewerkt ? new Date(e.bijgewerkt) : null;
+    if (dt && !isNaN(dt.getTime()) && (!laatst || dt > laatst)) laatst = dt;
+  }
+  return laatst;
+}
+
+/* De werkruimte bewaart bedrijfscontext als losse entries (Onderdeel/Inhoud,
+ * registry 1.24.1); zone 2 verwacht één sleutel->waarde-object met een Bron.
+ * De bron ís hier de instantie zelf — de klant heeft zijn context daar staan. */
+function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
+  if (!entries.length) return null; // geen context in de werkruimte -> zone 2 zegt "onbekend"
+  const obj = { Bron: "je werkruimte-instantie (hosted)" };
+  let laatst = null;
+  for (const e of entries) {
+    const d = e.data || {};
+    if (d.Onderdeel) obj[String(d.Onderdeel)] = d.Inhoud;
+    const dt = d.Bijgewerkt ? new Date(d.Bijgewerkt) : null;
+    if (dt && !isNaN(dt.getTime()) && (!laatst || dt > laatst)) laatst = dt;
+  }
+  obj.staleAt = laatst || fallbackStaleAt;
+  return obj;
+}
+
+async function loadWerkruimteBundle(daglink) {
+  const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
+  const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
+  const bundle = emptyBundle("werkruimte", label);
+  const schema = getSchema();
+
+  const metInhoud = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
+    domein: d.domein,
+    body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
+  })));
+
+  for (const { domein, body } of opgehaald) {
+    const entries = body.entries || [];
+    const staleAt = maxBijgewerkt(entries);
+    if (domein === "bedrijfscontext") {
+      bundle.bedrijfscontext = bedrijfscontextUitEntries(entries, staleAt);
+      continue;
+    }
+    if (!schema.datadomeinen[domein]) {
+      bundle.waarschuwingen.push(`Domein "${domein}" uit je werkruimte is onbekend in deze dashboardversie — genegeerd. Waarschijnlijk is het dashboard ouder dan je werkruimte.`);
+      continue;
+    }
+    bundle.domains[domein] = {
+      aanwezig: true,
+      rows: entries.map(e => e.data),
+      staleAt,
+      herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
+    };
+  }
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink,
+    bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
+  };
+}
+
+
 /* Berekent de vijf zones uit één bundle (zie bundle-loaders.js). Puur —
  * geen DOM. "Vandaag" is injecteerbaar zodat dit reproduceerbaar te testen
  * is; in de app zelf is dat gewoon new Date(). */
@@ -2294,7 +2534,11 @@ function computeRitme(bundle, today, weeks = 12) {
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).
 function computeBreedte(bundle, schema) {
-  const domeinen = Object.keys(schema.datadomeinen);
+  // bedrijfscontext staat sinds registry 1.24.1 wél in datadomeinen, maar
+  // komt in de bundel nooit in domains{} terecht (het gaat naar
+  // bundle.bedrijfscontext en heeft zone 2 als eigen meetlat) — meetellen
+  // zou het domein permanent als "geen inhoud" laten scoren.
+  const domeinen = Object.keys(schema.datadomeinen).filter(k => k !== "bedrijfscontext");
   const metInhoud = domeinen.filter(k => { const r = rows(bundle, k); return r && r.length > 0; });
   return {
     berekenbaar: true,
@@ -3317,7 +3561,7 @@ function renderLastUsed() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { el.textContent = ""; return; }
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map" }[route] || route;
+    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map", werkruimte: "Werkruimte (daglink)" }[route] || route;
     el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { el.textContent = ""; }
 }
@@ -3443,7 +3687,7 @@ function renderAll() {
       `Bundel: ${meta.bronLabel} (Notion — metricsbestand v${METRICS_VERSION}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -3509,7 +3753,19 @@ function wireNavigatie() {
       if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
     }
   });
-  window.addEventListener("hashchange", route);
+  window.addEventListener("hashchange", () => {
+    // Een daglink aanklikken terwijl deze pagina al openstaat wijzigt alleen
+    // het #fragment — de browser herlaadt dan niet. Zonder dit pad zou een
+    // verse daglink op een open tabblad stilletjes niets doen.
+    const daglink = parseDaglinkFragment(window.location.hash);
+    if (daglink) {
+      try { sessionStorage.setItem(DAGLINK_SS_KEY, JSON.stringify(daglink)); } catch (e) { /* privémodus */ }
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      laadWerkruimte(daglink);
+      return;
+    }
+    route();
+  });
 }
 
 function wireInputs() {
@@ -3611,12 +3867,31 @@ function wireInputs() {
   });
 }
 
+/* Route 4: opent iemand deze pagina via een daglink (of herlaadt hij binnen
+ * dezelfde sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets
+ * te kiezen, de link wijst al naar zijn eigen instantie. De bestandsknoppen
+ * blijven gewoon werken als alternatief. */
+async function laadWerkruimte(daglink) {
+  setStatus("Live gegevens uit je werkruimte worden opgehaald…");
+  try {
+    const bundle = await loadWerkruimteBundle(daglink);
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
+    setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
+  } catch (err) {
+    console.error(err);
+    if (err.daglinkVerlopen) vergeetDaglink();
+    setStatus(err.message, true);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
   renderLastUsed();
   renderAll();
+  const daglink = restoreDaglink();
+  if (daglink) laadWerkruimte(daglink);
 });
 
 </script>
