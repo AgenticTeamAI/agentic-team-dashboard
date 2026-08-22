@@ -143,14 +143,24 @@ async function haalMetricsEntry(daglink, bundle) {
   return { payload, gegenereerdOp: payload.gegenereerd_op || entry.bijgewerkt };
 }
 
+/* Domeinen met opslag=werkruimte (dashboard_metrics, bronkoppeling, …)
+ * zijn afgeleide/config-data en nooit rows-domeinen. Het schema levert de
+ * lijst (extract-schema.py); de vaste namen hieronder blijven als vangnet
+ * voor een artefact dat tegen een nieuwere registry praat. */
+function werkruimteDomeinen(schema) {
+  const uitSchema = schema.werkruimteDomeinen || [];
+  return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
+}
+
 async function loadWerkruimteBundle(daglink) {
   const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   const schema = getSchema();
+  const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
-  const werkdataDomeinen = gevuld.filter(d => d.domein !== METRICS_DOMEIN && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1);
+  const werkdataDomeinen = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1 && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1);
 
   // Voorrangsregels (f24): verse metrics winnen; oude metrics naast echte
   // werkdata-rijen worden genegeerd; oude metrics zonder werkdata worden
@@ -176,7 +186,7 @@ async function loadWerkruimteBundle(daglink) {
     }
   }
 
-  const metInhoud = gevuld.filter(d => d.domein !== METRICS_DOMEIN);
+  const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
   const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
     domein: d.domein,
     body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),

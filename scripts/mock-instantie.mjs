@@ -61,6 +61,15 @@ if (MOCK_METRICS) {
     aangemaakt: '2026-08-01T08:00:00Z', bijgewerkt: String(basis.gegenereerd_op),
   }]
 }
+// i23: een bronkoppeling-entry hoort door de loader stil overgeslagen te
+// worden (opslag=werkruimte-domein, geen rows-domein, geen waarschuwing).
+if (process.env.MOCK_BRONKOPPELING === '1') {
+  domeinen.bronkoppeling = [{
+    domein: 'bronkoppeling', entryId: 'sales_funnel',
+    data: { Titel: 'Sales Funnel', Systeem: 'notion', Verwijzing: 'collection://00000000-mock', Laatst_geverifieerd: '2026-08-22' },
+    aangemaakt: '2026-08-22T08:00:00Z', bijgewerkt: '2026-08-22T08:00:00Z',
+  }]
+}
 if (process.env.MOCK_ALLEEN_GEHEUGEN === '1') {
   for (const naam of Object.keys(domeinen)) {
     if (!['bedrijfscontext', 'dashboard_metrics'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
