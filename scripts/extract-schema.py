@@ -85,6 +85,14 @@ def main():
             for slug, domein in registry.get("datadomeinen", {}).items()
             if domein.get("opslag") != "werkruimte"
         },
+        # De weggefilterde slugs apart meegeven: de werkruimte-loader moet ze
+        # in het instantie-overzicht stil kunnen overslaan (het zijn geen
+        # rows-domeinen), zonder ze hier hardcoded te kennen.
+        "werkruimteDomeinen": sorted(
+            slug
+            for slug, domein in registry.get("datadomeinen", {}).items()
+            if domein.get("opslag") == "werkruimte"
+        ),
     }
 
     out_path = Path(args.output)
