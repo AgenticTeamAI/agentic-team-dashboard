@@ -80,7 +80,10 @@ function buildContext() {
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen,
+      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta,
+      // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
+      // zo zichtbaar te zijn als parse-waarschuwingen
+      waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
     };
   }
 
@@ -121,7 +124,7 @@ function renderAll() {
     versionErrorEl.style.display = "";
     renderVersionError(versionErrorEl, ctx.versionError, bundle);
     document.getElementById("warnings-box").style.display = "none";
-    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (Notion-metricsbestand) — niet gelezen, zie melding hierboven.`;
+    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (metricsbestand) — niet gelezen, zie melding hierboven.`;
     return;
   }
   versionErrorEl.style.display = "none";
@@ -159,8 +162,11 @@ function renderAll() {
     const meta = ctx.metricsMeta;
     const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
     const door = meta.door ? ` door ${meta.door}` : "";
+    const herkomst = bundle.source === "werkruimte"
+      ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
+      : `Notion — metricsbestand v${METRICS_VERSION}`;
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${meta.bronLabel} (Notion — metricsbestand v${METRICS_VERSION}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
+      `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
       `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;

@@ -404,7 +404,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
-    1.24.1 van AgenticTeamAI/agent-architecture.
+    1.26.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -413,20 +413,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.24.1
+//   registryVersion : 1.26.0
 //   registry updated: 2026-08-21
-//   bron-commit     : fce4b7aff8cef87f98555071b211d48a32d2353b
-//   geextraheerd op : 2026-08-22T09:03:35Z
+//   bron-commit     : 68d53f91cff51494b571a16d012c0e3d9a0fceb3
+//   geextraheerd op : 2026-08-22T20:10:03Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.24.1",
+  "registryVersion": "1.26.0",
   "registryUpdated": "2026-08-21",
-  "sourceCommit": "fce4b7aff8cef87f98555071b211d48a32d2353b",
-  "extractedAt": "2026-08-22T09:03:35Z",
+  "sourceCommit": "68d53f91cff51494b571a16d012c0e3d9a0fceb3",
+  "extractedAt": "2026-08-22T20:10:03Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -2149,13 +2149,82 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
   return obj;
 }
 
+/* f24: teams met werkdata buiten de werkruimte (Notion, eigen systeem)
+ * krijgen hun cijfers via het domein dashboard_metrics — één entry met het
+ * metricsbestand (contract v1) als JSON-string, dagelijks overschreven door
+ * de Coördinator. Dit domein is nooit een rows-domein: het staat bewust
+ * niet in het dashboard-schema (opslag=werkruimte-filter in
+ * extract-schema.py) en wordt hier bij naam overgeslagen als tweede
+ * vangrail. Werkgeheugen-domeinen tellen niet als werkdata voor de
+ * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
+const METRICS_DOMEIN = "dashboard_metrics";
+const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+
+function isVanVandaag(isoTekst, vandaag) {
+  const dt = isoTekst ? new Date(isoTekst) : null;
+  if (!dt || isNaN(dt.getTime())) return false;
+  return dt.getFullYear() === vandaag.getFullYear()
+    && dt.getMonth() === vandaag.getMonth()
+    && dt.getDate() === vandaag.getDate();
+}
+
+/* Haalt de metrics-entry op en geeft {payload, gegenereerdOp} of null.
+ * Onleesbaar (geen JSON, of niet de vorm van een metricsbestand) telt als
+ * "geen metrics", met een zichtbare waarschuwing — nooit stil negeren. */
+async function haalMetricsEntry(daglink, bundle) {
+  const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
+  const entries = body.entries || [];
+  const entry = entries.find(e => e.entryId === "metrics")
+    || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
+  if (!entry) return null;
+  let payload;
+  try {
+    payload = JSON.parse(String(entry.data && entry.data.Inhoud));
+  } catch (e) {
+    bundle.waarschuwingen.push("De dashboard_metrics-entry in je werkruimte bevat geen geldige JSON — de rijenroute wordt gebruikt. Vraag je Coördinator de dagstart opnieuw te draaien.");
+    return null;
+  }
+  if (!looksLikeMetricsPayload(payload)) {
+    bundle.waarschuwingen.push("De dashboard_metrics-entry in je werkruimte heeft niet de vorm van een metricsbestand — de rijenroute wordt gebruikt.");
+    return null;
+  }
+  return { payload, gegenereerdOp: payload.gegenereerd_op || entry.bijgewerkt };
+}
+
 async function loadWerkruimteBundle(daglink) {
   const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   const schema = getSchema();
 
-  const metInhoud = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  const werkdataDomeinen = gevuld.filter(d => d.domein !== METRICS_DOMEIN && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1);
+
+  // Voorrangsregels (f24): verse metrics winnen; oude metrics naast echte
+  // werkdata-rijen worden genegeerd; oude metrics zonder werkdata worden
+  // getoond mét verouderd-waarschuwing (iets ouds met stempel is beter dan
+  // een leeg dashboard).
+  if (gevuld.some(d => d.domein === METRICS_DOMEIN)) {
+    const metrics = await haalMetricsEntry(daglink, bundle);
+    if (metrics) {
+      const vers = isVanVandaag(metrics.gegenereerdOp, new Date());
+      const datumLabel = String(metrics.gegenereerdOp).slice(0, 10);
+      if (vers || werkdataDomeinen.length === 0) {
+        if (vers && werkdataDomeinen.length > 0) {
+          bundle.waarschuwingen.push("Je werkruimte bevat ook werkdata-rijen; het dashboard toont het vandaag aangeleverde metricsbestand.");
+        }
+        if (!vers) {
+          bundle.waarschuwingen.push(`Deze cijfers zijn gegenereerd op ${datumLabel} en mogelijk verouderd — vraag je Coördinator om een dagstart voor verse cijfers.`);
+        }
+        bundle.kind = "metrics";
+        bundle.metricsRaw = metrics.payload;
+        return bundle;
+      }
+      bundle.waarschuwingen.push(`Verouderde metrics-entry (van ${datumLabel}) genegeerd — het dashboard rekent live uit de werkdata-rijen in je werkruimte.`);
+    }
+  }
+
+  const metInhoud = gevuld.filter(d => d.domein !== METRICS_DOMEIN);
   const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
     domein: d.domein,
     body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
@@ -3604,7 +3673,10 @@ function buildContext() {
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen,
+      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta,
+      // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
+      // zo zichtbaar te zijn als parse-waarschuwingen
+      waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
     };
   }
 
@@ -3645,7 +3717,7 @@ function renderAll() {
     versionErrorEl.style.display = "";
     renderVersionError(versionErrorEl, ctx.versionError, bundle);
     document.getElementById("warnings-box").style.display = "none";
-    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (Notion-metricsbestand) — niet gelezen, zie melding hierboven.`;
+    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (metricsbestand) — niet gelezen, zie melding hierboven.`;
     return;
   }
   versionErrorEl.style.display = "none";
@@ -3683,8 +3755,11 @@ function renderAll() {
     const meta = ctx.metricsMeta;
     const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
     const door = meta.door ? ` door ${meta.door}` : "";
+    const herkomst = bundle.source === "werkruimte"
+      ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
+      : `Notion — metricsbestand v${METRICS_VERSION}`;
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${meta.bronLabel} (Notion — metricsbestand v${METRICS_VERSION}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
+      `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
       `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;

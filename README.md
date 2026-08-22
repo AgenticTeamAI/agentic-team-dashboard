@@ -668,6 +668,20 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   het zone 2-object); alles stroomafwaarts weet niet dat de data live is.
   Domeinen die de werkruimte wél kent maar deze dashboardversie niet,
   belanden zichtbaar in het waarschuwingenblok — nooit stil genegeerd.
+- **Werkdata buiten de werkruimte? Dan metrics via `dashboard_metrics`
+  (f24).** Teams met werkdata in Notion of een eigen systeem hebben geen
+  rijen in de werkruimte; hun Coördinator schrijft bij de dagstart het
+  kant-en-klare metricsbestand (contract v1 — exact route 3) als
+  JSON-string naar het domein `dashboard_metrics` (één entry, `metrics`,
+  dagelijks overschreven). De loader leest die entry en volgt deze
+  voorrangsregels: verse metrics (gegenereerd op vandaag) winnen; een
+  verouderde metrics-entry naast échte werkdata-rijen wordt genegeerd
+  (met waarschuwing); verouderde metrics zonder werkdata-rijen worden wél
+  getoond, mét verouderd-waarschuwing. `logboek` en `bedrijfscontext`
+  tellen niet als werkdata — die zijn bij elke werkruimte-klant gevuld.
+  Het domein zelf staat bewust níet in het dashboard-schema
+  (`opslag: "werkruimte"`-filter in `extract-schema.py`) en wordt nooit
+  als rows-domein getekend.
 
 ### Eén bron: deze repo heeft zijn eigen Vercel-project
 
