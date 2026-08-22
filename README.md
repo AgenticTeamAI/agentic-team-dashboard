@@ -2,8 +2,8 @@
 
 Eén zelfstandig HTML-bestand (`dashboard.html`) dat laat zien hoe een
 Agentic Team ervoor staat. Het staat als vaste pagina op
-**www.agentic-team.ai/werkruimte** (f15 — de site serveert exact dit
-gebouwde artefact, zie §Eén bron hieronder) en blijft daarnaast als los
+**dashboard.agentic-team.ai** (f15 — deze repo heeft een eigen
+Vercel-project, zie §Eén bron hieronder) en blijft daarnaast als los
 bestand beschikbaar voor offline of privacy-strikt gebruik (f4). Het
 dashboard **bevat geen data** — het leest, toont en rekent, en is nooit de
 bron van iets. Alle gegevens komen uit een databundel die de klant al
@@ -27,7 +27,7 @@ repo.
 
 ## Snel starten
 
-Ga naar `www.agentic-team.ai/werkruimte`, of open `dashboard.html` gewoon in
+Ga naar `dashboard.agentic-team.ai`, of open `dashboard.html` gewoon in
 een browser (dubbelklikken volstaat — geen server, geen build, geen internet
 nodig). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
 `data/`-map, of de Notion-export-map. Heeft je team een hosted werkruimte,
@@ -644,7 +644,7 @@ bestandsroutes een vierde: de Coördinator genereert met de MCP-tool
 alleen-lezen token en deelt bij de dagstart een prefilled URL:
 
 ```text
-https://www.agentic-team.ai/werkruimte#t=<token>&i=<instantie-url>
+https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
 ```
 
 Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
@@ -669,14 +669,19 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   Domeinen die de werkruimte wél kent maar deze dashboardversie niet,
   belanden zichtbaar in het waarschuwingenblok — nooit stil genegeerd.
 
-### Eén bron: de site serveert dit artefact
+### Eén bron: deze repo heeft zijn eigen Vercel-project
 
-`www.agentic-team.ai/werkruimte` is **dit** `dashboard.html`, één op één.
-De site-repo bouwt de pagina niet na (twee kopieën van dezelfde
-renderlogica lopen gegarandeerd uit elkaar); `agentic-team-site` heeft een
-syncscript dat het gebouwde artefact uit deze repo overneemt en serveert
-het met een strakke CSP (geen extern script, `connect-src` beperkt tot de
-instantie-domeinen). Na elke release hier: sync draaien in de site-repo.
+`dashboard.agentic-team.ai` is een eigen Vercel-project op deze repo —
+bewust niet ondergebracht in `agentic-team-site`, zodat er geen tweede
+kopie van het artefact bestaat die uit de pas kan lopen. Bij deploy bouwt
+Vercel de pagina vers uit `src/` (zie `vercel.json`: hetzelfde
+`scripts/build.py` als lokaal, artefact wordt `index.html`) en serveert
+hem met een strakke CSP: geen extern script of analytics, en `connect-src`
+beperkt tot de instantie-domeinen — de pagina kán technisch nergens anders
+heen praten, ook niet naar agentic-team.ai zelf. Wisselt de
+instantie-provider (nu Azure Container Apps), dan moet de CSP in
+`vercel.json` mee veranderen. Het gecommitte `dashboard.html` in de
+repo-root blijft het losse offline-bestand (f4): zelfde bron, zelfde build.
 
 ## Acceptatiecriteria (§11 van het ontwerp)
 
@@ -780,7 +785,7 @@ instantie-domeinen). Na elke release hier: sync draaien in de site-repo.
   MDN-compatibiliteitsdata, niet zelf getest op elk platform.
 - **Downloadmechanisme vanaf de accountpagina** (ontwerp §8) — vervallen
   met f15: het dashboard staat als vaste pagina op
-  `www.agentic-team.ai/werkruimte`, dus er valt niets meer te downloaden of
+  `dashboard.agentic-team.ai`, dus er valt niets meer te downloaden of
   bij te werken. Het losse bestand blijft bestaan voor offline of
   privacy-strikt gebruik (f4), maar is niet langer het distributiekanaal.
 - **Adoptiescore drift over tijd.** Bij een "vandaag"-gebaseerde

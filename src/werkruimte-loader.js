@@ -1,7 +1,7 @@
 /* Route 4: live uit de eigen werkruimte-instantie, via een daglink (f15/f18).
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
- *   https://www.agentic-team.ai/werkruimte#t=<token>&i=<instantie-url>
+ *   https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
  * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
