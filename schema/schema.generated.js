@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.27.0
+//   registryVersion : 1.29.0
 //   registry updated: 2026-08-21
-//   bron-commit     : a900e96e29782df32d6c837b0b47952e5fba3a07
-//   geextraheerd op : 2026-08-22T21:11:03Z
+//   bron-commit     : 283408efb9b539f80cd0aafe9621ea962f13a21f
+//   geextraheerd op : 2026-08-23T18:29:30Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.27.0",
+  "registryVersion": "1.29.0",
   "registryUpdated": "2026-08-21",
-  "sourceCommit": "a900e96e29782df32d6c837b0b47952e5fba3a07",
-  "extractedAt": "2026-08-22T21:11:03Z",
+  "sourceCommit": "283408efb9b539f80cd0aafe9621ea962f13a21f",
+  "extractedAt": "2026-08-23T18:29:30Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -363,7 +363,8 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "select",
           "opties": [
             "Uitgaand",
-            "Inkomend"
+            "Inkomend",
+            "Intern"
           ]
         },
         {
@@ -391,6 +392,22 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Actie Deadline",
           "type": "datum"
+        },
+        {
+          "naam": "Bericht Tekst",
+          "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Deal (link)",
+          "type": "url"
+        },
+        {
+          "naam": "Actie doorgezet",
+          "type": "checkbox"
         }
       ]
     },
@@ -1054,10 +1071,99 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Status",
           "type": "select",
           "opties": [
+            "Voorstel",
             "Open",
             "Bezig",
+            "Wacht",
+            "Wacht op review",
             "Klaar"
           ]
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Taak",
+            "Alert",
+            "Opvolging",
+            "Beslissing"
+          ]
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Normaal",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Toelichting",
+          "type": "tekst"
+        },
+        {
+          "naam": "Aangemaakt door",
+          "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bron (link)",
+          "type": "url"
+        }
+      ]
+    },
+    "ritmetaken": {
+      "naam": "Ritmetaken",
+      "module": "core",
+      "emoji": "🔁",
+      "velden": [
+        {
+          "naam": "Taak",
+          "type": "titel"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Ritme",
+          "type": "select",
+          "opties": [
+            "elk-uur",
+            "elke-2-uur",
+            "elke-4-uur",
+            "dagelijks",
+            "wekelijks-ma",
+            "wekelijks-di",
+            "wekelijks-wo",
+            "wekelijks-vr",
+            "maandelijks"
+          ]
+        },
+        {
+          "naam": "Volgorde",
+          "type": "getal"
+        },
+        {
+          "naam": "Laatst gedraaid",
+          "type": "datum"
+        },
+        {
+          "naam": "Actief",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bron-template",
+          "type": "tekst"
+        },
+        {
+          "naam": "Instructie",
+          "type": "tekst"
         }
       ]
     },
