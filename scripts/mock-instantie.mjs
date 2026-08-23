@@ -68,12 +68,29 @@ if (process.env.MOCK_BRONKOPPELING === '1') {
     domein: 'bronkoppeling', entryId: 'sales_funnel',
     data: { Titel: 'Sales Funnel', Systeem: 'notion', Verwijzing: 'collection://00000000-mock', Laatst_geverifieerd: '2026-08-22' },
     aangemaakt: '2026-08-22T08:00:00Z', bijgewerkt: '2026-08-22T08:00:00Z',
+  }, {
+    domein: 'bronkoppeling', entryId: 'acties',
+    data: { Titel: 'Acties', Systeem: 'notion', Verwijzing: 'collection://11111111-mock', Laatst_geverifieerd: '2026-08-22' },
+    aangemaakt: '2026-08-22T08:00:00Z', bijgewerkt: '2026-08-22T08:00:00Z',
+  }]
+}
+// Eén verdwaalde werkdata-entry (het FFG-geval): acties wonen volgens de
+// bronkoppeling in Notion, maar er staat toch één actie in de werkruimte.
+if (process.env.MOCK_STRAY_ACTIE === '1') {
+  domeinen._strayActies = [{
+    domein: 'acties', entryId: 'stray-1',
+    data: { Actie: 'Boekhoudsysteem kiezen', Status: 'Open', Deadline: '2026-08-29', Agent: 'Coördinator', Eigenaar: 'Tijmen' },
+    aangemaakt: '2026-08-22T21:00:00Z', bijgewerkt: '2026-08-22T21:00:00Z',
   }]
 }
 if (process.env.MOCK_ALLEEN_GEHEUGEN === '1') {
   for (const naam of Object.keys(domeinen)) {
-    if (!['bedrijfscontext', 'dashboard_metrics'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
+    if (!['bedrijfscontext', 'dashboard_metrics', 'bronkoppeling', '_strayActies'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
   }
+}
+if (domeinen._strayActies) {
+  domeinen.acties = domeinen._strayActies
+  delete domeinen._strayActies
 }
 
 // Zelfde CORS-gedrag als de echte instantie (http.ts -> dashboardRoute):

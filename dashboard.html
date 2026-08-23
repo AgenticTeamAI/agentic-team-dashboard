@@ -2212,7 +2212,26 @@ async function loadWerkruimteBundle(daglink) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
-  const werkdataDomeinen = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1 && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1);
+
+  // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
+  // domein dat volgens de bronkoppeling ergens ánders woont (notion,
+  // werkboek, lokaal) telt hier niet mee — één verdwaalde entry in de
+  // werkruimte mag het metricsbestand niet verdringen (gezien bij FFG:
+  // een welkomstpakket-actie in de werkruimte terwijl acties in Notion
+  // wonen). Zonder bronkoppeling-entry geldt het oude gedrag.
+  const systeemPerDomein = {};
+  if (gevuld.some(d => d.domein === "bronkoppeling")) {
+    try {
+      const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=bronkoppeling&limiet=50");
+      for (const e of (body.entries || [])) {
+        if (e && e.data && e.data.Systeem) systeemPerDomein[e.entryId] = e.data.Systeem;
+      }
+    } catch (e) { /* geen bronkoppeling leesbaar -> oude gedrag */ }
+  }
+  const werkdataDomeinen = gevuld.filter(d =>
+    opslagDomeinen.indexOf(d.domein) === -1
+    && GEHEUGEN_DOMEINEN.indexOf(d.domein) === -1
+    && (!(d.domein in systeemPerDomein) || systeemPerDomein[d.domein] === "werkruimte"));
 
   // Voorrangsregels (f24): verse metrics winnen; oude metrics naast echte
   // werkdata-rijen worden genegeerd; oude metrics zonder werkdata worden
