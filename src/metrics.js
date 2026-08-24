@@ -42,11 +42,12 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
   const tijdwinst = computeTijdwinst(bundle, minutenPerActie);
   const agentUsage = computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
+  const correctievrij = computeCorrectievrij(bundle, today);
 
   return {
     versie: METRICS_VERSION,
     bron: bundle.source,
-    z1, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal,
+    z1, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
     periodWeeks, periodDays,
     meta: {
       bronLabel: bundle.sourceLabel,
@@ -105,6 +106,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const tijdwinst = buildTijdwinstFromMetrics(actiesBlock, minutenPerActie);
   const agentUsage = buildAgentUsageFromMetrics(agentsBlock, schema);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
+  const correctievrij = buildCorrectievrijFromMetrics(raw.correctievrij || null, today);
 
   const domeinenGevonden = domeinenBlock ? Object.keys(domeinenBlock).length : 0;
 
@@ -113,7 +115,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
     metrics: {
       versie: METRICS_VERSION,
       bron: "notion",
-      z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal,
+      z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,
       meta: {
@@ -328,6 +330,28 @@ function buildTijdwinstFromMetrics(actiesBlock, minutenPerActie) {
   return { berekenbaar: true, afgerond, totaal: actiesBlock.totaal || 0, minutenPerActie, minuten, uren: minuten / 60 };
 }
 
+// ── Correctievrij (i25) uit het correctievrij-blok ─────────────────────
+// Het blok draagt de ruwe tellingen (venster + weken); percentage en gate
+// worden hier NIET overgenomen maar met dezelfde helper als de rij-route
+// uitgerekend (berekenCorrectievrij in zones.js) — één rekenregel, twee routes.
+function buildCorrectievrijFromMetrics(block, today) {
+  if (!block) {
+    return { aanwezig: false, reden: "Dit metricsbestand bevat geen correctievrij-blok — de Coördinator levert dit vanaf registry 1.34.0 aan bij de dagstart." };
+  }
+  const weken = (Array.isArray(block.weken) ? block.weken : [])
+    .map(w => ({ weekStart: parseDateField(w.week_start), autonoom: w.autonoom_afgerond || 0, gecorrigeerd: w.gecorrigeerd || 0 }))
+    .filter(w => w.weekStart);
+  return berekenCorrectievrij({
+    vensterDagen: block.venster_dagen ?? undefined,
+    drempel: block.drempel_pct ?? undefined,
+    autonoom: block.autonoom_afgerond || 0,
+    gecorrigeerd: block.gecorrigeerd || 0,
+    heropend: block.heropend || 0,
+    weken,
+    opmerking: block.opmerking || null,
+  }, today);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     METRICS_VERSION,
@@ -335,5 +359,6 @@ if (typeof module !== "undefined") {
     buildZone1FromMetricsAandacht, buildZone3FromMetrics, buildAgentUsageFromMetrics,
     buildZone4FromMetrics, buildZone5FromMetrics, buildActiviteitFromMetrics,
     buildAdoptFromMetrics, buildTijdwinstFromMetrics, mapBedrijfscontextBlock,
+    buildCorrectievrijFromMetrics,
   };
 }

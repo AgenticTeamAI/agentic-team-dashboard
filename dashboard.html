@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-a3LsUn5NECp36SHbpChUtFF7KIqz6nvhLPAC0xreyGQ=' 'sha256-vesqPCeQ3BjecUWko28AkKubNWVlmkQfhC+WDMNXInw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ToEpr/4cORIFcQ34KyOZTKsREUsAO5EsKCjyfxvma3I=' 'sha256-oFEv6qKUB2M7VWoZAxl5flzboMH9lu4W3OnfWSqVCpw='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -412,7 +412,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
-    1.29.0 van AgenticTeamAI/agent-architecture.
+    1.34.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -421,20 +421,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.29.0
-//   registry updated: 2026-08-21
-//   bron-commit     : 283408efb9b539f80cd0aafe9621ea962f13a21f
-//   geextraheerd op : 2026-08-23T18:29:30Z
+//   registryVersion : 1.34.0
+//   registry updated: 2026-08-24
+//   bron-commit     : 4527538be05a115c09863baab4c85059447c431d
+//   geextraheerd op : 2026-08-24T20:49:38Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.29.0",
-  "registryUpdated": "2026-08-21",
-  "sourceCommit": "283408efb9b539f80cd0aafe9621ea962f13a21f",
-  "extractedAt": "2026-08-23T18:29:30Z",
+  "registryVersion": "1.34.0",
+  "registryUpdated": "2026-08-24",
+  "sourceCommit": "4527538be05a115c09863baab4c85059447c431d",
+  "extractedAt": "2026-08-24T20:49:38Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -1532,6 +1532,22 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Bron (link)",
           "type": "url"
+        },
+        {
+          "naam": "Afgerond door",
+          "type": "tekst"
+        },
+        {
+          "naam": "Afgerond op",
+          "type": "datum"
+        },
+        {
+          "naam": "Gecorrigeerd",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Correctie",
+          "type": "tekst"
         }
       ]
     },
@@ -2892,6 +2908,153 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
   return { status: "ok", ranking };
 }
 
+// -- Correctievrij-percentage (i25) - de f19-gate ------------------------
+// Aandeel acties dat een agent autonoom op Klaar zette (werkronde + QC) en
+// dat daarna NIET door een mens is gecorrigeerd. Beide routes (rijen én
+// metricsbestand) leveren de ruwe tellingen aan berekenCorrectievrij(), zodat
+// percentage en gate op precies één plek worden uitgerekend.
+const CORRECTIEVRIJ_VENSTER_DAGEN = 28;
+const CORRECTIEVRIJ_DREMPEL_PCT = 80;
+const CORRECTIEVRIJ_WEKEN = 5;         // 4 afgesloten + de lopende
+const CORRECTIEVRIJ_WEKEN_VEREIST = 4; // gate: 4 aaneengesloten afgesloten weken
+const CORRECTIEVRIJ_GEEN_VENSTER = "niet te berekenen — nog geen autonoom afgeronde acties in het venster";
+
+// Checkbox-waarden zoals ze uit Excel/Notion/werkruimte binnenkomen.
+function checkboxWaar(v) {
+  if (v === true || v === 1) return true;
+  if (typeof v !== "string") return false;
+  return ["true", "ja", "x", "__yes__", "1"].includes(v.trim().toLowerCase());
+}
+
+// Dagindex (UTC-dagen sinds epoch) — datums in de data zijn JJJJ-MM-DD en
+// parsen als UTC-middernacht; door op UTC-dagen te rekenen valt een datum
+// nooit door een tijdzone in de verkeerde week.
+function dagIndex(d) {
+  return Math.floor(d.getTime() / 86400000);
+}
+// Maandag van de week waarin de dagindex valt (dag 0 = do 1-1-1970).
+function weekStartIndex(idx) {
+  return idx - (((idx + 3) % 7) + 7) % 7;
+}
+function dagVanIndex(idx) {
+  return new Date(idx * 86400000);
+}
+function weekLabel(d) {
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}`;
+}
+
+function pctVan(autonoom, gecorrigeerd) {
+  if (!(autonoom > 0)) return null;
+  return ((autonoom - gecorrigeerd) / autonoom) * 100;
+}
+
+// Gedeelde helper: ruwe tellingen -> interne vorm (pct, weken met label/
+// pct/afgesloten, gate). `ruw.weken` = [{ weekStart: Date, autonoom, gecorrigeerd }].
+function berekenCorrectievrij(ruw, today) {
+  const vensterDagen = ruw.vensterDagen ?? CORRECTIEVRIJ_VENSTER_DAGEN;
+  const drempel = ruw.drempel ?? CORRECTIEVRIJ_DREMPEL_PCT;
+  const autonoom = ruw.autonoom || 0;
+  const gecorrigeerd = ruw.gecorrigeerd || 0;
+  const heropend = ruw.heropend || 0;
+  const vandaagIdx = dagIndex(today);
+
+  const weken = (ruw.weken || [])
+    .filter(w => w.weekStart instanceof Date && !isNaN(w.weekStart.getTime()))
+    .sort((a, b) => a.weekStart - b.weekStart)
+    .map(w => ({
+      weekStart: w.weekStart,
+      label: weekLabel(w.weekStart),
+      autonoom: w.autonoom || 0,
+      gecorrigeerd: w.gecorrigeerd || 0,
+      pct: pctVan(w.autonoom || 0, w.gecorrigeerd || 0),
+      afgesloten: dagIndex(w.weekStart) + 7 <= vandaagIdx,
+    }));
+
+  // Gate: de 4 meest recente AFGESLOTEN weken, elk met autonoom werk en op
+  // of boven de drempel. wekenGehaald telt van achteren, tot de eerste week
+  // die niet voldoet.
+  const afgesloten = weken.filter(w => w.afgesloten).slice(-CORRECTIEVRIJ_WEKEN_VEREIST);
+  const voldoet = w => w.autonoom >= 1 && w.pct !== null && w.pct >= drempel;
+  let wekenGehaald = 0;
+  for (let i = afgesloten.length - 1; i >= 0; i--) {
+    if (!voldoet(afgesloten[i])) break;
+    wekenGehaald++;
+  }
+  const gehaald = afgesloten.length >= CORRECTIEVRIJ_WEKEN_VEREIST && wekenGehaald >= CORRECTIEVRIJ_WEKEN_VEREIST;
+  let reden = null;
+  if (!gehaald) {
+    const metWerk = afgesloten.filter(w => w.autonoom >= 1);
+    if (metWerk.length < CORRECTIEVRIJ_WEKEN_VEREIST) {
+      reden = metWerk.length === 0
+        ? "nog geen afgesloten week met autonoom werk"
+        : `nog maar ${metWerk.length} afgesloten ${metWerk.length === 1 ? "week" : "weken"} met autonoom werk (${CORRECTIEVRIJ_WEKEN_VEREIST} nodig)`;
+    } else {
+      const fout = [...afgesloten].reverse().find(w => !voldoet(w));
+      reden = fout ? `week van ${fout.label} zat op ${Math.round(fout.pct)}%` : "gate niet gehaald";
+    }
+  }
+
+  const pct = pctVan(autonoom, gecorrigeerd);
+  return {
+    aanwezig: true,
+    reden: pct === null ? CORRECTIEVRIJ_GEEN_VENSTER : undefined,
+    vensterDagen, drempel, autonoom, gecorrigeerd, heropend, pct,
+    weken,
+    gate: { gehaald, wekenGehaald, wekenVereist: CORRECTIEVRIJ_WEKEN_VEREIST, reden },
+    opmerking: ruw.opmerking || null,
+  };
+}
+
+// Rij-route: telt uit Acties (velden Afgerond door / Afgerond op /
+// Gecorrigeerd / Status, registry 1.34.0).
+//   autonoom  = Afgerond door gevuld én Afgerond op binnen het venster t/m vandaag
+//   heropend  = daarvan Status ≠ "Klaar"
+//   gecorrigeerd = daarvan Gecorrigeerd aangevinkt óf Status ≠ "Klaar"
+// De weekreeks (laatste 5 kalenderweken, maandag = start) telt álle autonoom
+// afgeronde acties op Afgerond op, ook net buiten het 28-dagenvenster.
+function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT) {
+  const acties = rows(bundle, "acties");
+  if (!acties) {
+    return { aanwezig: false, reden: "Geen Acties-domein aanwezig in deze bundel — het correctievrij-percentage is niet af te leiden." };
+  }
+  const vandaagIdx = dagIndex(today);
+  const huidigeWeekIdx = weekStartIndex(vandaagIdx);
+  const wekenMap = new Map();
+  for (let i = CORRECTIEVRIJ_WEKEN - 1; i >= 0; i--) {
+    const ws = huidigeWeekIdx - i * 7;
+    wekenMap.set(ws, { weekStart: dagVanIndex(ws), autonoom: 0, gecorrigeerd: 0 });
+  }
+
+  let autonoom = 0, gecorrigeerd = 0, heropend = 0;
+  for (const r of acties) {
+    const door = getField(r, "Afgerond door");
+    if (door === undefined || door === null || String(door).trim() === "") continue;
+    const op = parseDateField(getField(r, "Afgerond op"));
+    if (!op) continue;
+    const opIdx = dagIndex(op);
+    const diff = vandaagIdx - opIdx;
+    if (diff < 0) continue; // toekomstige datum: nog niet gebeurd
+    const isHeropend = getField(r, "Status") !== "Klaar";
+    const isGecorrigeerd = isHeropend || checkboxWaar(getField(r, "Gecorrigeerd"));
+
+    if (diff < vensterDagen) {
+      autonoom++;
+      if (isHeropend) heropend++;
+      if (isGecorrigeerd) gecorrigeerd++;
+    }
+    const wk = wekenMap.get(weekStartIndex(opIdx));
+    if (wk) { wk.autonoom++; if (isGecorrigeerd) wk.gecorrigeerd++; }
+  }
+
+  return berekenCorrectievrij({
+    vensterDagen, drempel, autonoom, gecorrigeerd, heropend,
+    weken: [...wekenMap.values()],
+    opmerking: null,
+  }, today);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
@@ -2901,6 +3064,8 @@ if (typeof module !== "undefined") {
     voegContextToeAanAandacht, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
+    CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
+    checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
   };
 }
 
@@ -3082,6 +3247,29 @@ function saneerMetricsPayload(raw, schema) {
       opmerking: saneerTekstOfNull(raw.acties.opmerking, METRICS_MAX.tekst),
     };
   }
+  // i25: correctievrij-percentage (de f19-gate). Zelfde whitelist-stijl:
+  // alleen deze subsleutels, `percentage` en andere afgeleiden vallen weg —
+  // het dashboard rekent die zelf (zie berekenCorrectievrij in zones.js).
+  if (isObject(raw.correctievrij)) {
+    const c = raw.correctievrij;
+    const weken = Array.isArray(c.weken) ? c.weken.filter(isObject).slice(0, METRICS_MAX.buckets) : [];
+    uit.correctievrij = {
+      venster_dagen: saneerGetalOfNull(c.venster_dagen, ctx, "correctievrij.venster_dagen"),
+      drempel_pct: saneerGetalOfNull(c.drempel_pct, ctx, "correctievrij.drempel_pct"),
+      autonoom_afgerond: saneerGetal(c.autonoom_afgerond, ctx, "correctievrij.autonoom_afgerond"),
+      gecorrigeerd: saneerGetal(c.gecorrigeerd, ctx, "correctievrij.gecorrigeerd"),
+      heropend: saneerGetal(c.heropend, ctx, "correctievrij.heropend"),
+      weken: weken.map((w, i) => {
+        const pad = `correctievrij.weken[${i}]`;
+        return {
+          week_start: saneerDatum(w.week_start, ctx, `${pad}.week_start`),
+          autonoom_afgerond: saneerGetal(w.autonoom_afgerond, ctx, `${pad}.autonoom_afgerond`),
+          gecorrigeerd: saneerGetal(w.gecorrigeerd, ctx, `${pad}.gecorrigeerd`),
+        };
+      }),
+      opmerking: saneerTekstOfNull(c.opmerking, METRICS_MAX.tekst),
+    };
+  }
   if (isObject(raw.sales_funnel)) {
     uit.sales_funnel = {
       per_fase: saneerTellingen(raw.sales_funnel.per_fase, ctx, "sales_funnel.per_fase"),
@@ -3227,11 +3415,12 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
   const tijdwinst = computeTijdwinst(bundle, minutenPerActie);
   const agentUsage = computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
+  const correctievrij = computeCorrectievrij(bundle, today);
 
   return {
     versie: METRICS_VERSION,
     bron: bundle.source,
-    z1, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal,
+    z1, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
     periodWeeks, periodDays,
     meta: {
       bronLabel: bundle.sourceLabel,
@@ -3290,6 +3479,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const tijdwinst = buildTijdwinstFromMetrics(actiesBlock, minutenPerActie);
   const agentUsage = buildAgentUsageFromMetrics(agentsBlock, schema);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
+  const correctievrij = buildCorrectievrijFromMetrics(raw.correctievrij || null, today);
 
   const domeinenGevonden = domeinenBlock ? Object.keys(domeinenBlock).length : 0;
 
@@ -3298,7 +3488,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
     metrics: {
       versie: METRICS_VERSION,
       bron: "notion",
-      z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal,
+      z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,
       meta: {
@@ -3513,6 +3703,28 @@ function buildTijdwinstFromMetrics(actiesBlock, minutenPerActie) {
   return { berekenbaar: true, afgerond, totaal: actiesBlock.totaal || 0, minutenPerActie, minuten, uren: minuten / 60 };
 }
 
+// ── Correctievrij (i25) uit het correctievrij-blok ─────────────────────
+// Het blok draagt de ruwe tellingen (venster + weken); percentage en gate
+// worden hier NIET overgenomen maar met dezelfde helper als de rij-route
+// uitgerekend (berekenCorrectievrij in zones.js) — één rekenregel, twee routes.
+function buildCorrectievrijFromMetrics(block, today) {
+  if (!block) {
+    return { aanwezig: false, reden: "Dit metricsbestand bevat geen correctievrij-blok — de Coördinator levert dit vanaf registry 1.34.0 aan bij de dagstart." };
+  }
+  const weken = (Array.isArray(block.weken) ? block.weken : [])
+    .map(w => ({ weekStart: parseDateField(w.week_start), autonoom: w.autonoom_afgerond || 0, gecorrigeerd: w.gecorrigeerd || 0 }))
+    .filter(w => w.weekStart);
+  return berekenCorrectievrij({
+    vensterDagen: block.venster_dagen ?? undefined,
+    drempel: block.drempel_pct ?? undefined,
+    autonoom: block.autonoom_afgerond || 0,
+    gecorrigeerd: block.gecorrigeerd || 0,
+    heropend: block.heropend || 0,
+    weken,
+    opmerking: block.opmerking || null,
+  }, today);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     METRICS_VERSION,
@@ -3520,6 +3732,7 @@ if (typeof module !== "undefined") {
     buildZone1FromMetricsAandacht, buildZone3FromMetrics, buildAgentUsageFromMetrics,
     buildZone4FromMetrics, buildZone5FromMetrics, buildActiviteitFromMetrics,
     buildAdoptFromMetrics, buildTijdwinstFromMetrics, mapBedrijfscontextBlock,
+    buildCorrectievrijFromMetrics,
   };
 }
 
@@ -3816,6 +4029,7 @@ const DETAIL_VOLGORDE = [
   { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
   { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
+  { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️" },
   { key: "leren", titel: "Leren", emoji: "💡" },
 ];
 
@@ -3826,6 +4040,10 @@ function nlGetal(n, decimals = 0) {
 // ── KPI-tegels ────────────────────────────────────────────────────────
 function renderKpiTegels(el, ctx) {
   const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
+  // i25: correctievrij kan ontbreken in oudere ctx-objecten (bv. tests) —
+  // dan hetzelfde pad als "geen blok".
+  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
+  const cvKpi = correctievrijKpi(cv);
 
   const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
   const adoptieLabel = adopt.adoptiescore === null
@@ -3858,6 +4076,12 @@ function renderKpiTegels(el, ctx) {
       <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
+    </div>
+    <div class="kpi-tile" data-goto="correctievrij" tabindex="0" role="button">
+      <div class="kpi-getal">${esc(cvKpi.getal)}</div>
+      <div class="kpi-kop">Correctievrij (4 wk)</div>
+      <div class="kpi-som">${esc(cvKpi.gate)}</div>
+      <div class="kpi-label">${esc(cvKpi.label)}</div>
     </div>
     <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
       <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
@@ -4009,6 +4233,63 @@ function renderDetailTijdwinst(el, tijdwinst) {
     </div>
     <p class="footnote"><strong>Dit is een schatting op basis van je eigen aanname, geen meting.</strong> Dit dashboard kan niet zien hoeveel tijd een actie werkelijk kost of zou hebben gekost zonder het team. Het getal is uitsluitend: het aantal afgeronde acties in de bundel, vermenigvuldigd met de minuten-per-actie die jij hierboven instelt (standaard 25). Verzet de instelling gerust — de som past zich meteen aan, zodat je altijd kunt narekenen waar het getal vandaan komt.</p>
     <p class="footnote">Herkomst: domein Acties, veld Status = "Klaar", totaal in de bundel (geen aanmaakdatum in dit domein om op periode te filteren).</p>`;
+}
+
+// ── Correctievrij (i25) — tekstjes voor de KPI-tegel ─────────────────
+function correctievrijKpi(cv) {
+  if (!cv || !cv.aanwezig) {
+    return { getal: "n.v.t.", label: cv && cv.reden ? cv.reden : "Niet beschikbaar in deze bundel.", gate: "Gate f19: niet te bepalen" };
+  }
+  const berekenbaar = cv.pct !== null;
+  const getal = berekenbaar ? `${Math.round(cv.pct)}%` : "n.v.t.";
+  const label = berekenbaar
+    ? `${cv.autonoom - cv.gecorrigeerd} van ${cv.autonoom} autonoom afgeronde acties zonder correctie · laatste ${cv.vensterDagen} dagen`
+    : (cv.reden || "niet te berekenen");
+  const g = cv.gate;
+  const gate = g.gehaald
+    ? `Gate f19: gehaald ✓ (${g.wekenGehaald}/${g.wekenVereist} weken ≥ ${cv.drempel}%)`
+    : `Gate f19: nog niet — ${g.wekenGehaald}/${g.wekenVereist} weken ≥ ${cv.drempel}%`;
+  return { getal, label, gate };
+}
+
+function renderDetailCorrectievrij(el, cv) {
+  if (!cv || !cv.aanwezig) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Correctievrij</div><div class="getal">n.v.t.</div><div class="detail">${esc(cv && cv.reden ? cv.reden : "Niet beschikbaar in deze bundel.")}</div></div>
+      <p class="footnote">Vanaf registry 1.34.0 krijgt het domein Acties de velden <em>Afgerond door</em>, <em>Afgerond op</em>, <em>Gecorrigeerd</em> en <em>Correctie</em>. Zodra die gevuld zijn (rijenroute) of de Coördinator het correctievrij-blok meelevert (metricsroute), verschijnt dit percentage vanzelf.</p>`;
+    return;
+  }
+  const kpi = correctievrijKpi(cv);
+  const g = cv.gate;
+  const gateKlasse = g.gehaald ? "signaal-groen" : "signaal-oranje";
+  const gateTekst = g.gehaald
+    ? `De laatste ${g.wekenVereist} afgesloten weken zaten elk op of boven ${cv.drempel}% met minstens één autonoom afgeronde actie.`
+    : `Nog niet gehaald: ${g.reden || "onbekende reden"}. Nodig: ${g.wekenVereist} aaneengesloten afgesloten weken, elk met autonoom werk én ≥ ${cv.drempel}%.`;
+
+  const rijen = cv.weken.map(w => `<tr>
+      <td>${esc(w.label)}</td>
+      <td>${esc(w.autonoom)}</td>
+      <td>${esc(w.gecorrigeerd)}</td>
+      <td>${w.pct === null ? "—" : esc(Math.round(w.pct)) + "%"}</td>
+      <td>${w.afgesloten ? "afgesloten" : "lopend"}</td>
+    </tr>`).join("");
+
+  el.innerHTML = `
+    <p>Het <strong>correctievrij-percentage</strong> is de succesmaat van f9 en de gate voor f19: het aandeel acties dat een agent <strong>autonoom</strong> heeft afgerond (werkronde + kwaliteitscontrole, daarna zelf op "Klaar" gezet) en dat daarna <strong>niet door een mens is gecorrigeerd</strong>.</p>
+    <div class="grid-9">
+      <div class="card"><div class="kop">Correctievrij</div><div class="getal">${esc(kpi.getal)}</div><div class="detail">${esc(kpi.label)}</div></div>
+      <div class="card"><div class="kop">Autonoom afgerond</div><div class="getal">${esc(cv.autonoom)}</div><div class="detail">acties met "Afgerond door" gevuld en "Afgerond op" in de laatste ${esc(cv.vensterDagen)} dagen</div></div>
+      <div class="card"><div class="kop">Gecorrigeerd</div><div class="getal">${esc(cv.gecorrigeerd)}</div><div class="detail">waarvan ${esc(cv.heropend)} heropend (status niet meer "Klaar")</div></div>
+      <div class="card ${gateKlasse}"><div class="kop">Gate f19</div><div class="getal">${g.gehaald ? "gehaald ✓" : "nog niet"}</div><div class="detail">${esc(g.wekenGehaald)}/${esc(g.wekenVereist)} weken ≥ ${esc(cv.drempel)}% · ${esc(gateTekst)}</div></div>
+    </div>
+    <h3>Per kalenderweek (maandag = weekstart)</h3>
+    <table class="detail-table">
+      <thead><tr><th>Week van</th><th>Autonoom afgerond</th><th>Gecorrigeerd</th><th>Correctievrij</th><th>Status</th></tr></thead>
+      <tbody>${rijen || `<tr><td colspan="5">Geen weekgegevens in deze bundel.</td></tr>`}</tbody>
+    </table>
+    <p class="footnote"><strong>Definities.</strong> <em>Autonoom afgerond</em> = een agent zette de actie zelf op "Klaar" nadat de kwaliteitscontrole akkoord gaf; het veld <em>Afgerond door</em> draagt dan de agentnaam en <em>Afgerond op</em> de datum. <em>Gecorrigeerd</em> = een mens vinkte daarna <em>Gecorrigeerd</em> aan (met de reden in <em>Correctie</em>) óf heropende de actie (status niet meer "Klaar"). Een afkeuring door de kwaliteitscontrole vóór de afronding telt <strong>niet</strong> als correctie — dat is het normale werkproces. Het venster is de laatste ${esc(cv.vensterDagen)} dagen tot en met vandaag; de weektabel telt alle autonoom afgeronde acties per kalenderweek.</p>
+    <p class="footnote"><strong>Gate f19</strong> (fase 1 en verder): ${esc(g.wekenVereist)} aaneengesloten <em>afgesloten</em> kalenderweken (weekstart + 7 dagen ≤ vandaag), elk met minstens één autonoom afgeronde actie en een weekpercentage ≥ ${esc(cv.drempel)}%. De lopende week telt nog niet mee.</p>
+    ${cv.opmerking ? `<p class="footnote">Opmerking van de Coördinator: ${esc(cv.opmerking)}</p>` : ""}
+    <p class="footnote">Met de hand na te rekenen: (a − g) / a — hier (${esc(cv.autonoom)} − ${esc(cv.gecorrigeerd)}) / ${esc(cv.autonoom)}${cv.pct === null ? " (geen noemer)" : ` = ${esc(Math.round(cv.pct))}%`}.</p>`;
 }
 
 function renderDetailActiviteit(el, activiteit, periodWeeks) {
@@ -4186,7 +4467,7 @@ function buildContext() {
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta,
+      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
       // zo zichtbaar te zijn als parse-waarschuwingen
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
@@ -4199,7 +4480,7 @@ function buildContext() {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen,
+    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
   };
 }
 
@@ -4314,6 +4595,7 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)],
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
   };
 

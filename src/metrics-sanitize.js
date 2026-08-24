@@ -175,6 +175,29 @@ function saneerMetricsPayload(raw, schema) {
       opmerking: saneerTekstOfNull(raw.acties.opmerking, METRICS_MAX.tekst),
     };
   }
+  // i25: correctievrij-percentage (de f19-gate). Zelfde whitelist-stijl:
+  // alleen deze subsleutels, `percentage` en andere afgeleiden vallen weg —
+  // het dashboard rekent die zelf (zie berekenCorrectievrij in zones.js).
+  if (isObject(raw.correctievrij)) {
+    const c = raw.correctievrij;
+    const weken = Array.isArray(c.weken) ? c.weken.filter(isObject).slice(0, METRICS_MAX.buckets) : [];
+    uit.correctievrij = {
+      venster_dagen: saneerGetalOfNull(c.venster_dagen, ctx, "correctievrij.venster_dagen"),
+      drempel_pct: saneerGetalOfNull(c.drempel_pct, ctx, "correctievrij.drempel_pct"),
+      autonoom_afgerond: saneerGetal(c.autonoom_afgerond, ctx, "correctievrij.autonoom_afgerond"),
+      gecorrigeerd: saneerGetal(c.gecorrigeerd, ctx, "correctievrij.gecorrigeerd"),
+      heropend: saneerGetal(c.heropend, ctx, "correctievrij.heropend"),
+      weken: weken.map((w, i) => {
+        const pad = `correctievrij.weken[${i}]`;
+        return {
+          week_start: saneerDatum(w.week_start, ctx, `${pad}.week_start`),
+          autonoom_afgerond: saneerGetal(w.autonoom_afgerond, ctx, `${pad}.autonoom_afgerond`),
+          gecorrigeerd: saneerGetal(w.gecorrigeerd, ctx, `${pad}.gecorrigeerd`),
+        };
+      }),
+      opmerking: saneerTekstOfNull(c.opmerking, METRICS_MAX.tekst),
+    };
+  }
   if (isObject(raw.sales_funnel)) {
     uit.sales_funnel = {
       per_fase: saneerTellingen(raw.sales_funnel.per_fase, ctx, "sales_funnel.per_fase"),

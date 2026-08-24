@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.29.0
-//   registry updated: 2026-08-21
-//   bron-commit     : 283408efb9b539f80cd0aafe9621ea962f13a21f
-//   geextraheerd op : 2026-08-23T18:29:30Z
+//   registryVersion : 1.34.0
+//   registry updated: 2026-08-24
+//   bron-commit     : 4527538be05a115c09863baab4c85059447c431d
+//   geextraheerd op : 2026-08-24T20:49:38Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.29.0",
-  "registryUpdated": "2026-08-21",
-  "sourceCommit": "283408efb9b539f80cd0aafe9621ea962f13a21f",
-  "extractedAt": "2026-08-23T18:29:30Z",
+  "registryVersion": "1.34.0",
+  "registryUpdated": "2026-08-24",
+  "sourceCommit": "4527538be05a115c09863baab4c85059447c431d",
+  "extractedAt": "2026-08-24T20:49:38Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -1113,6 +1113,22 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Bron (link)",
           "type": "url"
+        },
+        {
+          "naam": "Afgerond door",
+          "type": "tekst"
+        },
+        {
+          "naam": "Afgerond op",
+          "type": "datum"
+        },
+        {
+          "naam": "Gecorrigeerd",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Correctie",
+          "type": "tekst"
         }
       ]
     },

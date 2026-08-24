@@ -459,6 +459,153 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
   return { status: "ok", ranking };
 }
 
+// -- Correctievrij-percentage (i25) - de f19-gate ------------------------
+// Aandeel acties dat een agent autonoom op Klaar zette (werkronde + QC) en
+// dat daarna NIET door een mens is gecorrigeerd. Beide routes (rijen én
+// metricsbestand) leveren de ruwe tellingen aan berekenCorrectievrij(), zodat
+// percentage en gate op precies één plek worden uitgerekend.
+const CORRECTIEVRIJ_VENSTER_DAGEN = 28;
+const CORRECTIEVRIJ_DREMPEL_PCT = 80;
+const CORRECTIEVRIJ_WEKEN = 5;         // 4 afgesloten + de lopende
+const CORRECTIEVRIJ_WEKEN_VEREIST = 4; // gate: 4 aaneengesloten afgesloten weken
+const CORRECTIEVRIJ_GEEN_VENSTER = "niet te berekenen — nog geen autonoom afgeronde acties in het venster";
+
+// Checkbox-waarden zoals ze uit Excel/Notion/werkruimte binnenkomen.
+function checkboxWaar(v) {
+  if (v === true || v === 1) return true;
+  if (typeof v !== "string") return false;
+  return ["true", "ja", "x", "__yes__", "1"].includes(v.trim().toLowerCase());
+}
+
+// Dagindex (UTC-dagen sinds epoch) — datums in de data zijn JJJJ-MM-DD en
+// parsen als UTC-middernacht; door op UTC-dagen te rekenen valt een datum
+// nooit door een tijdzone in de verkeerde week.
+function dagIndex(d) {
+  return Math.floor(d.getTime() / 86400000);
+}
+// Maandag van de week waarin de dagindex valt (dag 0 = do 1-1-1970).
+function weekStartIndex(idx) {
+  return idx - (((idx + 3) % 7) + 7) % 7;
+}
+function dagVanIndex(idx) {
+  return new Date(idx * 86400000);
+}
+function weekLabel(d) {
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}-${mm}`;
+}
+
+function pctVan(autonoom, gecorrigeerd) {
+  if (!(autonoom > 0)) return null;
+  return ((autonoom - gecorrigeerd) / autonoom) * 100;
+}
+
+// Gedeelde helper: ruwe tellingen -> interne vorm (pct, weken met label/
+// pct/afgesloten, gate). `ruw.weken` = [{ weekStart: Date, autonoom, gecorrigeerd }].
+function berekenCorrectievrij(ruw, today) {
+  const vensterDagen = ruw.vensterDagen ?? CORRECTIEVRIJ_VENSTER_DAGEN;
+  const drempel = ruw.drempel ?? CORRECTIEVRIJ_DREMPEL_PCT;
+  const autonoom = ruw.autonoom || 0;
+  const gecorrigeerd = ruw.gecorrigeerd || 0;
+  const heropend = ruw.heropend || 0;
+  const vandaagIdx = dagIndex(today);
+
+  const weken = (ruw.weken || [])
+    .filter(w => w.weekStart instanceof Date && !isNaN(w.weekStart.getTime()))
+    .sort((a, b) => a.weekStart - b.weekStart)
+    .map(w => ({
+      weekStart: w.weekStart,
+      label: weekLabel(w.weekStart),
+      autonoom: w.autonoom || 0,
+      gecorrigeerd: w.gecorrigeerd || 0,
+      pct: pctVan(w.autonoom || 0, w.gecorrigeerd || 0),
+      afgesloten: dagIndex(w.weekStart) + 7 <= vandaagIdx,
+    }));
+
+  // Gate: de 4 meest recente AFGESLOTEN weken, elk met autonoom werk en op
+  // of boven de drempel. wekenGehaald telt van achteren, tot de eerste week
+  // die niet voldoet.
+  const afgesloten = weken.filter(w => w.afgesloten).slice(-CORRECTIEVRIJ_WEKEN_VEREIST);
+  const voldoet = w => w.autonoom >= 1 && w.pct !== null && w.pct >= drempel;
+  let wekenGehaald = 0;
+  for (let i = afgesloten.length - 1; i >= 0; i--) {
+    if (!voldoet(afgesloten[i])) break;
+    wekenGehaald++;
+  }
+  const gehaald = afgesloten.length >= CORRECTIEVRIJ_WEKEN_VEREIST && wekenGehaald >= CORRECTIEVRIJ_WEKEN_VEREIST;
+  let reden = null;
+  if (!gehaald) {
+    const metWerk = afgesloten.filter(w => w.autonoom >= 1);
+    if (metWerk.length < CORRECTIEVRIJ_WEKEN_VEREIST) {
+      reden = metWerk.length === 0
+        ? "nog geen afgesloten week met autonoom werk"
+        : `nog maar ${metWerk.length} afgesloten ${metWerk.length === 1 ? "week" : "weken"} met autonoom werk (${CORRECTIEVRIJ_WEKEN_VEREIST} nodig)`;
+    } else {
+      const fout = [...afgesloten].reverse().find(w => !voldoet(w));
+      reden = fout ? `week van ${fout.label} zat op ${Math.round(fout.pct)}%` : "gate niet gehaald";
+    }
+  }
+
+  const pct = pctVan(autonoom, gecorrigeerd);
+  return {
+    aanwezig: true,
+    reden: pct === null ? CORRECTIEVRIJ_GEEN_VENSTER : undefined,
+    vensterDagen, drempel, autonoom, gecorrigeerd, heropend, pct,
+    weken,
+    gate: { gehaald, wekenGehaald, wekenVereist: CORRECTIEVRIJ_WEKEN_VEREIST, reden },
+    opmerking: ruw.opmerking || null,
+  };
+}
+
+// Rij-route: telt uit Acties (velden Afgerond door / Afgerond op /
+// Gecorrigeerd / Status, registry 1.34.0).
+//   autonoom  = Afgerond door gevuld én Afgerond op binnen het venster t/m vandaag
+//   heropend  = daarvan Status ≠ "Klaar"
+//   gecorrigeerd = daarvan Gecorrigeerd aangevinkt óf Status ≠ "Klaar"
+// De weekreeks (laatste 5 kalenderweken, maandag = start) telt álle autonoom
+// afgeronde acties op Afgerond op, ook net buiten het 28-dagenvenster.
+function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT) {
+  const acties = rows(bundle, "acties");
+  if (!acties) {
+    return { aanwezig: false, reden: "Geen Acties-domein aanwezig in deze bundel — het correctievrij-percentage is niet af te leiden." };
+  }
+  const vandaagIdx = dagIndex(today);
+  const huidigeWeekIdx = weekStartIndex(vandaagIdx);
+  const wekenMap = new Map();
+  for (let i = CORRECTIEVRIJ_WEKEN - 1; i >= 0; i--) {
+    const ws = huidigeWeekIdx - i * 7;
+    wekenMap.set(ws, { weekStart: dagVanIndex(ws), autonoom: 0, gecorrigeerd: 0 });
+  }
+
+  let autonoom = 0, gecorrigeerd = 0, heropend = 0;
+  for (const r of acties) {
+    const door = getField(r, "Afgerond door");
+    if (door === undefined || door === null || String(door).trim() === "") continue;
+    const op = parseDateField(getField(r, "Afgerond op"));
+    if (!op) continue;
+    const opIdx = dagIndex(op);
+    const diff = vandaagIdx - opIdx;
+    if (diff < 0) continue; // toekomstige datum: nog niet gebeurd
+    const isHeropend = getField(r, "Status") !== "Klaar";
+    const isGecorrigeerd = isHeropend || checkboxWaar(getField(r, "Gecorrigeerd"));
+
+    if (diff < vensterDagen) {
+      autonoom++;
+      if (isHeropend) heropend++;
+      if (isGecorrigeerd) gecorrigeerd++;
+    }
+    const wk = wekenMap.get(weekStartIndex(opIdx));
+    if (wk) { wk.autonoom++; if (isGecorrigeerd) wk.gecorrigeerd++; }
+  }
+
+  return berekenCorrectievrij({
+    vensterDagen, drempel, autonoom, gecorrigeerd, heropend,
+    weken: [...wekenMap.values()],
+    opmerking: null,
+  }, today);
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
@@ -468,5 +615,7 @@ if (typeof module !== "undefined") {
     voegContextToeAanAandacht, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
+    CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
+    checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
   };
 }

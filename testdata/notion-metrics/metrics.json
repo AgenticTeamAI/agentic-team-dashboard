@@ -213,6 +213,41 @@
     "placeholders_open": [],
     "projectkennis_kopie_laatst_bijgewerkt": "2026-08-06"
   },
+  "correctievrij": {
+    "venster_dagen": 28,
+    "drempel_pct": 80,
+    "autonoom_afgerond": 22,
+    "gecorrigeerd": 3,
+    "heropend": 1,
+    "weken": [
+      {
+        "week_start": "2026-07-27",
+        "autonoom_afgerond": 5,
+        "gecorrigeerd": 0
+      },
+      {
+        "week_start": "2026-08-03",
+        "autonoom_afgerond": 6,
+        "gecorrigeerd": 1
+      },
+      {
+        "week_start": "2026-08-10",
+        "autonoom_afgerond": 3,
+        "gecorrigeerd": 1
+      },
+      {
+        "week_start": "2026-08-17",
+        "autonoom_afgerond": 7,
+        "gecorrigeerd": 1
+      },
+      {
+        "week_start": "2026-08-24",
+        "autonoom_afgerond": 1,
+        "gecorrigeerd": 0
+      }
+    ],
+    "opmerking": "Autonoom afgerond = Afgerond door gevuld én Afgerond op in de laatste 28 dagen; gecorrigeerd = Gecorrigeerd aangevinkt of actie heropend."
+  },
   "aandacht": [
     {
       "type": "acties-deadline",
