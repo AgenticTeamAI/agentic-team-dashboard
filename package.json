@@ -1,0 +1,14 @@
+{
+  "name": "agentic-team-dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Adoptiedashboard — build via python3 scripts/build.py; npm is alleen voor de tests.",
+  "scripts": {
+    "build": "python3 scripts/build.py",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  }
+}

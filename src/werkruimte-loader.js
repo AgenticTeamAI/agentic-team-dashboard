@@ -30,7 +30,17 @@ function parseDaglinkFragment(hash) {
   // mock-instantie — browsers behandelen localhost ook als secure context).
   const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalhost)) return null;
+  // b32: alleen hosts waar werkruimte-instanties draaien (zelfde grens als de
+  // CSP connect-src). Fase 2 (b32) haalt `i` helemaal uit de link en laat het
+  // dashboard via connector.agentic-team.ai praten.
+  if (!isLocalhost && !isToegestaneInstantieHost(url.hostname)) return null;
   return { token, instantieUrl: url.origin };
+}
+
+const INSTANTIE_HOST_SUFFIX = ".azurecontainerapps.io";
+function isToegestaneInstantieHost(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  return h.endsWith(INSTANTIE_HOST_SUFFIX) && h.length > INSTANTIE_HOST_SUFFIX.length && !h.includes("..");
 }
 
 /* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen

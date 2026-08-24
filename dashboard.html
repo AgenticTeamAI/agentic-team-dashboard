@@ -2195,7 +2195,17 @@ function parseDaglinkFragment(hash) {
   // mock-instantie — browsers behandelen localhost ook als secure context).
   const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalhost)) return null;
+  // b32: alleen hosts waar werkruimte-instanties draaien (zelfde grens als de
+  // CSP connect-src). Fase 2 (b32) haalt `i` helemaal uit de link en laat het
+  // dashboard via connector.agentic-team.ai praten.
+  if (!isLocalhost && !isToegestaneInstantieHost(url.hostname)) return null;
   return { token, instantieUrl: url.origin };
+}
+
+const INSTANTIE_HOST_SUFFIX = ".azurecontainerapps.io";
+function isToegestaneInstantieHost(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  return h.endsWith(INSTANTIE_HOST_SUFFIX) && h.length > INSTANTIE_HOST_SUFFIX.length && !h.includes("..");
 }
 
 /* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen
@@ -2880,6 +2890,225 @@ if (typeof module !== "undefined") {
 }
 
 
+/* Strikte normalisatie van een dashboard_metrics-payload (b32 / AT-003).
+ *
+ * Alles wat uit een metricsbestand of uit de werkruimte-entry komt is
+ * onbetrouwbare invoer: een agent onder prompt-injection, of wie dan ook met
+ * schrijfrecht op het domein, kan er willekeurige tekst in zetten. Deze
+ * module bouwt een NIEUW object met uitsluitend de velden die het dashboard
+ * kent, elk in het verwachte type en met een maximale lengte. Onbekende
+ * velden vallen weg; verkeerde types worden een veilige default (0, "",
+ * null). De renderlaag escapet daarbovenop nog steeds alles (defense in
+ * depth) — maar zelfs zonder esc() kan hier geen markup meer doorheen.
+ *
+ * Dezelfde regels staan server-side in agentic-team-werkruimte
+ * (src/domeinen/metrics.ts), die de entry al genormaliseerd opslaat. Houd
+ * beide bestanden gelijk (backlog s31: driftgate).
+ */
+
+const METRICS_MAX = {
+  tekstKort: 120,
+  tekst: 300,
+  lijst: 50,
+  sleutel: 60,
+  buckets: 60,
+  weken: 104,
+};
+
+const ERNST_TOEGESTAAN = ["rood", "oranje", "groen", "grijs"];
+const AANDACHT_TYPES = ["verouderd", "deadline", "context", "leeg", "overig"];
+
+function saneerGetal(v) {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function saneerGetalOfNull(v) {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function saneerTekst(v, max) {
+  return typeof v === "string" ? v.slice(0, max) : "";
+}
+
+function saneerTekstOfNull(v, max) {
+  return typeof v === "string" && v.length ? v.slice(0, max) : null;
+}
+
+function saneerDatum(v) {
+  // Alleen JJJJ-MM-DD of een ISO-tijdstempel; alles anders → null.
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/.test(v)) return null;
+  return Number.isNaN(Date.parse(v)) ? null : v;
+}
+
+function saneerHttpsUrl(v) {
+  if (typeof v !== "string" || v.length > 500) return null;
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" ? u.href : null;
+  } catch (e) { return null; }
+}
+
+function saneerSleutel(k) {
+  // Sleutels van per_fase/per_categorie: platte tekst, begrensd.
+  return typeof k === "string" ? k.slice(0, METRICS_MAX.sleutel) : null;
+}
+
+function isObject(v) {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+/* Object met tellingen: { sleutel: getal } — alleen string-sleutels, alleen getallen. */
+function saneerTellingen(v) {
+  const uit = {};
+  if (!isObject(v)) return uit;
+  for (const [k, n] of Object.entries(v).slice(0, METRICS_MAX.lijst)) {
+    const sleutel = saneerSleutel(k);
+    if (sleutel === null || sleutel === "") continue;
+    uit[sleutel] = saneerGetal(n);
+  }
+  return uit;
+}
+
+function saneerTekstLijst(v, max) {
+  return Array.isArray(v) ? v.filter(s => typeof s === "string").slice(0, METRICS_MAX.lijst).map(s => s.slice(0, max)) : [];
+}
+
+/* Hoofdingang. `schema` = window.AGENTIC_TEAM_SCHEMA (datadomeinen + agents);
+ * domein- en agentsleutels die niet in het schema staan worden weggelaten.
+ * Geeft altijd een object terug; de versiecontrole blijft in metrics.js. */
+function saneerMetricsPayload(raw, schema) {
+  if (!isObject(raw)) return null;
+  const domeinSlugs = schema && schema.datadomeinen ? Object.keys(schema.datadomeinen) : [];
+  const agentSlugs = schema && Array.isArray(schema.agents) ? schema.agents.map(a => a.slug) : [];
+
+  const uit = {};
+  if ("versie" in raw) uit.versie = saneerGetalOfNull(raw.versie);
+  if ("type" in raw) uit.type = saneerTekst(raw.type, METRICS_MAX.tekstKort);
+  uit.gegenereerd_op = saneerDatum(raw.gegenereerd_op);
+  uit.bron_label = saneerTekstOfNull(raw.bron_label, METRICS_MAX.tekstKort);
+  uit.door = saneerTekstOfNull(raw.door, METRICS_MAX.tekstKort);
+  uit.waarschuwingen = saneerTekstLijst(raw.waarschuwingen, METRICS_MAX.tekst);
+
+  if (isObject(raw.periode)) {
+    const weken = saneerGetalOfNull(raw.periode.weken);
+    uit.periode = { weken: weken && weken >= 1 && weken <= METRICS_MAX.weken ? Math.round(weken) : null };
+    if (uit.periode.weken === null) uit.periode = null;
+  }
+
+  if (Array.isArray(raw.aandacht)) {
+    uit.aandacht = raw.aandacht.filter(isObject).slice(0, METRICS_MAX.lijst).map(it => ({
+      type: AANDACHT_TYPES.includes(it.type) ? it.type : "overig",
+      ernst: ERNST_TOEGESTAAN.includes(it.ernst) ? it.ernst : "grijs",
+      label: saneerTekst(it.label, METRICS_MAX.tekst),
+      link: saneerHttpsUrl(it.link),
+    }));
+  }
+
+  if (isObject(raw.domeinen)) {
+    uit.domeinen = {};
+    for (const slug of domeinSlugs) {
+      const d = raw.domeinen[slug];
+      if (!isObject(d)) continue;
+      uit.domeinen[slug] = {
+        laatst_bijgewerkt: saneerDatum(d.laatst_bijgewerkt),
+        rijen: saneerGetal(d.rijen),
+      };
+    }
+  }
+
+  if (isObject(raw.acties)) {
+    uit.acties = {
+      totaal: saneerGetal(raw.acties.totaal),
+      afgerond: saneerGetal(raw.acties.afgerond),
+      verstreken: saneerGetal(raw.acties.verstreken),
+      klaar_verstreken: saneerGetal(raw.acties.klaar_verstreken),
+      opmerking: saneerTekstOfNull(raw.acties.opmerking, METRICS_MAX.tekst),
+    };
+  }
+  if (isObject(raw.sales_funnel)) {
+    uit.sales_funnel = {
+      per_fase: saneerTellingen(raw.sales_funnel.per_fase),
+      verwachte_omzet_totaal: saneerGetal(raw.sales_funnel.verwachte_omzet_totaal),
+      opmerking: saneerTekstOfNull(raw.sales_funnel.opmerking, METRICS_MAX.tekst),
+    };
+  }
+  if (isObject(raw.content)) {
+    uit.content = {
+      gepubliceerd: saneerGetal(raw.content.gepubliceerd),
+      gepland_in_periode: saneerGetal(raw.content.gepland_in_periode),
+      totaal: saneerGetal(raw.content.totaal),
+    };
+  }
+  if (isObject(raw.klantsucces)) {
+    uit.klantsucces = { in_onboarding: saneerGetal(raw.klantsucces.in_onboarding), totaal: saneerGetal(raw.klantsucces.totaal) };
+  }
+  if (isObject(raw.backlog)) {
+    uit.backlog = { besloten: saneerGetal(raw.backlog.besloten), done: saneerGetal(raw.backlog.done), totaal: saneerGetal(raw.backlog.totaal) };
+  }
+  if (isObject(raw.lessen)) {
+    uit.lessen = {
+      totaal: saneerGetal(raw.lessen.totaal),
+      open: saneerGetal(raw.lessen.open),
+      in_periode: saneerGetal(raw.lessen.in_periode),
+      per_categorie: saneerTellingen(raw.lessen.per_categorie),
+    };
+  }
+
+  if (isObject(raw.weekreeks)) {
+    const buckets = Array.isArray(raw.weekreeks.buckets) ? raw.weekreeks.buckets.filter(isObject).slice(0, METRICS_MAX.buckets) : [];
+    uit.weekreeks = {
+      bronnen: saneerTekstLijst(raw.weekreeks.bronnen, METRICS_MAX.sleutel),
+      buckets: buckets.map(b => {
+        const w = isObject(b.waarden) ? b.waarden : {};
+        return {
+          week_start: saneerDatum(b.week_start),
+          label: saneerTekstOfNull(b.label, METRICS_MAX.sleutel),
+          totaal: saneerGetalOfNull(b.totaal),
+          waarden: {
+            interacties: saneerGetal(w.interacties),
+            dagverslagen: saneerGetal(w.dagverslagen),
+            lessen_inzichten: saneerGetal(w.lessen_inzichten),
+            content_kalender: saneerGetal(w.content_kalender),
+          },
+        };
+      }),
+    };
+  }
+
+  if (isObject(raw.agents)) {
+    const perAgent = {};
+    if (isObject(raw.agents.per_agent)) {
+      for (const slug of agentSlugs) {
+        const t = raw.agents.per_agent[slug];
+        if (!isObject(t)) continue;
+        perAgent[slug] = {
+          aantal_periode: saneerGetal(t.aantal_periode),
+          aantal_totaal: saneerGetal(t.aantal_totaal),
+          laatst: saneerDatum(t.laatst),
+        };
+      }
+    }
+    uit.agents = { veld_aanwezig: raw.agents.veld_aanwezig === false ? false : true, per_agent: perAgent };
+  }
+
+  if (isObject(raw.bedrijfscontext)) {
+    const b = raw.bedrijfscontext;
+    uit.bedrijfscontext = {
+      bron: saneerTekstOfNull(b.bron, METRICS_MAX.tekstKort),
+      placeholders_open: saneerTekstLijst(b.placeholders_open, METRICS_MAX.tekstKort),
+      projectkennis_kopie_laatst_bijgewerkt: saneerDatum(b.projectkennis_kopie_laatst_bijgewerkt),
+      laatst_bijgewerkt: saneerDatum(b.laatst_bijgewerkt),
+    };
+  }
+
+  return uit;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN, AANDACHT_TYPES };
+}
+
+
 /* De interne metricsvorm — dit is de enige vorm die de renderlaag (render.js,
  * homepage.js) ooit ziet. Er zijn twee manieren om hem te vullen:
  *
@@ -2946,7 +3175,10 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
 // `raw` is de al-geparste JSON van het bestand. Retourneert altijd
 // { ok, ...}. Bij ok:false NOOIT een metrics-object teruggeven — de
 // aanroeper mag dan niets tekenen.
-function parseNotionMetricsFile(raw, schema, today, minutenPerActie) {
+function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie) {
+  // b32: eerst normaliseren — vanaf hier bevat `raw` uitsluitend bekende
+  // velden in het verwachte type (zie metrics-sanitize.js).
+  const raw = saneerMetricsPayload(rawOnbetrouwbaar, schema);
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, kind: "leeg-of-onherkenbaar", tekst: "Dit bestand is leeg of geen geldig metricsbestand (geen JSON-object met een \"versie\"-veld)." };
   }
@@ -3222,10 +3454,11 @@ if (typeof module !== "undefined") {
  * Bewust gescheiden van de berekening zelf, zodat de logica zonder browser
  * te testen is (zie test-scripts in scripts/). */
 
+// b32: ook veilig in attribuutcontext (value="…") — textContent→innerHTML
+// codeert geen aanhalingstekens, dus die doen we expliciet.
+const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(s) {
-  const div = document.createElement("div");
-  div.textContent = String(s ?? "");
-  return div.innerHTML;
+  return String(s ?? "").replace(/[&<>"']/g, ch => ESC_MAP[ch]);
 }
 
 function fmtDate(dt) {
@@ -3244,8 +3477,14 @@ function relAge(dt, today) {
 const SIGNAAL_ICOON = { rood: "🚨", oranje: "⚠️", groen: "✅", grijs: "❔" };
 const SIGNAAL_LABEL = { rood: "Aandacht nu", oranje: "Binnenkort aandacht", groen: "Op koers", grijs: "Onbekend / verouderd" };
 
+// b32: class-attribuut alleen uit de vaste set — nooit een vrije waarde.
+function signaalKlasse(signaal) {
+  return Object.prototype.hasOwnProperty.call(SIGNAAL_ICOON, signaal) ? signaal : "grijs";
+}
+
 function badgeHtml(signaal) {
-  return `<span class="badge ${signaal}">${SIGNAAL_ICOON[signaal] || ""} ${SIGNAAL_LABEL[signaal] || signaal}</span>`;
+  const k = signaalKlasse(signaal);
+  return `<span class="badge ${k}">${SIGNAAL_ICOON[k]} ${SIGNAAL_LABEL[k]}</span>`;
 }
 
 function stempelHtml(staleAt, today) {
@@ -3268,9 +3507,9 @@ function renderZone1(el, items) {
       if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
     }
     if (it.domeinen) {
-      detail = `<div class="detail" style="margin-top:0.25rem;">${it.domeinen.join(", ")}</div>`;
+      detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
@@ -3341,7 +3580,7 @@ function renderZone4(el, z4, periodDays) {
     <p class="footnote">Deze bundel is een momentopname, geen gebeurtenislog: waar geen bruikbaar datumveld bestaat, tonen we de huidige stand in plaats van een trend — dat staat per kaart aangegeven. Geen omzet-attributie: dit dashboard verbindt geen agent aan een gewonnen deal.</p>`;
 
   function card(kop, getal, detail, opm) {
-    return `<div class="card"><div class="kop">${esc(kop)}</div><div class="getal">${getal}</div><div class="detail">${esc(detail)}</div>${opm ? `<div class="footnote" style="margin-top:0.4rem;">${esc(opm)}</div>` : ""}</div>`;
+    return `<div class="card"><div class="kop">${esc(kop)}</div><div class="getal">${esc(getal)}</div><div class="detail">${esc(detail)}</div>${opm ? `<div class="footnote" style="margin-top:0.4rem;">${esc(opm)}</div>` : ""}</div>`;
   }
 }
 
@@ -3356,12 +3595,12 @@ function renderZone5(el, z5, periodDays) {
     return;
   }
   const catRows = Object.entries(z5.perCategorie).sort((a, b) => b[1] - a[1])
-    .map(([c, n]) => `<div class="agent-row"><span class="naam" style="flex-basis:230px;">${esc(c)}</span><span class="spoor actief">${n}</span></div>`).join("");
+    .map(([c, n]) => `<div class="agent-row"><span class="naam" style="flex-basis:230px;">${esc(c)}</span><span class="spoor actief">${esc(n)}</span></div>`).join("");
   el.innerHTML = `
     <div class="grid-9">
-      <div class="card"><div class="kop">Totaal lessen</div><div class="getal">${z5.totaal}</div><div class="detail">in de bundel</div></div>
-      <div class="card signaal-oranje"><div class="kop">Nog open</div><div class="getal">${z5.open}</div><div class="detail">nog te verwerken</div></div>
-      <div class="card"><div class="kop">Binnen periode</div><div class="getal">${z5.inPeriode}</div><div class="detail">laatste ${periodDays} dagen</div></div>
+      <div class="card"><div class="kop">Totaal lessen</div><div class="getal">${esc(z5.totaal)}</div><div class="detail">in de bundel</div></div>
+      <div class="card signaal-oranje"><div class="kop">Nog open</div><div class="getal">${esc(z5.open)}</div><div class="detail">nog te verwerken</div></div>
+      <div class="card"><div class="kop">Binnen periode</div><div class="getal">${esc(z5.inPeriode)}</div><div class="detail">laatste ${esc(periodDays)} dagen</div></div>
     </div>
     <div style="margin-top:1rem;">${catRows}</div>
     <p class="footnote">Herkomst: domein Lessen &amp; Inzichten, velden Categorie, Status en Datum.</p>`;
@@ -3532,29 +3771,29 @@ function renderKpiTegels(el, ctx) {
 
   el.innerHTML = `
     <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
-      <div class="kpi-getal">${adoptieWaarde}</div>
+      <div class="kpi-getal">${esc(adoptieWaarde)}</div>
       <div class="kpi-kop">Adoptiescore</div>
       <div class="kpi-label">${esc(adoptieLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
-      <div class="kpi-getal">${actiesGetal}</div>
+      <div class="kpi-getal">${esc(actiesGetal)}</div>
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
-      <div class="kpi-getal">${sporenTotaal}</div>
+      <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
     </div>
     <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
-      <div class="kpi-getal">${tijdwinstGetal}</div>
+      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
       <div class="kpi-kop">Geschatte tijdwinst</div>
       <div class="kpi-som">${esc(tijdwinstSom)}</div>
       <div class="kpi-label">
         Schatting op basis van jouw aanname, geen meting ·
         <label class="minuten-input-label" data-stop-nav="1">
           min/actie
-          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${minutenPerActie}">
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(minutenPerActie)}">
         </label>
       </div>
     </div>`;
@@ -3625,7 +3864,7 @@ function renderAandachtTop5(el, items) {
     return;
   }
   const top5 = items.slice(0, 5);
-  const lis = top5.map(it => `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${esc(it.label)}</div></li>`).join("");
   const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
   el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
 }

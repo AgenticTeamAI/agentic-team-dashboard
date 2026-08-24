@@ -22,6 +22,7 @@ JS_MODULES_IN_ORDER = [
     "bundle-loaders.js",
     "werkruimte-loader.js",
     "zones.js",
+    "metrics-sanitize.js",
     "metrics.js",
     "render.js",
     "charts.js",
