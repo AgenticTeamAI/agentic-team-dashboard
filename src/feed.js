@@ -142,7 +142,7 @@ function feedRijHtml(it) {
  * hem. Geeft null als er items zijn, anders de degradatie-html. */
 function feedDegradatieHtml(ctx) {
   const bundle = ctx.bundle || {};
-  if (bundle.kind !== "werkruimte") {
+  if (bundle.source !== "werkruimte") {
     return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — in een geladen bestand of het offline dashboard staat geen live activiteit.</div></div>`;
   }
   if (!bundle.teamfeed) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1w3tDbiWNO2KnHxWVTxgluXpADFTKGWROmJ6MxWWf5A=' 'sha256-aIOOsK0Ai2X/PV/5gvfFWYOefqlymwuLgmfsqGdG8/8='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1w3tDbiWNO2KnHxWVTxgluXpADFTKGWROmJ6MxWWf5A=' 'sha256-AY6hxOpi2FB1hqqBQaVfieDdkXyYIk4tFOzw/v3foTo='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -4044,7 +4044,7 @@ function feedRijHtml(it) {
  * hem. Geeft null als er items zijn, anders de degradatie-html. */
 function feedDegradatieHtml(ctx) {
   const bundle = ctx.bundle || {};
-  if (bundle.kind !== "werkruimte") {
+  if (bundle.source !== "werkruimte") {
     return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — in een geladen bestand of het offline dashboard staat geen live activiteit.</div></div>`;
   }
   if (!bundle.teamfeed) {

@@ -257,7 +257,7 @@ describe("teamfeed (f22)", () => {
 
   it("renderDetailFeed: vijandige entries, dagkoppen, agentfilter", () => {
     const c = el();
-    g.renderDetailFeed(c, ctxMet({ kind: "werkruimte", teamfeed: { entries: entries() } }));
+    g.renderDetailFeed(c, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: entries() } }));
     geenInjectie(c);
     expect(c.querySelectorAll(".feed-rij").length).toBe(5);
     expect(c.querySelectorAll(".feed-dag").length).toBeGreaterThanOrEqual(2);
@@ -271,21 +271,21 @@ describe("teamfeed (f22)", () => {
 
   it("renderFeedPanel: maximaal vijf, met doorklik; leeg en degradatie netjes", () => {
     const c = el();
-    g.renderFeedPanel(c, ctxMet({ kind: "werkruimte", teamfeed: { entries: entries() } }));
+    g.renderFeedPanel(c, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: entries() } }));
     geenInjectie(c);
     expect(c.querySelectorAll(".feed-rij").length).toBe(5);
     expect(c.querySelector('[data-goto="feed"]')).not.toBeNull();
 
     const leeg = el();
-    g.renderFeedPanel(leeg, ctxMet({ kind: "werkruimte", teamfeed: { entries: [] } }));
+    g.renderFeedPanel(leeg, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: [] } }));
     expect(leeg.textContent).toContain("Nog geen teamactiviteit");
 
     const oud = el();
-    g.renderFeedPanel(oud, ctxMet({ kind: "werkruimte", teamfeed: null }));
+    g.renderFeedPanel(oud, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: null }));
     expect(oud.textContent).toContain("kent de teamfeed nog niet");
 
     const bestand = el();
-    g.renderDetailFeed(bestand, ctxMet({ kind: "excel", teamfeed: null }));
+    g.renderDetailFeed(bestand, ctxMet({ source: "excel", kind: "rows", teamfeed: null }));
     expect(bestand.textContent).toContain("daglink van je Coördinator");
   });
 });
