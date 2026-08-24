@@ -302,3 +302,65 @@ section.panel {
 @media (max-width: 700px) {
   .kpi-getal { font-size: 1.7rem; }
 }
+
+/* ══ f22: Teamfeed ═══════════════════════════════════════════════════ */
+:root { --paars: #A78BFA; --blauw: #60A5FA; }
+
+.feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.feed-rij {
+  display: grid; grid-template-columns: 1.9rem 3.4rem 1fr auto; column-gap: 0.6rem; align-items: start;
+  padding: 0.55rem 0.8rem 0.55rem 0.7rem; border-left: 3px solid var(--grijs-status);
+  background: rgba(255,255,255,0.025); border-radius: 0 8px 8px 0;
+}
+/* Kleur per soort — altijd samen met het icoon, nooit alleen kleur. */
+.feed-rij[data-soort="rondestart"]      { border-left-color: var(--grey); }
+.feed-rij[data-soort="overdracht"]      { border-left-color: var(--blauw); }
+.feed-rij[data-soort="qc_goedgekeurd"]  { border-left-color: var(--groen-status); }
+.feed-rij[data-soort="qc_review_nodig"] { border-left-color: var(--oranje); background: rgba(251,191,36,0.06); }
+.feed-rij[data-soort="voorstel"]        { border-left-color: var(--paars); background: rgba(167,139,250,0.06); }
+.feed-rij[data-soort="afgerond"]        { border-left-color: var(--groen-status); }
+.feed-rij[data-soort="update"]          { border-left-color: var(--grijs-status); }
+.feed-rij.open-lus { border-left-style: dashed; background: transparent; }
+.feed-rij.open-lus .bericht { color: var(--grijs-status); font-style: italic; }
+.feed-rij .icoon { font-size: 1.05rem; line-height: 1.4; text-align: center; }
+.feed-rij .tijd { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.78rem; color: var(--grey); line-height: 1.75; font-variant-numeric: tabular-nums; }
+.feed-rij .kop { display: flex; flex-wrap: wrap; gap: 0.15rem 0.45rem; align-items: baseline; line-height: 1.5; }
+.feed-rij .kop .agent { color: var(--mint-light); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+.feed-rij .kop a.agent:hover { text-decoration: underline; }
+.feed-rij .kop .sep { color: var(--grijs-status); }
+.feed-rij .kop .actie { color: var(--white); font-weight: 600; font-size: 0.9rem; }
+.feed-rij .kop .label { font-size: 0.7rem; color: var(--grey); text-transform: uppercase; letter-spacing: 0.05em; margin-left: 0.2rem; }
+.feed-rij .bericht { color: #D1D5DB; font-size: 0.88rem; line-height: 1.5; margin-top: 0.15rem; }
+.feed-rij .bericht p { margin: 0; }
+.feed-rij .bericht ul { margin: 0.2rem 0 0; padding-left: 1.1rem; }
+.feed-rij .bericht li { margin: 0.1rem 0; }
+.feed-rij .bericht strong { color: var(--white); font-weight: 600; }
+.feed-rij .bericht .feed-kop { margin-top: 0.4rem; font-weight: 600; color: var(--white); }
+.feed-rij .bericht details summary { cursor: pointer; color: var(--mint-light); font-size: 0.8rem; list-style: none; margin-top: 0.2rem; }
+.feed-rij .bericht details summary::-webkit-details-marker { display: none; }
+.feed-rij .bericht details[open] summary { display: none; }
+.feed-rij .link { font-size: 0.8rem; white-space: nowrap; line-height: 1.75; }
+.feed-rij .link a { text-decoration: none; }
+.feed-rij .link a:hover { text-decoration: underline; }
+
+.feed-dag { display: flex; align-items: baseline; gap: 0.6rem; margin: 1.1rem 0 0.5rem; position: sticky; top: 0; background: var(--panel); padding: 0.4rem 0; z-index: 1; }
+.feed-dag h3 { margin: 0; font-size: 0.85rem; font-weight: 600; color: var(--white); }
+.feed-dag .rel { color: var(--grey); font-size: 0.8rem; }
+.feed-dag .lijn { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.feed-dag .n { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.75rem; color: var(--grey); }
+
+.feed-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: 0.6rem 0 0.4rem; }
+.feed-filter .lbl { font-size: 0.78rem; color: var(--grey); margin-right: 0.2rem; }
+.feed-pil {
+  font-size: 0.76rem; font-weight: 600; color: var(--grey); background: transparent;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 0.3rem 0.7rem; cursor: pointer;
+}
+.feed-pil:hover:not(.actief) { border-color: var(--mint); color: var(--mint-light); background: transparent; }
+.feed-pil.actief { color: var(--navy); background: var(--mint); border-color: var(--mint); }
+.feed-pil .n { font-family: "SFMono-Regular", Consolas, monospace; font-weight: 400; opacity: 0.75; margin-left: 0.3rem; font-size: 0.7rem; }
+
+@media (max-width: 640px) {
+  .feed-rij { grid-template-columns: 1.9rem 1fr; }
+  .feed-rij .tijd { grid-column: 2; order: -1; line-height: 1.3; }
+  .feed-rij .kop, .feed-rij .bericht, .feed-rij .link { grid-column: 2; }
+}

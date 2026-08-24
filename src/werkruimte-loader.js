@@ -135,6 +135,26 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
  * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
 const METRICS_DOMEIN = "dashboard_metrics";
 const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+const TEAMFEED_DOMEIN = "teamfeed";
+const TEAMFEED_DAGEN = 30;
+const TEAMFEED_LIMIET = 500;
+
+/* f22: de teamfeed (domein `teamfeed`, opslag=werkruimte) is nooit een
+ * rows-domein en telt niet mee in de voorrangsbeslissing; hij hoort bij
+ * élke route (rows én metrics) op de bundle. Fail-open: een werkruimte die
+ * het domein nog niet kent geeft 400 "Onbekend domein" — dan is de feed er
+ * gewoon niet, met een uitleg in de feed zelf (geen waarschuwingsbalk). */
+async function haalTeamfeed(daglink, vandaag) {
+  const sinds = new Date(vandaag.getTime() - TEAMFEED_DAGEN * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  try {
+    const body = await fetchWerkruimte(daglink,
+      "/dashboard/entries?domein=" + TEAMFEED_DOMEIN + "&limiet=" + TEAMFEED_LIMIET + "&sinds=" + sinds);
+    return { entries: Array.isArray(body.entries) ? body.entries : [], opgehaaldOp: vandaag.toISOString() };
+  } catch (e) {
+    if (e && e.daglinkVerlopen) throw e;
+    return null;
+  }
+}
 
 function isVanVandaag(isoTekst, vandaag) {
   const dt = isoTekst ? new Date(isoTekst) : null;
@@ -184,6 +204,13 @@ async function loadWerkruimteBundle(daglink) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+
+  // f22: alleen ophalen als de instantie het domein kent (staat dan in het
+  // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
+  // actief op deze werkruimte".
+  bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
+    ? await haalTeamfeed(daglink, new Date())
+    : null;
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
   // domein dat volgens de bronkoppeling ergens ánders woont (notion,
@@ -259,7 +286,7 @@ async function loadWerkruimteBundle(daglink) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink,
+    parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
   };
 }
