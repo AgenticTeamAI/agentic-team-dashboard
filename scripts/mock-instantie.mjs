@@ -44,6 +44,21 @@ for (const f of readdirSync(DATA_DIR)) {
   }))
 }
 
+// f22: de teamfeed is een opslag=werkruimte-domein en hoort niet in de
+// bundel-testdata (testdata/data), maar wél in de mock-instantie. Tijden
+// staan absoluut in het bestand; ze worden hier naar "nu" verschoven zodat
+// de dagkoppen (Vandaag/Gisteren) en het open-lus-vangnet kloppen.
+//   MOCK_ZONDER_TEAMFEED=1   simuleert een instantie op een oudere registry
+if (process.env.MOCK_ZONDER_TEAMFEED !== '1') {
+  const ruw = JSON.parse(readFileSync(join(REPO, 'testdata', 'werkruimte', 'teamfeed.json'), 'utf8'))
+  const nieuwste = Math.max(...ruw.map((e) => Date.parse(e.aangemaakt)))
+  const schuif = Date.now() - nieuwste
+  domeinen.teamfeed = ruw.map((e) => {
+    const ts = new Date(Date.parse(e.aangemaakt) + schuif).toISOString()
+    return { ...e, aangemaakt: ts, bijgewerkt: ts }
+  })
+}
+
 // f24-testvarianten voor het dashboard_metrics-domein:
 //   MOCK_METRICS=vers|oud|kapot|versie2   (weggelaten = geen metrics-entry)
 //   MOCK_ALLEEN_GEHEUGEN=1                (alleen logboek+bedrijfscontext als
@@ -85,7 +100,7 @@ if (process.env.MOCK_STRAY_ACTIE === '1') {
 }
 if (process.env.MOCK_ALLEEN_GEHEUGEN === '1') {
   for (const naam of Object.keys(domeinen)) {
-    if (!['bedrijfscontext', 'dashboard_metrics', 'bronkoppeling', '_strayActies'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
+    if (!['bedrijfscontext', 'dashboard_metrics', 'bronkoppeling', 'teamfeed', '_strayActies'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
   }
 }
 if (domeinen._strayActies) {
@@ -130,7 +145,9 @@ const server = createServer((req, res) => {
       const d = url.searchParams.get('domein')
       if (!d || !domeinen[d]) return json(400, { fout: `Onbekend domein ${d}` })
       const limiet = Number(url.searchParams.get('limiet') ?? 50)
-      return json(200, { domein: d, entries: domeinen[d].slice(0, limiet) })
+      const sinds = url.searchParams.get('sinds')
+      const lijst = sinds ? domeinen[d].filter((e) => String(e.bijgewerkt) >= sinds) : domeinen[d]
+      return json(200, { domein: d, entries: lijst.slice(0, limiet) })
     }
   }
   json(404, { fout: 'Onbekende route' })
