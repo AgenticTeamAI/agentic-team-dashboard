@@ -11,6 +11,8 @@ gebruikt (geen netwerktoegang nodig om dit te bouwen of te draaien).
 Gebruik:
     python3 scripts/build.py
 """
+import hashlib
+import base64
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -44,8 +46,24 @@ def main():
             registry_version = line.split(":", 1)[1].strip().strip(',').strip('"')
             break
 
+    # b32 fase 2: CSP-hashes voor de twee inline scriptblokken. De pagina
+    # draagt zo zijn eigen script-src (meta), die samen met de header-CSP uit
+    # vercel.json geldt: 'unsafe-inline' in de header wordt daardoor genegeerd
+    # en alleen precies deze twee blokken mogen draaien.
+    def csp_hash(tekst: str) -> str:
+        return "'sha256-" + base64.b64encode(hashlib.sha256(tekst.encode("utf-8")).digest()).decode() + "'"
+
+    script_schema = "\n" + schema_js + "\n"
+    script_app = "\n" + app_js + "\n"
+    csp_meta = (
+        '<meta http-equiv="Content-Security-Policy" content="script-src '
+        + csp_hash(script_schema) + " " + csp_hash(script_app)
+        + '">'
+    )
+
     out = (
         shell
+        .replace("__CSP_META__", csp_meta)
         .replace("__STYLES__", styles)
         .replace("__SCHEMA__", schema_js)
         .replace("__APP__", app_js)

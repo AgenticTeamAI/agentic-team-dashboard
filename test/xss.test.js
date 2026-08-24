@@ -161,15 +161,32 @@ describe("render.js zelf — ook zonder sanitizer geen markup", () => {
   });
 });
 
-describe("parseDaglinkFragment (instantie-origin)", () => {
-  it("accepteert alleen Container-Apps-hosts (en localhost)", () => {
-    expect(g.parseDaglinkFragment("#t=abc&i=https://wr-x.westeurope.azurecontainerapps.io")).toEqual({
-      token: "abc", instantieUrl: "https://wr-x.westeurope.azurecontainerapps.io",
-    });
+describe("parseDaglinkFragment (b32 fase 2: altijd via de router)", () => {
+  it("negeert elke i-parameter behalve localhost en praat via connector.agentic-team.ai", () => {
+    const via = { token: "abc", instantieUrl: "https://connector.agentic-team.ai" };
+    expect(g.parseDaglinkFragment("#t=abc")).toEqual(via);
+    expect(g.parseDaglinkFragment("#t=abc&i=https://wr-x.westeurope.azurecontainerapps.io")).toEqual(via);
+    expect(g.parseDaglinkFragment("#t=abc&i=https://evil.example.com")).toEqual(via);
+    expect(g.parseDaglinkFragment("#t=abc&i=javascript:alert(1)")).toEqual(via);
     expect(g.parseDaglinkFragment("#t=abc&i=http://localhost:8080")).toEqual({ token: "abc", instantieUrl: "http://localhost:8080" });
-    expect(g.parseDaglinkFragment("#t=abc&i=https://evil.example.com")).toBeNull();
-    expect(g.parseDaglinkFragment("#t=abc&i=https://azurecontainerapps.io")).toBeNull();
-    expect(g.parseDaglinkFragment("#t=abc&i=https://x.azurecontainerapps.io.evil.com")).toBeNull();
-    expect(g.parseDaglinkFragment("#t=abc&i=http://wr-x.westeurope.azurecontainerapps.io")).toBeNull();
+    expect(g.parseDaglinkFragment("#/detail/agent/jurist")).toBeNull();
+    expect(g.parseDaglinkFragment("#i=https://x")).toBeNull();
+  });
+});
+
+describe("CSP (b32 fase 2)", () => {
+  it("dashboard.html draagt script-src-hashes die exact bij de twee inline scriptblokken horen", async () => {
+    const { createHash } = await import("node:crypto");
+    const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
+    const meta = html.match(/<meta http-equiv="Content-Security-Policy" content="script-src ([^"]+)">/);
+    expect(meta).not.toBeNull();
+    const hashes = meta[1].split(" ");
+    const blokken = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    expect(blokken).toHaveLength(2);
+    const verwacht = blokken.map((b) => "'sha256-" + createHash("sha256").update(b, "utf8").digest("base64") + "'");
+    expect(hashes).toEqual(verwacht);
+    expect(html).not.toMatch(/ on[a-z]+="/i);
+    const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));
+    expect(vercel.headers[0].headers[0].value).toContain("connect-src https://connector.agentic-team.ai;");
   });
 });
