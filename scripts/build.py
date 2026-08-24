@@ -13,6 +13,8 @@ Gebruik:
 """
 import hashlib
 import base64
+import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -73,6 +75,18 @@ def main():
     out_path = ROOT / "dashboard.html"
     out_path.write_text(out, encoding="utf-8")
     print(f"OK: {out_path} geschreven ({len(out)} bytes).")
+
+    # Dezelfde hashes in de header-CSP (vercel.json), zodat de meta-tag niet
+    # de enige drager is. vercel.json wordt door Vercel vóór de build gelezen:
+    # dit bestand hoort dus gecommit te worden; de test bewaakt de gelijkheid.
+    vercel_path = ROOT / "vercel.json"
+    vercel = json.loads(vercel_path.read_text(encoding="utf-8"))
+    for regel in vercel.get("headers", []):
+        for h in regel.get("headers", []):
+            if h.get("key") == "Content-Security-Policy":
+                h["value"] = re.sub(r"script-src [^;]+;", "script-src " + csp_hash(script_schema) + " " + csp_hash(script_app) + ";", h["value"])
+    vercel_path.write_text(json.dumps(vercel, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"OK: {vercel_path} script-src-hashes bijgewerkt.")
 
 
 if __name__ == "__main__":

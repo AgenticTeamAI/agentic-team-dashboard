@@ -172,6 +172,14 @@ describe("parseDaglinkFragment (b32 fase 2: altijd via de router)", () => {
     expect(g.parseDaglinkFragment("#/detail/agent/jurist")).toBeNull();
     expect(g.parseDaglinkFragment("#i=https://x")).toBeNull();
   });
+
+  it("restoreDaglink gooit een opgeslagen sessie met een vreemde bestemming weg (pre-fase-2)", () => {
+    sessionStorage.setItem("agentic-team-dashboard:daglink", JSON.stringify({ token: "abc", instantieUrl: "https://wr-x.westeurope.azurecontainerapps.io" }));
+    expect(g.restoreDaglink()).toBeNull();
+    expect(sessionStorage.getItem("agentic-team-dashboard:daglink")).toBeNull();
+    sessionStorage.setItem("agentic-team-dashboard:daglink", JSON.stringify({ token: "abc", instantieUrl: "https://connector.agentic-team.ai" }));
+    expect(g.restoreDaglink()).toEqual({ token: "abc", instantieUrl: "https://connector.agentic-team.ai" });
+  });
 });
 
 describe("CSP (b32 fase 2)", () => {
@@ -187,6 +195,10 @@ describe("CSP (b32 fase 2)", () => {
     expect(hashes).toEqual(verwacht);
     expect(html).not.toMatch(/ on[a-z]+="/i);
     const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));
-    expect(vercel.headers[0].headers[0].value).toContain("connect-src https://connector.agentic-team.ai;");
+    const header = vercel.headers[0].headers[0].value;
+    expect(header).toContain("connect-src https://connector.agentic-team.ai");
+    // Header en meta dragen dezelfde hashes; 'unsafe-inline' staat niet meer in script-src.
+    expect(header).toContain(`script-src ${verwacht.join(" ")};`);
+    expect(header).not.toMatch(/script-src[^;]*unsafe-inline/);
   });
 });

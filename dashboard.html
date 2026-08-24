@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-a3LsUn5NECp36SHbpChUtFF7KIqz6nvhLPAC0xreyGQ=' 'sha256-sEOvioTmRcYasVFgNGfsqd7YZhere4bZMp7wQeg5w8U='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-a3LsUn5NECp36SHbpChUtFF7KIqz6nvhLPAC0xreyGQ=' 'sha256-vesqPCeQ3BjecUWko28AkKubNWVlmkQfhC+WDMNXInw='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -2219,9 +2219,24 @@ function restoreDaglink() {
   }
   try {
     const raw = sessionStorage.getItem(DAGLINK_SS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const opgeslagen = JSON.parse(raw);
+      // b32 fase 2: ook de opgeslagen bestemming moet aan de invariant voldoen
+      // (alleen de router, of localhost). Een sessie van vóór fase 2 draagt nog
+      // een azurecontainerapps-origin — die gooien we weg i.p.v. erop vast te lopen.
+      if (opgeslagen && typeof opgeslagen.token === "string" && isToegestaneBestemming(opgeslagen.instantieUrl)) return opgeslagen;
+      sessionStorage.removeItem(DAGLINK_SS_KEY);
+    }
   } catch (e) { /* privémodus of kapotte waarde — dan geen daglink */ }
   return null;
+}
+
+function isToegestaneBestemming(instantieUrl) {
+  if (instantieUrl === CONNECTOR_ORIGIN) return true;
+  try {
+    const u = new URL(String(instantieUrl));
+    return (u.hostname === "localhost" || u.hostname === "127.0.0.1") && (u.protocol === "http:" || u.protocol === "https:");
+  } catch (e) { return false; }
 }
 
 function vergeetDaglink() {
