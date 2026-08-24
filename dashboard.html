@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-a3LsUn5NECp36SHbpChUtFF7KIqz6nvhLPAC0xreyGQ=' 'sha256-vesqPCeQ3BjecUWko28AkKubNWVlmkQfhC+WDMNXInw='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -2183,30 +2184,28 @@ const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
 /* Herkent de daglink-parameters in het fragment. Detailroutes ("#/detail/…")
  * beginnen met "#/" en blijven buiten schot. Geeft null bij alles wat geen
  * geldige daglink is — de pagina gedraagt zich dan als de gewone f4-variant. */
+/* b32 fase 2: het dashboard praat altijd via de router op het vaste domein.
+ * De router zoekt de instantie op via de sleutel-hash in het token; een link
+ * kan dus nooit naar een vreemde host wijzen en de CSP staat maar één origin
+ * toe. De `i`-parameter uit oudere links wordt genegeerd — behalve http://
+ * localhost, voor lokaal testen tegen een mock-instantie. */
+const CONNECTOR_ORIGIN = "https://connector.agentic-team.ai";
+
 function parseDaglinkFragment(hash) {
   if (!hash || hash.startsWith("#/")) return null;
   const params = new URLSearchParams(hash.replace(/^#/, ""));
   const token = params.get("t");
+  if (!token) return null;
   const instantieRaw = params.get("i");
-  if (!token || !instantieRaw) return null;
-  let url;
-  try { url = new URL(instantieRaw); } catch (e) { return null; }
-  // https verplicht; alleen localhost mag http (lokaal testen tegen een
-  // mock-instantie — browsers behandelen localhost ook als secure context).
-  const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLocalhost)) return null;
-  // b32 fase 1: alleen Container-Apps-hosts. Let op: dat is een vormcheck,
-  // geen echtheidsgrens — iedereen met een Azure-abonnement krijgt zo'n host.
-  // Het sluit alleen willekeurige origins uit; fase 2 haalt `i` uit de link
-  // en laat het dashboard via connector.agentic-team.ai met de instantie praten.
-  if (!isLocalhost && !isToegestaneInstantieHost(url.hostname)) return null;
-  return { token, instantieUrl: url.origin };
-}
-
-const INSTANTIE_HOST_SUFFIX = ".azurecontainerapps.io";
-function isToegestaneInstantieHost(hostname) {
-  const h = String(hostname || "").toLowerCase();
-  return h.endsWith(INSTANTIE_HOST_SUFFIX) && h.length > INSTANTIE_HOST_SUFFIX.length && !h.includes("..");
+  if (instantieRaw) {
+    let url = null;
+    try { url = new URL(instantieRaw); } catch (e) { url = null; }
+    const isLocalhost = url && (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+    if (url && isLocalhost && (url.protocol === "http:" || url.protocol === "https:")) {
+      return { token, instantieUrl: url.origin };
+    }
+  }
+  return { token, instantieUrl: CONNECTOR_ORIGIN };
 }
 
 /* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen
@@ -2220,9 +2219,24 @@ function restoreDaglink() {
   }
   try {
     const raw = sessionStorage.getItem(DAGLINK_SS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const opgeslagen = JSON.parse(raw);
+      // b32 fase 2: ook de opgeslagen bestemming moet aan de invariant voldoen
+      // (alleen de router, of localhost). Een sessie van vóór fase 2 draagt nog
+      // een azurecontainerapps-origin — die gooien we weg i.p.v. erop vast te lopen.
+      if (opgeslagen && typeof opgeslagen.token === "string" && isToegestaneBestemming(opgeslagen.instantieUrl)) return opgeslagen;
+      sessionStorage.removeItem(DAGLINK_SS_KEY);
+    }
   } catch (e) { /* privémodus of kapotte waarde — dan geen daglink */ }
   return null;
+}
+
+function isToegestaneBestemming(instantieUrl) {
+  if (instantieUrl === CONNECTOR_ORIGIN) return true;
+  try {
+    const u = new URL(String(instantieUrl));
+    return (u.hostname === "localhost" || u.hostname === "127.0.0.1") && (u.protocol === "http:" || u.protocol === "https:");
+  } catch (e) { return false; }
 }
 
 function vergeetDaglink() {
