@@ -64,7 +64,10 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
 // `raw` is de al-geparste JSON van het bestand. Retourneert altijd
 // { ok, ...}. Bij ok:false NOOIT een metrics-object teruggeven — de
 // aanroeper mag dan niets tekenen.
-function parseNotionMetricsFile(raw, schema, today, minutenPerActie) {
+function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie) {
+  // b32: eerst normaliseren — vanaf hier bevat `raw` uitsluitend bekende
+  // velden in het verwachte type (zie metrics-sanitize.js).
+  const raw = saneerMetricsPayload(rawOnbetrouwbaar, schema);
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, kind: "leeg-of-onherkenbaar", tekst: "Dit bestand is leeg of geen geldig metricsbestand (geen JSON-object met een \"versie\"-veld)." };
   }

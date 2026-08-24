@@ -41,29 +41,29 @@ function renderKpiTegels(el, ctx) {
 
   el.innerHTML = `
     <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
-      <div class="kpi-getal">${adoptieWaarde}</div>
+      <div class="kpi-getal">${esc(adoptieWaarde)}</div>
       <div class="kpi-kop">Adoptiescore</div>
       <div class="kpi-label">${esc(adoptieLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
-      <div class="kpi-getal">${actiesGetal}</div>
+      <div class="kpi-getal">${esc(actiesGetal)}</div>
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
-      <div class="kpi-getal">${sporenTotaal}</div>
+      <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
     </div>
     <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
-      <div class="kpi-getal">${tijdwinstGetal}</div>
+      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
       <div class="kpi-kop">Geschatte tijdwinst</div>
       <div class="kpi-som">${esc(tijdwinstSom)}</div>
       <div class="kpi-label">
         Schatting op basis van jouw aanname, geen meting ·
         <label class="minuten-input-label" data-stop-nav="1">
           min/actie
-          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${minutenPerActie}">
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(minutenPerActie)}">
         </label>
       </div>
     </div>`;
@@ -134,7 +134,7 @@ function renderAandachtTop5(el, items) {
     return;
   }
   const top5 = items.slice(0, 5);
-  const lis = top5.map(it => `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${esc(it.label)}</div></li>`).join("");
   const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
   el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
 }

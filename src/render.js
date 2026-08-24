@@ -2,10 +2,11 @@
  * Bewust gescheiden van de berekening zelf, zodat de logica zonder browser
  * te testen is (zie test-scripts in scripts/). */
 
+// b32: ook veilig in attribuutcontext (value="…") — textContent→innerHTML
+// codeert geen aanhalingstekens, dus die doen we expliciet.
+const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(s) {
-  const div = document.createElement("div");
-  div.textContent = String(s ?? "");
-  return div.innerHTML;
+  return String(s ?? "").replace(/[&<>"']/g, ch => ESC_MAP[ch]);
 }
 
 function fmtDate(dt) {
@@ -24,8 +25,14 @@ function relAge(dt, today) {
 const SIGNAAL_ICOON = { rood: "🚨", oranje: "⚠️", groen: "✅", grijs: "❔" };
 const SIGNAAL_LABEL = { rood: "Aandacht nu", oranje: "Binnenkort aandacht", groen: "Op koers", grijs: "Onbekend / verouderd" };
 
+// b32: class-attribuut alleen uit de vaste set — nooit een vrije waarde.
+function signaalKlasse(signaal) {
+  return Object.prototype.hasOwnProperty.call(SIGNAAL_ICOON, signaal) ? signaal : "grijs";
+}
+
 function badgeHtml(signaal) {
-  return `<span class="badge ${signaal}">${SIGNAAL_ICOON[signaal] || ""} ${SIGNAAL_LABEL[signaal] || signaal}</span>`;
+  const k = signaalKlasse(signaal);
+  return `<span class="badge ${k}">${SIGNAAL_ICOON[k]} ${SIGNAAL_LABEL[k]}</span>`;
 }
 
 function stempelHtml(staleAt, today) {
@@ -48,9 +55,9 @@ function renderZone1(el, items) {
       if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
     }
     if (it.domeinen) {
-      detail = `<div class="detail" style="margin-top:0.25rem;">${it.domeinen.join(", ")}</div>`;
+      detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${it.ernst}"><span class="signaal-icoon">${SIGNAAL_ICOON[it.ernst]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
@@ -58,7 +65,7 @@ function renderZone1(el, items) {
 
 // ── Zone 2 ────────────────────────────────────────────────────────────
 function renderZone2(el, z2, today) {
-  const cardClass = `signaal-${z2.signaal}`;
+  const cardClass = `signaal-${signaalKlasse(z2.signaal)}`;
   let extra = "";
   if (z2.bron) extra += `<div class="detail">Bron: ${esc(z2.bron)}</div>`;
   if (z2.open && z2.open.length) extra += `<div class="detail">Nog open: ${esc(z2.open.join(", "))}</div>`;
@@ -121,7 +128,7 @@ function renderZone4(el, z4, periodDays) {
     <p class="footnote">Deze bundel is een momentopname, geen gebeurtenislog: waar geen bruikbaar datumveld bestaat, tonen we de huidige stand in plaats van een trend — dat staat per kaart aangegeven. Geen omzet-attributie: dit dashboard verbindt geen agent aan een gewonnen deal.</p>`;
 
   function card(kop, getal, detail, opm) {
-    return `<div class="card"><div class="kop">${esc(kop)}</div><div class="getal">${getal}</div><div class="detail">${esc(detail)}</div>${opm ? `<div class="footnote" style="margin-top:0.4rem;">${esc(opm)}</div>` : ""}</div>`;
+    return `<div class="card"><div class="kop">${esc(kop)}</div><div class="getal">${esc(getal)}</div><div class="detail">${esc(detail)}</div>${opm ? `<div class="footnote" style="margin-top:0.4rem;">${esc(opm)}</div>` : ""}</div>`;
   }
 }
 
@@ -136,12 +143,12 @@ function renderZone5(el, z5, periodDays) {
     return;
   }
   const catRows = Object.entries(z5.perCategorie).sort((a, b) => b[1] - a[1])
-    .map(([c, n]) => `<div class="agent-row"><span class="naam" style="flex-basis:230px;">${esc(c)}</span><span class="spoor actief">${n}</span></div>`).join("");
+    .map(([c, n]) => `<div class="agent-row"><span class="naam" style="flex-basis:230px;">${esc(c)}</span><span class="spoor actief">${esc(n)}</span></div>`).join("");
   el.innerHTML = `
     <div class="grid-9">
-      <div class="card"><div class="kop">Totaal lessen</div><div class="getal">${z5.totaal}</div><div class="detail">in de bundel</div></div>
-      <div class="card signaal-oranje"><div class="kop">Nog open</div><div class="getal">${z5.open}</div><div class="detail">nog te verwerken</div></div>
-      <div class="card"><div class="kop">Binnen periode</div><div class="getal">${z5.inPeriode}</div><div class="detail">laatste ${periodDays} dagen</div></div>
+      <div class="card"><div class="kop">Totaal lessen</div><div class="getal">${esc(z5.totaal)}</div><div class="detail">in de bundel</div></div>
+      <div class="card signaal-oranje"><div class="kop">Nog open</div><div class="getal">${esc(z5.open)}</div><div class="detail">nog te verwerken</div></div>
+      <div class="card"><div class="kop">Binnen periode</div><div class="getal">${esc(z5.inPeriode)}</div><div class="detail">laatste ${esc(periodDays)} dagen</div></div>
     </div>
     <div style="margin-top:1rem;">${catRows}</div>
     <p class="footnote">Herkomst: domein Lessen &amp; Inzichten, velden Categorie, Status en Datum.</p>`;
