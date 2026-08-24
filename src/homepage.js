@@ -237,9 +237,63 @@ function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
   renderZone3(el, z3, schema, today, periodDays);
 }
 
+// ── Detail per agent (f4: doorklik per agent) ─────────────────────────
+function renderDetailAgent(el, slug, ctx) {
+  const agent = ctx.schema.agents.find(a => a.slug === slug);
+  if (!agent) { el.innerHTML = `<p>Onbekende agent.</p>`; return; }
+  const perMod = (ctx.z3.perModule && ctx.z3.perModule[agent.module]) || [];
+  const t = perMod.find(a => a.slug === slug) || { geenSpoor: true, aantalPeriode: 0, aantalTotaal: 0, laatst: null };
+  const modNaam = (ctx.schema.modules[agent.module] && ctx.schema.modules[agent.module].naam) || agent.module;
+
+  const cards = `<div class="grid-9">
+    <div class="card"><div class="kop">Sporen in de periode</div><div class="getal">${t.aantalPeriode}</div><div class="detail">laatste ${ctx.periodDays} dagen</div></div>
+    <div class="card"><div class="kop">Sporen totaal</div><div class="getal">${t.aantalTotaal}</div><div class="detail">in de hele bundel</div></div>
+    <div class="card${t.laatst ? "" : " signaal-grijs"}"><div class="kop">Laatste spoor</div><div class="getal">${t.laatst ? fmtDate(t.laatst) : "—"}</div><div class="detail">${t.laatst ? relAge(t.laatst, ctx.today) : "geen spoor met datum gevonden"}</div></div>
+  </div>`;
+
+  // Bij een rijenroute kunnen we de onderliggende rijen van deze agent laten
+  // zien; het metricsbestand draagt alleen totalen — dat zeggen we er dan bij.
+  let lijsten = "";
+  const bundle = ctx.bundle;
+  if (bundle && bundle.kind !== "metrics") {
+    const MAX = 15;
+    function rijenVan(domeinKey, veldDatum, veldTitel) {
+      const dom = bundle.domains && bundle.domains[domeinKey];
+      if (!dom) return null;
+      return dom.rows
+        .filter(r => matchAgentValue(getField(r, "Agent"), ctx.agentLookup) === slug)
+        .map(r => ({ titel: String(getField(r, veldTitel) || "(zonder titel)"), datum: parseDateField(getField(r, veldDatum)), status: getField(r, "Status") }))
+        .sort((a, b) => (b.datum ? b.datum.getTime() : 0) - (a.datum ? a.datum.getTime() : 0));
+    }
+    const acties = rijenVan("acties", "Deadline", "Actie");
+    const lessen = rijenVan("lessen_inzichten", "Datum", "Les");
+    function lijstHtml(kop, items, datumLabel) {
+      if (items === null) return "";
+      if (!items.length) return `<h3>${kop}</h3><p class="footnote">Geen rijen van deze agent in dit domein.</p>`;
+      const rows = items.slice(0, MAX).map(i =>
+        `<tr><td>${esc(i.titel)}</td><td>${i.status ? esc(String(i.status)) : ""}</td><td>${i.datum ? fmtDate(i.datum) : "—"}</td></tr>`).join("");
+      const rest = items.length > MAX ? `<p class="footnote">… en nog ${items.length - MAX} — zie de bron zelf.</p>` : "";
+      return `<h3>${kop} (${items.length})</h3>
+        <table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table>${rest}`;
+    }
+    lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
+  } else {
+    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, open het dashboard dan via een rijenroute (Excel-werkboek, data-map, Notion-export met losse domeinbestanden, of een werkruimte met werkdata-rijen).</p>`;
+  }
+
+  el.innerHTML = `
+    <p><strong>${agent.emoji} ${esc(agent.displayName)}</strong> · module ${esc(modNaam)}</p>
+    ${cards}
+    ${lijsten}
+    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "Geen spoor" ≠ "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+    <a class="detail-link" data-goto="gebruik">← Alle agents, per module</a>`;
+}
+
 // ── Router ────────────────────────────────────────────────────────────
 function bepaalActieveView() {
   const hash = window.location.hash || "";
+  const ag = hash.match(/^#\/?detail\/agent\/([a-z0-9-]+)/);
+  if (ag) return "agent/" + ag[1];
   const m = hash.match(/^#\/?detail\/([a-z]+)/);
   if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
   return null;

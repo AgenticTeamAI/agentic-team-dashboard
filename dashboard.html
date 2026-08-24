@@ -300,6 +300,12 @@ section.panel {
 .detail-table th, .detail-table td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .detail-table th { color: var(--grey); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.03em; }
 
+/* f4: doorklik per agent vanuit de modulelijst */
+.agent-row.klikbaar { cursor: pointer; border-radius: 6px; }
+.agent-row.klikbaar:hover, .agent-row.klikbaar:focus-visible { background: rgba(52, 211, 153, 0.07); }
+.agent-row.klikbaar:hover .naam { text-decoration: underline; }
+.agent-row .pijl { margin-left: auto; color: var(--grey); }
+
 @media (max-width: 700px) {
   .kpi-getal { font-size: 1.7rem; }
 }
@@ -332,6 +338,7 @@ section.panel {
         </select>
       </div>
     </div>
+    <p class="last-used" id="download-offline" style="display:none;">💾 Liever offline of privacy-strikt? <a href="dashboard.html" download>Download dit dashboard als los bestand</a> — zelfde artefact, werkt zonder internet.</p>
     <p class="last-used" id="last-used"></p>
     <p class="last-used" id="status-line"></p>
     <p class="last-used" id="bundle-info"></p>
@@ -404,7 +411,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
-    1.27.0 van AgenticTeamAI/agent-architecture.
+    1.29.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -413,20 +420,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.27.0
+//   registryVersion : 1.29.0
 //   registry updated: 2026-08-21
-//   bron-commit     : a900e96e29782df32d6c837b0b47952e5fba3a07
-//   geextraheerd op : 2026-08-22T21:11:03Z
+//   bron-commit     : 283408efb9b539f80cd0aafe9621ea962f13a21f
+//   geextraheerd op : 2026-08-23T18:29:30Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.27.0",
+  "registryVersion": "1.29.0",
   "registryUpdated": "2026-08-21",
-  "sourceCommit": "a900e96e29782df32d6c837b0b47952e5fba3a07",
-  "extractedAt": "2026-08-22T21:11:03Z",
+  "sourceCommit": "283408efb9b539f80cd0aafe9621ea962f13a21f",
+  "extractedAt": "2026-08-23T18:29:30Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -774,7 +781,8 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "select",
           "opties": [
             "Uitgaand",
-            "Inkomend"
+            "Inkomend",
+            "Intern"
           ]
         },
         {
@@ -802,6 +810,22 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Actie Deadline",
           "type": "datum"
+        },
+        {
+          "naam": "Bericht Tekst",
+          "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Deal (link)",
+          "type": "url"
+        },
+        {
+          "naam": "Actie doorgezet",
+          "type": "checkbox"
         }
       ]
     },
@@ -1465,10 +1489,99 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Status",
           "type": "select",
           "opties": [
+            "Voorstel",
             "Open",
             "Bezig",
+            "Wacht",
+            "Wacht op review",
             "Klaar"
           ]
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Taak",
+            "Alert",
+            "Opvolging",
+            "Beslissing"
+          ]
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Normaal",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Toelichting",
+          "type": "tekst"
+        },
+        {
+          "naam": "Aangemaakt door",
+          "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bron (link)",
+          "type": "url"
+        }
+      ]
+    },
+    "ritmetaken": {
+      "naam": "Ritmetaken",
+      "module": "core",
+      "emoji": "🔁",
+      "velden": [
+        {
+          "naam": "Taak",
+          "type": "titel"
+        },
+        {
+          "naam": "Agent",
+          "type": "select",
+          "opties_dynamisch": "agent_options"
+        },
+        {
+          "naam": "Ritme",
+          "type": "select",
+          "opties": [
+            "elk-uur",
+            "elke-2-uur",
+            "elke-4-uur",
+            "dagelijks",
+            "wekelijks-ma",
+            "wekelijks-di",
+            "wekelijks-wo",
+            "wekelijks-vr",
+            "maandelijks"
+          ]
+        },
+        {
+          "naam": "Volgorde",
+          "type": "getal"
+        },
+        {
+          "naam": "Laatst gedraaid",
+          "type": "datum"
+        },
+        {
+          "naam": "Actief",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bron-template",
+          "type": "tekst"
+        },
+        {
+          "naam": "Instructie",
+          "type": "tekst"
         }
       ]
     },
@@ -3192,7 +3305,7 @@ function renderZone3(el, z3, schema, today, periodDays) {
       const spoor = a.geenSpoor
         ? `<span class="spoor geen">geen spoor gevonden</span>`
         : `<span class="spoor actief">laatst ${fmtDate(a.laatst)} (${relAge(a.laatst, today)}) · ${a.aantalPeriode}× in ${periodDays}d · ${a.aantalTotaal}× totaal in bundel</span>`;
-      return `<div class="agent-row"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${spoor}</div>`;
+      return `<div class="agent-row klikbaar" data-goto="agent/${a.slug}" role="link" tabindex="0"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${spoor}<span class="pijl">→</span></div>`;
     }).join("");
     return `<div class="module-block"><h3>${esc(modNaam)}</h3>${rows}</div>`;
   }).join("");
@@ -3615,9 +3728,63 @@ function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
   renderZone3(el, z3, schema, today, periodDays);
 }
 
+// ── Detail per agent (f4: doorklik per agent) ─────────────────────────
+function renderDetailAgent(el, slug, ctx) {
+  const agent = ctx.schema.agents.find(a => a.slug === slug);
+  if (!agent) { el.innerHTML = `<p>Onbekende agent.</p>`; return; }
+  const perMod = (ctx.z3.perModule && ctx.z3.perModule[agent.module]) || [];
+  const t = perMod.find(a => a.slug === slug) || { geenSpoor: true, aantalPeriode: 0, aantalTotaal: 0, laatst: null };
+  const modNaam = (ctx.schema.modules[agent.module] && ctx.schema.modules[agent.module].naam) || agent.module;
+
+  const cards = `<div class="grid-9">
+    <div class="card"><div class="kop">Sporen in de periode</div><div class="getal">${t.aantalPeriode}</div><div class="detail">laatste ${ctx.periodDays} dagen</div></div>
+    <div class="card"><div class="kop">Sporen totaal</div><div class="getal">${t.aantalTotaal}</div><div class="detail">in de hele bundel</div></div>
+    <div class="card${t.laatst ? "" : " signaal-grijs"}"><div class="kop">Laatste spoor</div><div class="getal">${t.laatst ? fmtDate(t.laatst) : "—"}</div><div class="detail">${t.laatst ? relAge(t.laatst, ctx.today) : "geen spoor met datum gevonden"}</div></div>
+  </div>`;
+
+  // Bij een rijenroute kunnen we de onderliggende rijen van deze agent laten
+  // zien; het metricsbestand draagt alleen totalen — dat zeggen we er dan bij.
+  let lijsten = "";
+  const bundle = ctx.bundle;
+  if (bundle && bundle.kind !== "metrics") {
+    const MAX = 15;
+    function rijenVan(domeinKey, veldDatum, veldTitel) {
+      const dom = bundle.domains && bundle.domains[domeinKey];
+      if (!dom) return null;
+      return dom.rows
+        .filter(r => matchAgentValue(getField(r, "Agent"), ctx.agentLookup) === slug)
+        .map(r => ({ titel: String(getField(r, veldTitel) || "(zonder titel)"), datum: parseDateField(getField(r, veldDatum)), status: getField(r, "Status") }))
+        .sort((a, b) => (b.datum ? b.datum.getTime() : 0) - (a.datum ? a.datum.getTime() : 0));
+    }
+    const acties = rijenVan("acties", "Deadline", "Actie");
+    const lessen = rijenVan("lessen_inzichten", "Datum", "Les");
+    function lijstHtml(kop, items, datumLabel) {
+      if (items === null) return "";
+      if (!items.length) return `<h3>${kop}</h3><p class="footnote">Geen rijen van deze agent in dit domein.</p>`;
+      const rows = items.slice(0, MAX).map(i =>
+        `<tr><td>${esc(i.titel)}</td><td>${i.status ? esc(String(i.status)) : ""}</td><td>${i.datum ? fmtDate(i.datum) : "—"}</td></tr>`).join("");
+      const rest = items.length > MAX ? `<p class="footnote">… en nog ${items.length - MAX} — zie de bron zelf.</p>` : "";
+      return `<h3>${kop} (${items.length})</h3>
+        <table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table>${rest}`;
+    }
+    lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
+  } else {
+    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, open het dashboard dan via een rijenroute (Excel-werkboek, data-map, Notion-export met losse domeinbestanden, of een werkruimte met werkdata-rijen).</p>`;
+  }
+
+  el.innerHTML = `
+    <p><strong>${agent.emoji} ${esc(agent.displayName)}</strong> · module ${esc(modNaam)}</p>
+    ${cards}
+    ${lijsten}
+    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "Geen spoor" ≠ "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+    <a class="detail-link" data-goto="gebruik">← Alle agents, per module</a>`;
+}
+
 // ── Router ────────────────────────────────────────────────────────────
 function bepaalActieveView() {
   const hash = window.location.hash || "";
+  const ag = hash.match(/^#\/?detail\/agent\/([a-z0-9-]+)/);
+  if (ag) return "agent/" + ag[1];
   const m = hash.match(/^#\/?detail\/([a-z]+)/);
   if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
   return null;
@@ -3804,6 +3971,22 @@ function renderAll() {
 function renderDetail(key) {
   const ctx = window.__dashboardCtx;
   if (!ctx) return;
+
+  // f4: doorklik per agent — key "agent/<slug>", geen vast DETAIL_VOLGORDE-item
+  if (key.indexOf("agent/") === 0) {
+    const slug = key.slice("agent/".length);
+    const agent = ctx.schema.agents.find(a => a.slug === slug);
+    document.title = `${agent ? agent.displayName : "Agent"} — Agentic Team Dashboard`;
+    renderDetailNav(document.getElementById("detail-nav"), "gebruik");
+    const body = document.getElementById("detail-body");
+    body.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.innerHTML = detailSectionHtml(agent ? agent.displayName : "Onbekende agent", agent ? agent.emoji : "👤", "Wat deed deze agent, en waar komt dat uit de data vandaan?", "detail-inner");
+    body.appendChild(wrap.firstElementChild);
+    renderDetailAgent(document.getElementById("detail-inner"), slug, ctx);
+    return;
+  }
+
   const meta = DETAIL_VOLGORDE.find(d => d.key === key);
   document.title = `${meta ? meta.titel : "Detail"} — Agentic Team Dashboard`;
   renderDetailNav(document.getElementById("detail-nav"), key);
@@ -3998,6 +4181,10 @@ document.addEventListener("DOMContentLoaded", () => {
   wireNavigatie();
   renderLastUsed();
   renderAll();
+  // f4: de offline variant is hetzelfde artefact — geserveerd via http(s)
+  // bieden we het als download aan; via file:// ben je het bestand al.
+  const dl = document.getElementById("download-offline");
+  if (dl && window.location.protocol.indexOf("http") === 0) dl.style.display = "";
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);
 });
