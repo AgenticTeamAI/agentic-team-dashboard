@@ -85,7 +85,7 @@ function renderZone3(el, z3, schema, today, periodDays) {
       const spoor = a.geenSpoor
         ? `<span class="spoor geen">geen spoor gevonden</span>`
         : `<span class="spoor actief">laatst ${fmtDate(a.laatst)} (${relAge(a.laatst, today)}) · ${a.aantalPeriode}× in ${periodDays}d · ${a.aantalTotaal}× totaal in bundel</span>`;
-      return `<div class="agent-row"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${spoor}</div>`;
+      return `<div class="agent-row klikbaar" data-goto="agent/${a.slug}" role="link" tabindex="0"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${spoor}<span class="pijl">→</span></div>`;
     }).join("");
     return `<div class="module-block"><h3>${esc(modNaam)}</h3>${rows}</div>`;
   }).join("");

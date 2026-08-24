@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 scripts/build.py && rm -rf out && mkdir out && cp dashboard.html out/index.html && cp public/favicon.ico out/favicon.ico",
+  "buildCommand": "python3 scripts/build.py && rm -rf out && mkdir out && cp dashboard.html out/index.html && cp dashboard.html out/dashboard.html && cp public/favicon.ico out/favicon.ico",
   "outputDirectory": "out",
   "headers": [
     {

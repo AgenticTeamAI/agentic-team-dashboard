@@ -178,6 +178,22 @@ function renderAll() {
 function renderDetail(key) {
   const ctx = window.__dashboardCtx;
   if (!ctx) return;
+
+  // f4: doorklik per agent — key "agent/<slug>", geen vast DETAIL_VOLGORDE-item
+  if (key.indexOf("agent/") === 0) {
+    const slug = key.slice("agent/".length);
+    const agent = ctx.schema.agents.find(a => a.slug === slug);
+    document.title = `${agent ? agent.displayName : "Agent"} — Agentic Team Dashboard`;
+    renderDetailNav(document.getElementById("detail-nav"), "gebruik");
+    const body = document.getElementById("detail-body");
+    body.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.innerHTML = detailSectionHtml(agent ? agent.displayName : "Onbekende agent", agent ? agent.emoji : "👤", "Wat deed deze agent, en waar komt dat uit de data vandaan?", "detail-inner");
+    body.appendChild(wrap.firstElementChild);
+    renderDetailAgent(document.getElementById("detail-inner"), slug, ctx);
+    return;
+  }
+
   const meta = DETAIL_VOLGORDE.find(d => d.key === key);
   document.title = `${meta ? meta.titel : "Detail"} — Agentic Team Dashboard`;
   renderDetailNav(document.getElementById("detail-nav"), key);
@@ -372,6 +388,10 @@ document.addEventListener("DOMContentLoaded", () => {
   wireNavigatie();
   renderLastUsed();
   renderAll();
+  // f4: de offline variant is hetzelfde artefact — geserveerd via http(s)
+  // bieden we het als download aan; via file:// ben je het bestand al.
+  const dl = document.getElementById("download-offline");
+  if (dl && window.location.protocol.indexOf("http") === 0) dl.style.display = "";
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);
 });

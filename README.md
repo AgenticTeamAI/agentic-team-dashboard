@@ -29,7 +29,8 @@ repo.
 
 Ga naar `dashboard.agentic-team.ai`, of open `dashboard.html` gewoon in
 een browser (dubbelklikken volstaat — geen server, geen build, geen internet
-nodig). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
+nodig; de pagina biedt het bestand zelf als download aan voor offline of
+privacy-strikt gebruik — f4). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
 `data/`-map, of de Notion-export-map. Heeft je team een hosted werkruimte,
 dan geeft de Coördinator je bij de dagstart een daglink die de pagina met je
 gegevens er al in opent. Wil je het meteen met voorbeelddata proberen:
@@ -92,7 +93,11 @@ De homepage toont, van boven naar beneden:
    vijf items, met een doorklik naar de volledige lijst.
 5. **Gebruik per agent** — gerangschikte horizontale staafgrafiek. Ontbreekt
    het brongegeven (zie hieronder), dan een expliciet grijs blok met de
-   reden, geen twintig balkjes op nul.
+   reden, geen twintig balkjes op nul. Vanuit de detailpagina is elke agent
+   **per agent doorklikbaar** (`#/detail/agent/<slug>`, f4): kerncijfers
+   (sporen in periode/totaal, laatste spoor) plus — bij een rijenroute — de
+   onderliggende acties en lessen van die agent; een metricsbestand draagt
+   alleen totalen en zegt dat er dan eerlijk bij.
 
 Geen cirkeldiagrammen. Statuskleuren (rood/oranje/groen) worden nergens voor
 een grafiekserie gebruikt — series krijgen mint, licht mint en twee neutrale
