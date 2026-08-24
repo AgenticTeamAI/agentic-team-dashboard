@@ -65,7 +65,7 @@ function renderZone1(el, items) {
 
 // ── Zone 2 ────────────────────────────────────────────────────────────
 function renderZone2(el, z2, today) {
-  const cardClass = `signaal-${z2.signaal}`;
+  const cardClass = `signaal-${signaalKlasse(z2.signaal)}`;
   let extra = "";
   if (z2.bron) extra += `<div class="detail">Bron: ${esc(z2.bron)}</div>`;
   if (z2.open && z2.open.length) extra += `<div class="detail">Nog open: ${esc(z2.open.join(", "))}</div>`;

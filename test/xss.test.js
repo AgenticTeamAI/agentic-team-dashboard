@@ -70,12 +70,34 @@ describe("saneerMetricsPayload", () => {
   it("laat alleen bekende velden in het juiste type door", () => {
     const uit = g.saneerMetricsPayload(vijandigPayload(), g.AGENTIC_TEAM_SCHEMA);
     expect(uit.aandacht[0]).toEqual({ type: "deadline", ernst: "grijs", label: `<b>${XSS}</b>`.slice(0, 300), link: null });
+    expect(uit.waarschuwingen.length).toBeGreaterThan(0);
     expect(Object.keys(uit.domeinen)).toEqual(["acties"]);
     expect(uit.acties).toMatchObject({ totaal: 0, afgerond: 0 });
     expect(uit.sales_funnel.verwachte_omzet_totaal).toBe(0);
     expect(uit.lessen).toMatchObject({ totaal: 0, open: 0, in_periode: 0 });
     expect(Object.keys(uit.agents.per_agent)).toEqual(["jurist"]);
     expect(uit.agents.per_agent.jurist).toEqual({ aantal_periode: 2, aantal_totaal: 0, laatst: null });
+  });
+
+  it("coerceert wat de Coördinator echt schrijft (review b32) in plaats van te nullen", () => {
+    const uit = g.saneerMetricsPayload({
+      versie: 1,
+      gegenereerd_op: "2026-08-24T09:15:00+0200",
+      minuten_per_actie: "25",
+      periode: { weken: "8", van: "2026-06-29", tot: "2026-08-24" },
+      acties: { totaal: "12", afgerond: "7" },
+      aandacht: [{ type: "acties-deadline", ernst: "rood", label: "x" }, { type: "deals-stil", ernst: "paars", label: "y" }],
+      agents: { per_agent: { Jurist: { aantal_periode: "2" }, jurist: { aantal_periode: 1 }, Onbekend: { aantal_periode: 9 } } },
+    }, g.AGENTIC_TEAM_SCHEMA);
+    expect(uit.gegenereerd_op).toBe("2026-08-24T09:15:00+0200");
+    expect(uit.minuten_per_actie).toBe(25);
+    expect(uit.periode).toEqual({ weken: 8, van: "2026-06-29", tot: "2026-08-24" });
+    expect(uit.acties).toMatchObject({ totaal: 12, afgerond: 7 });
+    expect(uit.aandacht.map(a => a.type)).toEqual(["acties-deadline", "deals-stil"]);
+    expect(uit.aandacht[1].ernst).toBe("grijs");
+    expect(Object.keys(uit.agents.per_agent)).toEqual(["jurist"]);
+    expect(uit.waarschuwingen.some(w => w.includes("aandacht[1].ernst"))).toBe(true);
+    expect(uit.waarschuwingen.some(w => w.includes("Onbekend"))).toBe(true);
   });
 
   it("geeft null voor niet-objecten", () => {
