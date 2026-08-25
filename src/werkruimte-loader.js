@@ -116,6 +116,26 @@ async function fetchWerkruimte(daglink, pad) {
   return body;
 }
 
+/**
+ * Voert `werk` uit over `items` met hooguit `plafond` tegelijk, en levert de
+ * uitkomsten in dezelfde volgorde als de invoer (s26/016). Faalt er één, dan
+ * faalt het geheel — net als Promise.all, zodat de foutafhandeling erboven
+ * niet verandert.
+ */
+async function metPlafond(items, plafond, werk) {
+  const uit = new Array(items.length);
+  let volgende = 0;
+  const werkers = new Array(Math.min(plafond, items.length)).fill(null).map(async () => {
+    for (;;) {
+      const i = volgende++;
+      if (i >= items.length) return;
+      uit[i] = await werk(items[i], i);
+    }
+  });
+  await Promise.all(werkers);
+  return uit;
+}
+
 function maxBijgewerkt(entries) {
   let laatst = null;
   for (const e of entries) {
@@ -278,10 +298,16 @@ async function loadWerkruimteBundle(daglink) {
   }
 
   const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
-  const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
+  // s26/016: dit was één Promise.all over álle gevulde domeinen — bij een vol
+  // team zijn dat er zeventien, elk met een verzoek om 5.000 records, allemaal
+  // tegelijk naar één instantie. Die instantie is een kleine container; de
+  // browser knijpt zelf al af rond zes verbindingen, maar de rest staat dan in
+  // de rij bij de instantie in plaats van bij de browser. Vier tegelijk houdt
+  // de eerste schermvulling snel zonder de instantie plat te leggen.
+  const opgehaald = await metPlafond(metInhoud, 4, async (d) => ({
     domein: d.domein,
     body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
-  })));
+  }));
 
   for (const { domein, body } of opgehaald) {
     const entries = body.entries || [];
@@ -309,6 +335,6 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
-    emptyBundle, looksLikeMetricsPayload,
+    emptyBundle, looksLikeMetricsPayload, metPlafond,
   };
 }
