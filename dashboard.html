@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-e/Mt+skUVu+IhFd8LmpckQ2z7+6An1VFRbgaptwAIZY=' 'sha256-2D5NAO5dCFo+CA6H29WvJmoMQf1X8yG91TnI4pIzUKc='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ulf0KjPkClCt05rjLNAomsViAc6+421JbZ4NJzan2Ww=' 'sha256-f+b/IF+xYYmAtFy2zNsRDinHZKfg/36ZCMwl0dQ9PdI='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -472,7 +472,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser). Gegenereerd uit registryVersion
-    1.38.0 van AgenticTeamAI/agent-architecture.
+    1.42.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -481,20 +481,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.38.0
+//   registryVersion : 1.42.0
 //   registry updated: 2026-08-25
-//   bron-commit     : 0afaafa99bad77579d906361196184e32d63473b
-//   geextraheerd op : 2026-08-25T11:13:03Z
+//   bron-commit     : 48d9e37dafbfc8eac4fe2b04c1f3a11acdc57d82
+//   geextraheerd op : 2026-08-25T13:18:42Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.38.0",
+  "registryVersion": "1.42.0",
   "registryUpdated": "2026-08-25",
-  "sourceCommit": "0afaafa99bad77579d906361196184e32d63473b",
-  "extractedAt": "2026-08-25T11:13:03Z",
+  "sourceCommit": "48d9e37dafbfc8eac4fe2b04c1f3a11acdc57d82",
+  "extractedAt": "2026-08-25T13:18:42Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -2005,6 +2005,26 @@ async function fetchWerkruimte(daglink, pad) {
   return body;
 }
 
+/**
+ * Voert `werk` uit over `items` met hooguit `plafond` tegelijk, en levert de
+ * uitkomsten in dezelfde volgorde als de invoer (s26/016). Faalt er één, dan
+ * faalt het geheel — net als Promise.all, zodat de foutafhandeling erboven
+ * niet verandert.
+ */
+async function metPlafond(items, plafond, werk) {
+  const uit = new Array(items.length);
+  let volgende = 0;
+  const werkers = new Array(Math.min(plafond, items.length)).fill(null).map(async () => {
+    for (;;) {
+      const i = volgende++;
+      if (i >= items.length) return;
+      uit[i] = await werk(items[i], i);
+    }
+  });
+  await Promise.all(werkers);
+  return uit;
+}
+
 function maxBijgewerkt(entries) {
   let laatst = null;
   for (const e of entries) {
@@ -2167,10 +2187,16 @@ async function loadWerkruimteBundle(daglink) {
   }
 
   const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
-  const opgehaald = await Promise.all(metInhoud.map(async (d) => ({
+  // s26/016: dit was één Promise.all over álle gevulde domeinen — bij een vol
+  // team zijn dat er zeventien, elk met een verzoek om 5.000 records, allemaal
+  // tegelijk naar één instantie. Die instantie is een kleine container; de
+  // browser knijpt zelf al af rond zes verbindingen, maar de rest staat dan in
+  // de rij bij de instantie in plaats van bij de browser. Vier tegelijk houdt
+  // de eerste schermvulling snel zonder de instantie plat te leggen.
+  const opgehaald = await metPlafond(metInhoud, 4, async (d) => ({
     domein: d.domein,
     body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
-  })));
+  }));
 
   for (const { domein, body } of opgehaald) {
     const entries = body.entries || [];
@@ -2198,7 +2224,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
-    emptyBundle, looksLikeMetricsPayload,
+    emptyBundle, looksLikeMetricsPayload, metPlafond,
   };
 }
 
