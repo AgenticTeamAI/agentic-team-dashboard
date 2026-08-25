@@ -33,7 +33,9 @@ nodig; de pagina biedt het bestand zelf als download aan voor offline of
 privacy-strikt gebruik — f4). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
 `data/`-map, of de Notion-export-map. Heeft je team een hosted werkruimte,
 dan geeft de Coördinator je bij de dagstart een daglink die de pagina met je
-gegevens er al in opent. Wil je het meteen met voorbeelddata proberen:
+gegevens er al in opent. In die daglink-modus verbergt de pagina de
+bundelknoppen — er valt niets te kiezen, de link wijst al naar je eigen
+instantie; de knoppen komen alleen terug als de daglink verlopen blijkt. Wil je het meteen met voorbeelddata proberen:
 gebruik de bestanden in `testdata/` (zie `testdata/README.md` voor wat daar
 bewust wel en niet in staat).
 

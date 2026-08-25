@@ -17,7 +17,7 @@ __STYLES__
     <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: alles wat je hier kiest of laadt, blijft in je browser. Open je deze pagina via een daglink van je Coördinator, dan haalt je browser de gegevens rechtstreeks op uit je eigen werkruimte-instantie — ook dan komt er niets bij ons terecht.</p>
 
     <div class="controls-row">
-      <div class="bundle-picker">
+      <div class="bundle-picker" id="bundle-picker-files">
         <span class="label">Bundel kiezen:</span>
         <button id="btn-excel" type="button">📊 Excel-werkboek</button>
         <button id="btn-json" type="button">🗂️ data-map (JSON)</button>
@@ -42,8 +42,9 @@ __STYLES__
   </header>
 
   <div id="empty-state" class="empty-state">
-    <h2>Nog geen bundel geladen</h2>
-    <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
+    <h2 class="alleen-bestand">Nog geen bundel geladen</h2>
+    <h2 class="alleen-daglink">Live gegevens uit je werkruimte worden opgehaald…</h2>
+    <p class="alleen-bestand">Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
     Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
     metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
     Gebruikt je team een hosted werkruimte? Vraag je Coördinator om een daglink — die opent deze pagina

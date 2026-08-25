@@ -373,9 +373,17 @@ function wireInputs() {
 
 /* Route 4: opent iemand deze pagina via een daglink (of herlaadt hij binnen
  * dezelfde sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets
- * te kiezen, de link wijst al naar zijn eigen instantie. De bestandsknoppen
- * blijven gewoon werken als alternatief. */
+ * te kiezen, de link wijst al naar zijn eigen instantie. De bestandskiezer
+ * (Excel/data-map/Notion) wordt daarom verborgen (body.daglink-modus, zie
+ * styles.css); de code erachter blijft bestaan voor het offline bestand (f4)
+ * en klanten zonder hosted werkruimte. Verloopt de daglink, dan komt de
+ * kiezer terug zodat je alsnog een bundel kunt kiezen. */
+function zetDaglinkModus(aan) {
+  document.body.classList.toggle("daglink-modus", !!aan);
+}
+
 async function laadWerkruimte(daglink) {
+  zetDaglinkModus(true);
   setStatus("Live gegevens uit je werkruimte worden opgehaald…");
   try {
     const bundle = await loadWerkruimteBundle(daglink);
@@ -383,7 +391,7 @@ async function laadWerkruimte(daglink) {
     setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
   } catch (err) {
     console.error(err);
-    if (err.daglinkVerlopen) vergeetDaglink();
+    if (err.daglinkVerlopen) { vergeetDaglink(); zetDaglinkModus(false); }
     setStatus(err.message, true);
   }
 }
