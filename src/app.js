@@ -81,6 +81,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
       // zo zichtbaar te zijn als parse-waarschuwingen
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
@@ -94,6 +95,7 @@ function buildContext() {
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
+    intern: bundle.intern === true,
   };
 }
 
@@ -185,7 +187,7 @@ function renderDetail(key) {
     const slug = key.slice("agent/".length);
     const agent = ctx.schema.agents.find(a => a.slug === slug);
     document.title = `${agent ? agent.displayName : "Agent"} — Agentic Team Dashboard`;
-    renderDetailNav(document.getElementById("detail-nav"), "gebruik");
+    renderDetailNav(document.getElementById("detail-nav"), "gebruik", ctx.intern);
     const body = document.getElementById("detail-body");
     body.innerHTML = "";
     const wrap = document.createElement("div");
@@ -197,7 +199,7 @@ function renderDetail(key) {
 
   const meta = DETAIL_VOLGORDE.find(d => d.key === key);
   document.title = `${meta ? meta.titel : "Detail"} — Agentic Team Dashboard`;
-  renderDetailNav(document.getElementById("detail-nav"), key);
+  renderDetailNav(document.getElementById("detail-nav"), key, ctx.intern);
   const body = document.getElementById("detail-body");
   body.innerHTML = "";
 
@@ -210,7 +212,8 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
-    correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)],
+    // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
+    ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
   };
 

@@ -682,6 +682,15 @@ door een mens, vóór dit naar een klant gaat, blijft aan te raden.
 
 ## Route 4: live uit de werkruimte, via een daglink (f15/f18)
 
+**Interne tegels.** `/dashboard/overzicht` levert `intern: true` wanneer de instantie met
+`DASHBOARD_INTERN=1` draait (FFG, Greenhive-test). Alleen dan toont het dashboard de
+KPI-tegel "Correctievrij (4 wk)" met de f19-gate en de bijbehorende detailpagina. De
+bestandsroutes (Excel, Notion-export, metricsbestand) zetten die vlag nooit — een klant ziet
+de tegel dus ook niet in een gedownloade bundel. De berekening zelf blijft in beide routes
+draaien (tests, één rekenregel), alleen de rendering is gegate. Dit is "nooit per ongeluk
+zichtbaar", geen afscherming: wie het HTML-bestand openbreekt ziet hooguit zijn eigen
+percentage.
+
 Voor teams met een hosted werkruimte (f18) bestaat er naast de drie
 bestandsroutes een vierde: de Coördinator genereert met de MCP-tool
 `werkruimte_dashboard_link` (in `agentic-team-werkruimte`) een kortlevend,
