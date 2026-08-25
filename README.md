@@ -349,17 +349,42 @@ canoniek in `AgenticTeamAI/agent-architecture` → `core/agents.json` →
 `datadomeinen`. Dit dashboard **typt dat nooit over** — het wordt afgeleid:
 
 ```bash
-git clone https://<fine-grained-token>@github.com/AgenticTeamAI/agent-architecture.git /tmp/aa
-python3 scripts/extract-schema.py --source /tmp/aa --output schema/schema.generated.js
-python3 scripts/build.py
+python3 scripts/sync-schema.py    # extraheert op origin/main van ../agent-architecture en zet de pin
+python3 scripts/build.py          # bakt het nieuwe schema in dashboard.html
+git add schema/ dashboard.html vercel.json agent-architecture.lock.json
 ```
 
-Het token hoort alleen in de clone-URL, nooit in een bestand van deze repo,
-commit-message of PR-tekst. Trek het token na gebruik in via GitHub →
-Settings → Developer settings → Fine-grained tokens.
+`sync-schema.py` extraheert op een schone uitpak van precies één commit die
+op `origin/main` van agent-architecture staat (niet op je werkkopie met
+lokale wijzigingen), en schrijft die commit in `agent-architecture.lock.json`.
+Welke build bij welke registry hoort staat dus in dat bestand, niet in deze
+tekst — en de CI bewaakt het (zie §Tests en CI). Een token hoort alleen in de
+clone-URL van agent-architecture, nooit in een bestand van deze repo.
 
-Deze build gebruikt registryVersion **1.18.0** (commit `882f544a…`,
-9 augustus 2026 — 20 agents, 15 datadomeinen, 7 modules).
+## Tests en CI (s31)
+
+De tests staan in `test/` en draaien met `npm test` (vitest; jsdom voor de
+DOM-tests). Sinds s31 (25-08-2026) bewaakt `.github/workflows/ci.yml` bij
+elke PR en push naar main:
+
+- **test** — `test/integratie.test.js` draait de échte gebouwde
+  `dashboard.html` in jsdom tegen een gestubde werkruimte-instantie (exact de
+  vormen uit `scripts/mock-instantie.mjs`): rijenroute, metricsroute (vers /
+  verouderd / onleesbaar / onbekende versie), teamfeed, onbekend domein, lege
+  werkruimte, 401 en 500, interne tegels, hash-router en de periode- en
+  minutenschakelaar. Daarnaast `test/xss.test.js` (b32),
+  `test/correctievrij.test.js` (i25) en `test/kalenderdag.test.js` (b37).
+- **build-drift** — `python3 scripts/build.py` moet `dashboard.html` en
+  `vercel.json` (CSP-hashes) ongewijzigd laten; wie `src/` of `schema/`
+  wijzigt zonder te herbouwen, faalt hier.
+- **schema-drift** (ook dagelijks op schema, want deze drift ontstaat zonder
+  commit in deze repo) — `schema/schema.generated.js` hoort bij de
+  arch-commit in `agent-architecture.lock.json`, die commit moet op arch-main
+  staan, en `core/agents.json` op main mag niet verder zijn dan de pin.
+  Vereist het repo-secret `AGENT_ARCH_TOKEN` (read-only PAT op
+  agent-architecture); ontbreekt het, dan faalt de job hard — een stil
+  overgeslagen guard is een dode guard. Uit agent-architecture wordt geen
+  code uitgevoerd, alleen `core/agents.json` gelezen.
 
 ## Bouwen
 

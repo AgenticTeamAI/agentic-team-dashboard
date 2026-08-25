@@ -1,0 +1,58 @@
+name: CI
+
+# s31: deze repo had geen CI. Drie poorten:
+#   test         — de gecommitte vitest/jsdom-suites (XSS b32, correctievrij i25,
+#                  kalenderdag b37, en de integratietest op de gebouwde
+#                  dashboard.html: de werkruimte-route end-to-end).
+#   build-drift  — dashboard.html + vercel.json (CSP-hashes) zijn gegenereerd;
+#                  wie src/ of schema/ wijzigt zonder te herbouwen, faalt hier.
+#   schema-drift — zie schema-drift.yml (herbruikbaar; draait hier én dagelijks).
+# s28: minimale rechten, actions op commit-SHA (Dependabot houdt de pins bij).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run
+
+  build-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Herbouwen en vergelijken met de gecommitte release
+        run: |
+          set -e
+          python3 scripts/build.py
+          if ! git diff --quiet -- dashboard.html vercel.json; then
+            echo "::error::dashboard.html en/of vercel.json zijn niet herbouwd na een wijziging in src/ of schema/. Draai 'python3 scripts/build.py' en commit beide."
+            git diff --stat -- dashboard.html vercel.json
+            exit 1
+          fi
+          echo "✅ dashboard.html en vercel.json zijn actueel"
+
+  schema-drift:
+    uses: ./.github/workflows/schema-drift.yml
+    secrets: inherit

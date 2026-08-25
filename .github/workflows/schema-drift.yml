@@ -1,0 +1,120 @@
+name: Schema-drift
+
+# s31: schema/schema.generated.js hoort bij de gepinde arch-commit in
+# agent-architecture.lock.json (opnieuw geëxtraheerd op precies die commit,
+# byte-gelijk), én core/agents.json op arch-main mag niet verder zijn dan die
+# pin — alleen dat bestand: prompts/overlays raken het schema niet, en een
+# gate die op elke playbook-wijziging rood wordt, wordt genegeerd.
+# Draait in CI (workflow_call) én dagelijks: de drift ontstaat zonder commit
+# in deze repo. Uit agent-architecture wordt geen code uitgevoerd.
+#
+# Cross-repo: vereist het repo-secret AGENT_ARCH_TOKEN (read-only PAT op
+# AgenticTeamAI/agent-architecture, zelfde als in de site) — óók als
+# Dependabot-secret. Publieke repo: fork-PR's krijgen het secret niet en falen
+# hier, bewust. Ontbreekt het secret, dan faalt de job hard: een stil
+# overgeslagen guard is een dode guard.
+on:
+  workflow_call:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Secret aanwezig? (anders harde failure)
+        env:
+          TOKEN: ${{ secrets.AGENT_ARCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::schema-drift kan niet draaien — repo-secret AGENT_ARCH_TOKEN ontbreekt (fine-grained PAT, read-access op AgenticTeamAI/agent-architecture; ook als Dependabot-secret zetten). Zonder deze guard loopt het ingebakken schema ongemerkt achter op de registry."
+            exit 1
+          fi
+
+      # Lege/kapotte pin mag nooit stil doorlopen (checkout zonder ref valt
+      # terug op de default branch); waarden gevalideerd vóór ze output worden.
+      - name: Pin lezen
+        id: pin
+        run: |
+          set -euo pipefail
+          COMMIT=$(jq -er .commit agent-architecture.lock.json)
+          VERSIE=$(jq -er .registryVersion agent-architecture.lock.json)
+          if ! [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::agent-architecture.lock.json: commit ontbreekt of is geen 40-tekens SHA ('$COMMIT')."
+            exit 1
+          fi
+          if ! [[ "$VERSIE" =~ ^[0-9A-Za-z.+-]+$ ]]; then
+            echo "::error::agent-architecture.lock.json: registryVersion heeft een onverwachte vorm ('$VERSIE')."
+            exit 1
+          fi
+          printf 'commit=%s\nversie=%s\n' "$COMMIT" "$VERSIE" >> "$GITHUB_OUTPUT"
+
+      - name: Check out agent-architecture op de pin
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: AgenticTeamAI/agent-architecture
+          ref: ${{ steps.pin.outputs.commit }}
+          token: ${{ secrets.AGENT_ARCH_TOKEN }}
+          path: agent-architecture
+
+      - name: Pin staat op arch-main en core/agents.json loopt niet achter
+        env:
+          PIN: ${{ steps.pin.outputs.commit }}
+          GH_TOKEN: ${{ secrets.AGENT_ARCH_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Ancestry via de compare-API: beide checkouts zijn shallow, dus
+          # merge-base --is-ancestor ziet geen gedeelde historie.
+          STATUS=$(gh api "repos/AgenticTeamAI/agent-architecture/compare/$PIN...main" --jq .status)
+          case "$STATUS" in
+            identical|ahead) ;;
+            *) echo "::error::De pin $PIN staat niet op agent-architecture main (compare-status: $STATUS). Alleen commits op main mogen als pin dienen — draai 'python3 scripts/sync-schema.py'."; exit 1 ;;
+          esac
+          git -C agent-architecture fetch -q --depth=1 origin main
+          set +e
+          git -C agent-architecture diff --quiet "$PIN" FETCH_HEAD -- core/agents.json
+          rc=$?
+          set -e
+          case $rc in
+            0) echo "✅ pin $PIN staat op main en is actueel t.o.v. core/agents.json" ;;
+            1) echo "::error::core/agents.json in agent-architecture (main) is verder dan de gepinde commit $PIN — het ingebakken schema loopt achter. Draai 'python3 scripts/sync-schema.py && python3 scripts/build.py' en commit schema/, dashboard.html, vercel.json en agent-architecture.lock.json."
+               exit 1 ;;
+            *) echo "::error::git diff faalde (exit $rc) — de driftcheck heeft NIET gedraaid."; exit 1 ;;
+          esac
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: schema.generated.js hoort bij de pin
+        env:
+          PIN: ${{ steps.pin.outputs.commit }}
+          VERSIE: ${{ steps.pin.outputs.versie }}
+        run: |
+          set -euo pipefail
+          EXTRACTED=$(sed -n 's/.*"extractedAt": "\([^"]*\)".*/\1/p' schema/schema.generated.js | head -1)
+          if [ -z "$EXTRACTED" ]; then
+            echo "::error::schema/schema.generated.js bevat geen extractedAt — is het bestand met scripts/extract-schema.py gegenereerd?"
+            exit 1
+          fi
+          python3 scripts/extract-schema.py --source agent-architecture \
+            --source-commit "$PIN" --extracted-at "$EXTRACTED" \
+            --output /tmp/schema.fresh.js
+          if ! cmp -s /tmp/schema.fresh.js schema/schema.generated.js; then
+            echo "::error::schema/schema.generated.js wijkt af van wat core/agents.json op de gepinde commit $PIN oplevert. Draai 'python3 scripts/sync-schema.py && python3 scripts/build.py' en commit schema/, dashboard.html, vercel.json en agent-architecture.lock.json."
+            diff /tmp/schema.fresh.js schema/schema.generated.js | head -40 || true
+            exit 1
+          fi
+          SCHEMA=$(sed -n 's/.*"registryVersion": "\([^"]*\)".*/\1/p' schema/schema.generated.js | head -1)
+          if [ "$SCHEMA" != "$VERSIE" ]; then
+            echo "::error::registryVersion in schema ($SCHEMA) ≠ agent-architecture.lock.json ($VERSIE). Draai 'python3 scripts/sync-schema.py'."
+            exit 1
+          fi
+          echo "✅ schema.generated.js = registry $VERSIE @ $PIN"
