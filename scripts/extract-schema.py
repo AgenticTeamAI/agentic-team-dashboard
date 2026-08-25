@@ -44,6 +44,11 @@ def main():
     parser = argparse.ArgumentParser(description="Extraheer datadomeinen + agentlijst uit agent-architecture")
     parser.add_argument("--source", required=True, help="Pad naar een verse clone van AgenticTeamAI/agent-architecture")
     parser.add_argument("--output", default="schema/schema.generated.js", help="Uitvoerpad voor het gegenereerde JS-bestand")
+    # s31: CI extraheert op een schone uitpak (geen .git) van de gepinde commit
+    # en moet byte-gelijk uitkomen met de gecommitte versie — daarom zijn de
+    # twee niet-inhoudelijke velden van buitenaf te zetten.
+    parser.add_argument("--source-commit", default=None, help="Commit-SHA van de bron als --source geen git-clone is (bv. een git-archive-uitpak)")
+    parser.add_argument("--extracted-at", default=None, help="Vaste waarde voor extractedAt (ISO, UTC) i.p.v. 'nu' — voor reproduceerbare vergelijking in CI")
     args = parser.parse_args()
 
     registry_path = Path(args.source) / "core" / "agents.json"
@@ -72,8 +77,8 @@ def main():
     payload = {
         "registryVersion": registry.get("registryVersion"),
         "registryUpdated": registry.get("updated"),
-        "sourceCommit": git_commit(args.source),
-        "extractedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "sourceCommit": args.source_commit or git_commit(args.source),
+        "extractedAt": args.extracted_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "modules": registry.get("modules", {}),
         "agents": agents,
         # opslag=werkruimte-domeinen (bv. dashboard_metrics) zijn afgeleide

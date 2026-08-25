@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1v+AOcFkSzXS3TvJ3YicUNwp/N44tt46VD/1/njJBns=' 'sha256-pZytb6KHHOzVf8dwl39TLAyQ7VyoMVAr25Qb8AO4En0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-e/Mt+skUVu+IhFd8LmpckQ2z7+6An1VFRbgaptwAIZY=' 'sha256-2D5NAO5dCFo+CA6H29WvJmoMQf1X8yG91TnI4pIzUKc='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -472,7 +472,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser). Gegenereerd uit registryVersion
-    1.36.0 van AgenticTeamAI/agent-architecture.
+    1.38.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -481,20 +481,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.36.0
-//   registry updated: 2026-08-24
-//   bron-commit     : f222b9a7763207d4e56ae89f351d8aa55ddce795
-//   geextraheerd op : 2026-08-25T07:23:15Z
+//   registryVersion : 1.38.0
+//   registry updated: 2026-08-25
+//   bron-commit     : 0afaafa99bad77579d906361196184e32d63473b
+//   geextraheerd op : 2026-08-25T11:13:03Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.36.0",
-  "registryUpdated": "2026-08-24",
-  "sourceCommit": "f222b9a7763207d4e56ae89f351d8aa55ddce795",
-  "extractedAt": "2026-08-25T07:23:15Z",
+  "registryVersion": "1.38.0",
+  "registryUpdated": "2026-08-25",
+  "sourceCommit": "0afaafa99bad77579d906361196184e32d63473b",
+  "extractedAt": "2026-08-25T11:13:03Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -4731,6 +4731,14 @@ function route() {
   const homeEl = document.getElementById("home-view");
   const detailEl = document.getElementById("detail-view");
   if (!bundle) return;
+  // s31: niets tekenen op een bestand dat dit dashboard niet herkent. Zonder
+  // deze guard toont een hashchange (bv. het leegmaken van het fragment na het
+  // laden van een daglink) alsnog de lege homepage náást de versiefout.
+  if (document.getElementById("version-error").style.display !== "none") {
+    homeEl.style.display = "none";
+    detailEl.style.display = "none";
+    return;
+  }
   const key = bepaalActieveView();
   if (key) {
     homeEl.style.display = "none";

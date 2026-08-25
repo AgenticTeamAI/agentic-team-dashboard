@@ -231,6 +231,14 @@ function route() {
   const homeEl = document.getElementById("home-view");
   const detailEl = document.getElementById("detail-view");
   if (!bundle) return;
+  // s31: niets tekenen op een bestand dat dit dashboard niet herkent. Zonder
+  // deze guard toont een hashchange (bv. het leegmaken van het fragment na het
+  // laden van een daglink) alsnog de lege homepage náást de versiefout.
+  if (document.getElementById("version-error").style.display !== "none") {
+    homeEl.style.display = "none";
+    detailEl.style.display = "none";
+    return;
+  }
   const key = bepaalActieveView();
   if (key) {
     homeEl.style.display = "none";

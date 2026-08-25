@@ -15,6 +15,7 @@ import hashlib
 import base64
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -84,6 +85,11 @@ def main():
         for h in regel.get("headers", []):
             if h.get("key") == "Content-Security-Policy":
                 h["value"] = re.sub(r"script-src [^;]+;", "script-src " + csp_hash(script_schema) + " " + csp_hash(script_app) + ";", h["value"])
+                # s31: een script-src zonder afsluitende puntkomma zou de
+                # substitutie stil laten mislukken — dan draagt productie een
+                # verkeerde hash en blokkeert de CSP het eigen script.
+                if csp_hash(script_schema) not in h["value"] or csp_hash(script_app) not in h["value"]:
+                    sys.exit("FOUT: vercel.json script-src kon niet bijgewerkt worden (staat script-src nog als 'script-src …;' met afsluitende puntkomma?).")
     vercel_path.write_text(json.dumps(vercel, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"OK: {vercel_path} script-src-hashes bijgewerkt.")
 
