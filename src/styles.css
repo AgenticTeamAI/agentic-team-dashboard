@@ -225,6 +225,8 @@ footer.app-footer {
   transition: border-color 0.15s, transform 0.1s;
 }
 .kpi-tile:hover, .kpi-tile:focus-visible { border-color: var(--mint); transform: translateY(-1px); outline: none; }
+/* Interne tegel (alleen met DASHBOARD_INTERN=1 op de werkruimte): gestippelde rand als herkenning. */
+.kpi-tile.kpi-intern { border-style: dashed; border-color: rgba(255,255,255,0.18); }
 .kpi-getal { font-size: 2.1rem; font-weight: 700; color: var(--mint); line-height: 1.05; }
 .kpi-kop { font-size: 0.78rem; color: var(--white); font-weight: 600; margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .kpi-label { font-size: 0.76rem; color: var(--grey); margin-top: 0.35rem; line-height: 1.4; }
