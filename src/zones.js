@@ -1,4 +1,4 @@
-/* Berekent de vijf zones uit één bundle (zie bundle-loaders.js). Puur —
+/* Berekent de vijf zones uit één bundle (zie werkruimte-loader.js). Puur —
  * geen DOM. "Vandaag" is injecteerbaar zodat dit reproduceerbaar te testen
  * is; in de app zelf is dat gewoon new Date(). */
 
@@ -27,13 +27,6 @@ const CONTEXT_ORANJE_DAYS = 90;
 // donderdag) zodat verschillen gehele getallen zijn en weekrekenwerk erop
 // doorgaat. null bij ontbrekende/onleesbare waarde.
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-// Excel-datumcellen komen uit parseXlsx als serienummer (dagen sinds
-// 1899-12-30). Alleen getallen in dit bereik (ca. 1954–2064) lezen we zo;
-// een ms-epoch is altijd veel groter en een kolomnummer veel kleiner.
-const EXCEL_SERIAL_MIN = 20000;
-const EXCEL_SERIAL_MAX = 60000;
-const EXCEL_EPOCH_DAG = -25569; // kalenderdag-ordinaal van 1899-12-30
 
 // "JJJJ-MM-DD" -> lokale middernacht, of null als de string geen bestaande
 // kalenderdag is. Date.UTC/new Date(j, m, d) rollen stil om ("2026-02-30"
@@ -65,8 +58,7 @@ function kalenderDag(v) {
     if (dateOnly === null) return null; // date-only-vorm, maar geen bestaande dag
     v = dateOnly === undefined ? new Date(v.trim()) : dateOnly;
   } else if (typeof v === "number") {
-    if (v >= EXCEL_SERIAL_MIN && v <= EXCEL_SERIAL_MAX) return EXCEL_EPOCH_DAG + Math.floor(v);
-    v = new Date(v);
+    v = new Date(v); // ms-epoch
   }
   if (!(v instanceof Date) || isNaN(v.getTime())) return null;
   // lokale kalenderdag: eerst de lokale Y/M/D nemen, dan pas naar een ordinaal
@@ -96,16 +88,12 @@ function daysBetween(a, b) {
 // Date-only strings worden als LOKALE middernacht gelezen (niet als UTC-
 // middernacht, wat new Date("JJJJ-MM-DD") doet) — zo tonen fmtDate() en
 // kalenderDag() in elke tijdzone dezelfde dag als in de brondata staat.
-// Getallen in het Excel-serialbereik worden als Excel-datum gelezen (route 1:
-// parseXlsx geeft datumcellen als getal door).
 function parseDateField(v) {
   if (!v) return null;
   if (typeof v === "string") {
     const dateOnly = dateOnlyNaarLokaleDate(v);
     if (dateOnly !== undefined) return dateOnly;
     v = v.trim();
-  } else if (typeof v === "number" && v >= EXCEL_SERIAL_MIN && v <= EXCEL_SERIAL_MAX) {
-    return dagVanIndex(EXCEL_EPOCH_DAG + Math.floor(v));
   }
   const dt = new Date(v);
   return isNaN(dt.getTime()) ? null : dt;
@@ -449,9 +437,10 @@ function computeRitme(bundle, today, weeks = 12) {
 // metrics-route juist wél — twee scores op dezelfde data (b37 / AT-033).
 //
 // logboek en ritmetaken (f17/f19) zijn werkgeheugen van het team, geen
-// werkdata: alleen de werkruimte-route levert ze als rijen-domein aan, de
-// Excel-/JSON-/Notion-routes en het metricsbestand kennen ze niet. Meetellen
-// zou een werkruimte-klant structureel +1 à +2 op de noemer geven. Het schema
+// werkdata: de werkruimte-route levert ze als rijen-domein aan, het
+// metricsbestand (dashboard_metrics, teams met werkdata buiten de werkruimte)
+// kent ze niet. Meetellen zou een werkruimte-rijenklant structureel +1 à +2
+// op de noemer geven. Het schema
 // heeft (nog) geen werkdata-vlag per domein, vandaar een expliciete lijst.
 const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken"];
 function meetbareDomeinen(schema) {

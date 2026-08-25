@@ -8,16 +8,33 @@
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
  * aan te pas, en de CSP van de pagina staat ook geen ander verkeer toe.
  *
- * Deze module levert dezelfde uniforme bundelvorm als bundle-loaders.js
- * (kind "rows"), zodat alles stroomafwaarts (zones, metrics, render) niet
- * hoeft te weten dat de rijen live zijn opgehaald in plaats van gekozen.
+ * Dit is sinds 25-08-2026 de enige route: er is altijd een werkruimte, dus
+ * de vroegere bestandsroutes (Excel-werkboek, data-map, Notion-export-map)
+ * en het losse offline dashboard.html zijn verwijderd. Deze module levert
+ * de uniforme bundelvorm (kind "rows" of "metrics") waar alles
+ * stroomafwaarts (zones, metrics, render) op rekent.
+ *
+ * Bundelvorm:
+ *   { source: "werkruimte", sourceLabel, kind, domains: { [domein]:
+ *     { aanwezig, rows, staleAt, herkomstLabel } }, bedrijfscontext,
+ *     waarschuwingen: [], teamfeed, intern, metricsRaw? }
  */
+
+function emptyBundle(source, sourceLabel) {
+  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+}
+
+// Beslist, puur op vorm, of een payload het kant-en-klare metricsbestand is
+// (een "versie"- of "type"-veld) — de versiecontrole zelf zit in metrics.js.
+function looksLikeMetricsPayload(raw) {
+  return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
+}
 
 const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
 
 /* Herkent de daglink-parameters in het fragment. Detailroutes ("#/detail/…")
  * beginnen met "#/" en blijven buiten schot. Geeft null bij alles wat geen
- * geldige daglink is — de pagina gedraagt zich dan als de gewone f4-variant. */
+ * geldige daglink is — de pagina toont dan de lege staat met de uitleg. */
 /* b32 fase 2: het dashboard praat altijd via de router op het vaste domein.
  * De router zoekt de instantie op via de sleutel-hash in het token; een link
  * kan dus nooit naar een vreemde host wijzen en de CSP staat maar één origin
@@ -202,9 +219,7 @@ async function loadWerkruimteBundle(daglink) {
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
-  // het dashboard de interne tegels (correctievrij / f19-gate). De
-  // bestandsroutes zetten deze vlag nooit — een klant ziet die tegels dus
-  // ook niet in een gedownloade bundel.
+  // het dashboard de interne tegels (correctievrij / f19-gate).
   bundle.intern = overzicht.intern === true;
   const schema = getSchema();
   const opslagDomeinen = werkruimteDomeinen(schema);
@@ -294,5 +309,6 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
+    emptyBundle, looksLikeMetricsPayload,
   };
 }

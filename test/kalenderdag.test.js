@@ -16,7 +16,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULES = [
   "schema/schema.generated.js",
   "src/schema-helpers.js",
-  "src/bundle-loaders.js",
+  "src/werkruimte-loader.js",
   "src/zones.js",
   "src/metrics-sanitize.js",
   "src/metrics.js",
@@ -35,7 +35,7 @@ beforeAll(() => {
 const VANDAAG_18U = new Date(2026, 7, 24, 18, 0, 0);
 
 function bundelMetActies(rijen) {
-  return { source: "json", sourceLabel: "test", domains: { acties: { rows: rijen, staleAt: VANDAAG_18U } }, waarschuwingen: [] };
+  return { source: "werkruimte", sourceLabel: "test", domains: { acties: { rows: rijen, staleAt: VANDAAG_18U } }, waarschuwingen: [] };
 }
 
 describe("kalenderDag / daysBetween — hele kalenderdagen", () => {
@@ -164,6 +164,8 @@ describe("weekbuckets op kalenderdag", () => {
   });
 });
 
+// Sinds #13 is de werkruimte de enige route; "rij-route" = werkruimte met
+// werkdata-rijen (bundle.domains), "metrics-route" = dashboard_metrics-entry.
 describe("meetbareDomeinen — één breedte-noemer voor beide routes (AT-033)", () => {
   it("sluit bedrijfscontext uit en staat in het schema", () => {
     expect(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen)).toContain("bedrijfscontext");
@@ -172,10 +174,10 @@ describe("meetbareDomeinen — één breedte-noemer voor beide routes (AT-033)",
     expect(m.length).toBe(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen).length - 3); // ook logboek/ritmetaken, zie reviewronde 1
   });
 
-  it("rij-route en metrics-route geven op dezelfde fixture dezelfde noemer en teller", () => {
+  it("werkruimte-rijenroute en metricsroute geven op dezelfde fixture dezelfde noemer en teller", () => {
     const schema = g.AGENTIC_TEAM_SCHEMA;
     const rijRoute = {
-      source: "json", sourceLabel: "test", waarschuwingen: [],
+      source: "werkruimte", sourceLabel: "test", waarschuwingen: [],
       bedrijfscontext: { Bron: "Notion", staleAt: VANDAAG_18U },
       domains: {
         acties: { rows: [{ Actie: "a", Status: "Open", Deadline: "2026-08-20" }], staleAt: VANDAAG_18U },
@@ -222,10 +224,10 @@ describe("reviewronde 1 (b37)", () => {
   });
 
   it("onleesbare Laatst_bijgewerkt geeft grijs op de rij-route én de metrics-route (nooit groen)", () => {
-    // rij-route via de loaders
-    const excel = g.rowsToBedrijfscontext([["sleutel", "waarde"], ["Bron", "Notion"], ["Laatst_bijgewerkt", "onbekend"]], new Date(2020, 0, 1));
-    expect(excel.staleAt).toBeNull();
-    expect(g.computeZone2({ bedrijfscontext: excel }, VANDAAG_18U).signaal).toBe("grijs");
+    // rijen-route via de werkruimte-loader: onleesbare Bijgewerkt-stempels tellen niet, terugval op null
+    const wr = g.bedrijfscontextUitEntries([{ data: { Onderdeel: "Missie", Inhoud: "x", Bijgewerkt: "onbekend" } }], null);
+    expect(wr.staleAt).toBeNull();
+    expect(g.computeZone2({ bedrijfscontext: wr }, VANDAAG_18U).signaal).toBe("grijs");
     // guard in computeZone2 zelf, ook als een loader ooit weer een Invalid Date doorgeeft
     expect(g.computeZone2({ bedrijfscontext: { Bron: "Notion", staleAt: new Date("onbekend") } }, VANDAAG_18U).signaal).toBe("grijs");
     // metrics-route
@@ -234,19 +236,6 @@ describe("reviewronde 1 (b37)", () => {
     expect(res.metrics.z2.signaal).toBe("grijs");
     // en isStale: onleesbaar = verouderd, niet "vers"
     expect(g.isStale(new Date("onbekend"), VANDAAG_18U)).toBe(true);
-  });
-
-  it("Excel-serienummers worden als datum gelezen", () => {
-    expect(g.kalenderDag(46258)).toBe(g.kalenderDag("2026-08-24")); // 2026-08-24 = serial 46258
-    expect(g.daysBetween(VANDAAG_18U, 46258)).toBe(0);
-    expect(g.daysBetween(VANDAAG_18U, 46257)).toBe(1);
-    const d = g.parseDateField(46258);
-    expect([d.getFullYear(), d.getMonth() + 1, d.getDate()]).toEqual([2026, 8, 24]);
-    expect(g.kalenderDag(46258.5)).toBe(g.kalenderDag("2026-08-24")); // met tijdfractie
-    // ms-epoch blijft ms-epoch
-    expect(g.kalenderDag(VANDAAG_18U.getTime())).toBe(g.kalenderDag("2026-08-24"));
-    const o = g.computeOpvolging(bundelMetActies([{ Actie: "x", Status: "Open", Deadline: 46258 }, { Actie: "y", Status: "Klaar", Deadline: 46250 }]), VANDAAG_18U);
-    expect(o.verstreken).toBe(1);
   });
 
   it("meetbareDomeinen sluit ook logboek en ritmetaken uit; beide routes zien dezelfde noemer", () => {

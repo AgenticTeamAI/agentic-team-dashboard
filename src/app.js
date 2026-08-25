@@ -1,8 +1,8 @@
-/* Wiring: bestandskeuze, periodeschakelaar, laden -> berekenen -> tonen,
- * en de hash-router tussen de homepage en de detailpagina's. Schrijft nooit
- * iets terug behalve, optioneel en lokaal, welke bundelroute/bestandsnaam
- * en welke minuten-per-actie-instelling je de laatste keer koos (geen
- * bundelinhoud) — zie rememberChoice()/rememberMinuten() onderaan. */
+/* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
+ * periodeschakelaar en de hash-router tussen de homepage en de
+ * detailpagina's. Schrijft nooit iets terug behalve, optioneel en lokaal,
+ * wanneer je de laatste keer laadde en welke minuten-per-actie-instelling
+ * je koos (geen bundelinhoud) — zie rememberChoice()/rememberMinuten(). */
 
 const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
 const LS_MINUTEN_KEY = "agentic-team-dashboard:minuten-per-actie";
@@ -37,7 +37,7 @@ function renderLastUsed() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { el.textContent = ""; return; }
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map", werkruimte: "Werkruimte (daglink)" }[route] || route;
+    const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
     el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { el.textContent = ""; }
 }
@@ -167,12 +167,12 @@ function renderAll() {
     const door = meta.door ? ` door ${meta.door}` : "";
     const herkomst = bundle.source === "werkruimte"
       ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
-      : `Notion — metricsbestand v${METRICS_VERSION}`;
+      : `metricsbestand v${METRICS_VERSION}`;
     document.getElementById("bundle-info").textContent =
       `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+      `Bundel: ${bundle.sourceLabel} (live uit je werkruimte-instantie) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -273,87 +273,6 @@ function wireNavigatie() {
 }
 
 function wireInputs() {
-  const excelInput = document.getElementById("input-excel");
-  const jsonInput = document.getElementById("input-json");
-  const notionInput = document.getElementById("input-notion");
-
-  document.getElementById("btn-excel").addEventListener("click", () => excelInput.click());
-  document.getElementById("btn-json").addEventListener("click", () => jsonInput.click());
-  document.getElementById("btn-notion").addEventListener("click", () => notionInput.click());
-
-  excelInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setStatus(`${file.name} wordt gelezen…`);
-    try {
-      const bundle = await loadExcelBundle(file);
-      await handleBundle(bundle, "excel", file.name);
-      setStatus(`${file.name} geladen.`);
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon ${file.name} niet lezen: ${err.message}`, true);
-    }
-  });
-
-  jsonInput.addEventListener("change", async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setStatus(`${files.length} bestand(en) worden gelezen…`);
-    try {
-      const bundle = await loadJsonBundle(files);
-      const label = files[0].webkitRelativePath ? files[0].webkitRelativePath.split("/")[0] : `${files.length} bestanden`;
-      await handleBundle(bundle, "json", label);
-      setStatus(`${label} geladen.`);
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon de data-map niet lezen: ${err.message}`, true);
-    }
-  });
-
-  notionInput.addEventListener("change", async (e) => {
-    const allFiles = Array.from(e.target.files || []);
-    const jsonFiles = allFiles.filter(f => f.name.toLowerCase().endsWith(".json"));
-    if (!jsonFiles.length) {
-      setStatus("Geen .json-bestanden gevonden in de gekozen map.", true);
-      return;
-    }
-    setStatus(`${jsonFiles.length} bestand(en) worden gelezen…`);
-    try {
-      // Eén los bestand kan onmogelijk het oude vijftien-bestanden-formaat
-      // zijn — probeer het daarom eerst als het nieuwe metricsbestand
-      // (route 3). Alleen als de vorm niet klopt (geen "versie"/"type"),
-      // val terug op de oude rijenlezer — dat vangt ook het geval dat
-      // iemand per ongeluk maar één bestand uit de oude exportmap koos.
-      let handled = false;
-      if (jsonFiles.length === 1) {
-        let raw;
-        try {
-          raw = await readJsonFile(jsonFiles[0]);
-        } catch (parseErr) {
-          throw new Error(`${jsonFiles[0].name} is geen geldige JSON (${parseErr.message}).`);
-        }
-        if (looksLikeMetricsPayload(raw)) {
-          const bundle = emptyBundle("notion", jsonFiles[0].name);
-          bundle.kind = "metrics";
-          bundle.metricsRaw = raw;
-          await handleBundle(bundle, "notion", jsonFiles[0].name);
-          setStatus(`${jsonFiles[0].name} gelezen als metricsbestand (Notion-route, kant-en-klare uitkomsten — geen rijen ingelezen).`);
-          handled = true;
-        }
-      }
-      if (!handled) {
-        const bundle = await loadNotionExportBundle(jsonFiles);
-        bundle.kind = "rows";
-        const label = jsonFiles[0].webkitRelativePath ? jsonFiles[0].webkitRelativePath.split("/")[0] : `${jsonFiles.length} bestanden`;
-        await handleBundle(bundle, "notion", label);
-        setStatus(`${label} gelezen als losse-domeinen-export (oud formaat, ${jsonFiles.length} bestand(en)) — dit dashboard rekent de metrics lokaal uit de rijen, net als bij de Excel- en data-map-route.`);
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon de Notion-export niet lezen: ${err.message}`, true);
-    }
-  });
-
   document.getElementById("period-select").addEventListener("change", (e) => {
     currentPeriodWeeks = parseInt(e.target.value, 10);
     if (currentBundle) renderAll();
@@ -371,11 +290,17 @@ function wireInputs() {
   });
 }
 
-/* Route 4: opent iemand deze pagina via een daglink (of herlaadt hij binnen
- * dezelfde sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets
- * te kiezen, de link wijst al naar zijn eigen instantie. De bestandsknoppen
- * blijven gewoon werken als alternatief. */
+/* Opent iemand deze pagina via een daglink (of herlaadt hij binnen dezelfde
+ * sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets te
+ * kiezen, de link wijst al naar zijn eigen instantie. Zonder (of met een
+ * verlopen) daglink blijft de lege staat staan met de uitleg. */
+function toonLegeStaat(titel, tekst) {
+  document.getElementById("empty-state-titel").textContent = titel;
+  document.getElementById("empty-state-tekst").textContent = tekst;
+}
+
 async function laadWerkruimte(daglink) {
+  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
   setStatus("Live gegevens uit je werkruimte worden opgehaald…");
   try {
     const bundle = await loadWerkruimteBundle(daglink);
@@ -384,6 +309,7 @@ async function laadWerkruimte(daglink) {
   } catch (err) {
     console.error(err);
     if (err.daglinkVerlopen) vergeetDaglink();
+    toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
     setStatus(err.message, true);
   }
 }
@@ -394,10 +320,6 @@ document.addEventListener("DOMContentLoaded", () => {
   wireNavigatie();
   renderLastUsed();
   renderAll();
-  // f4: de offline variant is hetzelfde artefact — geserveerd via http(s)
-  // bieden we het als download aan; via file:// ben je het bestand al.
-  const dl = document.getElementById("download-offline");
-  if (dl && window.location.protocol.indexOf("http") === 0) dl.style.display = "";
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);
 });

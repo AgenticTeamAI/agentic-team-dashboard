@@ -348,7 +348,7 @@ function renderDetailAgent(el, slug, ctx) {
     }
     lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
   } else {
-    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, open het dashboard dan via een rijenroute (Excel-werkboek, data-map, Notion-export met losse domeinbestanden, of een werkruimte met werkdata-rijen).</p>`;
+    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, dan moeten de werkdata-rijen in je werkruimte staan (in plaats van alleen een dagelijks metricsbestand).</p>`;
   }
 
   el.innerHTML = `
