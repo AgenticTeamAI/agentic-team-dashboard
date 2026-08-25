@@ -171,7 +171,7 @@ function renderVersionError(el, result, bundle) {
     <h2>❔ ${esc(kindLabel)}</h2>
     <p>${esc(result.tekst)}</p>
     ${details}
-    <p class="footnote">Bestand: ${esc(bundle.sourceLabel)}. Er is bewust niets getekend op basis van dit bestand. Kies hierboven een andere bundel, werk het dashboard bij, of vraag om een export in het formaat dat deze versie herkent.</p>`;
+    <p class="footnote">Bron: ${esc(bundle.sourceLabel)}. Er is bewust niets getekend op basis van dit metricsbestand. Vraag je Coördinator om een nieuwe dagstart, of wacht op een dashboardversie die dit formaat herkent.</p>`;
 }
 
 if (typeof module !== "undefined") {

@@ -1,4 +1,4 @@
-/* Berekent de vijf zones uit één bundle (zie bundle-loaders.js). Puur —
+/* Berekent de vijf zones uit één bundle (zie werkruimte-loader.js). Puur —
  * geen DOM. "Vandaag" is injecteerbaar zodat dit reproduceerbaar te testen
  * is; in de app zelf is dat gewoon new Date(). */
 

@@ -13,19 +13,10 @@ __STYLES__
 <div class="wrap">
   <header class="top">
     <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel of, via een daglink, live uit je eigen werkruimte.</p>
-    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: alles wat je hier kiest of laadt, blijft in je browser. Open je deze pagina via een daglink van je Coördinator, dan haalt je browser de gegevens rechtstreeks op uit je eigen werkruimte-instantie — ook dan komt er niets bij ons terecht.</p>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen, via de daglink van je Coördinator, live uit je eigen werkruimte.</p>
+    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: je browser haalt de gegevens rechtstreeks op uit je eigen werkruimte-instantie en alles blijft in je browser.</p>
 
     <div class="controls-row">
-      <div class="bundle-picker">
-        <span class="label">Bundel kiezen:</span>
-        <button id="btn-excel" type="button">📊 Excel-werkboek</button>
-        <button id="btn-json" type="button">🗂️ data-map (JSON)</button>
-        <button id="btn-notion" type="button">🧩 Notion-export-map</button>
-        <input type="file" id="input-excel" accept=".xlsx">
-        <input type="file" id="input-json" multiple webkitdirectory>
-        <input type="file" id="input-notion" multiple webkitdirectory accept=".json">
-      </div>
       <div class="bundle-picker">
         <span class="label">Periode:</span>
         <select id="period-select">
@@ -35,21 +26,17 @@ __STYLES__
         </select>
       </div>
     </div>
-    <p class="last-used" id="download-offline" style="display:none;">💾 Liever offline of privacy-strikt? <a href="dashboard.html" download>Download dit dashboard als los bestand</a> — zelfde artefact, werkt zonder internet.</p>
     <p class="last-used" id="last-used"></p>
     <p class="last-used" id="status-line"></p>
     <p class="last-used" id="bundle-info"></p>
   </header>
 
   <div id="empty-state" class="empty-state">
-    <h2>Nog geen bundel geladen</h2>
-    <p>Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
-    Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
-    metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
-    Gebruikt je team een hosted werkruimte? Vraag je Coördinator om een daglink — die opent deze pagina
-    met je gegevens er al in.<br>
-    Niets wordt opgeslagen of verstuurd — dit dashboard leest lokaal in je browser, of via een daglink
-    rechtstreeks uit je eigen werkruimte.</p>
+    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
+    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
+    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
+    verlopen, vraag je Coördinator dan om een nieuwe.<br>
+    Niets wordt opgeslagen of verstuurd — je browser leest rechtstreeks uit je eigen werkruimte.</p>
   </div>
 
   <div id="version-error" style="display:none;"></div>
@@ -114,8 +101,8 @@ __STYLES__
     Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
     pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
-    worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
-    (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
+    worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
+    (lokaal, in je browser). Gegenereerd uit registryVersion
     __REGISTRY_VERSION__ van AgenticTeamAI/agent-architecture.
   </footer>
 </div>

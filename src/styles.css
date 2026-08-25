@@ -92,6 +92,7 @@ select#period-select {
 }
 .empty-state h2 { color: var(--white); font-size: 1.15rem; }
 
+
 /* Onbekende versie of onherkenbaar metricsbestand — geen statuskleur (dit
    is geen rood/oranje/groen-signaal maar een compatibiliteitsmelding),
    daarom dezelfde grijze/neutrale behandeling als "onbekend" elders. */

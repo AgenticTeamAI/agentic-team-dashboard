@@ -1,7 +1,7 @@
 /* De interne metricsvorm — dit is de enige vorm die de renderlaag (render.js,
  * homepage.js) ooit ziet. Er zijn twee manieren om hem te vullen:
  *
- *   1. buildMetricsFromRowsBundle(bundle, ...)  — Excel-route en data/*.json-route:
+ *   1. buildMetricsFromRowsBundle(bundle, ...)  — werkruimte met werkdata-rijen:
  *      rekent de vijf zones, de adoptiescore, de weekreeks, de tijdwinst en de
  *      agent-ranglijst uit de rijen in de bundle, met de bestaande zones.js-
  *      functies. Dit ís de bestaande rij-berekening; hij verandert niet, hij
