@@ -136,7 +136,7 @@ function mapBedrijfscontextBlock(b) {
     Bron: b.bron,
     Placeholders_open: b.placeholders_open || [],
     Projectkennis_kopie_laatst_bijgewerkt: b.projectkennis_kopie_laatst_bijgewerkt,
-    staleAt: b.laatst_bijgewerkt ? new Date(b.laatst_bijgewerkt) : null,
+    staleAt: parseDateField(b.laatst_bijgewerkt),
   };
 }
 
@@ -273,7 +273,11 @@ function buildActiviteitFromMetrics(weekreeksBlock, weeksFallback) {
 // ── Adoptiescore uit domeinen/weekreeks/acties ──────────────────────────
 // Ritme en breedte zijn hier client-side afgeleid (dezelfde formule als de
 // andere twee routes, zie zones.js), omdat de bouwstenen ervoor
-// (weekreeks, domeinen) toch al in het bestand staan. Opvolging kan alleen
+// (weekreeks, domeinen) toch al in het bestand staan. De breedte-noemer komt
+// uit meetbareDomeinen(schema) (zones.js): bedrijfscontext staat wel in het
+// schema en in het domeinen-blok van de Coördinator, maar heeft zone 2 als
+// eigen meetlat — anders gaf deze route een andere score dan de rij-route
+// op dezelfde data (b37 / AT-033). Opvolging kan alleen
 // uit een expliciet aangeleverd acties.verstreken/klaar_verstreken komen —
 // "verstreken deadline" is geen telling die uit de andere blokken is af te
 // leiden zonder rijen te zien.
@@ -292,7 +296,7 @@ function buildAdoptFromMetrics(raw, activiteit, schema) {
     };
   }
 
-  const domeinenSchema = Object.keys(schema.datadomeinen);
+  const domeinenSchema = meetbareDomeinen(schema);
   let breedte;
   if (!raw.domeinen) {
     breedte = { berekenbaar: false, reden: "Geen domeinen-blok aanwezig in dit metricsbestand." };
