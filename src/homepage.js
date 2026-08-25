@@ -5,6 +5,7 @@
  * zonder browser te testen zijn. */
 
 const DETAIL_VOLGORDE = [
+  { key: "feed", titel: "Teamfeed", emoji: "📣" },
   { key: "aandacht", titel: "Vraagt je aandacht", emoji: "🎯" },
   { key: "context", titel: "Contextgezondheid", emoji: "🧭" },
   { key: "adoptiescore", titel: "Adoptiescore — herkomst", emoji: "📊" },

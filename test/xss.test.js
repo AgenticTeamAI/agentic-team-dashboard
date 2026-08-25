@@ -19,6 +19,7 @@ const MODULES = [
   "src/metrics.js",
   "src/render.js",
   "src/charts.js",
+  "src/feed.js",
   "src/homepage.js",
 ];
 
@@ -200,5 +201,91 @@ describe("CSP (b32 fase 2)", () => {
     // Header en meta dragen dezelfde hashes; 'unsafe-inline' staat niet meer in script-src.
     expect(header).toContain(`script-src ${verwacht.join(" ")};`);
     expect(header).not.toMatch(/script-src[^;]*unsafe-inline/);
+  });
+});
+
+/* f22 — teamfeed: entries zijn LLM-tekst uit de werkruimte; alleen esc()
+ * plus **vet** en "- "-lijsten mogen het rendering halen. */
+describe("teamfeed (f22)", () => {
+  const nu = new Date(TODAY);
+  const iso = (minGeleden) => new Date(nu.getTime() - minGeleden * 60000).toISOString();
+  function entries() {
+    return [
+      { entryId: "a", aangemaakt: iso(10), data: { Actie: "Dagstart", Agent: "orchestrator", Soort: "afgerond", Bericht: "Dagstart afgerond: 2 prioriteiten.\n**Prioriteiten:**\n- Offerte **Van Dijk**\n- Q3-cijfers", Link: "https://voorbeeld.nl/a" } },
+      { entryId: "b", aangemaakt: iso(120), data: { Actie: "werkronde gestart", Agent: "orchestrator", Soort: "rondestart", Bericht: "werkronde gestart: 2 acties", Link: "" } },
+      { entryId: "c", aangemaakt: iso(30), data: { Actie: "werkronde gestart", Agent: "orchestrator", Soort: "rondestart", Bericht: "werkronde gestart: 1 actie", Link: "" } },
+      { entryId: "d", aangemaakt: iso(60), data: { Actie: XSS, Agent: "stagiair", Soort: "<script>", Bericht: `${XSS}\n- <img src=x onerror=window.__xss=1>\n**<b>kop</b>**`, Link: "javascript:alert(1)" } },
+      { entryId: "e", aangemaakt: iso(2000), data: { Actie: "Lang", Agent: "Pipeline Manager", Soort: "voorstel", Bericht: "Kernzin.\n" + "x".repeat(600), Link: "https://voorbeeld.nl/e" } },
+    ];
+  }
+  function ctxMet(bundle) {
+    return { bundle, schema: g.AGENTIC_TEAM_SCHEMA, agentLookup: g.buildAgentLookup(), today: nu };
+  }
+
+  it("normaliseert: agent-slug én displayName matchen, onbekende soort/agent degraderen, link alleen https", () => {
+    const items = g.normaliseerFeed(entries(), g.AGENTIC_TEAM_SCHEMA, g.buildAgentLookup());
+    expect(items.map(i => i.id)).toEqual(["a", "c", "d", "b", "e"]); // nieuwste eerst
+    const d = items.find(i => i.id === "d");
+    expect(d.soort).toBe("update");
+    expect(d.agentSlug).toBeNull();
+    expect(d.agentEmoji).toBe("🤖");
+    expect(d.link).toBeNull();
+    expect(items.find(i => i.id === "e").agentSlug).toBe("pipeline-manager");
+  });
+
+  it("markeert een rondestart zonder afronding na 90 minuten als open lus — een verse niet", () => {
+    const items = g.markeerOpenLussen(g.normaliseerFeed(entries(), g.AGENTIC_TEAM_SCHEMA, g.buildAgentLookup()), nu);
+    expect(items.find(i => i.id === "b").openLus).toBe(true);
+    expect(items.find(i => i.id === "c").openLus).toBe(false);
+  });
+
+  it("feedTekstHtml: alleen vet en lijsten, al het andere als tekst", () => {
+    const c = el();
+    c.innerHTML = g.feedTekstHtml(`${XSS}\n**Kop:**\n- <img src=x onerror=window.__xss=1>\n- **vet** woord`);
+    geenInjectie(c);
+    expect(c.querySelectorAll("li").length).toBe(2);
+    expect(c.querySelector("strong").textContent).toBe("vet");
+    expect(c.querySelector(".feed-kop").textContent).toBe("Kop:");
+    expect(c.textContent).toContain("<img");
+  });
+
+  it("vouwt lange berichten in", () => {
+    const c = el();
+    c.innerHTML = g.feedTekstHtml("Kernzin.\n" + "x".repeat(600));
+    expect(c.querySelector("details summary").textContent).toBe("meer");
+  });
+
+  it("renderDetailFeed: vijandige entries, dagkoppen, agentfilter", () => {
+    const c = el();
+    g.renderDetailFeed(c, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: entries() } }));
+    geenInjectie(c);
+    expect(c.querySelectorAll(".feed-rij").length).toBe(5);
+    expect(c.querySelectorAll(".feed-dag").length).toBeGreaterThanOrEqual(2);
+    expect(c.querySelector('a[href="javascript:alert(1)"]')).toBeNull();
+    expect(c.querySelector('a.agent[href="#/detail/agent/orchestrator"]')).not.toBeNull();
+    expect(c.querySelector(".feed-rij.open-lus").textContent).toContain("afgerond — geen samenvatting");
+    c.querySelector('[data-feed-filter="pipeline-manager"]').click();
+    expect(c.querySelectorAll(".feed-rij").length).toBe(1);
+    expect(c.querySelector('[data-feed-filter="pipeline-manager"]').classList.contains("actief")).toBe(true);
+  });
+
+  it("renderFeedPanel: maximaal vijf, met doorklik; leeg en degradatie netjes", () => {
+    const c = el();
+    g.renderFeedPanel(c, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: entries() } }));
+    geenInjectie(c);
+    expect(c.querySelectorAll(".feed-rij").length).toBe(5);
+    expect(c.querySelector('[data-goto="feed"]')).not.toBeNull();
+
+    const leeg = el();
+    g.renderFeedPanel(leeg, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: [] } }));
+    expect(leeg.textContent).toContain("Nog geen teamactiviteit");
+
+    const oud = el();
+    g.renderFeedPanel(oud, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: null }));
+    expect(oud.textContent).toContain("kent de teamfeed nog niet");
+
+    const bestand = el();
+    g.renderDetailFeed(bestand, ctxMet({ source: "excel", kind: "rows", teamfeed: null }));
+    expect(bestand.textContent).toContain("daglink van je Coördinator");
   });
 });

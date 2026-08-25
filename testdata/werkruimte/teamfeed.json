@@ -1,0 +1,236 @@
+[
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-000",
+  "data": {
+   "Actie": "Dagstart",
+   "Agent": "orchestrator",
+   "Soort": "afgerond",
+   "Bericht": "Dagstart afgerond: 3 prioriteiten, 1 deadline morgen.\n**Prioriteiten:**\n- Offerte **Van Dijk** afronden — wacht op jouw prijsbevestiging\n- **LinkedIn-reeks Q4** inplannen\n- Capaciteitsvoorstel september beoordelen",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-24T09:41:00",
+  "bijgewerkt": "2026-08-24T09:41:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-001",
+  "data": {
+   "Actie": "Offerte Van Dijk",
+   "Agent": "quality-control",
+   "Soort": "qc_review_nodig",
+   "Bericht": "Prijsopbouw wijkt af van het tarievenblad (uurtarief 95 i.p.v. 110). **Menselijke blik nodig** vóór verzending.",
+   "Link": "https://voorbeeld.nl/crm/offerte-van-dijk"
+  },
+  "aangemaakt": "2026-08-24T08:31:00",
+  "bijgewerkt": "2026-08-24T08:31:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-002",
+  "data": {
+   "Actie": "Offerte Van Dijk",
+   "Agent": "pipeline-manager",
+   "Soort": "overdracht",
+   "Bericht": "**Wacht op review** — concept staat klaar in het CRM.\n- scope: 12 dagdelen procesbegeleiding\n- aanname: start 15 september\n- open: definitief uurtarief",
+   "Link": "https://voorbeeld.nl/crm/offerte-van-dijk"
+  },
+  "aangemaakt": "2026-08-24T08:17:00",
+  "bijgewerkt": "2026-08-24T08:17:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-003",
+  "data": {
+   "Actie": "LinkedIn-reeks Q4",
+   "Agent": "content-strateeg",
+   "Soort": "afgerond",
+   "Bericht": "3 posts geschreven, planning bijgewerkt in het contentdomein.",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-24T08:12:00",
+  "bijgewerkt": "2026-08-24T08:12:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-004",
+  "data": {
+   "Actie": "werkronde gestart",
+   "Agent": "orchestrator",
+   "Soort": "rondestart",
+   "Bericht": "werkronde gestart: 3 acties",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-24T08:05:00",
+  "bijgewerkt": "2026-08-24T08:05:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-005",
+  "data": {
+   "Actie": "werkronde gestart",
+   "Agent": "orchestrator",
+   "Soort": "rondestart",
+   "Bericht": "werkronde gestart: 1 actie",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-23T21:40:00",
+  "bijgewerkt": "2026-08-23T21:40:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-006",
+  "data": {
+   "Actie": "Capaciteit september",
+   "Agent": "coo-agent",
+   "Soort": "voorstel",
+   "Bericht": "**Voorstel:** freelancer inhuren voor 2 weken.\n- bezetting september 118% bij huidige planning\n- kosten ca. € 6.400, dekking uit project Van Dijk\n- alternatief: start Van Dijk 2 weken opschuiven",
+   "Link": "https://voorbeeld.nl/acties/capaciteit-september"
+  },
+  "aangemaakt": "2026-08-23T21:14:00",
+  "bijgewerkt": "2026-08-23T21:14:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-007",
+  "data": {
+   "Actie": "Werkronde",
+   "Agent": "orchestrator",
+   "Soort": "afgerond",
+   "Bericht": "Werkronde klaar: 2 acties af.\n**Klaar:**\n- Prospects logistiek Zuid-Holland\n- Interacties verrijkt (6)",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-23T16:10:00",
+  "bijgewerkt": "2026-08-23T16:10:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-008",
+  "data": {
+   "Actie": "Prospects logistiek Zuid-Holland",
+   "Agent": "researcher",
+   "Soort": "afgerond",
+   "Bericht": "**7 organisaties** gekwalificeerd en aangemaakt.\n- 4 met actief koopsignaal (vacature procesmanager)\n- 3 ter oriëntatie",
+   "Link": "https://voorbeeld.nl/organisaties"
+  },
+  "aangemaakt": "2026-08-23T16:02:00",
+  "bijgewerkt": "2026-08-23T16:02:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-009",
+  "data": {
+   "Actie": "Prospects logistiek Zuid-Holland",
+   "Agent": "quality-control",
+   "Soort": "qc_goedgekeurd",
+   "Bericht": "Feiten en bronnen kloppen; data-writes correct.",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-23T15:48:00",
+  "bijgewerkt": "2026-08-23T15:48:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-010",
+  "data": {
+   "Actie": "werkronde gestart",
+   "Agent": "orchestrator",
+   "Soort": "rondestart",
+   "Bericht": "werkronde gestart: 2 acties",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-23T15:30:00",
+  "bijgewerkt": "2026-08-23T15:30:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-011",
+  "data": {
+   "Actie": "Opvolging Bezorgservice",
+   "Agent": "outreach-specialist",
+   "Soort": "overdracht",
+   "Bericht": "Concept follow-upmail staat klaar; verwijst naar het gesprek van vorige week. **Wacht op review** — extern zichtbaar, dus niet verstuurd.",
+   "Link": "https://voorbeeld.nl/acties/opvolging"
+  },
+  "aangemaakt": "2026-08-22T11:20:00",
+  "bijgewerkt": "2026-08-22T11:20:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-012",
+  "data": {
+   "Actie": "update",
+   "Agent": "pipeline-manager",
+   "Soort": "update",
+   "Bericht": "Weekreview: 2 deals zonder volgende actie gemarkeerd, eigenaar gezet.",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-22T11:05:00",
+  "bijgewerkt": "2026-08-22T11:05:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-013",
+  "data": {
+   "Actie": "Dagstart",
+   "Agent": "orchestrator",
+   "Soort": "afgerond",
+   "Bericht": "Dagstart afgerond: 2 prioriteiten.\n- Opvolging **Bezorgservice**\n- Kwartaalcijfers Q3 controleren",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-22T07:45:00",
+  "bijgewerkt": "2026-08-22T07:45:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-014",
+  "data": {
+   "Actie": "Artikelreeks 'Obeya in de praktijk'",
+   "Agent": "content-strateeg",
+   "Soort": "voorstel",
+   "Bericht": "**Voorstel:** 4-delige reeks, elke twee weken één artikel, start 8 september. Eerste concept staat bij de actie. Dit is een langere toelichting die in de feed wordt ingevouwen omdat hij de 450 tekens ruim overschrijdt: de reeks bouwt op naar het assessment-aanbod, sluit aan bij de zoekwoorden uit de SEO-check van 14 augustus en gebruikt de klantcasus Van Dijk (na akkoord) als rode draad. Per artikel een LinkedIn-post en een nieuwsbriefblok. Meting: verkeer naar de assessmentpagina en aanmeldingen.",
+   "Link": "https://voorbeeld.nl/acties/artikelreeks"
+  },
+  "aangemaakt": "2026-08-21T14:10:00",
+  "bijgewerkt": "2026-08-21T14:10:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-015",
+  "data": {
+   "Actie": "Dagstart",
+   "Agent": "orchestrator",
+   "Soort": "afgerond",
+   "Bericht": "Dagstart afgerond: 1 prioriteit, geen deadlines deze week.",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-21T09:02:00",
+  "bijgewerkt": "2026-08-21T09:02:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-016",
+  "data": {
+   "Actie": "update",
+   "Agent": "stagiair-bot",
+   "Soort": "update",
+   "Bericht": "Onbekende agent-slug: de feed toont de slug zelf met 🤖.",
+   "Link": ""
+  },
+  "aangemaakt": "2026-08-20T10:00:00",
+  "bijgewerkt": "2026-08-20T10:00:00"
+ },
+ {
+  "domein": "teamfeed",
+  "entryId": "tf-017",
+  "data": {
+   "Actie": "\"><img src=q onerror=window.__xss=1>",
+   "Agent": "researcher",
+   "Soort": "update",
+   "Bericht": "Vijandige entry: <script>alert(1)</script> **<b>vet</b>** - regel\n- item <img src=x onerror=window.__xss=1>",
+   "Link": "javascript:alert(1)"
+  },
+  "aangemaakt": "2026-08-20T09:30:00",
+  "bijgewerkt": "2026-08-20T09:30:00"
+ }
+]

@@ -30,6 +30,7 @@ JS_MODULES_IN_ORDER = [
     "metrics.js",
     "render.js",
     "charts.js",
+    "feed.js",
     "homepage.js",
     "app.js",
 ]

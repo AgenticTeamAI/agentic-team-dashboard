@@ -143,6 +143,7 @@ function renderAll() {
     periodSelect.value = String(currentPeriodWeeks);
   }
 
+  renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderKpiTegels(document.getElementById("kpi-grid"), ctx);
   renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
@@ -201,6 +202,7 @@ function renderDetail(key) {
   body.innerHTML = "";
 
   const secties = {
+    feed: () => [detailSectionHtml("Teamfeed", "📣", "Wat doet mijn team, zonder dat ik erom hoef te vragen?", "detail-inner"), () => renderDetailFeed(document.getElementById("detail-inner"), ctx)],
     aandacht: () => [detailSectionHtml("Aandacht", "🎯", "Waar besteed ik vandaag mijn halfuur aan?", "detail-inner"), () => renderZone1(document.getElementById("detail-inner"), ctx.z1)],
     context: () => [detailSectionHtml("Contextgezondheid", "🧭", "Moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?", "detail-inner"), () => renderZone2(document.getElementById("detail-inner"), ctx.z2, ctx.today)],
     gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
