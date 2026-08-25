@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1v+AOcFkSzXS3TvJ3YicUNwp/N44tt46VD/1/njJBns=' 'sha256-HBbtMOXx8Y7hukqxO50DHqO1x+o4tlgVIxGRCGFD8/k='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1v+AOcFkSzXS3TvJ3YicUNwp/N44tt46VD/1/njJBns=' 'sha256-Lu71qExmp2EAsNeLf6X3DgbI4uJiJGORqaanKiucn4c='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -100,13 +100,6 @@ select#period-select {
 }
 .empty-state h2 { color: var(--white); font-size: 1.15rem; }
 
-/* Daglink-modus (route 4, hosted werkruimte): de link wijst al naar de eigen
-   instantie, dus de bestandskiezer (Excel/data-map/Notion) is dan ruis en
-   blijft verborgen. Zonder daglink — offline dashboard.html (f4) of een
-   klant zonder hosted werkruimte — blijft hij gewoon staan. */
-body.daglink-modus #bundle-picker-files,
-body.daglink-modus .alleen-bestand { display: none; }
-body:not(.daglink-modus) .alleen-daglink { display: none; }
 
 /* Onbekende versie of onherkenbaar metricsbestand — geen statuskleur (dit
    is geen rood/oranje/groen-signaal maar een compatibiliteitsmelding),
@@ -389,19 +382,10 @@ section.panel {
 <div class="wrap">
   <header class="top">
     <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen uit jouw eigen databundel of, via een daglink, live uit je eigen werkruimte.</p>
-    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: alles wat je hier kiest of laadt, blijft in je browser. Open je deze pagina via een daglink van je Coördinator, dan haalt je browser de gegevens rechtstreeks op uit je eigen werkruimte-instantie — ook dan komt er niets bij ons terecht.</p>
+    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen, via de daglink van je Coördinator, live uit je eigen werkruimte.</p>
+    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: je browser haalt de gegevens rechtstreeks op uit je eigen werkruimte-instantie en alles blijft in je browser.</p>
 
     <div class="controls-row">
-      <div class="bundle-picker" id="bundle-picker-files">
-        <span class="label">Bundel kiezen:</span>
-        <button id="btn-excel" type="button">📊 Excel-werkboek</button>
-        <button id="btn-json" type="button">🗂️ data-map (JSON)</button>
-        <button id="btn-notion" type="button">🧩 Notion-export-map</button>
-        <input type="file" id="input-excel" accept=".xlsx">
-        <input type="file" id="input-json" multiple webkitdirectory>
-        <input type="file" id="input-notion" multiple webkitdirectory accept=".json">
-      </div>
       <div class="bundle-picker">
         <span class="label">Periode:</span>
         <select id="period-select">
@@ -411,22 +395,17 @@ section.panel {
         </select>
       </div>
     </div>
-    <p class="last-used" id="download-offline" style="display:none;">💾 Liever offline of privacy-strikt? <a href="dashboard.html" download>Download dit dashboard als los bestand</a> — zelfde artefact, werkt zonder internet.</p>
     <p class="last-used" id="last-used"></p>
     <p class="last-used" id="status-line"></p>
     <p class="last-used" id="bundle-info"></p>
   </header>
 
   <div id="empty-state" class="empty-state">
-    <h2 class="alleen-bestand">Nog geen bundel geladen</h2>
-    <h2 class="alleen-daglink">Live gegevens uit je werkruimte worden opgehaald…</h2>
-    <p class="alleen-bestand">Kies hierboven het Excel-werkboek, de data-map of de Notion-export-map die jouw team gebruikt.<br>
-    Bij Notion mag dat zowel de map met losse domeinbestanden zijn (oud formaat) als één kant-en-klaar
-    metricsbestand — dit dashboard herkent zelf welke van de twee je koos.<br>
-    Gebruikt je team een hosted werkruimte? Vraag je Coördinator om een daglink — die opent deze pagina
-    met je gegevens er al in.<br>
-    Niets wordt opgeslagen of verstuurd — dit dashboard leest lokaal in je browser, of via een daglink
-    rechtstreeks uit je eigen werkruimte.</p>
+    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
+    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
+    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
+    verlopen, vraag je Coördinator dan om een nieuwe.<br>
+    Niets wordt opgeslagen of verstuurd — je browser leest rechtstreeks uit je eigen werkruimte.</p>
   </div>
 
   <div id="version-error" style="display:none;"></div>
@@ -491,8 +470,8 @@ section.panel {
     Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
     pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
-    worden alleen de laatst gekozen bundelroute, bestandsnaam en de minuten-per-actie-instelling onthouden
-    (lokaal, in je browser) om je te herinneren wat je de vorige keer koos. Gegenereerd uit registryVersion
+    worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
+    (lokaal, in je browser). Gegenereerd uit registryVersion
     1.36.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
@@ -1786,184 +1765,6 @@ window.AGENTIC_TEAM_SCHEMA = {
 
 </script>
 <script>
-/* Minimale, dependency-vrije ZIP + XLSX-lezer voor de browser (en Node voor
- * tests). Geen externe library nodig: XLSX is een ZIP van XML-bestanden, en
- * moderne browsers kunnen 'deflate-raw' decomprimeren via de ingebouwde
- * DecompressionStream — daarmee is een eigen inflate-implementatie
- * overbodig. Werkt zonder netwerk, dus ook prima onder file://.
- */
-
-async function inflateRaw(bytes) {
-  const ds = new DecompressionStream("deflate-raw");
-  const stream = new Blob([bytes]).stream().pipeThrough(ds);
-  const buf = await new Response(stream).arrayBuffer();
-  return new Uint8Array(buf);
-}
-
-function readUInt32LE(dv, off) { return dv.getUint32(off, true); }
-function readUInt16LE(dv, off) { return dv.getUint16(off, true); }
-
-/** Leest de centrale directory van een ZIP-bestand en geeft per entry de
- * ruwe (nog gecomprimeerde) data terug. */
-async function parseZipEntries(arrayBuffer) {
-  const bytes = new Uint8Array(arrayBuffer);
-  const dv = new DataView(arrayBuffer);
-  // Zoek EOCD-record (0x06054b50) vanaf het einde.
-  let eocd = -1;
-  for (let i = bytes.length - 22; i >= 0 && i >= bytes.length - 22 - 65557; i--) {
-    if (readUInt32LE(dv, i) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd === -1) throw new Error("Geen geldig ZIP-bestand (EOCD niet gevonden) — is dit echt een .xlsx?");
-
-  const totalEntries = readUInt16LE(dv, eocd + 10);
-  const cdOffset = readUInt32LE(dv, eocd + 16);
-
-  const entries = {};
-  let ptr = cdOffset;
-  for (let i = 0; i < totalEntries; i++) {
-    if (readUInt32LE(dv, ptr) !== 0x02014b50) throw new Error("Centrale ZIP-directory is beschadigd of onverwacht formaat.");
-    const compMethod = readUInt16LE(dv, ptr + 10);
-    const compSize = readUInt32LE(dv, ptr + 20);
-    const uncompSize = readUInt32LE(dv, ptr + 24);
-    const nameLen = readUInt16LE(dv, ptr + 28);
-    const extraLen = readUInt16LE(dv, ptr + 30);
-    const commentLen = readUInt16LE(dv, ptr + 32);
-    const localHeaderOffset = readUInt32LE(dv, ptr + 42);
-    const nameBytes = bytes.slice(ptr + 46, ptr + 46 + nameLen);
-    const filename = new TextDecoder("utf-8").decode(nameBytes);
-
-    entries[filename] = { compMethod, compSize, uncompSize, localHeaderOffset };
-    ptr += 46 + nameLen + extraLen + commentLen;
-  }
-
-  const result = {};
-  for (const [filename, meta] of Object.entries(entries)) {
-    const lh = meta.localHeaderOffset;
-    if (readUInt32LE(dv, lh) !== 0x04034b50) throw new Error(`Lokale ZIP-header ontbreekt voor ${filename}.`);
-    const lNameLen = readUInt16LE(dv, lh + 26);
-    const lExtraLen = readUInt16LE(dv, lh + 28);
-    const dataStart = lh + 30 + lNameLen + lExtraLen;
-    const compData = bytes.slice(dataStart, dataStart + meta.compSize);
-    let raw;
-    if (meta.compMethod === 0) {
-      raw = compData;
-    } else if (meta.compMethod === 8) {
-      raw = await inflateRaw(compData);
-    } else {
-      throw new Error(`Onbekende ZIP-compressiemethode (${meta.compMethod}) voor ${filename} — kan dit bestand niet lezen.`);
-    }
-    result[filename] = raw;
-  }
-  return result;
-}
-
-function xmlText(bytes) {
-  return new TextDecoder("utf-8").decode(bytes);
-}
-
-/** Zeer beperkte XML-attribuutlezer — geen volwaardige XML-parser nodig
- * voor de paar tags die xlsx-sheets gebruiken. */
-function parseXmlLite(xml) {
-  return new DOMParser().parseFromString(xml, "application/xml");
-}
-
-function colLetterToIndex(ref) {
-  const m = ref.match(/^([A-Z]+)/);
-  const letters = m[1];
-  let n = 0;
-  for (let i = 0; i < letters.length; i++) n = n * 26 + (letters.charCodeAt(i) - 64);
-  return n - 1;
-}
-
-/** Excel-datumserienummer (dagen sinds 1899-12-30) naar ISO-datumstring. */
-function excelSerialToISO(serial) {
-  const epoch = Date.UTC(1899, 11, 30);
-  const ms = epoch + serial * 86400000;
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
-/** Parseert een xlsx ArrayBuffer naar { sheetNaam: [[cel,...], ...] }.
- * Eerste rij van elke sheet is de header-rij. dateFieldNames is een Set met
- * kolomnamen (headers) die als 'datum' bekendstaan uit het schema — alleen
- * daarvoor wordt een numerieke cel als Excel-datumserienummer geïnterpreteerd. */
-async function parseXlsx(arrayBuffer) {
-  const files = await parseZipEntries(arrayBuffer);
-  if (!files["xl/workbook.xml"]) throw new Error("Geen xl/workbook.xml gevonden — dit lijkt geen geldig .xlsx-bestand.");
-
-  const workbookXml = parseXmlLite(xmlText(files["xl/workbook.xml"]));
-  const relsXml = files["xl/_rels/workbook.xml.rels"]
-    ? parseXmlLite(xmlText(files["xl/_rels/workbook.xml.rels"]))
-    : null;
-
-  const relMap = {};
-  if (relsXml) {
-    for (const rel of relsXml.getElementsByTagName("Relationship")) {
-      relMap[rel.getAttribute("Id")] = rel.getAttribute("Target");
-    }
-  }
-
-  const sheets = [];
-  for (const sheetEl of workbookXml.getElementsByTagName("sheet")) {
-    const name = sheetEl.getAttribute("name");
-    const rId = sheetEl.getAttribute("r:id") || sheetEl.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
-    let target = relMap[rId];
-    if (!target) continue;
-    if (!target.startsWith("worksheets/")) target = "worksheets/" + target.split("/").pop();
-    sheets.push({ name, path: "xl/" + target });
-  }
-
-  let sharedStrings = [];
-  if (files["xl/sharedStrings.xml"]) {
-    const ssXml = parseXmlLite(xmlText(files["xl/sharedStrings.xml"]));
-    for (const si of ssXml.getElementsByTagName("si")) {
-      // <si> kan meerdere <t> hebben bij rich text (per run) — concateneren.
-      const parts = [];
-      for (const t of si.getElementsByTagName("t")) parts.push(t.textContent);
-      sharedStrings.push(parts.join(""));
-    }
-  }
-
-  const out = {};
-  for (const { name, path } of sheets) {
-    if (!files[path]) continue;
-    const sheetXml = parseXmlLite(xmlText(files[path]));
-    const rows = [];
-    for (const rowEl of sheetXml.getElementsByTagName("row")) {
-      const row = [];
-      for (const c of rowEl.getElementsByTagName("c")) {
-        const ref = c.getAttribute("r");
-        const idx = ref ? colLetterToIndex(ref) : row.length;
-        const type = c.getAttribute("t");
-        let value = "";
-        const vEl = c.getElementsByTagName("v")[0];
-        const isEl = c.getElementsByTagName("is")[0];
-        if (type === "s" && vEl) {
-          value = sharedStrings[parseInt(vEl.textContent, 10)] ?? "";
-        } else if (type === "str" && vEl) {
-          value = vEl.textContent;
-        } else if (type === "inlineStr" && isEl) {
-          const t = isEl.getElementsByTagName("t")[0];
-          value = t ? t.textContent : "";
-        } else if (type === "b" && vEl) {
-          value = vEl.textContent === "1";
-        } else if (vEl) {
-          value = vEl.textContent === "" ? "" : Number(vEl.textContent);
-        }
-        while (row.length < idx) row.push("");
-        row[idx] = value;
-      }
-      rows.push(row);
-    }
-    out[name] = rows;
-  }
-  return out;
-}
-
-if (typeof module !== "undefined") {
-  module.exports = { parseZipEntries, parseXlsx, colLetterToIndex, excelSerialToISO };
-}
-
-
 /* Hulpfuncties rond schema/schema.generated.js (window.AGENTIC_TEAM_SCHEMA).
  * Puur, geen DOM-afhankelijkheid — apart getest. */
 
@@ -2086,182 +1887,6 @@ if (typeof module !== "undefined") {
 }
 
 
-/* Leest de drie bundelformaten in tot één uniforme structuur:
- *
- * bundle = {
- *   source: "excel" | "json" | "notion",
- *   sourceLabel: string,          // voor UI, bv. bestandsnaam
- *   domains: {
- *     [domainKey]: {
- *       aanwezig: true,
- *       rows: [ {...veld: waarde} ],
- *       staleAt: Date | null,     // wanneer dit specifieke domein "van" is
- *       herkomstLabel: string,    // bv. sheetnaam of bestandsnaam
- *     }
- *   },
- *   bedrijfscontext: null | "niet-ondersteund-door-bundel" | {...},
- *   waarschuwingen: [string],     // dingen die niet zeker herkend zijn
- * }
- *
- * "Niet aanwezig" (domein ontbreekt uit domains) betekent: dit dashboard
- * toont er niets over, in plaats van een leeg paneel te tonen — conform het
- * ontwerp ("toon wat je in de data vindt").
- */
-
-function emptyBundle(source, sourceLabel) {
-  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
-}
-
-// ── Route 1: Excel-werkboek ────────────────────────────────────────────
-async function loadExcelBundle(file) {
-  const buf = await file.arrayBuffer();
-  const sheets = await parseXlsx(buf);
-  const bundle = emptyBundle("excel", file.name);
-  const staleAt = new Date(file.lastModified);
-
-  for (const [sheetName, rows] of Object.entries(sheets)) {
-    if (sheetName === "_schema") continue;
-    if (sheetName.toLowerCase() === "bedrijfscontext") {
-      bundle.bedrijfscontext = rowsToBedrijfscontext(rows, staleAt);
-      continue;
-    }
-    if (!rows.length) continue;
-    const headers = rows[0].map(String);
-    let domainKey = domainKeyFromSheetName(sheetName);
-    if (!domainKey) domainKey = domainKeyFromHeaders(headers);
-    if (!domainKey) {
-      bundle.waarschuwingen.push(`Tabblad "${sheetName}" kon niet aan een bekend datadomein gekoppeld worden — genegeerd.`);
-      continue;
-    }
-    const dataRows = rows.slice(1).filter(r => r.some(c => c !== "" && c !== undefined));
-    const objRows = dataRows.map(r => headerRowToObject(headers, r));
-    bundle.domains[domainKey] = {
-      aanwezig: true,
-      rows: objRows,
-      staleAt,
-      herkomstLabel: `${file.name} — tabblad "${sheetName}"`,
-    };
-  }
-  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
-  return bundle;
-}
-
-function headerRowToObject(headers, dataRow) {
-  const obj = {};
-  headers.forEach((h, i) => {
-    if (!h) return;
-    obj[h] = dataRow[i] ?? "";
-  });
-  return obj;
-}
-
-function rowsToBedrijfscontext(rows, fallbackStaleAt) {
-  // Verwacht formaat: twee kolommen (sleutel, waarde) — vrij formaat, want
-  // dit domein staat niet in de registry (zie S17). Beste-poging-lezer.
-  const obj = {};
-  for (const row of rows.slice(1)) {
-    if (row[0]) obj[String(row[0])] = row[1];
-  }
-  obj.staleAt = obj.Laatst_bijgewerkt ? new Date(obj.Laatst_bijgewerkt) : fallbackStaleAt;
-  return obj;
-}
-
-// ── Route 2 & 3: data/*.json en notion-export/*.json ───────────────────
-// Zelfde bestandsvorm ({_schema, items:[...]} of een kale array), alleen de
-// herkomst en het staleness-veld verschillen.
-async function loadJsonLikeBundle(fileList, source) {
-  const bundle = emptyBundle(source, source === "notion" ? "Notion-export" : "data/-map");
-  for (const file of fileList) {
-    if (!file.name.toLowerCase().endsWith(".json")) continue;
-    let parsed;
-    try {
-      parsed = JSON.parse(await file.text());
-    } catch (e) {
-      bundle.waarschuwingen.push(`${file.name} is geen geldige JSON — genegeerd (${e.message}).`);
-      continue;
-    }
-
-    const isBedrijfscontext = file.name.replace(/\.json$/i, "").toLowerCase() === "bedrijfscontext";
-    if (isBedrijfscontext) {
-      // Voorkeursvolgorde voor "hoe oud is dit": het inhoudelijke veld
-      // Laatst_bijgewerkt (het echte moment waarop iemand de context bijwerkte)
-      // gaat boven het exportmoment, dat op zijn beurt boven de kale
-      // bestandsdatum gaat.
-      const staleAt = parsed.Laatst_bijgewerkt
-        ? new Date(parsed.Laatst_bijgewerkt)
-        : parsed._geexporteerd_op
-          ? new Date(parsed._geexporteerd_op)
-          : new Date(file.lastModified);
-      bundle.bedrijfscontext = { ...parsed, staleAt };
-      continue;
-    }
-
-    const domainKey = domainKeyFromFilename(file.name);
-    if (!domainKey) {
-      // Terugval: kijk of de inhoud zelf op basis van velden herkenbaar is.
-      const items = Array.isArray(parsed) ? parsed : parsed.items;
-      if (items && items.length) {
-        const guessed = domainKeyFromHeaders(Object.keys(items[0]));
-        if (guessed) {
-          registerJsonDomain(bundle, guessed, parsed, file, source);
-          continue;
-        }
-      }
-      bundle.waarschuwingen.push(`${file.name} kon niet aan een bekend datadomein gekoppeld worden — genegeerd.`);
-      continue;
-    }
-    registerJsonDomain(bundle, domainKey, parsed, file, source);
-  }
-  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
-  return bundle;
-}
-
-function registerJsonDomain(bundle, domainKey, parsed, file, source) {
-  const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
-  let staleAt = new Date(file.lastModified);
-  if (source === "notion" && parsed._geexporteerd_op) {
-    staleAt = new Date(parsed._geexporteerd_op);
-  }
-  bundle.domains[domainKey] = {
-    aanwezig: true,
-    rows: items,
-    staleAt,
-    herkomstLabel: file.name,
-  };
-}
-
-function loadJsonBundle(fileList) { return loadJsonLikeBundle(fileList, "json"); }
-function loadNotionExportBundle(fileList) { return loadJsonLikeBundle(fileList, "notion"); }
-
-// ── Route 3, nieuwe vorm: één kant-en-klaar metricsbestand ─────────────
-// Deze functies lezen en herkennen alleen — ze interpreteren niets. De
-// omzetting naar de interne metricsvorm (inclusief de versiecontrole)
-// gebeurt in metrics.js -> parseNotionMetricsFile(), dat na dit bestand
-// geladen wordt. bundle-loaders.js blijft zo een pure lezer, ongeacht
-// welke van de twee Notion-vormen wordt aangeboden.
-async function readJsonFile(file) {
-  const text = await file.text();
-  return JSON.parse(text);
-}
-
-// Beslist, zonder aannames, of een geselecteerde Notion-bestandenset het
-// nieuwe metricsbestand is (route 3: één bestand met een "versie"- of
-// "type"-veld) of het oude rijenformaat (vijftien losse domeinbestanden,
-// zoals in testdata/notion-export/). Puur op vorm, niet op bestandsnaam —
-// zodat een klant die het bestand hernoemt niet per ongeluk de verkeerde
-// route raakt.
-function looksLikeMetricsPayload(raw) {
-  return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
-}
-
-if (typeof module !== "undefined") {
-  module.exports = {
-    loadExcelBundle, loadJsonBundle, loadNotionExportBundle, emptyBundle,
-    readJsonFile, looksLikeMetricsPayload,
-  };
-}
-
-
 /* Route 4: live uit de eigen werkruimte-instantie, via een daglink (f15/f18).
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
@@ -2272,16 +1897,33 @@ if (typeof module !== "undefined") {
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
  * aan te pas, en de CSP van de pagina staat ook geen ander verkeer toe.
  *
- * Deze module levert dezelfde uniforme bundelvorm als bundle-loaders.js
- * (kind "rows"), zodat alles stroomafwaarts (zones, metrics, render) niet
- * hoeft te weten dat de rijen live zijn opgehaald in plaats van gekozen.
+ * Dit is sinds 25-08-2026 de enige route: er is altijd een werkruimte, dus
+ * de vroegere bestandsroutes (Excel-werkboek, data-map, Notion-export-map)
+ * en het losse offline dashboard.html zijn verwijderd. Deze module levert
+ * de uniforme bundelvorm (kind "rows" of "metrics") waar alles
+ * stroomafwaarts (zones, metrics, render) op rekent.
+ *
+ * Bundelvorm:
+ *   { source: "werkruimte", sourceLabel, kind, domains: { [domein]:
+ *     { aanwezig, rows, staleAt, herkomstLabel } }, bedrijfscontext,
+ *     waarschuwingen: [], teamfeed, intern, metricsRaw? }
  */
+
+function emptyBundle(source, sourceLabel) {
+  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+}
+
+// Beslist, puur op vorm, of een payload het kant-en-klare metricsbestand is
+// (een "versie"- of "type"-veld) — de versiecontrole zelf zit in metrics.js.
+function looksLikeMetricsPayload(raw) {
+  return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
+}
 
 const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
 
 /* Herkent de daglink-parameters in het fragment. Detailroutes ("#/detail/…")
  * beginnen met "#/" en blijven buiten schot. Geeft null bij alles wat geen
- * geldige daglink is — de pagina gedraagt zich dan als de gewone f4-variant. */
+ * geldige daglink is — de pagina toont dan de lege staat met de uitleg. */
 /* b32 fase 2: het dashboard praat altijd via de router op het vaste domein.
  * De router zoekt de instantie op via de sleutel-hash in het token; een link
  * kan dus nooit naar een vreemde host wijzen en de CSP staat maar één origin
@@ -2465,9 +2107,7 @@ async function loadWerkruimteBundle(daglink) {
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
-  // het dashboard de interne tegels (correctievrij / f19-gate). De
-  // bestandsroutes zetten deze vlag nooit — een klant ziet die tegels dus
-  // ook niet in een gedownloade bundel.
+  // het dashboard de interne tegels (correctievrij / f19-gate).
   bundle.intern = overzicht.intern === true;
   const schema = getSchema();
   const opslagDomeinen = werkruimteDomeinen(schema);
@@ -2557,11 +2197,12 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
+    emptyBundle, looksLikeMetricsPayload,
   };
 }
 
 
-/* Berekent de vijf zones uit één bundle (zie bundle-loaders.js). Puur —
+/* Berekent de vijf zones uit één bundle (zie werkruimte-loader.js). Puur —
  * geen DOM. "Vandaag" is injecteerbaar zodat dit reproduceerbaar te testen
  * is; in de app zelf is dat gewoon new Date(). */
 
@@ -3488,7 +3129,7 @@ if (typeof module !== "undefined") {
 /* De interne metricsvorm — dit is de enige vorm die de renderlaag (render.js,
  * homepage.js) ooit ziet. Er zijn twee manieren om hem te vullen:
  *
- *   1. buildMetricsFromRowsBundle(bundle, ...)  — Excel-route en data/*.json-route:
+ *   1. buildMetricsFromRowsBundle(bundle, ...)  — werkruimte met werkdata-rijen:
  *      rekent de vijf zones, de adoptiescore, de weekreeks, de tijdwinst en de
  *      agent-ranglijst uit de rijen in de bundle, met de bestaande zones.js-
  *      functies. Dit ís de bestaande rij-berekening; hij verandert niet, hij
@@ -4024,7 +3665,7 @@ function renderVersionError(el, result, bundle) {
     <h2>❔ ${esc(kindLabel)}</h2>
     <p>${esc(result.tekst)}</p>
     ${details}
-    <p class="footnote">Bestand: ${esc(bundle.sourceLabel)}. Er is bewust niets getekend op basis van dit bestand. Kies hierboven een andere bundel, werk het dashboard bij, of vraag om een export in het formaat dat deze versie herkent.</p>`;
+    <p class="footnote">Bron: ${esc(bundle.sourceLabel)}. Er is bewust niets getekend op basis van dit metricsbestand. Vraag je Coördinator om een nieuwe dagstart, of wacht op een dashboardversie die dit formaat herkent.</p>`;
 }
 
 if (typeof module !== "undefined") {
@@ -4274,7 +3915,7 @@ function feedRijHtml(it) {
 function feedDegradatieHtml(ctx) {
   const bundle = ctx.bundle || {};
   if (bundle.source !== "werkruimte") {
-    return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — in een geladen bestand of het offline dashboard staat geen live activiteit.</div></div>`;
+    return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — zonder daglink is er geen live activiteit.</div></div>`;
   }
   if (!bundle.teamfeed) {
     return `<div class="grijs-blok"><div class="grijs-tekst">Je werkruimte kent de teamfeed nog niet. Vraag je Coördinator om de <strong>werkruimte-update</strong>; daarna verschijnt hier wat het team doet.</div></div>`;
@@ -4720,7 +4361,7 @@ function renderDetailAgent(el, slug, ctx) {
     }
     lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
   } else {
-    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, open het dashboard dan via een rijenroute (Excel-werkboek, data-map, Notion-export met losse domeinbestanden, of een werkruimte met werkdata-rijen).</p>`;
+    lijsten = `<p class="footnote">Deze bundel is een kant-en-klaar metricsbestand: het draagt per agent alleen de totalen hierboven, geen losse rijen. Wil je de onderliggende acties en lessen van deze agent zien, dan moeten de werkdata-rijen in je werkruimte staan (in plaats van alleen een dagelijks metricsbestand).</p>`;
   }
 
   el.innerHTML = `
@@ -4742,11 +4383,11 @@ function bepaalActieveView() {
 }
 
 
-/* Wiring: bestandskeuze, periodeschakelaar, laden -> berekenen -> tonen,
- * en de hash-router tussen de homepage en de detailpagina's. Schrijft nooit
- * iets terug behalve, optioneel en lokaal, welke bundelroute/bestandsnaam
- * en welke minuten-per-actie-instelling je de laatste keer koos (geen
- * bundelinhoud) — zie rememberChoice()/rememberMinuten() onderaan. */
+/* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
+ * periodeschakelaar en de hash-router tussen de homepage en de
+ * detailpagina's. Schrijft nooit iets terug behalve, optioneel en lokaal,
+ * wanneer je de laatste keer laadde en welke minuten-per-actie-instelling
+ * je koos (geen bundelinhoud) — zie rememberChoice()/rememberMinuten(). */
 
 const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
 const LS_MINUTEN_KEY = "agentic-team-dashboard:minuten-per-actie";
@@ -4781,7 +4422,7 @@ function renderLastUsed() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) { el.textContent = ""; return; }
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { excel: "Excel-werkboek", json: "data-map (JSON)", notion: "Notion-export-map", werkruimte: "Werkruimte (daglink)" }[route] || route;
+    const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
     el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { el.textContent = ""; }
 }
@@ -4911,12 +4552,12 @@ function renderAll() {
     const door = meta.door ? ` door ${meta.door}` : "";
     const herkomst = bundle.source === "werkruimte"
       ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
-      : `Notion — metricsbestand v${METRICS_VERSION}`;
+      : `metricsbestand v${METRICS_VERSION}`;
     document.getElementById("bundle-info").textContent =
       `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
   } else {
     document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (${{ excel: "Excel-werkboek", json: "data/*.json", notion: "Notion-export (rijen, oud formaat)", werkruimte: "live uit je werkruimte-instantie" }[bundle.source]}) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
+      `Bundel: ${bundle.sourceLabel} (live uit je werkruimte-instantie) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -5017,87 +4658,6 @@ function wireNavigatie() {
 }
 
 function wireInputs() {
-  const excelInput = document.getElementById("input-excel");
-  const jsonInput = document.getElementById("input-json");
-  const notionInput = document.getElementById("input-notion");
-
-  document.getElementById("btn-excel").addEventListener("click", () => excelInput.click());
-  document.getElementById("btn-json").addEventListener("click", () => jsonInput.click());
-  document.getElementById("btn-notion").addEventListener("click", () => notionInput.click());
-
-  excelInput.addEventListener("change", async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setStatus(`${file.name} wordt gelezen…`);
-    try {
-      const bundle = await loadExcelBundle(file);
-      await handleBundle(bundle, "excel", file.name);
-      setStatus(`${file.name} geladen.`);
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon ${file.name} niet lezen: ${err.message}`, true);
-    }
-  });
-
-  jsonInput.addEventListener("change", async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    setStatus(`${files.length} bestand(en) worden gelezen…`);
-    try {
-      const bundle = await loadJsonBundle(files);
-      const label = files[0].webkitRelativePath ? files[0].webkitRelativePath.split("/")[0] : `${files.length} bestanden`;
-      await handleBundle(bundle, "json", label);
-      setStatus(`${label} geladen.`);
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon de data-map niet lezen: ${err.message}`, true);
-    }
-  });
-
-  notionInput.addEventListener("change", async (e) => {
-    const allFiles = Array.from(e.target.files || []);
-    const jsonFiles = allFiles.filter(f => f.name.toLowerCase().endsWith(".json"));
-    if (!jsonFiles.length) {
-      setStatus("Geen .json-bestanden gevonden in de gekozen map.", true);
-      return;
-    }
-    setStatus(`${jsonFiles.length} bestand(en) worden gelezen…`);
-    try {
-      // Eén los bestand kan onmogelijk het oude vijftien-bestanden-formaat
-      // zijn — probeer het daarom eerst als het nieuwe metricsbestand
-      // (route 3). Alleen als de vorm niet klopt (geen "versie"/"type"),
-      // val terug op de oude rijenlezer — dat vangt ook het geval dat
-      // iemand per ongeluk maar één bestand uit de oude exportmap koos.
-      let handled = false;
-      if (jsonFiles.length === 1) {
-        let raw;
-        try {
-          raw = await readJsonFile(jsonFiles[0]);
-        } catch (parseErr) {
-          throw new Error(`${jsonFiles[0].name} is geen geldige JSON (${parseErr.message}).`);
-        }
-        if (looksLikeMetricsPayload(raw)) {
-          const bundle = emptyBundle("notion", jsonFiles[0].name);
-          bundle.kind = "metrics";
-          bundle.metricsRaw = raw;
-          await handleBundle(bundle, "notion", jsonFiles[0].name);
-          setStatus(`${jsonFiles[0].name} gelezen als metricsbestand (Notion-route, kant-en-klare uitkomsten — geen rijen ingelezen).`);
-          handled = true;
-        }
-      }
-      if (!handled) {
-        const bundle = await loadNotionExportBundle(jsonFiles);
-        bundle.kind = "rows";
-        const label = jsonFiles[0].webkitRelativePath ? jsonFiles[0].webkitRelativePath.split("/")[0] : `${jsonFiles.length} bestanden`;
-        await handleBundle(bundle, "notion", label);
-        setStatus(`${label} gelezen als losse-domeinen-export (oud formaat, ${jsonFiles.length} bestand(en)) — dit dashboard rekent de metrics lokaal uit de rijen, net als bij de Excel- en data-map-route.`);
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus(`Kon de Notion-export niet lezen: ${err.message}`, true);
-    }
-  });
-
   document.getElementById("period-select").addEventListener("change", (e) => {
     currentPeriodWeeks = parseInt(e.target.value, 10);
     if (currentBundle) renderAll();
@@ -5115,19 +4675,17 @@ function wireInputs() {
   });
 }
 
-/* Route 4: opent iemand deze pagina via een daglink (of herlaadt hij binnen
- * dezelfde sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets
- * te kiezen, de link wijst al naar zijn eigen instantie. De bestandskiezer
- * (Excel/data-map/Notion) wordt daarom verborgen (body.daglink-modus, zie
- * styles.css); de code erachter blijft bestaan voor het offline bestand (f4)
- * en klanten zonder hosted werkruimte. Verloopt de daglink, dan komt de
- * kiezer terug zodat je alsnog een bundel kunt kiezen. */
-function zetDaglinkModus(aan) {
-  document.body.classList.toggle("daglink-modus", !!aan);
+/* Opent iemand deze pagina via een daglink (of herlaadt hij binnen dezelfde
+ * sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets te
+ * kiezen, de link wijst al naar zijn eigen instantie. Zonder (of met een
+ * verlopen) daglink blijft de lege staat staan met de uitleg. */
+function toonLegeStaat(titel, tekst) {
+  document.getElementById("empty-state-titel").textContent = titel;
+  document.getElementById("empty-state-tekst").textContent = tekst;
 }
 
 async function laadWerkruimte(daglink) {
-  zetDaglinkModus(true);
+  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
   setStatus("Live gegevens uit je werkruimte worden opgehaald…");
   try {
     const bundle = await loadWerkruimteBundle(daglink);
@@ -5135,7 +4693,8 @@ async function laadWerkruimte(daglink) {
     setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
   } catch (err) {
     console.error(err);
-    if (err.daglinkVerlopen) { vergeetDaglink(); zetDaglinkModus(false); }
+    if (err.daglinkVerlopen) vergeetDaglink();
+    toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
     setStatus(err.message, true);
   }
 }
@@ -5146,10 +4705,6 @@ document.addEventListener("DOMContentLoaded", () => {
   wireNavigatie();
   renderLastUsed();
   renderAll();
-  // f4: de offline variant is hetzelfde artefact — geserveerd via http(s)
-  // bieden we het als download aan; via file:// ben je het bestand al.
-  const dl = document.getElementById("download-offline");
-  if (dl && window.location.protocol.indexOf("http") === 0) dl.style.display = "";
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);
 });

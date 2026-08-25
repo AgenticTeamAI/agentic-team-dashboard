@@ -143,7 +143,7 @@ function feedRijHtml(it) {
 function feedDegradatieHtml(ctx) {
   const bundle = ctx.bundle || {};
   if (bundle.source !== "werkruimte") {
-    return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — in een geladen bestand of het offline dashboard staat geen live activiteit.</div></div>`;
+    return `<div class="grijs-blok"><div class="grijs-tekst">De teamfeed is alleen beschikbaar via de <strong>daglink van je Coördinator</strong> — zonder daglink is er geen live activiteit.</div></div>`;
   }
   if (!bundle.teamfeed) {
     return `<div class="grijs-blok"><div class="grijs-tekst">Je werkruimte kent de teamfeed nog niet. Vraag je Coördinator om de <strong>werkruimte-update</strong>; daarna verschijnt hier wat het team doet.</div></div>`;

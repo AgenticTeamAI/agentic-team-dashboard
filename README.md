@@ -3,14 +3,18 @@
 Eén zelfstandig HTML-bestand (`dashboard.html`) dat laat zien hoe een
 Agentic Team ervoor staat. Het staat als vaste pagina op
 **dashboard.agentic-team.ai** (f15 — deze repo heeft een eigen
-Vercel-project, zie §Eén bron hieronder) en blijft daarnaast als los
-bestand beschikbaar voor offline of privacy-strikt gebruik (f4). Het
-dashboard **bevat geen data** — het leest, toont en rekent, en is nooit de
-bron van iets. Alle gegevens komen uit een databundel die de klant al
-heeft: een Excel-werkboek, een `data/`-map met JSON-bestanden, een
-Notion-export die de Coördinator wegschrijft — of, voor teams met een
-hosted werkruimte (f18), live uit de eigen werkruimte-instantie via een
-daglink van de Coördinator.
+Vercel-project, zie §Eén bron hieronder). Het dashboard **bevat geen
+data** — het leest, toont en rekent, en is nooit de bron van iets. Alle
+gegevens komen live uit de eigen werkruimte-instantie van de klant (f18),
+via een daglink van de Coördinator.
+
+> **Sinds 25-08-2026 is de werkruimte de enige route.** Elke klant heeft een
+> werkruimte, dus de bestandsroutes (Excel-werkboek, `data/`-map,
+> Notion-export-map) en het losse offline `dashboard.html` (f4) zijn
+> verwijderd. Waar deze README nog over "route 1/2/3", Excel of offline
+> spreekt, is dat historische context over hoe de berekeningen ontstaan
+> zijn — de code erachter (`zones.js`, `metrics.js`) is ongewijzigd en
+> werkt nu op de rijen of het metricsbestand uit de werkruimte.
 
 **De homepage is een dashboard, geen rapport.** Bovenaan vier KPI-tegels, een
 gestapelde staafgrafiek van activiteit per week, drie balken die de
@@ -27,30 +31,23 @@ repo.
 
 ## Snel starten
 
-Ga naar `dashboard.agentic-team.ai`, of open `dashboard.html` gewoon in
-een browser (dubbelklikken volstaat — geen server, geen build, geen internet
-nodig; de pagina biedt het bestand zelf als download aan voor offline of
-privacy-strikt gebruik — f4). Klik op één van de drie bundelknoppen en kies het Excel-bestand, de
-`data/`-map, of de Notion-export-map. Heeft je team een hosted werkruimte,
-dan geeft de Coördinator je bij de dagstart een daglink die de pagina met je
-gegevens er al in opent. In die daglink-modus verbergt de pagina de
-bundelknoppen — er valt niets te kiezen, de link wijst al naar je eigen
-instantie; de knoppen komen alleen terug als de daglink verlopen blijkt. Wil je het meteen met voorbeelddata proberen:
+De Coördinator geeft je bij de dagstart een daglink naar
+`dashboard.agentic-team.ai` die de pagina met je gegevens er al in opent.
+Zonder (of met een verlopen) daglink toont de pagina alleen de uitleg om er
+een te vragen. Lokaal testen kan tegen `scripts/mock-instantie.mjs`. Wil je het meteen met voorbeelddata proberen:
 gebruik de bestanden in `testdata/` (zie `testdata/README.md` voor wat daar
 bewust wel en niet in staat).
 
 ## Wat er in deze repo staat
 
 ```
-dashboard.html          → HET releasebestand. Dit is wat een klant download.
+dashboard.html          → HET gebouwde artefact dat Vercel serveert.
 src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
   shell.html             → HTML-skelet met __PLACEHOLDERS__ (homepage + detail-view)
   styles.css              → huisstijl (zie §Vormgeving)
-  zip-xlsx.js             → ZIP + xlsx-lezer (geen library — zie §Waarom geen SheetJS)
-  schema-helpers.js       → matching van sheets/bestanden/agents op het schema
-  bundle-loaders.js       → leest de drie bestands-bundelformaten tot één interne vorm
-  werkruimte-loader.js    → route 4: leest dezelfde interne vorm live uit de eigen
-                             werkruimte-instantie, via een daglink (zie §Route 4)
+  schema-helpers.js       → matching van domeinen/agents op het schema
+  werkruimte-loader.js    → de enige route: leest de interne bundelvorm live uit de
+                             eigen werkruimte-instantie, via een daglink (zie §Route 4)
   zones.js                → alle berekeningen (puur, geen DOM): de vijf zones, de
                              adoptiescore (ritme/breedte/opvolging), activiteit per
                              week, tijdwinst-som, gebruik-per-agent-ranglijst — dit
@@ -377,19 +374,6 @@ dat is de hele build. Dat past bij het uitgangspunt dat het uitgeleverde
 bestand zonder internet moet werken, en het houdt de build zelf ook
 netwerkloos.
 
-## Waarom geen SheetJS of andere xlsx-library
-
-`.xlsx` is een ZIP-bestand met XML erin. In plaats van een externe library
-te vendoren, gebruikt `src/zip-xlsx.js` de in de browser **ingebouwde**
-`DecompressionStream('deflate-raw')` om de ZIP-entries te decomprimeren, en
-`DOMParser` om de XML te lezen. Geen dependency, geen licentievraag, geen
-netwerkverzoek — en het is precies zo veel code als nodig is om
-`xl/workbook.xml`, `xl/_rels/workbook.xml.rels`, `xl/sharedStrings.xml` en de
-sheet-XML's te lezen. Werkt in elke browser met `DecompressionStream`
-(Chrome/Edge sinds 2023, Firefox sinds 2024, Safari sinds 16.4) — een
-oudere browser krijgt een duidelijke foutmelding in plaats van een silent
-fail.
-
 ## De vijf zones — herkomst en beslissing (nu: detailpagina's)
 
 De vijf zones uit het ontwerp bestaan onveranderd — ze staan alleen niet
@@ -432,7 +416,7 @@ letterlijke lezing van het ontwerp**:
 
 - Is er een sectie/bestand met de naam `bedrijfscontext` in de bundel, dan
   wordt die gelezen (zie `rowsToBedrijfscontext`/`registerJsonDomain` in
-  `src/bundle-loaders.js`) en beoordeeld op: aanwezigheid van een bron,
+  `src/werkruimte-loader.js`) en beoordeeld op: aanwezigheid van een bron,
   hoe lang geleden bijgewerkt, openstaande placeholders, en of een kopie in
   projectkennis ouder is dan de bron.
 - **Ontbreekt** die sectie volledig uit de bundel, dan toont zone 2 een

@@ -1,8 +1,11 @@
 # Testdata — GroenBuro (volledig fictief)
 
 Deze map bevat één fictieve klant ("GroenBuro", een verzonnen bedrijf in
-kantoorbeplanting en werkplekwelzijn) in alle drie de bundelformaten die
-`dashboard.html` moet kunnen lezen. Genereer opnieuw met:
+kantoorbeplanting en werkplekwelzijn). Sinds 25-08-2026 leest het dashboard
+alleen nog uit de werkruimte; de bestandsbundels hieronder (`agentic-team.xlsx`,
+`data/`, `notion-export/`) worden door het dashboard zelf **niet meer
+gelezen** en blijven alleen als bron voor `notion-metrics/` (tests, i25)
+en `werkruimte/` (mock-instantie). Genereer opnieuw met:
 
 ```
 python3 scripts/generate-testdata.py
