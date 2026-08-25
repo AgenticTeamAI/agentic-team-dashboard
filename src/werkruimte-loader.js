@@ -200,6 +200,11 @@ async function loadWerkruimteBundle(daglink) {
   const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
+  // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
+  // het dashboard de interne tegels (correctievrij / f19-gate). De
+  // bestandsroutes zetten deze vlag nooit — een klant ziet die tegels dus
+  // ook niet in een gedownloade bundel.
+  bundle.intern = overzicht.intern === true;
   const schema = getSchema();
   const opslagDomeinen = werkruimteDomeinen(schema);
 

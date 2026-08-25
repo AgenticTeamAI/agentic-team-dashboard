@@ -13,7 +13,7 @@ const DETAIL_VOLGORDE = [
   { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
   { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
-  { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️" },
+  { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️", intern: true },
   { key: "leren", titel: "Leren", emoji: "💡" },
 ];
 
@@ -25,7 +25,8 @@ function nlGetal(n, decimals = 0) {
 function renderKpiTegels(el, ctx) {
   const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
   // i25: correctievrij kan ontbreken in oudere ctx-objecten (bv. tests) —
-  // dan hetzelfde pad als "geen blok".
+  // dan hetzelfde pad als "geen blok". De tegel zelf is intern: alleen
+  // zichtbaar met ctx.intern (zie werkruimte-loader), nooit voor klanten.
   const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
   const cvKpi = correctievrijKpi(cv);
 
@@ -61,12 +62,12 @@ function renderKpiTegels(el, ctx) {
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
     </div>
-    <div class="kpi-tile" data-goto="correctievrij" tabindex="0" role="button">
+    ${ctx.intern ? `<div class="kpi-tile kpi-intern" data-goto="correctievrij" tabindex="0" role="button">
       <div class="kpi-getal">${esc(cvKpi.getal)}</div>
       <div class="kpi-kop">Correctievrij (4 wk)</div>
       <div class="kpi-som">${esc(cvKpi.gate)}</div>
       <div class="kpi-label">${esc(cvKpi.label)}</div>
-    </div>
+    </div>` : ""}
     <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
       <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
       <div class="kpi-kop">Geschatte tijdwinst</div>
@@ -179,8 +180,8 @@ function detailSectionHtml(titel, emoji, decision, innerId) {
   </section>`;
 }
 
-function renderDetailNav(el, activeKey) {
-  el.innerHTML = DETAIL_VOLGORDE.map(d =>
+function renderDetailNav(el, activeKey, intern) {
+  el.innerHTML = DETAIL_VOLGORDE.filter(d => !d.intern || intern).map(d =>
     `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
   ).join("");
 }
