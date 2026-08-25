@@ -6,22 +6,103 @@ const STALE_DAYS = 30; // drempel "verouderd" — zie ontwerp §12 (dertig dagen
 const CONTEXT_ROOD_DAYS = 180;
 const CONTEXT_ORANJE_DAYS = 90;
 
-// daysBetween(a, b) = a - b in dagen. Voor "ligt in het verleden" geldt dus
-// daysBetween(today, datum) > 0. Dit stond in zone 1 twee keer omgekeerd,
-// waardoor juist de niet-verlopen items als probleem verschenen.
-function daysBetween(a, b) {
-  return Math.round((a.getTime() - b.getTime()) / 86400000);
+// ── Kalenderdag-semantiek (b37 / AT-032) ───────────────────────────────
+// Alle datumvergelijkingen in dit dashboard gaan over hele kalenderdagen,
+// nooit over milliseconden. Vroeger deelde daysBetween timestamps en rondde
+// af: een date-only "2026-08-24" parst als UTC-middernacht, dus om 18:00
+// Amsterdamse tijd was "vandaag" al 1 dag verder en stond een actie met
+// deadline vandaag 's middags op "over de deadline". DST-overgangen (23/25-
+// uursdagen) schoven op dezelfde manier mee.
+//
+// Regels:
+//   - "JJJJ-MM-DD" (zoals Notion/werkruimte/JSON-export datums aanleveren)
+//     is een kalenderdag, zonder tijdzone: die dag is die dag.
+//   - Een datetime (ISO-string of Date, bv. `today` = new Date(), of een
+//     Bijgewerkt-stempel uit de werkruimte) telt als de LOKALE kalenderdag
+//     van de gebruiker — de browser is Europe/Amsterdam voor onze klanten,
+//     en de vraag "is dit vandaag?" is een vraag over de dag van de gebruiker.
+//   - Zelfde kalenderdag als vandaag = NIET verlopen, NIET verouderd.
+//
+// kalenderDag(v) geeft een ordinaal dagnummer (dagen sinds 1-1-1970, dag 0 =
+// donderdag) zodat verschillen gehele getallen zijn en weekrekenwerk erop
+// doorgaat. null bij ontbrekende/onleesbare waarde.
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+// "JJJJ-MM-DD" -> lokale middernacht, of null als de string geen bestaande
+// kalenderdag is. Date.UTC/new Date(j, m, d) rollen stil om ("2026-02-30"
+// wordt 2 maart, "2026-13-45" 14 februari 2027), dus na constructie worden
+// de componenten teruggevalideerd. setFullYear omdat de Date-constructor
+// jaren 0–99 als 1900–1999 leest ("0026-08-24" -> 1926).
+function dateOnlyNaarLokaleDate(str) {
+  const m = DATE_ONLY_RE.exec(str.trim());
+  if (!m) return undefined; // geen date-only-vorm (wel misschien een datetime)
+  const j = +m[1], mnd = +m[2], d = +m[3];
+  const dt = new Date(2000, mnd - 1, d);
+  dt.setFullYear(j);
+  if (dt.getFullYear() !== j || dt.getMonth() !== mnd - 1 || dt.getDate() !== d) return null;
+  return dt;
 }
 
+// Ordinaal van een kalenderdag (j, m, d). Via het jaar 2000 + setUTCFullYear,
+// omdat Date.UTC jaren 0–99 als 1900–1999 leest.
+function ordinaalVan(j, m, d) {
+  const u = new Date(Date.UTC(2000, m - 1, d));
+  u.setUTCFullYear(j);
+  return Math.floor(u.getTime() / 86400000);
+}
+
+function kalenderDag(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "string") {
+    const dateOnly = dateOnlyNaarLokaleDate(v);
+    if (dateOnly === null) return null; // date-only-vorm, maar geen bestaande dag
+    v = dateOnly === undefined ? new Date(v.trim()) : dateOnly;
+  } else if (typeof v === "number") {
+    v = new Date(v); // ms-epoch
+  }
+  if (!(v instanceof Date) || isNaN(v.getTime())) return null;
+  // lokale kalenderdag: eerst de lokale Y/M/D nemen, dan pas naar een ordinaal
+  return ordinaalVan(v.getFullYear(), v.getMonth() + 1, v.getDate());
+}
+
+// Ordinaal dagnummer -> Date op lokale middernacht van die kalenderdag.
+// Lokaal (en niet UTC) zodat toLocaleDateString/getDate dezelfde dag tonen
+// als kalenderDag() ervan teruggeeft.
+function dagVanIndex(idx) {
+  const u = new Date(idx * 86400000);
+  return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+}
+
+// daysBetween(a, b) = a - b in HELE kalenderdagen (geen afronding). Voor
+// "ligt in het verleden" geldt dus daysBetween(today, datum) > 0, en
+// "vandaag" geeft 0. Dit stond in zone 1 ooit twee keer omgekeerd, waardoor
+// juist de niet-verlopen items als probleem verschenen. NaN bij een
+// ontbrekende of onleesbare kant.
+function daysBetween(a, b) {
+  const da = kalenderDag(a);
+  const db = kalenderDag(b);
+  if (da === null || db === null) return NaN;
+  return da - db;
+}
+
+// Date-only strings worden als LOKALE middernacht gelezen (niet als UTC-
+// middernacht, wat new Date("JJJJ-MM-DD") doet) — zo tonen fmtDate() en
+// kalenderDag() in elke tijdzone dezelfde dag als in de brondata staat.
 function parseDateField(v) {
   if (!v) return null;
+  if (typeof v === "string") {
+    const dateOnly = dateOnlyNaarLokaleDate(v);
+    if (dateOnly !== undefined) return dateOnly;
+    v = v.trim();
+  }
   const dt = new Date(v);
   return isNaN(dt.getTime()) ? null : dt;
 }
 
 function isStale(staleAt, today, thresholdDays = STALE_DAYS) {
   if (!staleAt) return true;
-  return daysBetween(today, staleAt) > thresholdDays;
+  const dagen = daysBetween(today, staleAt);
+  return Number.isNaN(dagen) || dagen > thresholdDays; // onleesbare datum = onbekend = verouderd
 }
 
 function domain(bundle, key) {
@@ -55,11 +136,13 @@ function computeZone2(bundle, today) {
   }
 
   const ageDays = staleAt ? daysBetween(today, staleAt) : null;
-  const kopieOuderDanBron = kopieDatum && staleAt && kopieDatum < staleAt;
+  const kopieOuderDanBron = !!(kopieDatum && staleAt) && daysBetween(kopieDatum, staleAt) < 0; // hele dagen: zelfde dag = niet ouder
 
   let signaal = "groen";
   const redenen = [];
-  if (ageDays === null) { signaal = "grijs"; redenen.push("geen datum van laatste update bekend"); }
+  // null (geen datum) én NaN (onleesbare datum, bv. "onbekend") zijn allebei
+  // "we weten het niet" -> grijs, nooit stilzwijgend groen.
+  if (ageDays === null || Number.isNaN(ageDays)) { signaal = "grijs"; redenen.push("geen datum van laatste update bekend"); }
   else if (ageDays > CONTEXT_ROOD_DAYS) { signaal = "rood"; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
   else if (ageDays > CONTEXT_ORANJE_DAYS) { signaal = signaal === "groen" ? "oranje" : signaal; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
 
@@ -96,7 +179,10 @@ function computeZone3(bundle, agentLookup, schema, today, periodDays) {
     const dt = parseDateField(datumRaw);
     traces[slug].aantalTotaal++;
     if (dt && (!traces[slug].laatst || dt > traces[slug].laatst)) traces[slug].laatst = dt;
-    if (dt && daysBetween(today, dt) <= periodDays && daysBetween(today, dt) >= 0) traces[slug].aantalPeriode++;
+    if (dt) {
+      const diff = daysBetween(today, dt);
+      if (diff >= 0 && diff <= periodDays) traces[slug].aantalPeriode++;
+    }
   }
 
   if (actiesDomain) {
@@ -280,14 +366,19 @@ const RITME_SERIE_LABEL = { interacties: "Interacties", dagverslagen: "Dagversla
 // Vandaag zelf hoort bij de laatste (meest recente) week-bucket, ook als de
 // dagentelling die precies op de rand van "buiten de periode" zou plaatsen.
 function bucketIndexVoorDatum(d, periodStart, weeks) {
-  if (!d || d < periodStart) return -1;
-  let idx = Math.floor(daysBetween(d, periodStart) / 7);
+  if (!d) return -1;
+  const dagen = daysBetween(d, periodStart);
+  if (!(dagen >= 0)) return -1;
+  let idx = Math.floor(dagen / 7);
   if (idx >= weeks) idx = weeks - 1;
   return idx;
 }
 
 function computeActiviteitPerWeek(bundle, today, weeks = 12) {
-  const periodStart = new Date(today.getTime() - weeks * 7 * 86400000);
+  // periodStart als kalenderdag (lokale middernacht), niet als "nu minus
+  // n*24 uur": anders verschuift de weekgrens met het uur van openen en met DST.
+  const vandaagIdx = kalenderDag(today);
+  const periodStart = dagVanIndex(vandaagIdx - weeks * 7);
   const aanwezigeBronnen = RITME_BRONNEN.filter(b => domain(bundle, b));
   const buckets = [];
   for (let i = 0; i < weeks; i++) {
@@ -299,7 +390,7 @@ function computeActiviteitPerWeek(bundle, today, weeks = 12) {
     const veld = RITME_DATUMVELD[bron];
     for (const row of dom.rows) {
       const d = parseDateField(getField(row, veld));
-      if (!d || d > today) continue; // toekomstige/geplande datum (bv. content) is nog niet "gebeurd"
+      if (!d || kalenderDag(d) > vandaagIdx) continue; // toekomstige/geplande datum (bv. content) is nog niet "gebeurd"; vandaag telt wél
       const idx = bucketIndexVoorDatum(d, periodStart, weeks);
       if (idx < 0) continue;
       buckets[idx].values[bron]++;
@@ -308,7 +399,7 @@ function computeActiviteitPerWeek(bundle, today, weeks = 12) {
   for (const b of buckets) {
     b.totaal = RITME_BRONNEN.reduce((s, k) => s + b.values[k], 0);
     b.leeg = b.totaal === 0;
-    const weekStart = new Date(periodStart.getTime() + b.index * 7 * 86400000);
+    const weekStart = dagVanIndex(vandaagIdx - weeks * 7 + b.index * 7);
     b.weekStart = weekStart;
     b.label = weekStart.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit" });
   }
@@ -336,16 +427,37 @@ function computeRitme(bundle, today, weeks = 12) {
   };
 }
 
-// Breedte = domeinen met minstens een rij / 15 canonieke domeinen. Altijd
+// Welke datadomeinen tellen mee in de breedte-noemer — op precies één plek,
+// voor de rij-route (computeBreedte) én de metrics-route
+// (buildAdoptFromMetrics in metrics.js). bedrijfscontext staat sinds registry
+// 1.24.1 wél in schema.datadomeinen, maar is geen werkdata-domein: het komt
+// in de bundel nooit in domains{} terecht (het gaat naar bundle.bedrijfscontext)
+// en heeft zone 2 (Contextgezondheid) als eigen meetlat. Meetellen zou het
+// domein in de rij-route permanent als "geen inhoud" laten scoren, en in de
+// metrics-route juist wél — twee scores op dezelfde data (b37 / AT-033).
+//
+// logboek en ritmetaken (f17/f19) zijn werkgeheugen van het team, geen
+// werkdata: de werkruimte-route levert ze als rijen-domein aan, het
+// metricsbestand (dashboard_metrics, teams met werkdata buiten de werkruimte)
+// kent ze niet. Meetellen zou een werkruimte-rijenklant structureel +1 à +2
+// op de noemer geven. Het schema
+// heeft (nog) geen werkdata-vlag per domein, vandaar een expliciete lijst.
+const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken"];
+function meetbareDomeinen(schema) {
+  return Object.keys(schema.datadomeinen).filter(k => !NIET_MEETBARE_DOMEINEN.includes(k));
+}
+
+// Breedte = domeinen met minstens een rij / meetbare domeinen (17 in de
+// registry minus bedrijfscontext/logboek/ritmetaken, zie meetbareDomeinen). Altijd
 // berekenbaar: een ontbrekend domein telt gewoon mee als "geen inhoud" - dat
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).
+//
+// De noemer komt uit meetbareDomeinen(schema) — dezelfde helper als de
+// metrics-route (buildAdoptFromMetrics), zodat beide routes op dezelfde data
+// dezelfde breedte geven (b37 / AT-033).
 function computeBreedte(bundle, schema) {
-  // bedrijfscontext staat sinds registry 1.24.1 wél in datadomeinen, maar
-  // komt in de bundel nooit in domains{} terecht (het gaat naar
-  // bundle.bedrijfscontext en heeft zone 2 als eigen meetlat) — meetellen
-  // zou het domein permanent als "geen inhoud" laten scoren.
-  const domeinen = Object.keys(schema.datadomeinen).filter(k => k !== "bedrijfscontext");
+  const domeinen = meetbareDomeinen(schema);
   const metInhoud = domeinen.filter(k => { const r = rows(bundle, k); return r && r.length > 0; });
   return {
     berekenbaar: true,
@@ -477,22 +589,20 @@ function checkboxWaar(v) {
   return ["true", "ja", "x", "__yes__", "1"].includes(v.trim().toLowerCase());
 }
 
-// Dagindex (UTC-dagen sinds epoch) — datums in de data zijn JJJJ-MM-DD en
-// parsen als UTC-middernacht; door op UTC-dagen te rekenen valt een datum
-// nooit door een tijdzone in de verkeerde week.
+// Dagindex = kalenderDag (zie bovenaan): date-only datums als die dag,
+// datetimes als lokale kalenderdag. Zo valt een datum nooit door een
+// tijdzone of DST-overgang in de verkeerde week.
 function dagIndex(d) {
-  return Math.floor(d.getTime() / 86400000);
+  return kalenderDag(d);
 }
 // Maandag van de week waarin de dagindex valt (dag 0 = do 1-1-1970).
 function weekStartIndex(idx) {
   return idx - (((idx + 3) % 7) + 7) % 7;
 }
-function dagVanIndex(idx) {
-  return new Date(idx * 86400000);
-}
+// Label van een (lokale) kalenderdag-Date, zie dagVanIndex.
 function weekLabel(d) {
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}-${mm}`;
 }
 
@@ -610,7 +720,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
     RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
-    daysBetween, parseDateField, isStale,
+    kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen, NIET_MEETBARE_DOMEINEN,
     computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
     voegContextToeAanAandacht, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
