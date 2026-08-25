@@ -203,6 +203,8 @@ naam, een versienummer en een tweede vulmethode heeft gekregen.
   "backlog":    { "besloten", "done", "totaal" },
   "lessen":     { "totaal", "per_categorie": {...}, "open", "in_periode" },
   "bedrijfscontext": { "bron", "laatst_bijgewerkt", "placeholders_open": [...], "projectkennis_kopie_laatst_bijgewerkt" },
+  "correctievrij": { "venster_dagen", "drempel_pct", "autonoom_afgerond", "gecorrigeerd", "heropend",
+                     "weken": [{ "week_start", "autonoom_afgerond", "gecorrigeerd" }], "opmerking" },   // i25, optioneel
   "aandacht":   [ { "type", "ernst", "label", "link" } ],   // maximaal vijf, door de Coördinator samengesteld
   "waarschuwingen": [ "..." ]
 }
@@ -222,6 +224,40 @@ juist **niet** apart aangeleverd: die zijn client-side af te leiden uit
 routes (zie `buildAdoptFromMetrics()` in `metrics.js`) — minder velden om
 mee te sturen, en de rekenregel blijft narekenbaar vanaf wat er in het
 bestand staat.
+
+#### correctievrij (i25)
+
+Het blok `correctievrij` is de f9-succesmaat en de gate voor f19 fase 1+:
+het aandeel acties dat een agent **autonoom** heeft afgerond (werkronde +
+QC, daarna zelf op "Klaar" gezet) en dat daarna **niet door een mens is
+gecorrigeerd**. Het domein Acties draagt hiervoor vanaf registry 1.34.0 de
+velden `Afgerond door` (agentnaam, alleen gevuld bij autonome afronding),
+`Afgerond op` (datum), `Gecorrigeerd` (checkbox, door een mens) en
+`Correctie` (reden). Definitie, in beide routes identiek:
+
+- `autonoom_afgerond` = acties met `Afgerond door` gevuld én `Afgerond op`
+  binnen de laatste `venster_dagen` (28) tot en met vandaag;
+- `heropend` = daarvan de acties met Status ≠ "Klaar";
+- `gecorrigeerd` = daarvan de acties met `Gecorrigeerd` aangevinkt **óf**
+  Status ≠ "Klaar" (heropend zit dus in gecorrigeerd). Een QC-afkeuring vóór
+  de afronding telt niet — dat is het normale werkproces;
+- percentage = (autonoom_afgerond − gecorrigeerd) / autonoom_afgerond × 100;
+  `null` ("n.v.t.") als er geen autonoom afgeronde acties in het venster zijn;
+- `weken` = de laatste vijf kalenderweken (maandag = `week_start`; vier
+  afgesloten plus de lopende), oud → nieuw, elk met dezelfde twee tellingen;
+- **gate**: de vier meest recente *afgesloten* weken (`week_start` + 7 dagen
+  ≤ vandaag) hebben elk minstens één autonoom afgeronde actie én een
+  weekpercentage ≥ `drempel_pct` (80). De KPI-tegel "Correctievrij (4 wk)"
+  toont "Gate f19: gehaald ✓ (4/4 weken ≥ 80%)" of "nog niet — n/4 weken"
+  met de reden op de detailpagina (bv. "week van 10-08 zat op 67%").
+
+Het bestand draagt alleen de **tellingen**; percentage en gate rekent het
+dashboard zelf uit, met precies dezelfde helper (`berekenCorrectievrij()` in
+`zones.js`) als de rij-route (`computeCorrectievrij()`, die de tellingen uit
+de Acties-rijen haalt). Een meegestuurd `percentage`-veld wordt door de
+sanitizer weggelaten. Checkbox-waarden in rijen mogen `true`, `"true"`,
+`"ja"`, `"x"`, `"__YES__"` of `1` zijn. Versie blijft 1: het blok is
+additief en optioneel.
 
 ### Versiecontrole — nooit stil een verkeerd dashboard tekenen
 
@@ -262,6 +298,9 @@ niet zijn, niet een verzonnen nul.
   `computeZone2()` aan, met een tijdelijk object in plaats van rijen).
 - Geen `acties`-blok → geen Opvolging-subscore, geen tijdwinst-KPI, geen
   Acties-kaart in zone 4.
+- Geen `correctievrij`-blok → KPI-tegel toont n.v.t. met reden ("de
+  Coördinator levert dit vanaf registry 1.34.0 aan bij de dagstart"); de
+  detailpagina legt uit welke velden nodig zijn.
 
 Een **leeg metricsbestand** (`{}`, geen `"versie"`, geen `"type"`) valt
 onder §Versiecontrole hierboven, niet onder dit punt: dat bestand wordt

@@ -80,7 +80,7 @@ function buildContext() {
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta,
+      sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
       // zo zichtbaar te zijn als parse-waarschuwingen
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
@@ -93,7 +93,7 @@ function buildContext() {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen,
+    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
   };
 }
 
@@ -210,6 +210,7 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)],
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
   };
 

@@ -201,6 +201,46 @@ def build_metrics_payload():
             "projectkennis_kopie_laatst_bijgewerkt": d(-4),
         },
 
+        # i25: correctievrij-percentage (de f19-gate). Vaste kalenderweken
+        # relatief aan 2026-08-24 (maandag): vier afgesloten weken plus de
+        # lopende. Week 10-08 zit bewust op 67% (2 van 3), zodat de gate
+        # NIET gehaald wordt en de reden-tekst zichtbaar is.
+        "correctievrij": {
+            "venster_dagen": 28,
+            "drempel_pct": 80,
+            "autonoom_afgerond": 22,
+            "gecorrigeerd": 3,
+            "heropend": 1,
+            "weken": [
+                        {
+                                    "week_start": "2026-07-27",
+                                    "autonoom_afgerond": 5,
+                                    "gecorrigeerd": 0
+                        },
+                        {
+                                    "week_start": "2026-08-03",
+                                    "autonoom_afgerond": 6,
+                                    "gecorrigeerd": 1
+                        },
+                        {
+                                    "week_start": "2026-08-10",
+                                    "autonoom_afgerond": 3,
+                                    "gecorrigeerd": 1
+                        },
+                        {
+                                    "week_start": "2026-08-17",
+                                    "autonoom_afgerond": 7,
+                                    "gecorrigeerd": 1
+                        },
+                        {
+                                    "week_start": "2026-08-24",
+                                    "autonoom_afgerond": 1,
+                                    "gecorrigeerd": 0
+                        }
+            ],
+            "opmerking": "Autonoom afgerond = Afgerond door gevuld én Afgerond op in de laatste 28 dagen; gecorrigeerd = Gecorrigeerd aangevinkt of actie heropend."
+        },
+
         # Max. vijf, door de Coördinator zelf samengesteld (zie ontwerp).
         # Het dashboard voegt hier zelf nog een vijfde regel aan toe als er
         # verouderde domeinen zijn (zie domeinen-blok) - dat brengt dit op

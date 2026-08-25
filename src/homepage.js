@@ -13,6 +13,7 @@ const DETAIL_VOLGORDE = [
   { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
   { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
+  { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️" },
   { key: "leren", titel: "Leren", emoji: "💡" },
 ];
 
@@ -23,6 +24,10 @@ function nlGetal(n, decimals = 0) {
 // ── KPI-tegels ────────────────────────────────────────────────────────
 function renderKpiTegels(el, ctx) {
   const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
+  // i25: correctievrij kan ontbreken in oudere ctx-objecten (bv. tests) —
+  // dan hetzelfde pad als "geen blok".
+  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
+  const cvKpi = correctievrijKpi(cv);
 
   const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
   const adoptieLabel = adopt.adoptiescore === null
@@ -55,6 +60,12 @@ function renderKpiTegels(el, ctx) {
       <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
+    </div>
+    <div class="kpi-tile" data-goto="correctievrij" tabindex="0" role="button">
+      <div class="kpi-getal">${esc(cvKpi.getal)}</div>
+      <div class="kpi-kop">Correctievrij (4 wk)</div>
+      <div class="kpi-som">${esc(cvKpi.gate)}</div>
+      <div class="kpi-label">${esc(cvKpi.label)}</div>
     </div>
     <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
       <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
@@ -206,6 +217,63 @@ function renderDetailTijdwinst(el, tijdwinst) {
     </div>
     <p class="footnote"><strong>Dit is een schatting op basis van je eigen aanname, geen meting.</strong> Dit dashboard kan niet zien hoeveel tijd een actie werkelijk kost of zou hebben gekost zonder het team. Het getal is uitsluitend: het aantal afgeronde acties in de bundel, vermenigvuldigd met de minuten-per-actie die jij hierboven instelt (standaard 25). Verzet de instelling gerust — de som past zich meteen aan, zodat je altijd kunt narekenen waar het getal vandaan komt.</p>
     <p class="footnote">Herkomst: domein Acties, veld Status = "Klaar", totaal in de bundel (geen aanmaakdatum in dit domein om op periode te filteren).</p>`;
+}
+
+// ── Correctievrij (i25) — tekstjes voor de KPI-tegel ─────────────────
+function correctievrijKpi(cv) {
+  if (!cv || !cv.aanwezig) {
+    return { getal: "n.v.t.", label: cv && cv.reden ? cv.reden : "Niet beschikbaar in deze bundel.", gate: "Gate f19: niet te bepalen" };
+  }
+  const berekenbaar = cv.pct !== null;
+  const getal = berekenbaar ? `${Math.round(cv.pct)}%` : "n.v.t.";
+  const label = berekenbaar
+    ? `${cv.autonoom - cv.gecorrigeerd} van ${cv.autonoom} autonoom afgeronde acties zonder correctie · laatste ${cv.vensterDagen} dagen`
+    : (cv.reden || "niet te berekenen");
+  const g = cv.gate;
+  const gate = g.gehaald
+    ? `Gate f19: gehaald ✓ (${g.wekenGehaald}/${g.wekenVereist} weken ≥ ${cv.drempel}%)`
+    : `Gate f19: nog niet — ${g.wekenGehaald}/${g.wekenVereist} weken ≥ ${cv.drempel}%`;
+  return { getal, label, gate };
+}
+
+function renderDetailCorrectievrij(el, cv) {
+  if (!cv || !cv.aanwezig) {
+    el.innerHTML = `<div class="card signaal-grijs"><div class="kop">Correctievrij</div><div class="getal">n.v.t.</div><div class="detail">${esc(cv && cv.reden ? cv.reden : "Niet beschikbaar in deze bundel.")}</div></div>
+      <p class="footnote">Vanaf registry 1.34.0 krijgt het domein Acties de velden <em>Afgerond door</em>, <em>Afgerond op</em>, <em>Gecorrigeerd</em> en <em>Correctie</em>. Zodra die gevuld zijn (rijenroute) of de Coördinator het correctievrij-blok meelevert (metricsroute), verschijnt dit percentage vanzelf.</p>`;
+    return;
+  }
+  const kpi = correctievrijKpi(cv);
+  const g = cv.gate;
+  const gateKlasse = g.gehaald ? "signaal-groen" : "signaal-oranje";
+  const gateTekst = g.gehaald
+    ? `De laatste ${g.wekenVereist} afgesloten weken zaten elk op of boven ${cv.drempel}% met minstens één autonoom afgeronde actie.`
+    : `Nog niet gehaald: ${g.reden || "onbekende reden"}. Nodig: ${g.wekenVereist} aaneengesloten afgesloten weken, elk met autonoom werk én ≥ ${cv.drempel}%.`;
+
+  const rijen = cv.weken.map(w => `<tr>
+      <td>${esc(w.label)}</td>
+      <td>${esc(w.autonoom)}</td>
+      <td>${esc(w.gecorrigeerd)}</td>
+      <td>${w.pct === null ? "—" : esc(Math.round(w.pct)) + "%"}</td>
+      <td>${w.afgesloten ? "afgesloten" : "lopend"}</td>
+    </tr>`).join("");
+
+  el.innerHTML = `
+    <p>Het <strong>correctievrij-percentage</strong> is de succesmaat van f9 en de gate voor f19: het aandeel acties dat een agent <strong>autonoom</strong> heeft afgerond (werkronde + kwaliteitscontrole, daarna zelf op "Klaar" gezet) en dat daarna <strong>niet door een mens is gecorrigeerd</strong>.</p>
+    <div class="grid-9">
+      <div class="card"><div class="kop">Correctievrij</div><div class="getal">${esc(kpi.getal)}</div><div class="detail">${esc(kpi.label)}</div></div>
+      <div class="card"><div class="kop">Autonoom afgerond</div><div class="getal">${esc(cv.autonoom)}</div><div class="detail">acties met "Afgerond door" gevuld en "Afgerond op" in de laatste ${esc(cv.vensterDagen)} dagen</div></div>
+      <div class="card"><div class="kop">Gecorrigeerd</div><div class="getal">${esc(cv.gecorrigeerd)}</div><div class="detail">waarvan ${esc(cv.heropend)} heropend (status niet meer "Klaar")</div></div>
+      <div class="card ${gateKlasse}"><div class="kop">Gate f19</div><div class="getal">${g.gehaald ? "gehaald ✓" : "nog niet"}</div><div class="detail">${esc(g.wekenGehaald)}/${esc(g.wekenVereist)} weken ≥ ${esc(cv.drempel)}% · ${esc(gateTekst)}</div></div>
+    </div>
+    <h3>Per kalenderweek (maandag = weekstart)</h3>
+    <table class="detail-table">
+      <thead><tr><th>Week van</th><th>Autonoom afgerond</th><th>Gecorrigeerd</th><th>Correctievrij</th><th>Status</th></tr></thead>
+      <tbody>${rijen || `<tr><td colspan="5">Geen weekgegevens in deze bundel.</td></tr>`}</tbody>
+    </table>
+    <p class="footnote"><strong>Definities.</strong> <em>Autonoom afgerond</em> = een agent zette de actie zelf op "Klaar" nadat de kwaliteitscontrole akkoord gaf; het veld <em>Afgerond door</em> draagt dan de agentnaam en <em>Afgerond op</em> de datum. <em>Gecorrigeerd</em> = een mens vinkte daarna <em>Gecorrigeerd</em> aan (met de reden in <em>Correctie</em>) óf heropende de actie (status niet meer "Klaar"). Een afkeuring door de kwaliteitscontrole vóór de afronding telt <strong>niet</strong> als correctie — dat is het normale werkproces. Het venster is de laatste ${esc(cv.vensterDagen)} dagen tot en met vandaag; de weektabel telt alle autonoom afgeronde acties per kalenderweek.</p>
+    <p class="footnote"><strong>Gate f19</strong> (fase 1 en verder): ${esc(g.wekenVereist)} aaneengesloten <em>afgesloten</em> kalenderweken (weekstart + 7 dagen ≤ vandaag), elk met minstens één autonoom afgeronde actie en een weekpercentage ≥ ${esc(cv.drempel)}%. De lopende week telt nog niet mee.</p>
+    ${cv.opmerking ? `<p class="footnote">Opmerking van de Coördinator: ${esc(cv.opmerking)}</p>` : ""}
+    <p class="footnote">Met de hand na te rekenen: (a − g) / a — hier (${esc(cv.autonoom)} − ${esc(cv.gecorrigeerd)}) / ${esc(cv.autonoom)}${cv.pct === null ? " (geen noemer)" : ` = ${esc(Math.round(cv.pct))}%`}.</p>`;
 }
 
 function renderDetailActiviteit(el, activiteit, periodWeeks) {
