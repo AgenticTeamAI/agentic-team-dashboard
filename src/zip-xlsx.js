@@ -87,17 +87,11 @@ function colLetterToIndex(ref) {
   return n - 1;
 }
 
-/** Excel-datumserienummer (dagen sinds 1899-12-30) naar ISO-datumstring. */
-function excelSerialToISO(serial) {
-  const epoch = Date.UTC(1899, 11, 30);
-  const ms = epoch + serial * 86400000;
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
 /** Parseert een xlsx ArrayBuffer naar { sheetNaam: [[cel,...], ...] }.
- * Eerste rij van elke sheet is de header-rij. dateFieldNames is een Set met
- * kolomnamen (headers) die als 'datum' bekendstaan uit het schema — alleen
- * daarvoor wordt een numerieke cel als Excel-datumserienummer geïnterpreteerd. */
+ * Eerste rij van elke sheet is de header-rij. Numerieke cellen komen als
+ * getal door; datumcellen (Excel-serienummer, dagen sinds 1899-12-30) worden
+ * pas bij het lezen van een datumveld herkend — zie parseDateField/kalenderDag
+ * in zones.js (b37). */
 async function parseXlsx(arrayBuffer) {
   const files = await parseZipEntries(arrayBuffer);
   if (!files["xl/workbook.xml"]) throw new Error("Geen xl/workbook.xml gevonden — dit lijkt geen geldig .xlsx-bestand.");
@@ -172,5 +166,5 @@ async function parseXlsx(arrayBuffer) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { parseZipEntries, parseXlsx, colLetterToIndex, excelSerialToISO };
+  module.exports = { parseZipEntries, parseXlsx, colLetterToIndex };
 }

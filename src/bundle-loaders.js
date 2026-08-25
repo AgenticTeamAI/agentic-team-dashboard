@@ -74,7 +74,8 @@ function rowsToBedrijfscontext(rows, fallbackStaleAt) {
   for (const row of rows.slice(1)) {
     if (row[0]) obj[String(row[0])] = row[1];
   }
-  obj.staleAt = obj.Laatst_bijgewerkt ? new Date(obj.Laatst_bijgewerkt) : fallbackStaleAt;
+  // b37: parseDateField — onleesbaar wordt null (zone 2: grijs), nooit Invalid Date
+  obj.staleAt = obj.Laatst_bijgewerkt ? parseDateField(obj.Laatst_bijgewerkt) : fallbackStaleAt;
   return obj;
 }
 
@@ -100,9 +101,9 @@ async function loadJsonLikeBundle(fileList, source) {
       // gaat boven het exportmoment, dat op zijn beurt boven de kale
       // bestandsdatum gaat.
       const staleAt = parsed.Laatst_bijgewerkt
-        ? new Date(parsed.Laatst_bijgewerkt)
+        ? parseDateField(parsed.Laatst_bijgewerkt)
         : parsed._geexporteerd_op
-          ? new Date(parsed._geexporteerd_op)
+          ? parseDateField(parsed._geexporteerd_op)
           : new Date(file.lastModified);
       bundle.bedrijfscontext = { ...parsed, staleAt };
       continue;
@@ -132,7 +133,7 @@ function registerJsonDomain(bundle, domainKey, parsed, file, source) {
   const items = Array.isArray(parsed) ? parsed : (parsed.items || []);
   let staleAt = new Date(file.lastModified);
   if (source === "notion" && parsed._geexporteerd_op) {
-    staleAt = new Date(parsed._geexporteerd_op);
+    staleAt = parseDateField(parsed._geexporteerd_op) || staleAt;
   }
   bundle.domains[domainKey] = {
     aanwezig: true,

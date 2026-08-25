@@ -145,7 +145,8 @@ const TEAMFEED_LIMIET = 500;
  * het domein nog niet kent geeft 400 "Onbekend domein" — dan is de feed er
  * gewoon niet, met een uitleg in de feed zelf (geen waarschuwingsbalk). */
 async function haalTeamfeed(daglink, vandaag) {
-  const sinds = new Date(vandaag.getTime() - TEAMFEED_DAGEN * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  // b37: op lokale kalenderdag (toISOString gaf de UTC-dag: 's avonds een dag te weinig)
+  const sinds = feedDagKey(dagVanIndex(kalenderDag(vandaag) - TEAMFEED_DAGEN));
   try {
     const body = await fetchWerkruimte(daglink,
       "/dashboard/entries?domein=" + TEAMFEED_DOMEIN + "&limiet=" + TEAMFEED_LIMIET + "&sinds=" + sinds);

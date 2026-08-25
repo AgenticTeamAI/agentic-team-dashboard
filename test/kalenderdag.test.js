@@ -16,9 +16,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULES = [
   "schema/schema.generated.js",
   "src/schema-helpers.js",
+  "src/bundle-loaders.js",
   "src/zones.js",
   "src/metrics-sanitize.js",
   "src/metrics.js",
+  "src/feed.js",
 ];
 
 let g;
@@ -167,7 +169,7 @@ describe("meetbareDomeinen — één breedte-noemer voor beide routes (AT-033)",
     expect(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen)).toContain("bedrijfscontext");
     const m = g.meetbareDomeinen(g.AGENTIC_TEAM_SCHEMA);
     expect(m).not.toContain("bedrijfscontext");
-    expect(m.length).toBe(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen).length - 1);
+    expect(m.length).toBe(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen).length - 3); // ook logboek/ritmetaken, zie reviewronde 1
   });
 
   it("rij-route en metrics-route geven op dezelfde fixture dezelfde noemer en teller", () => {
@@ -201,5 +203,70 @@ describe("meetbareDomeinen — één breedte-noemer voor beide routes (AT-033)",
     expect(breedteRij.metInhoud).toBe(2);
     expect(breedteMetrics.waarde).toBe(breedteRij.waarde);
     expect(breedteMetrics.domeinenLijst.sort()).toEqual(breedteRij.domeinenLijst.sort());
+  });
+});
+
+describe("reviewronde 1 (b37)", () => {
+  it("ongeldige date-only strings rollen niet om maar geven null", () => {
+    for (const v of ["2026-13-45", "2026-02-30", "2026-00-10"]) {
+      expect(g.kalenderDag(v), v).toBeNull();
+      expect(g.parseDateField(v), v).toBeNull();
+    }
+    // jaar 26 blijft jaar 26 (Date-constructor zou er 1926 van maken)
+    expect(g.parseDateField("0026-08-24").getFullYear()).toBe(26);
+    expect(g.kalenderDag("0026-08-24")).toBe(g.kalenderDag(g.parseDateField("0026-08-24")));
+    expect(g.kalenderDag("0026-08-24")).not.toBe(g.kalenderDag("1926-08-24"));
+    expect(g.kalenderDag("2024-02-29")).not.toBeNull(); // schrikkeldag bestaat
+    expect(g.kalenderDag(" 2026-08-24 ")).toBe(g.kalenderDag("2026-08-24"));
+    expect(g.kalenderDag(" 2026-08-24T10:00:00Z ")).toBe(g.kalenderDag(new Date("2026-08-24T10:00:00Z")));
+  });
+
+  it("onleesbare Laatst_bijgewerkt geeft grijs op de rij-route én de metrics-route (nooit groen)", () => {
+    // rij-route via de loaders
+    const excel = g.rowsToBedrijfscontext([["sleutel", "waarde"], ["Bron", "Notion"], ["Laatst_bijgewerkt", "onbekend"]], new Date(2020, 0, 1));
+    expect(excel.staleAt).toBeNull();
+    expect(g.computeZone2({ bedrijfscontext: excel }, VANDAAG_18U).signaal).toBe("grijs");
+    // guard in computeZone2 zelf, ook als een loader ooit weer een Invalid Date doorgeeft
+    expect(g.computeZone2({ bedrijfscontext: { Bron: "Notion", staleAt: new Date("onbekend") } }, VANDAAG_18U).signaal).toBe("grijs");
+    // metrics-route
+    const res = g.parseNotionMetricsFile({ versie: 1, bedrijfscontext: { bron: "Notion", laatst_bijgewerkt: "onbekend" } }, g.AGENTIC_TEAM_SCHEMA, VANDAAG_18U, 25);
+    expect(res.ok).toBe(true);
+    expect(res.metrics.z2.signaal).toBe("grijs");
+    // en isStale: onleesbaar = verouderd, niet "vers"
+    expect(g.isStale(new Date("onbekend"), VANDAAG_18U)).toBe(true);
+  });
+
+  it("Excel-serienummers worden als datum gelezen", () => {
+    expect(g.kalenderDag(46258)).toBe(g.kalenderDag("2026-08-24")); // 2026-08-24 = serial 46258
+    expect(g.daysBetween(VANDAAG_18U, 46258)).toBe(0);
+    expect(g.daysBetween(VANDAAG_18U, 46257)).toBe(1);
+    const d = g.parseDateField(46258);
+    expect([d.getFullYear(), d.getMonth() + 1, d.getDate()]).toEqual([2026, 8, 24]);
+    expect(g.kalenderDag(46258.5)).toBe(g.kalenderDag("2026-08-24")); // met tijdfractie
+    // ms-epoch blijft ms-epoch
+    expect(g.kalenderDag(VANDAAG_18U.getTime())).toBe(g.kalenderDag("2026-08-24"));
+    const o = g.computeOpvolging(bundelMetActies([{ Actie: "x", Status: "Open", Deadline: 46258 }, { Actie: "y", Status: "Klaar", Deadline: 46250 }]), VANDAAG_18U);
+    expect(o.verstreken).toBe(1);
+  });
+
+  it("meetbareDomeinen sluit ook logboek en ritmetaken uit; beide routes zien dezelfde noemer", () => {
+    const schema = g.AGENTIC_TEAM_SCHEMA;
+    expect(Object.keys(schema.datadomeinen)).toEqual(expect.arrayContaining(["logboek", "ritmetaken"]));
+    const m = g.meetbareDomeinen(schema);
+    expect(m).not.toContain("logboek");
+    expect(m).not.toContain("ritmetaken");
+    expect(m.length).toBe(Object.keys(schema.datadomeinen).length - 3);
+    // werkruimte-klant met logboek+ritmetaken als rijen-domein: telt niet mee
+    const rij = { source: "werkruimte", domains: { acties: { rows: [{ Actie: "a" }] }, logboek: { rows: [{ Onderwerp: "x" }] }, ritmetaken: { rows: [{ Taak: "y" }] } } };
+    const b1 = g.computeBreedte(rij, schema);
+    expect(b1.metInhoud).toBe(1);
+    expect(b1.totaalDomeinen).toBe(m.length);
+    const res = g.parseNotionMetricsFile({ versie: 1, domeinen: { acties: { rijen: 1 }, logboek: { rijen: 9 }, ritmetaken: { rijen: 9 } } }, schema, VANDAAG_18U, 25);
+    const b2 = res.metrics.adopt.componenten.find(c => c.key === "breedte");
+    expect([b2.metInhoud, b2.totaalDomeinen, b2.waarde]).toEqual([b1.metInhoud, b1.totaalDomeinen, b1.waarde]);
+  });
+
+  it("teamfeed 'sinds' is de lokale kalenderdag min 30 dagen, ook 's avonds", () => {
+    expect(g.feedDagKey(g.dagVanIndex(g.kalenderDag(new Date(2026, 7, 24, 23, 30)) - 30))).toBe("2026-07-25");
   });
 });

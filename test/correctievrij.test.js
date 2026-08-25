@@ -22,7 +22,7 @@ const MODULES = [
   "src/homepage.js",
 ];
 
-const TODAY = new Date("2026-08-24T12:00:00Z"); // maandag
+const TODAY = new Date(2026, 7, 24, 12, 0); // maandag, lokale tijd (TZ-onafhankelijk)
 const XSS = '"><img src=q onerror=window.__xss=1><li class="';
 
 let g;

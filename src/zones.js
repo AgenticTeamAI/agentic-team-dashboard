@@ -28,18 +28,49 @@ const CONTEXT_ORANJE_DAYS = 90;
 // doorgaat. null bij ontbrekende/onleesbare waarde.
 const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+// Excel-datumcellen komen uit parseXlsx als serienummer (dagen sinds
+// 1899-12-30). Alleen getallen in dit bereik (ca. 1954–2064) lezen we zo;
+// een ms-epoch is altijd veel groter en een kolomnummer veel kleiner.
+const EXCEL_SERIAL_MIN = 20000;
+const EXCEL_SERIAL_MAX = 60000;
+const EXCEL_EPOCH_DAG = -25569; // kalenderdag-ordinaal van 1899-12-30
+
+// "JJJJ-MM-DD" -> lokale middernacht, of null als de string geen bestaande
+// kalenderdag is. Date.UTC/new Date(j, m, d) rollen stil om ("2026-02-30"
+// wordt 2 maart, "2026-13-45" 14 februari 2027), dus na constructie worden
+// de componenten teruggevalideerd. setFullYear omdat de Date-constructor
+// jaren 0–99 als 1900–1999 leest ("0026-08-24" -> 1926).
+function dateOnlyNaarLokaleDate(str) {
+  const m = DATE_ONLY_RE.exec(str.trim());
+  if (!m) return undefined; // geen date-only-vorm (wel misschien een datetime)
+  const j = +m[1], mnd = +m[2], d = +m[3];
+  const dt = new Date(2000, mnd - 1, d);
+  dt.setFullYear(j);
+  if (dt.getFullYear() !== j || dt.getMonth() !== mnd - 1 || dt.getDate() !== d) return null;
+  return dt;
+}
+
+// Ordinaal van een kalenderdag (j, m, d). Via het jaar 2000 + setUTCFullYear,
+// omdat Date.UTC jaren 0–99 als 1900–1999 leest.
+function ordinaalVan(j, m, d) {
+  const u = new Date(Date.UTC(2000, m - 1, d));
+  u.setUTCFullYear(j);
+  return Math.floor(u.getTime() / 86400000);
+}
+
 function kalenderDag(v) {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "string") {
-    const m = DATE_ONLY_RE.exec(v.trim());
-    if (m) return Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000);
-    v = new Date(v);
+    const dateOnly = dateOnlyNaarLokaleDate(v);
+    if (dateOnly === null) return null; // date-only-vorm, maar geen bestaande dag
+    v = dateOnly === undefined ? new Date(v.trim()) : dateOnly;
   } else if (typeof v === "number") {
+    if (v >= EXCEL_SERIAL_MIN && v <= EXCEL_SERIAL_MAX) return EXCEL_EPOCH_DAG + Math.floor(v);
     v = new Date(v);
   }
   if (!(v instanceof Date) || isNaN(v.getTime())) return null;
   // lokale kalenderdag: eerst de lokale Y/M/D nemen, dan pas naar een ordinaal
-  return Math.floor(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()) / 86400000);
+  return ordinaalVan(v.getFullYear(), v.getMonth() + 1, v.getDate());
 }
 
 // Ordinaal dagnummer -> Date op lokale middernacht van die kalenderdag.
@@ -65,11 +96,16 @@ function daysBetween(a, b) {
 // Date-only strings worden als LOKALE middernacht gelezen (niet als UTC-
 // middernacht, wat new Date("JJJJ-MM-DD") doet) — zo tonen fmtDate() en
 // kalenderDag() in elke tijdzone dezelfde dag als in de brondata staat.
+// Getallen in het Excel-serialbereik worden als Excel-datum gelezen (route 1:
+// parseXlsx geeft datumcellen als getal door).
 function parseDateField(v) {
   if (!v) return null;
   if (typeof v === "string") {
-    const m = DATE_ONLY_RE.exec(v.trim());
-    if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+    const dateOnly = dateOnlyNaarLokaleDate(v);
+    if (dateOnly !== undefined) return dateOnly;
+    v = v.trim();
+  } else if (typeof v === "number" && v >= EXCEL_SERIAL_MIN && v <= EXCEL_SERIAL_MAX) {
+    return dagVanIndex(EXCEL_EPOCH_DAG + Math.floor(v));
   }
   const dt = new Date(v);
   return isNaN(dt.getTime()) ? null : dt;
@@ -77,7 +113,8 @@ function parseDateField(v) {
 
 function isStale(staleAt, today, thresholdDays = STALE_DAYS) {
   if (!staleAt) return true;
-  return daysBetween(today, staleAt) > thresholdDays;
+  const dagen = daysBetween(today, staleAt);
+  return Number.isNaN(dagen) || dagen > thresholdDays; // onleesbare datum = onbekend = verouderd
 }
 
 function domain(bundle, key) {
@@ -115,7 +152,9 @@ function computeZone2(bundle, today) {
 
   let signaal = "groen";
   const redenen = [];
-  if (ageDays === null) { signaal = "grijs"; redenen.push("geen datum van laatste update bekend"); }
+  // null (geen datum) én NaN (onleesbare datum, bv. "onbekend") zijn allebei
+  // "we weten het niet" -> grijs, nooit stilzwijgend groen.
+  if (ageDays === null || Number.isNaN(ageDays)) { signaal = "grijs"; redenen.push("geen datum van laatste update bekend"); }
   else if (ageDays > CONTEXT_ROOD_DAYS) { signaal = "rood"; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
   else if (ageDays > CONTEXT_ORANJE_DAYS) { signaal = signaal === "groen" ? "oranje" : signaal; redenen.push(`niet bijgewerkt sinds ${ageDays} dagen`); }
 
@@ -152,7 +191,10 @@ function computeZone3(bundle, agentLookup, schema, today, periodDays) {
     const dt = parseDateField(datumRaw);
     traces[slug].aantalTotaal++;
     if (dt && (!traces[slug].laatst || dt > traces[slug].laatst)) traces[slug].laatst = dt;
-    if (dt && daysBetween(today, dt) <= periodDays && daysBetween(today, dt) >= 0) traces[slug].aantalPeriode++;
+    if (dt) {
+      const diff = daysBetween(today, dt);
+      if (diff >= 0 && diff <= periodDays) traces[slug].aantalPeriode++;
+    }
   }
 
   if (actiesDomain) {
@@ -405,11 +447,19 @@ function computeRitme(bundle, today, weeks = 12) {
 // en heeft zone 2 (Contextgezondheid) als eigen meetlat. Meetellen zou het
 // domein in de rij-route permanent als "geen inhoud" laten scoren, en in de
 // metrics-route juist wél — twee scores op dezelfde data (b37 / AT-033).
+//
+// logboek en ritmetaken (f17/f19) zijn werkgeheugen van het team, geen
+// werkdata: alleen de werkruimte-route levert ze als rijen-domein aan, de
+// Excel-/JSON-/Notion-routes en het metricsbestand kennen ze niet. Meetellen
+// zou een werkruimte-klant structureel +1 à +2 op de noemer geven. Het schema
+// heeft (nog) geen werkdata-vlag per domein, vandaar een expliciete lijst.
+const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken"];
 function meetbareDomeinen(schema) {
-  return Object.keys(schema.datadomeinen).filter(k => k !== "bedrijfscontext");
+  return Object.keys(schema.datadomeinen).filter(k => !NIET_MEETBARE_DOMEINEN.includes(k));
 }
 
-// Breedte = domeinen met minstens een rij / 15 canonieke domeinen. Altijd
+// Breedte = domeinen met minstens een rij / meetbare domeinen (17 in de
+// registry minus bedrijfscontext/logboek/ritmetaken, zie meetbareDomeinen). Altijd
 // berekenbaar: een ontbrekend domein telt gewoon mee als "geen inhoud" - dat
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).
@@ -681,7 +731,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
     RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
-    kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen,
+    kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen, NIET_MEETBARE_DOMEINEN,
     computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
     voegContextToeAanAandacht, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
