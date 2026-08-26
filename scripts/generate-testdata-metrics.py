@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Genereert de testdata voor de nieuwe Notion-route: een kant-en-klaar
-metricsbestand (versie 1) in plaats van vijftien bestanden met rijen. Zie
-ONTWERP-wekelijkse-dashboardbijwerking.md voor het waarom en de vorm.
+Genereert de fixture voor het metricsbestand (contract versie 1) dat de
+Coördinator bij een klant met werkdata buiten de werkruimte naar het domein
+dashboard_metrics schrijft (f24). Gelezen door test/correctievrij.test.js,
+test/integratie.test.js en scripts/mock-instantie.mjs. Zie
+ONTWERP-wekelijkse-dashboardbijwerking.md (intern) voor het waarom en de vorm.
 
 Zelfde fictieve klant als de rest van testdata/ ("GroenBuro"), en de
 getallen zijn afgeleid van dezelfde onderliggende feiten als
@@ -12,28 +14,20 @@ PRODUCTBACKLOG, CONTENT_KALENDER) — dit bestand hergebruikt die lijsten en
 telt ze op, precies zoals de Coördinator dat met een aggregatiequery zou
 doen. Geen rijen zelf komen in het metricsbestand terecht.
 
-Schrijft drie scenario's, elk in zijn eigen map (zodat de map-picker in het
-dashboard, die alle bestanden in de gekozen map leest, per scenario precies
-één bestand tegenkomt):
+Schrijft één bestand:
 
   testdata/notion-metrics/metrics.json
-      Het hoofdscenario: geldig (versie 1), met bewuste gaten:
+      Geldig (versie 1), met bewuste gaten:
         - geen "agents"-blok (ontbrekend blok -> "bron ontbreekt", niet 0)
         - één week zonder enig spoor in de weekreeks (vakantieweek)
         - domein "delivery_rugzak" is 56 dagen oud (> de 30-dagen-drempel)
         - twee domeinen (tijdregistratie, product_catalogus) ontbreken
           volledig uit het domeinen-blok, want die modules zijn niet
-          aangeschaft (net als bij de Excel-testdata)
-        - bedrijfscontext is hier bewust het GROENE pad (compleet, vers) -
-          notion-export/ (oude route) laat al het rode pad zien; dit
-          bestand laat zien dat de metrics-route ook een gezonde context
-          kan melden.
+          aangeschaft
+        - bedrijfscontext is compleet en vers (het groene zone 2-pad).
 
-  testdata/notion-metrics-onbekende-versie/metrics.json
-      Zelfde inhoud, maar "versie": 2 — test de "onbekende versie"-melding.
-
-  testdata/notion-metrics-leeg/metrics.json
-      Letterlijk "{}" — test het "leeg/onherkenbaar bestand"-pad.
+De foutpaden (onbekende versie, leeg/onherkenbaar bestand) hebben geen
+fixture meer nodig: test/integratie.test.js bouwt die stubs zelf (s36).
 
 Gebruik:
     python3 scripts/generate-testdata-metrics.py
@@ -47,16 +41,14 @@ TESTDATA = ROOT / "testdata"
 
 # Hergebruik de domeinlijsten uit generate-testdata.py zonder het script uit
 # te voeren (het heeft een if __name__ == "__main__"-gate, dus importeren
-# is veilig en voert alleen de module-top toe, niet build_excel() etc.)
+# is veilig en voert alleen de module-top toe, niet build_json_bundle())
 spec = importlib.util.spec_from_file_location("gtd", ROOT / "scripts" / "generate-testdata.py")
 gtd = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gtd)
 
-d = gtd.d  # dag-offset t.o.v. TODAY (2026-08-10), zelfde vaste "vandaag" als de andere drie bundels
+d = gtd.d  # dag-offset t.o.v. TODAY (2026-08-10), zelfde vaste "vandaag" als testdata/data/
 
 OUT_GOED = TESTDATA / "notion-metrics"
-OUT_ONBEKEND = TESTDATA / "notion-metrics-onbekende-versie"
-OUT_LEEG = TESTDATA / "notion-metrics-leeg"
 
 
 def build_metrics_payload():
@@ -191,9 +183,8 @@ def build_metrics_payload():
             "in_periode": len(in_periode_lessen),
         },
 
-        # Bewust het GROENE pad: notion-export/ (oude route) toont het rode
-        # pad al (zie testdata/README.md); deze bundel laat zien dat de
-        # metrics-route ook een gezonde context correct meldt.
+        # Bewust het GROENE pad (compleet, vers); het rode pad van zone 2
+        # wordt in test/integratie.test.js met een eigen stub getest.
         "bedrijfscontext": {
             "bron": "Notion-pagina 'GroenBuro - Bedrijfscontext' (intern gedeeld met het team)",
             "laatst_bijgewerkt": d(-4),
@@ -265,17 +256,8 @@ def main():
     goed = build_metrics_payload()
     write_json(OUT_GOED / "metrics.json", goed)
 
-    onbekend = dict(goed)
-    onbekend["versie"] = 2
-    onbekend["bron_label"] = "Notion-export — GroenBuro workspace (metricsbestand, volgende generatie)"
-    write_json(OUT_ONBEKEND / "metrics.json", onbekend)
-
-    write_json(OUT_LEEG / "metrics.json", {})
-
     print("Testdata (metricsroute) gegenereerd:")
     print(" -", OUT_GOED / "metrics.json")
-    print(" -", OUT_ONBEKEND / "metrics.json")
-    print(" -", OUT_LEEG / "metrics.json")
 
 
 if __name__ == "__main__":

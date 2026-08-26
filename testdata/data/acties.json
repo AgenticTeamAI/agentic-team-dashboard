@@ -1,5 +1,5 @@
 {
-  "_schema": "Acties - Actie; Eigenaar; Agent; Deadline; Status.",
+  "_schema": "Acties - Actie; Eigenaar; Agent; Deadline; Status; Type; Prioriteit; Toelichting; Aangemaakt door; Organisatie; Bron (link); Afgerond door; Afgerond op; Gecorrigeerd; Correctie.",
   "items": [
     {
       "Actie": "Offerte De Linde opstellen",
