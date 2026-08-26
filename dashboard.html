@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-1Y4Z0dw/63i9qJA8QJ/P15eABK50u8wH+QoqS2Ai9EA=' 'sha256-f+b/IF+xYYmAtFy2zNsRDinHZKfg/36ZCMwl0dQ9PdI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ZypwnXS1lJ1jCs1K2adH1GClBfI6zqN907gc5EhCnwI=' 'sha256-UBymgUQSJvo0MltCqe09utSx4mxqq3/dHQyR2TTlVeI='">
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -472,7 +472,7 @@ section.panel {
     nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
     worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
     (lokaal, in je browser). Gegenereerd uit registryVersion
-    1.45.0 van AgenticTeamAI/agent-architecture.
+    1.46.0 van AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -481,20 +481,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.45.0
+//   registryVersion : 1.46.0
 //   registry updated: 2026-08-26
-//   bron-commit     : 3571ee382be4475d628b7f60bdc3fc280745b3ab
-//   geextraheerd op : 2026-08-26T10:35:35Z
+//   bron-commit     : 8bca57dd05187073a17a1ee2a140c9934a975589
+//   geextraheerd op : 2026-08-26T14:21:27Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.45.0",
+  "registryVersion": "1.46.0",
   "registryUpdated": "2026-08-26",
-  "sourceCommit": "3571ee382be4475d628b7f60bdc3fc280745b3ab",
-  "extractedAt": "2026-08-26T10:35:35Z",
+  "sourceCommit": "8bca57dd05187073a17a1ee2a140c9934a975589",
+  "extractedAt": "2026-08-26T14:21:27Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -523,7 +523,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "backoffice": {
       "naam": "Backoffice",
-      "aantalAgents": 4
+      "aantalAgents": 5
     }
   },
   "agents": [
@@ -665,6 +665,13 @@ window.AGENTIC_TEAM_SCHEMA = {
       "displayName": "Customer Success Manager",
       "emoji": "💚",
       "module": "delivery",
+      "team": "coo"
+    },
+    {
+      "slug": "informatiemanager",
+      "displayName": "Informatiemanager",
+      "emoji": "🖥️",
+      "module": "backoffice",
       "team": "coo"
     }
   ],
@@ -1272,7 +1279,8 @@ window.AGENTIC_TEAM_SCHEMA = {
             "Team Coördinatie",
             "Dagelijks Ritme",
             "Content & Zichtbaarheid",
-            "Klantsucces & Retentie"
+            "Klantsucces & Retentie",
+            "Data & Tooling"
           ]
         },
         {
@@ -1751,6 +1759,83 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Besluit",
+          "type": "tekst"
+        }
+      ]
+    },
+    "toolstack": {
+      "naam": "Toolstack",
+      "module": "backoffice",
+      "emoji": "🖥️",
+      "velden": [
+        {
+          "naam": "Tool",
+          "type": "titel"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "CRM & werkdata",
+            "Communicatie",
+            "Financieel & administratie",
+            "Marketing & content",
+            "AI & automatisering",
+            "Opslag & documenten",
+            "Beveiliging & toegang",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Doel",
+          "type": "tekst"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Actief",
+            "Proef",
+            "Opzeggen",
+            "Opgezegd"
+          ]
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "tekst"
+        },
+        {
+          "naam": "Kosten per maand",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Verlengdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Datalocatie",
+          "type": "select",
+          "opties": [
+            "EU",
+            "Buiten EU",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Persoonsgegevens",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Verwerkersovereenkomst",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Toegang",
+          "type": "tekst"
+        },
+        {
+          "naam": "Notities",
           "type": "tekst"
         }
       ]
@@ -2671,15 +2756,20 @@ function computeRitme(bundle, today, weeks = 12) {
 // werkdata: de werkruimte-route levert ze als rijen-domein aan, het
 // metricsbestand (dashboard_metrics, teams met werkdata buiten de werkruimte)
 // kent ze niet. Meetellen zou een werkruimte-rijenklant structureel +1 à +2
-// op de noemer geven. Het schema
+// op de noemer geven.
+//
+// toolstack (f7, Informatiemanager) is het register van de tools en systemen
+// van het bedrijf: context waar de agents op steunen, geen werk dat het team
+// uitvoert. Meetellen zou de breedte-noemer +1 geven voor een domein dat
+// per opzet maar een handvol rijen kent en zelden beweegt. Het schema
 // heeft (nog) geen werkdata-vlag per domein, vandaar een expliciete lijst.
-const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken"];
+const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken", "toolstack"];
 function meetbareDomeinen(schema) {
   return Object.keys(schema.datadomeinen).filter(k => !NIET_MEETBARE_DOMEINEN.includes(k));
 }
 
-// Breedte = domeinen met minstens een rij / meetbare domeinen (17 in de
-// registry minus bedrijfscontext/logboek/ritmetaken, zie meetbareDomeinen). Altijd
+// Breedte = domeinen met minstens een rij / meetbare domeinen (19 in de
+// registry minus bedrijfscontext/logboek/ritmetaken/toolstack, zie meetbareDomeinen). Altijd
 // berekenbaar: een ontbrekend domein telt gewoon mee als "geen inhoud" - dat
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).

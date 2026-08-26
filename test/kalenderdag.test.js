@@ -171,7 +171,7 @@ describe("meetbareDomeinen — één breedte-noemer voor beide routes (AT-033)",
     expect(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen)).toContain("bedrijfscontext");
     const m = g.meetbareDomeinen(g.AGENTIC_TEAM_SCHEMA);
     expect(m).not.toContain("bedrijfscontext");
-    expect(m.length).toBe(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen).length - 3); // ook logboek/ritmetaken, zie reviewronde 1
+    expect(m.length).toBe(Object.keys(g.AGENTIC_TEAM_SCHEMA.datadomeinen).length - 4); // ook logboek/ritmetaken/toolstack, zie reviewronde 1
   });
 
   it("werkruimte-rijenroute en metricsroute geven op dezelfde fixture dezelfde noemer en teller", () => {
@@ -240,11 +240,12 @@ describe("reviewronde 1 (b37)", () => {
 
   it("meetbareDomeinen sluit ook logboek en ritmetaken uit; beide routes zien dezelfde noemer", () => {
     const schema = g.AGENTIC_TEAM_SCHEMA;
-    expect(Object.keys(schema.datadomeinen)).toEqual(expect.arrayContaining(["logboek", "ritmetaken"]));
+    expect(Object.keys(schema.datadomeinen)).toEqual(expect.arrayContaining(["logboek", "ritmetaken", "toolstack"]));
     const m = g.meetbareDomeinen(schema);
     expect(m).not.toContain("logboek");
     expect(m).not.toContain("ritmetaken");
-    expect(m.length).toBe(Object.keys(schema.datadomeinen).length - 3);
+    expect(m).not.toContain("toolstack"); // f7, Informatiemanager: tool-register is context, geen werkdata
+    expect(m.length).toBe(Object.keys(schema.datadomeinen).length - 4);
     // werkruimte-klant met logboek+ritmetaken als rijen-domein: telt niet mee
     const rij = { source: "werkruimte", domains: { acties: { rows: [{ Actie: "a" }] }, logboek: { rows: [{ Onderwerp: "x" }] }, ritmetaken: { rows: [{ Taak: "y" }] } } };
     const b1 = g.computeBreedte(rij, schema);
