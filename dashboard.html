@@ -2,8 +2,9 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ZypwnXS1lJ1jCs1K2adH1GClBfI6zqN907gc5EhCnwI=' 'sha256-UBymgUQSJvo0MltCqe09utSx4mxqq3/dHQyR2TTlVeI='">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ZypwnXS1lJ1jCs1K2adH1GClBfI6zqN907gc5EhCnwI=' 'sha256-01vhbron71ShqbKN0OD0qm7O3vDqUij1qNeMhDlIwWE='">
+
 <title>Agentic Team Dashboard</title>
 <style>
 :root {
@@ -18,6 +19,8 @@
   --oranje: #FBBF24;
   --groen-status: #34D399;
   --grijs-status: #6B7280;
+  --paars: #A78BFA;
+  --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -62,6 +65,7 @@ header.top h1 {
   display: flex; align-items: center; gap: 0.5rem;
 }
 header.top .sub { color: var(--grey); font-size: 0.9rem; margin: 0; }
+.kop-kort { display: none; }
 
 .hex-bg {
   position: absolute; inset: 0; z-index: -1; opacity: 0.35; pointer-events: none;
@@ -315,7 +319,6 @@ section.panel {
 }
 
 /* ══ f22: Teamfeed ═══════════════════════════════════════════════════ */
-:root { --paars: #A78BFA; --blauw: #60A5FA; }
 
 .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .feed-rij {
@@ -376,15 +379,234 @@ section.panel {
   .feed-rij .kop, .feed-rij .bericht, .feed-rij .link { grid-column: 2; }
 }
 
+
+/* ══ f25 — waardezones + mobiel-eerst ════════════════════════════════ */
+
+/* ── Tabbar. Eén component, twee plaatsen: onder de kop op desktop, vast
+      onderaan het scherm op mobiel. Altijd dezelfde vier in dezelfde
+      volgorde, zodat je niet hoeft te herleren welk scherm je hebt. ── */
+.tabbar {
+  display: flex; gap: 0.4rem; margin: 0 0 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.6rem;
+}
+.tabbar .tab {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 44px; padding: 0.5rem 0.95rem;
+  color: var(--grey); text-decoration: none; font-size: 0.88rem; font-weight: 600;
+  border: 1px solid transparent; border-radius: 999px;
+}
+.tabbar .tab:hover:not(.actief) { color: var(--mint-light); border-color: rgba(255,255,255,0.14); }
+.tabbar .tab.actief { color: var(--navy); background: var(--mint); border-color: var(--mint); }
+.tabbar .tab-emoji { font-size: 1rem; }
+
+/* ── Vandaag: statusregel en privacybelofte ── */
+.statusregel {
+  font-size: 1.02rem; color: var(--white); font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+.privacy-blok { margin: 0 0 1.5rem; }
+.privacy-uitklap > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: baseline; gap: 0.4rem;
+  color: var(--grey); font-size: 0.82rem; line-height: 1.5;
+}
+.privacy-uitklap > summary::-webkit-details-marker { display: none; }
+.privacy-uitklap .privacy-info { color: var(--mint-light); font-size: 0.85rem; }
+.privacy-uitklap[open] > summary .privacy-info { opacity: 0.6; }
+.privacy-volledig {
+  margin: 0.6rem 0 0; padding: 0.85rem 1rem;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+  color: var(--grey); font-size: 0.8rem; line-height: 1.6;
+}
+.privacy-regel-tekst { color: var(--grey); font-size: 0.82rem; line-height: 1.5; }
+.empty-state .privacy-regel-tekst { display: block; margin-top: 0.9rem; }
+
+/* ── Opbrengst: de harde telling en de schatting mogen niet hetzelfde
+      lezen. De schatting is lichter, met de aanname erbij. ── */
+.kpi-tile.kpi-zacht { border-style: dashed; border-color: rgba(255,255,255,0.14); }
+.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; }
+.kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
+.kpi-instelling { margin-top: 0.45rem; }
+
+/* ── Herkomst-uitklap: alle dataherkomst op één plek, uit de tegels weg ── */
+.herkomst {
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
+  padding: 0.9rem 1.25rem; margin-bottom: 1.5rem;
+}
+.herkomst > summary {
+  cursor: pointer; color: var(--mint-light); font-size: 0.85rem; font-weight: 600;
+  min-height: 32px; display: flex; align-items: center;
+}
+.herkomst .footnote:first-child { margin-top: 0.6rem; }
+
+/* ── Grafieken en tabellen scrollen binnen hun eigen kader in plaats van
+      de pagina scheef te trekken. De min-width houdt de astekst leesbaar:
+      zonder deze regel schaalt de hele SVG mee omlaag tot ~4px letters. ── */
+.chart-scroll, .tabel-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tabel-scroll { margin-top: 1rem; }
+.tabel-scroll .detail-table { margin-top: 0; }
+
+/* ── Feedstrook op de Vandaag-tab: maximaal twee regels, de rest achter
+      "meer" (feed.js vouwt de tekst al eerder in; dit vangt de ene lange
+      regel zonder harde returns af). ── */
+.feed-strook .bericht > p:first-child {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Data-tab ── */
+.data-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0 0.2rem; }
+.data-toolbar input[type="search"] {
+  flex: 1 1 220px; min-height: 40px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  color: var(--white); font-family: var(--font); font-size: 0.85rem; padding: 0.4rem 0.7rem;
+}
+.data-telling { font-size: 0.78rem; color: var(--grey); font-variant-numeric: tabular-nums; }
+
+/* ── Typografie: één stap meer contrast tussen data en uitleg ── */
+.footnote { font-size: 0.72rem; color: #8B92A5; }
+.kpi-kop { color: var(--white); }
+.card .getal, .kpi-getal { letter-spacing: -0.01em; }
+
+/* ── Touch targets ── */
+.feed-pil { min-height: 36px; padding: 0.45rem 0.8rem; }
+.detail-nav a { min-height: 36px; display: inline-flex; align-items: center; padding: 0.4rem 0.75rem; }
+
+@media (max-width: 700px) {
+  /* 1 · vaste tabbar onderaan; de rest van de pagina houdt er ruimte voor vrij */
+  body { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)); }
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    margin: 0; padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+    gap: 0; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: none;
+    background: var(--panel);
+  }
+  .tabbar .tab {
+    flex: 1 1 0; min-height: 52px; flex-direction: column; gap: 0.15rem;
+    padding: 0.35rem 0.2rem; border-radius: 10px; font-size: 0.7rem;
+  }
+  .tabbar .tab-emoji { font-size: 1.15rem; }
+
+  /* 2 · KPI's als 2×2 compacte tegels; de uitleg zit achter de tap
+        (elke tegel opent zijn eigen herkomstpagina) */
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .kpi-tile { padding: 0.8rem 0.85rem; }
+  .kpi-getal { font-size: 1.7rem; }
+  .kpi-tile .kpi-label, .kpi-tile .kpi-som { display: none; }
+
+  /* 3 · een n.v.t.-tegel is op klein scherm ruis — de reden staat in de
+        herkomst-uitklap */
+  .kpi-tile[data-nvt] { display: none; }
+
+  /* 4 · grafieken scrollen horizontaal in plaats van onleesbaar te krimpen.
+        De weekgrafiek heeft twaalf staafjes plus astekst nodig; de
+        agentranking is smaller — die krijgt een lagere ondergrens zodat de
+        waardekolom niet standaard buiten beeld valt. */
+  .chart-scroll > svg { min-width: 620px; }
+  .chart-scroll-smal > svg { min-width: 480px; }
+
+  /* 5 · ingeklapte kop bij scroll: alleen de merkregel blijft staan */
+  header.top { padding: 1.1rem 0 0.9rem; margin-bottom: 1rem; }
+  header.top h1 { font-size: 1.15rem; }
+  .kop-vol { display: none; }
+  .kop-kort { display: inline; }
+  body.kop-klein header.top { padding: 0.5rem 0 0.4rem; margin-bottom: 0.6rem; }
+  body.kop-klein header.top h1 { font-size: 0.95rem; }
+
+  /* 6a · de agentfilter van de feed wordt op mobiel één veegbare rij; acht
+        pillen die wrappen kosten anders het hele eerste scherm — precies de
+        fout die deze herindeling elders juist weghaalt */
+  .feed-filter {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+  .feed-filter .feed-pil { flex: 0 0 auto; }
+  .feed-filter .lbl { flex: 0 0 auto; }
+
+  /* 6 · zones dichter op elkaar, uitleg naar de achtergrond */
+  section.panel { padding: 1.05rem 1rem; margin-bottom: 1rem; }
+  .panel-header .decision { display: none; }
+  .statusregel { font-size: 0.98rem; }
+  .agent-row .naam { flex-basis: 120px; }
+}
+
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen, via de daglink van je Coördinator, live uit je eigen werkruimte.</p>
-    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: je browser haalt de gegevens rechtstreeks op uit je eigen werkruimte-instantie en alles blijft in je browser.</p>
+  <header class="top" id="kop">
+    <h1>🔮 <span class="kop-vol">Agentic Team Dashboard</span><span class="kop-kort">Agentic Team · vandaag</span></h1>
+  </header>
 
+  <!-- ══ Vier tabs, dezelfde volgorde op desktop en mobiel (f25) ══ -->
+  <nav class="tabbar" id="tabbar" aria-label="Hoofdnavigatie" style="display:none;"></nav>
+
+  <div id="empty-state" class="empty-state">
+    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
+    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
+    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
+    verlopen, vraag je Coördinator dan om een nieuwe.</p>
+    <p class="privacy-regel-tekst" id="empty-state-privacy"></p>
+  </div>
+
+  <div id="version-error" style="display:none;"></div>
+
+  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
+
+  <!-- ══ Tab 1 · Vandaag — "wat moet ik nu doen?" ══════════════════════ -->
+  <div id="tab-vandaag" style="display:none;">
+    <p class="statusregel" id="statusregel"></p>
+    <div class="privacy-blok" id="privacy-blok"></div>
+
+    <section class="panel" id="panel-aandacht">
+      <div class="panel-header">
+        <h2>🎯 Vraagt je aandacht</h2>
+        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf.</span>
+      </div>
+      <div id="panel-aandacht-body"></div>
+    </section>
+
+    <section class="panel" id="panel-feed">
+      <div class="panel-header">
+        <h2>📣 <span data-feed-kop>Vandaag in het team</span></h2>
+        <span class="decision">Wat je agents deden — live uit je werkruimte, nieuwste boven.</span>
+      </div>
+      <div id="panel-feed-body"></div>
+    </section>
+
+    <section class="panel" id="panel-opbrengst">
+      <div class="panel-header">
+        <h2>💰 Opbrengst</h2>
+        <span class="decision">Wat levert het me op?</span>
+      </div>
+      <div class="kpi-grid" id="opbrengst-grid"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 2 · Team — de volledige feed (f22) ════════════════════════ -->
+  <div id="tab-team" style="display:none;">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📣 Je team</h2>
+        <span class="decision">Wat doet mijn team, zonder dat ik erom hoef te vragen?</span>
+      </div>
+      <div id="tab-team-body"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 3 · Data — alleen-lezen blik op je eigen werkdata ═════════ -->
+  <div id="tab-data" style="display:none;">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>🗂️ Je gegevens</h2>
+        <span class="decision">Wat staat er precies in mijn werkruimte? Alleen lezen — dit dashboard schrijft nooit.</span>
+      </div>
+      <div id="tab-data-body"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 4 · Prestaties — "hoe staat mijn team ervoor?" ════════════ -->
+  <div id="tab-prestaties" style="display:none;">
     <div class="controls-row">
       <div class="bundle-picker">
         <span class="label">Periode:</span>
@@ -395,34 +617,16 @@ section.panel {
         </select>
       </div>
     </div>
-    <p class="last-used" id="last-used"></p>
-    <p class="last-used" id="status-line"></p>
-    <p class="last-used" id="bundle-info"></p>
-  </header>
-
-  <div id="empty-state" class="empty-state">
-    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
-    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
-    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
-    verlopen, vraag je Coördinator dan om een nieuwe.<br>
-    Niets wordt opgeslagen of verstuurd — je browser leest rechtstreeks uit je eigen werkruimte.</p>
-  </div>
-
-  <div id="version-error" style="display:none;"></div>
-
-  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
-
-  <!-- ══ Homepage: grafieken en aandacht — tekst en uitleg zitten achter de doorklik ══ -->
-  <div id="home-view" style="display:none;">
-    <section class="panel" id="panel-feed">
-      <div class="panel-header">
-        <h2>📣 <span data-feed-kop>Vandaag in het team</span></h2>
-        <span class="decision">Wat je agents deden — live uit je werkruimte, nieuwste boven.</span>
-      </div>
-      <div id="panel-feed-body"></div>
-    </section>
 
     <section class="kpi-grid" id="kpi-grid"></section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📊 Waar het ritme vandaan komt</h2>
+        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot het ritme hierboven.</span>
+      </div>
+      <div id="panel-adoptie-body"></div>
+    </section>
 
     <section class="panel">
       <div class="panel-header">
@@ -434,27 +638,16 @@ section.panel {
 
     <section class="panel">
       <div class="panel-header">
-        <h2>📊 Waar de adoptiescore vandaan komt</h2>
-        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot de adoptiescore hierboven.</span>
-      </div>
-      <div id="panel-adoptie-body"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
-        <h2>🎯 Vraagt je aandacht</h2>
-        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf, samengevat uit de andere zones.</span>
-      </div>
-      <div id="panel-aandacht-body"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
         <h2>👥 Gebruik per agent</h2>
         <span class="decision">Welke agent laat ik links liggen, en waarom?</span>
       </div>
       <div id="panel-gebruik-body"></div>
     </section>
+
+    <details class="herkomst" id="herkomst-uitklap">
+      <summary>Waar komen deze cijfers vandaan?</summary>
+      <div id="herkomst-body"></div>
+    </details>
   </div>
 
   <!-- ══ Detail: de volledige, uitgeschreven zone-inhoud — bereikbaar via elke tegel/grafiek ══ -->
@@ -467,12 +660,10 @@ section.panel {
   </div>
 
   <footer class="app-footer">
-    Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
-    pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
-    nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
-    worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
-    (lokaal, in je browser). Gegenereerd uit registryVersion
-    1.46.0 van AgenticTeamAI/agent-architecture.
+    Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
+    gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
+    op de Vandaag-tab. Gegenereerd uit registryVersion 1.46.0 van
+    AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 
@@ -1850,6 +2041,43 @@ window.AGENTIC_TEAM_SCHEMA = {
 
 </script>
 <script>
+/* Juridisch geladen teksten — bewust op één plek.
+ *
+ * De formuleringen hieronder zijn woordelijk goedgekeurd in de juridische
+ * toets van 26-08-2026 (backlogitem f25). Wijzig ze niet zonder een nieuwe
+ * toets: de één-regelversie is de samenvatting, PRIVACY_UITKLAP is de
+ * juridische tekst en moet in de UI zelf bereikbaar zijn op het moment dat
+ * de belofte wordt gedaan — niet achter een tweede klik of op een andere
+ * pagina.
+ *
+ * Harde voorwaarde bij deze tekst: GEEN TELEMETRIE op dit dashboard. Zodra
+ * er analytics, foutrapportage of een andere meting naar ons bij komt, is
+ * deze tekst onjuist en moet hij mee veranderen. Zie het hoofdstuk
+ * "Geen telemetrie" in de README en test/geen-telemetrie.test.js. */
+
+const PRIVACY_REGEL =
+  "Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.";
+
+const PRIVACY_UITKLAP =
+  "Dit dashboard bewaart en verwerkt zelf geen gegevens. Alles wat je hier ziet, haalt je browser rechtstreeks op bij jouw eigen werkruimte-instantie met de daglink; jouw bedrijfsdata komt niet langs onze servers. De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres). Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Lokaal in je browser worden alleen het moment van laatst laden en je minuten-per-actie-instelling bewaard.";
+
+/* Dezelfde belofte, in de lege staat (nog geen daglink geladen). Bewust
+ * dezelfde strekking en dezelfde grens als hierboven — twee varianten van
+ * één belofte is op zichzelf al een risico. */
+const PRIVACY_LEGE_STAAT =
+  "Je gegevens komen straks rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.";
+
+/* Feed-specifieke variant (f22-tab). Idem: geen absolute claim over al het
+ * verkeer, wel de grens die wél klopt — bedrijfsdata gaat browser ↔ eigen
+ * werkruimte. */
+const PRIVACY_FEED =
+  "Deze feed leest rechtstreeks uit je eigen werkruimte via de daglink; die berichten komen niet langs onze servers.";
+
+if (typeof module !== "undefined") {
+  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
+}
+
+
 /* Hulpfuncties rond schema/schema.generated.js (window.AGENTIC_TEAM_SCHEMA).
  * Puur, geen DOM-afhankelijkheid — apart getest. */
 
@@ -2618,7 +2846,7 @@ function computeZone1(bundle, agentLookup, today) {
   const acties = rows(bundle, "acties");
   if (acties) {
     const qcOpen = acties.filter(r => matchAgentValue(getField(r, "Agent"), agentLookup) === "quality-control" && getField(r, "Status") !== "Klaar");
-    if (qcOpen.length) items.push({ type: "qc", ernst: "rood", label: `${qcOpen.length} QC-bevinding(en) die een menselijke blik vragen`, rows: qcOpen });
+    if (qcOpen.length) items.push({ type: "qc", ernst: "rood", label: `${qcOpen.length} punt(en) uit de kwaliteitscontrole wachten op jou`, rows: qcOpen });
 
     const overDeadline = acties.filter(r => {
       const dt = parseDateField(getField(r, "Deadline"));
@@ -2669,6 +2897,31 @@ function voegContextToeAanAandacht(items, z2) {
     return [{ type: "context", ernst: "rood", label: `Bedrijfscontext vraagt aandacht: ${z2.reden}`, rows: null }, ...items];
   }
   return items;
+}
+
+// f25 - Ritme van je team (de oude adoptiescore) hoort in de Prestaties-zone,
+// niet als hoofdcijfer. Maar zakt hij onder de drempel, dan is hij wel degelijk
+// iets waar de gebruiker vandaag iets mee moet - dan (en alleen dan) komt hij
+// omhoog in de aandachtlijst. Zelfde vorm als voegContextToeAanAandacht:
+// puur tekstueel samenvoegen van een al berekend resultaat, geen databron,
+// en idempotent zodat de metrics-route hem niet dubbel krijgt.
+const RITME_DREMPEL_PCT = 70;
+
+function voegRitmeToeAanAandacht(items, adopt) {
+  if (items.some(it => it.type === "ritme")) return items;
+  // null = geen enkele subscore berekenbaar. Dan weten we het niet, en
+  // "niet te berekenen" is geen aandachtspunt (nooit een ontbrekende bron
+  // als een slechte score presenteren).
+  if (!adopt || adopt.adoptiescore === null || adopt.adoptiescore === undefined) return items;
+  if (adopt.adoptiescore >= RITME_DREMPEL_PCT) return items;
+  const item = {
+    type: "ritme",
+    ernst: "oranje",
+    label: `Ritme van je team staat op ${adopt.adoptiescore}% (onder ${RITME_DREMPEL_PCT}%) - kijk waar het zakt`,
+    rows: null,
+  };
+  // Oranje: achter rood en grijs aan, net als de sortering in computeZone1.
+  return items.concat([item]);
 }
 
 // -- Homepage - Activiteit per week --------------------------------------
@@ -3043,7 +3296,7 @@ if (typeof module !== "undefined") {
     RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
     kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen, NIET_MEETBARE_DOMEINEN,
     computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
-    voegContextToeAanAandacht, computeActiviteitPerWeek,
+    voegContextToeAanAandacht, voegRitmeToeAanAandacht, RITME_DREMPEL_PCT, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
@@ -3387,7 +3640,7 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
 
   const z1ruw = computeZone1(bundle, agentLookup, today);
   const z2 = computeZone2(bundle, today);
-  const z1 = voegContextToeAanAandacht(z1ruw, z2);
+  const z1MetContext = voegContextToeAanAandacht(z1ruw, z2);
   const z3 = computeZone3(bundle, agentLookup, schema, today, periodDays);
   const z4 = computeZone4(bundle, today, periodDays);
   const z5 = computeZone5(bundle, today, periodDays);
@@ -3398,6 +3651,9 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
   const agentUsage = computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
   const correctievrij = computeCorrectievrij(bundle, today);
+  // f25: het ritme (de oude adoptiescore) komt alleen omhoog in de aandachtlijst
+  // als hij onder de drempel zakt — daarom pas hier, na computeAdoptiescore().
+  const z1 = voegRitmeToeAanAandacht(z1MetContext, adopt);
 
   return {
     versie: METRICS_VERSION,
@@ -3453,7 +3709,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const activiteit = buildActiviteitFromMetrics(weekreeksBlock, (raw.periode && raw.periode.weken) || 12);
   const z1 = buildZone1FromMetricsAandacht(raw.aandacht, domeinenBlock, today);
   const z2 = computeZone2({ bedrijfscontext: raw.bedrijfscontext ? mapBedrijfscontextBlock(raw.bedrijfscontext) : "niet-ondersteund-door-bundel" }, today);
-  const z1Compleet = voegContextToeAanAandacht(z1, z2);
+  const z1MetContext = voegContextToeAanAandacht(z1, z2);
   const z3 = buildZone3FromMetrics(agentsBlock, schema);
   const z4 = buildZone4FromMetrics(raw);
   const z5 = buildZone5FromMetrics(raw.lessen);
@@ -3462,6 +3718,8 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const agentUsage = buildAgentUsageFromMetrics(agentsBlock, schema);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
   const correctievrij = buildCorrectievrijFromMetrics(raw.correctievrij || null, today);
+  // f25: zie de rijenroute — zelfde regel, zelfde drempel, op beide routes.
+  const z1Compleet = voegRitmeToeAanAandacht(z1MetContext, adopt);
 
   const domeinenGevonden = domeinenBlock ? Object.keys(domeinenBlock).length : 0;
 
@@ -4013,15 +4271,18 @@ if (typeof module !== "undefined") {
 const FEED_SOORTEN = {
   rondestart:      { icoon: "🏁", label: "werkronde gestart" },
   overdracht:      { icoon: "🤝", label: "overdracht" },
-  qc_goedgekeurd:  { icoon: "🛡️", label: "QC: goedgekeurd" },
-  qc_review_nodig: { icoon: "🛡️", label: "QC: menselijke blik nodig" },
+  // f25: mensentaal in plaats van QC-jargon — de kleurstip (styles.css)
+  // draagt het onderscheid, het label hoeft het niet te herhalen.
+  qc_goedgekeurd:  { icoon: "🛡️", label: "klaar" },
+  qc_review_nodig: { icoon: "🛡️", label: "wacht op jou" },
   voorstel:        { icoon: "💡", label: "voorstel" },
   afgerond:        { icoon: "✅", label: "afgerond" },
   update:          { icoon: "💬", label: "update" },
 };
 const FEED_OPEN_LUS_MS = 90 * 60 * 1000;
 const FEED_INVOUW_TEKENS = 450;
-const FEED_STROOK_MAX = 5;
+const FEED_STROOK_INVOUW_TEKENS = 150;  // f25: strookberichten passen in twee regels
+const FEED_STROOK_MAX = 3;   // f25: de Vandaag-tab toont drie, de rest op de Team-tab
 const FEED_FILTER_KEY = "agentic-team-dashboard:feed-filter";
 
 function feedDagKey(d) {
@@ -4087,7 +4348,7 @@ function feedInline(tekst) {
 
 /* Feed-markdown (conventie uit post_activity): kernzin, **vette** kopregels,
  * `- `-items. Meer niet. Lange berichten worden ingevouwen. */
-function feedTekstHtml(bericht) {
+function feedTekstHtml(bericht, invouwVanaf = FEED_INVOUW_TEKENS, kortTot = 220) {
   const regels = String(bericht || "").split(/\r?\n/);
   let html = "", lijst = [];
   const flush = () => { if (lijst.length) { html += `<ul>${lijst.map(l => `<li>${feedInline(l)}</li>`).join("")}</ul>`; lijst = []; } };
@@ -4100,9 +4361,9 @@ function feedTekstHtml(bericht) {
     else html += `<p>${feedInline(t)}</p>`;
   }
   flush();
-  if (bericht && bericht.length > FEED_INVOUW_TEKENS) {
+  if (bericht && bericht.length > invouwVanaf) {
     const eerste = regels.find(r => r.trim() && !/^\s*-\s+/.test(r)) || "";
-    const kort = feedInline(eerste.slice(0, 220).replace(/\*\*/g, "")) + "…";
+    const kort = feedInline(eerste.slice(0, kortTot).replace(/\*\*/g, "")) + "…";
     return `<p>${kort}</p><details><summary>meer</summary>${html}</details>`;
   }
   return html || `<p class="footnote">(leeg bericht)</p>`;
@@ -4122,7 +4383,7 @@ function feedDagLabel(key, today) {
   return { rel, dat: `${dagen[d.getDay()]} ${d.getDate()} ${mnd[d.getMonth()]}` };
 }
 
-function feedRijHtml(it) {
+function feedRijHtml(it, kort) {
   const so = FEED_SOORTEN[it.soort];
   const agentHtml = it.agentSlug
     ? `<a class="agent" href="#/detail/agent/${esc(it.agentSlug)}">${it.agentEmoji} ${esc(it.agentNaam)}</a>`
@@ -4130,7 +4391,10 @@ function feedRijHtml(it) {
   const actieHtml = it.actie
     ? `<span class="sep">·</span><span class="actie">${esc(it.actie)}</span><span class="label">${esc(so.label)}</span>`
     : `<span class="sep">·</span><span class="actie">${esc(so.label)}</span>`;
-  const bericht = it.openLus ? "<p>afgerond — geen samenvatting</p>" : feedTekstHtml(it.bericht);
+  // f25: op de Vandaag-strook maximaal twee regels, de rest achter "meer";
+  // op de Team-tab het bestaande, ruimere invouwpunt.
+  const bericht = it.openLus ? "<p>afgerond — geen samenvatting</p>"
+    : (kort ? feedTekstHtml(it.bericht, FEED_STROOK_INVOUW_TEKENS, FEED_STROOK_INVOUW_TEKENS) : feedTekstHtml(it.bericht));
   const icoon = it.openLus ? "⏱" : so.icoon;
   const title = it.openLus ? ` title="Gestart om ${feedTijd(it.tijd)}, geen afronding gemeld"` : "";
   const link = it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">🔗 bron</a>` : "";
@@ -4173,8 +4437,8 @@ function renderFeedPanel(el, ctx) {
   }
   const vandaag = feedDagKey(ctx.today);
   if (kopEl) kopEl.textContent = items[0].dag === vandaag ? "Vandaag in het team" : "Laatste activiteit in het team";
-  el.innerHTML = `<ul class="feed">${items.slice(0, FEED_STROOK_MAX).map(feedRijHtml).join("")}</ul>
-    <a class="detail-link" data-goto="feed">Alle ${items.length} berichten →</a>`;
+  el.innerHTML = `<ul class="feed feed-strook">${items.slice(0, FEED_STROOK_MAX).map(it => feedRijHtml(it, true)).join("")}</ul>
+    <a class="detail-link" href="#/team">Alle ${items.length} berichten →</a>`;
 }
 
 // ── Detail-tab ────────────────────────────────────────────────────────
@@ -4225,7 +4489,7 @@ function renderDetailFeed(el, ctx) {
     <p class="footnote" style="margin-top:0">Wat je agent-team doet, nieuwste boven — laatste 30 dagen, ${items.length} berichten. Signalering, geen archief: het resultaat zelf staat bij de actie.</p>
     <div class="feed-filter" data-feed-pillen>${pillen()}</div>
     <div data-feed-lijst>${lijst()}</div>
-    <div class="grijs-blok" style="margin-top:1.2rem"><div class="grijs-tekst">ℹ️ Deze feed leest live uit je eigen werkruimte via de daglink. Er wordt niets opgeslagen of naar ons verstuurd. Een <strong>werkronde gestart</strong> zonder afronding binnen 90 minuten tonen we als "afgerond — geen samenvatting".</div></div>`;
+    <div class="grijs-blok" style="margin-top:1.2rem"><div class="grijs-tekst">ℹ️ ${esc(PRIVACY_FEED)} Een <strong>werkronde gestart</strong> zonder afronding binnen 90 minuten tonen we als "afgerond — geen samenvatting".</div></div>`;
 
   el.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-feed-filter]");
@@ -4242,17 +4506,30 @@ if (typeof module !== "undefined") {
 }
 
 
-/* Homepage: KPI-tegels, grafieken, adoptiescore-balken, aandacht-top-5 en
- * gebruik-per-agent — plus de doorklik naar het detail (de oude, volledige
- * zone-inhoud die van de homepage is verhuisd, niet verwijderd). Rendering
- * only; de berekeningen zelf staan in zones.js (puur, geen DOM) zodat ze
- * zonder browser te testen zijn. */
+/* Homepage: de vier tabs (Vandaag · Team · Data · Prestaties), hun tegels en
+ * panelen, plus de doorklik naar het detail (de volledige, uitgeschreven
+ * zone-inhoud). Rendering only; de berekeningen zelf staan in zones.js
+ * (puur, geen DOM) zodat ze zonder browser te testen zijn.
+ *
+ * f25 — de indeling volgt één vraag per zone: Vandaag = "wat moet ik nu
+ * doen?", Team = "wat deden ze?", Data = "wat staat er in mijn werkruimte?",
+ * Prestaties = "hoe staat mijn team ervoor?". De adoptiescore heet naar de
+ * gebruiker toe "Ritme van je team" en staat bewust NIET bovenaan: hij zegt
+ * iets over de gebruiker, niet over ons. Zakt hij onder de drempel, dan
+ * komt hij vanzelf omhoog als aandachtspunt (zones.js). */
+
+const TABS = [
+  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team" },
+  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data" },
+  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties" },
+];
 
 const DETAIL_VOLGORDE = [
   { key: "feed", titel: "Teamfeed", emoji: "📣" },
   { key: "aandacht", titel: "Vraagt je aandacht", emoji: "🎯" },
   { key: "context", titel: "Contextgezondheid", emoji: "🧭" },
-  { key: "adoptiescore", titel: "Adoptiescore — herkomst", emoji: "📊" },
+  { key: "adoptiescore", titel: "Ritme — herkomst", emoji: "📊" },
   { key: "activiteit", titel: "Activiteit per week", emoji: "📈" },
   { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
   { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
@@ -4261,69 +4538,181 @@ const DETAIL_VOLGORDE = [
   { key: "leren", titel: "Leren", emoji: "💡" },
 ];
 
+// Onder welke tab hoort een detailpagina? Zo blijft de tabbar staan (en de
+// juiste tab gemarkeerd) terwijl je een verdieping open hebt.
+const DETAIL_TAB = {
+  feed: "team",
+  aandacht: "vandaag",
+  opbrengst: "vandaag",
+  tijdwinst: "vandaag",
+  context: "prestaties",
+  adoptiescore: "prestaties",
+  activiteit: "prestaties",
+  gebruik: "prestaties",
+  correctievrij: "prestaties",
+  leren: "prestaties",
+};
+
 function nlGetal(n, decimals = 0) {
   return Number(n).toLocaleString("nl-NL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-// ── KPI-tegels ────────────────────────────────────────────────────────
-function renderKpiTegels(el, ctx) {
-  const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
-  // i25: correctievrij kan ontbreken in oudere ctx-objecten (bv. tests) —
-  // dan hetzelfde pad als "geen blok". De tegel zelf is intern: alleen
-  // zichtbaar met ctx.intern (zie werkruimte-loader), nooit voor klanten.
-  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
-  const cvKpi = correctievrijKpi(cv);
+// ── Tabbar ────────────────────────────────────────────────────────────
+// Gewone links: toetsenbordnavigatie en "open in nieuw tabblad" gratis, en
+// de hash-router doet de rest. Op mobiel plakt deze balk onderaan (styles.css).
+function renderTabbar(el, activeTab) {
+  // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
+  // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
+  const kort = document.querySelector(".kop-kort");
+  const actief = TABS.find(t => t.key === activeTab);
+  if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
+  el.innerHTML = TABS.map(t =>
+    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
+      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
+    </a>`).join("");
+}
 
-  const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
-  const adoptieLabel = adopt.adoptiescore === null
-    ? "Geen enkele subscore is te berekenen in deze bundel"
-    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+// ── Vandaag · statusregel ─────────────────────────────────────────────
+// Antwoordt op "draaide mijn team eigenlijk?" vóór welk cijfer dan ook.
+// Leest alleen wat er al is: de nieuwste teamfeed-post, anders de nieuwste
+// tijdstempel van de opgehaalde domeinen, anders het moment waarop het
+// metricsbestand is gemaakt. Nooit een tijd verzinnen.
+function laatsteActiviteit(ctx) {
+  let nieuwste = null;
+  const bump = (d) => { if (d && !isNaN(d.getTime()) && (!nieuwste || d > nieuwste)) nieuwste = d; };
+  const feed = ctx.bundle && ctx.bundle.teamfeed;
+  if (feed && Array.isArray(feed.entries)) {
+    for (const e of feed.entries) bump(new Date(e && (e.aangemaakt || e.bijgewerkt)));
+  }
+  const domains = (ctx.bundle && ctx.bundle.domains) || {};
+  for (const d of Object.values(domains)) bump(d && d.staleAt);
+  if (ctx.metricsMeta) bump(ctx.metricsMeta.gegenereerdOp);
+  return nieuwste;
+}
 
+function renderStatusregel(el, ctx) {
+  const dt = laatsteActiviteit(ctx);
+  if (!dt) { el.textContent = "Nog geen activiteit gevonden in deze bundel."; return; }
+  const dagen = daysBetween(ctx.today, dt);
+  const tijd = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+  el.textContent = dagen === 0
+    ? `Je team draaide vandaag — laatst bijgewerkt ${tijd}.`
+    : `Laatste activiteit: ${fmtDate(dt)} (${relAge(dt, ctx.today)}).`;
+}
+
+// ── Vandaag · privacybelofte ──────────────────────────────────────────
+// De één-regelversie is de samenvatting, de uitklap is de juridische tekst
+// (toets 26-08-2026). De uitklap moet hier staan — in de UI, op het moment
+// dat de belofte wordt gedaan — en mag niet naar een andere pagina
+// verhuizen. Zie src/teksten.js.
+function renderPrivacyBlok(el) {
+  el.innerHTML = `<details class="privacy-uitklap">
+    <summary><span class="privacy-regel-tekst">${esc(PRIVACY_REGEL)}</span><span class="privacy-info" aria-hidden="true">ⓘ</span></summary>
+    <p class="privacy-volledig">${esc(PRIVACY_UITKLAP)}</p>
+  </details>`;
+}
+
+// ── Vandaag · Opbrengst — twee tegels ─────────────────────────────────
+// Eén harde telling en één schatting. De schatting krijgt bewust een andere,
+// lichtere behandeling (kpi-zacht) zodat hij niet als meting leest.
+function renderOpbrengstKpis(el, ctx) {
+  const { tijdwinst } = ctx;
   const uren = nlGetal(tijdwinst.uren, 1);
-  const som = `${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`;
-
   const actiesGetal = tijdwinst.berekenbaar ? tijdwinst.afgerond : "n.v.t.";
   const actiesLabel = tijdwinst.berekenbaar
-    ? `van ${tijdwinst.totaal} acties in de bundel (geen aanmaakdatum in dit domein — geen periodefilter mogelijk)`
+    ? `van ${tijdwinst.totaal} acties in de bundel`
     : "Geen Acties-domein aanwezig in deze bundel.";
-
   const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
-  const tijdwinstSom = tijdwinst.berekenbaar ? som : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
+  const som = tijdwinst.berekenbaar
+    ? `${tijdwinst.afgerond} × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`
+    : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
 
   el.innerHTML = `
-    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
-      <div class="kpi-getal">${esc(adoptieWaarde)}</div>
-      <div class="kpi-kop">Adoptiescore</div>
-      <div class="kpi-label">${esc(adoptieLabel)}</div>
-    </div>
-    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
+    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button"${tijdwinst.berekenbaar ? "" : ' data-nvt="1"'}>
       <div class="kpi-getal">${esc(actiesGetal)}</div>
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
+    </div>
+    <div class="kpi-tile kpi-zacht" data-goto="tijdwinst" tabindex="0" role="button">
+      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
+      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-aanname">schatting op basis van jouw aanname, geen meting</div>
+      <div class="kpi-instelling" data-stop-nav="1">
+        <label class="minuten-input-label">min/actie
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(ctx.minutenPerActie)}">
+        </label>
+      </div>
+      <div class="kpi-som">${esc(som)}</div>
+    </div>`;
+}
+
+// ── Prestaties · tegels ───────────────────────────────────────────────
+// De adoptiescore heet hier "Ritme van je team". De berekening verandert
+// niet: het is exact dezelfde score, met dezelfde narekenbare herkomst.
+function renderPrestatieKpis(el, ctx) {
+  const { adopt, sporenTotaal, periodWeeks } = ctx;
+  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
+  const cvKpi = correctievrijKpi(cv);
+
+  const ritmeWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
+  const ritmeLabel = adopt.adoptiescore === null
+    ? "Geen enkele subscore is te berekenen in deze bundel"
+    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+
+  el.innerHTML = `
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button"${adopt.adoptiescore === null ? ' data-nvt="1"' : ""}>
+      <div class="kpi-getal">${esc(ritmeWaarde)}</div>
+      <div class="kpi-kop">Ritme van je team</div>
+      <div class="kpi-label">${esc(ritmeLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
       <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
     </div>
-    ${ctx.intern ? `<div class="kpi-tile kpi-intern" data-goto="correctievrij" tabindex="0" role="button">
+    ${ctx.intern ? `<div class="kpi-tile kpi-intern" data-goto="correctievrij" tabindex="0" role="button"${cvKpi.getal === "n.v.t." ? ' data-nvt="1"' : ""}>
       <div class="kpi-getal">${esc(cvKpi.getal)}</div>
       <div class="kpi-kop">Correctievrij (4 wk)</div>
       <div class="kpi-som">${esc(cvKpi.gate)}</div>
       <div class="kpi-label">${esc(cvKpi.label)}</div>
-    </div>` : ""}
-    <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
-      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
-      <div class="kpi-kop">Geschatte tijdwinst</div>
-      <div class="kpi-som">${esc(tijdwinstSom)}</div>
-      <div class="kpi-label">
-        Schatting op basis van jouw aanname, geen meting ·
-        <label class="minuten-input-label" data-stop-nav="1">
-          min/actie
-          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(minutenPerActie)}">
-        </label>
-      </div>
-    </div>`;
+    </div>` : ""}`;
+}
+
+// ── Prestaties · "Waar komen deze cijfers vandaan?" ───────────────────
+// Alle dataherkomst, bundelinfo en "niet in deze bundel"-waarschuwingen op
+// één plek. Uit de tegels weg: daar stond de voetnoot in bijna dezelfde
+// weging als het cijfer zelf.
+function renderHerkomst(el, ctx) {
+  const regels = [];
+
+  if (ctx.bundle.kind === "metrics") {
+    const meta = ctx.metricsMeta;
+    const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
+    regels.push(`<strong>Bundel:</strong> ${esc(meta.bronLabel)} — kant-en-klaar metricsbestand v${METRICS_VERSION}, gegenereerd op ${esc(gen)}${meta.door ? ` door ${esc(meta.door)}` : ""}, ${esc(meta.domeinenGevonden)} domein(en) met tellingen. De periode ligt vast in dat bestand en is hier niet aanpasbaar.`);
+  } else {
+    regels.push(`<strong>Bundel:</strong> ${esc(ctx.bundle.sourceLabel)} — live opgehaald uit je werkruimte-instantie, ${esc(Object.keys(ctx.bundle.domains).length)} domein(en) gevonden.`);
+  }
+
+  const ontbrekend = RITME_BRONNEN.filter(b => !ctx.activiteit.aanwezigeBronnen.includes(b));
+  if (ontbrekend.length) {
+    regels.push(`<strong>Niet in deze bundel:</strong> ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.`);
+  }
+
+  const nvt = ctx.adopt.componenten.filter(c => !c.berekenbaar).map(c => `${esc(c.label)}: ${esc(c.reden)}`);
+  if (!ctx.tijdwinst.berekenbaar) nvt.push("Acties afgerond en geschatte tijdwinst: geen Acties-domein aanwezig in deze bundel.");
+  if (ctx.intern && ctx.correctievrij && !ctx.correctievrij.aanwezig) nvt.push(`Correctievrij: ${esc(ctx.correctievrij.reden || "niet beschikbaar in deze bundel")}`);
+  if (nvt.length) regels.push(`<strong>Waarom staat er n.v.t.:</strong><br>${nvt.join("<br>")}`);
+
+  regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
+  regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
+  regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  regels.push(`<strong>Geschatte tijdwinst</strong> is een schatting op basis van jouw eigen aanname, geen meting: afgeronde acties × de minuten-per-actie die je op de Vandaag-tab instelt.`);
+  regels.push(`Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module nergens een spoor, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt.`);
+
+  const laatst = leesLaatstGebruikt();
+  if (laatst) regels.push(`<strong>Laatst geladen:</strong> ${esc(laatst)}`);
+
+  el.innerHTML = regels.map(r => `<p class="footnote">${r}</p>`).join("");
 }
 
 // ── Activiteit per week (gestapelde staafgrafiek) ───────────────────────
@@ -4339,13 +4728,12 @@ function renderActiviteitPanel(el, activiteit, periodWeeks) {
   const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
   const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels });
   const ontbrekend = RITME_BRONNEN.filter(b => !activiteit.aanwezigeBronnen.includes(b));
-  el.innerHTML = `${chart}
-    <p class="footnote">Elke serie komt uit zijn eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.</p>
-    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.</p>` : ""}
+  el.innerHTML = `<div class="chart-scroll">${chart}</div>
+    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")}.</p>` : ""}
     <a class="detail-link" data-goto="activiteit">Bekijk per week in detail →</a>`;
 }
 
-// ── Adoptiescore — drie balken naast elkaar ─────────────────────────────
+// ── Ritme — drie balken naast elkaar ────────────────────────────────────
 function renderAdoptieSubscores(el, adopt) {
   const kolommen = adopt.componenten.map(c => {
     if (!c.berekenbaar) {
@@ -4367,9 +4755,11 @@ function renderAdoptieSubscores(el, adopt) {
 
   const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
   const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  // De narekenbaarheid blijft bij het cijfer staan — dat is geen herkomst-
+  // voetnoot maar de belofte zelf: je moet het met de hand kunnen volgen.
   const rekenregel = berekenbaar.length
-    ? `De adoptiescore is het gemiddelde van de ${berekenbaar.length} berekenbare subscore(s) hierboven, met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
-    : "Geen van de drie subscores is in deze bundel te berekenen — de adoptiescore blijft daarom leeg (n.v.t.), nooit 0%.";
+    ? `Met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
+    : "Geen van de drie subscores is in deze bundel te berekenen — het ritme blijft daarom leeg (n.v.t.), nooit 0%.";
 
   el.innerHTML = `<div class="subscore-grid">${kolommen}</div>
     <p class="footnote">${esc(rekenregel)}</p>
@@ -4410,8 +4800,7 @@ function renderGebruikPanel(el, agentUsage) {
   const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
   const top = agentUsage.ranking.slice(0, MAX_TONEN);
   const chart = buildHorizontalBarChart({ items: top });
-  el.innerHTML = `${chart}
-    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" in deze grafiek betekent geen spoor gevonden in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+  el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
     <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
@@ -4440,7 +4829,7 @@ function renderDetailAdoptiescore(el, adopt, periodWeeks) {
   const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
   const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
   el.innerHTML = `
-    <p>De adoptiescore is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
+    <p>Het <strong>ritme van je team</strong> (voorheen: de adoptiescore) is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
     <div class="grid-9">${rows}</div>
     <p class="footnote"><strong>Formules:</strong><br>
     Ritme = weken met minstens één spoor (rij met een datum in Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender) ÷ aantal weken in de periode.<br>
@@ -4511,10 +4900,10 @@ function renderDetailCorrectievrij(el, cv) {
       <div class="card ${gateKlasse}"><div class="kop">Gate f19</div><div class="getal">${g.gehaald ? "gehaald ✓" : "nog niet"}</div><div class="detail">${esc(g.wekenGehaald)}/${esc(g.wekenVereist)} weken ≥ ${esc(cv.drempel)}% · ${esc(gateTekst)}</div></div>
     </div>
     <h3>Per kalenderweek (maandag = weekstart)</h3>
-    <table class="detail-table">
+    <div class="tabel-scroll"><table class="detail-table">
       <thead><tr><th>Week van</th><th>Autonoom afgerond</th><th>Gecorrigeerd</th><th>Correctievrij</th><th>Status</th></tr></thead>
       <tbody>${rijen || `<tr><td colspan="5">Geen weekgegevens in deze bundel.</td></tr>`}</tbody>
-    </table>
+    </table></div>
     <p class="footnote"><strong>Definities.</strong> <em>Autonoom afgerond</em> = een agent zette de actie zelf op "Klaar" nadat de kwaliteitscontrole akkoord gaf; het veld <em>Afgerond door</em> draagt dan de agentnaam en <em>Afgerond op</em> de datum. <em>Gecorrigeerd</em> = een mens vinkte daarna <em>Gecorrigeerd</em> aan (met de reden in <em>Correctie</em>) óf heropende de actie (status niet meer "Klaar"). Een afkeuring door de kwaliteitscontrole vóór de afronding telt <strong>niet</strong> als correctie — dat is het normale werkproces. Het venster is de laatste ${esc(cv.vensterDagen)} dagen tot en met vandaag; de weektabel telt alle autonoom afgeronde acties per kalenderweek.</p>
     <p class="footnote"><strong>Gate f19</strong> (fase 1 en verder): ${esc(g.wekenVereist)} aaneengesloten <em>afgesloten</em> kalenderweken (weekstart + 7 dagen ≤ vandaag), elk met minstens één autonoom afgeronde actie en een weekpercentage ≥ ${esc(cv.drempel)}%. De lopende week telt nog niet mee.</p>
     ${cv.opmerking ? `<p class="footnote">Opmerking van de Coördinator: ${esc(cv.opmerking)}</p>` : ""}
@@ -4532,11 +4921,11 @@ function renderDetailActiviteit(el, activiteit, periodWeeks) {
   const tabelRijen = activiteit.buckets.map(b =>
     `<tr><td>${esc(b.label)}</td><td>${b.values.interacties}</td><td>${b.values.dagverslagen}</td><td>${b.values.lessen_inzichten}</td><td>${b.values.content_kalender}</td><td><strong>${b.totaal}</strong>${b.leeg ? " — geen" : ""}</td></tr>`
   ).join("");
-  el.innerHTML = `${chart}
-    <table class="detail-table">
+  el.innerHTML = `<div class="chart-scroll">${chart}</div>
+    <div class="tabel-scroll"><table class="detail-table">
       <thead><tr><th>Week van</th><th>Interacties</th><th>Dagverslagen</th><th>Lessen</th><th>Content</th><th>Totaal</th></tr></thead>
       <tbody>${tabelRijen}</tbody>
-    </table>
+    </table></div>
     <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
 }
 
@@ -4588,7 +4977,7 @@ function renderDetailAgent(el, slug, ctx) {
         `<tr><td>${esc(i.titel)}</td><td>${i.status ? esc(String(i.status)) : ""}</td><td>${i.datum ? fmtDate(i.datum) : "—"}</td></tr>`).join("");
       const rest = items.length > MAX ? `<p class="footnote">… en nog ${items.length - MAX} — zie de bron zelf.</p>` : "";
       return `<h3>${kop} (${items.length})</h3>
-        <table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table>${rest}`;
+        <div class="tabel-scroll"><table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table></div>${rest}`;
     }
     lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
   } else {
@@ -4604,21 +4993,234 @@ function renderDetailAgent(el, slug, ctx) {
 }
 
 // ── Router ────────────────────────────────────────────────────────────
+// Vier top-level tabs plus de bestaande detailroutes, die ongewijzigd
+// blijven: elke bestaande #/detail/…-link (en de f4-agentdoorklik) werkt
+// precies zoals hij werkte. Geeft altijd {soort, …} terug.
+//   {soort:"tab", tab}                 #/ · #/team · #/data · #/prestaties
+//   {soort:"data", domein}             #/data/<domein>
+//   {soort:"detail", key, tab}         #/detail/<key> · #/detail/agent/<slug>
 function bepaalActieveView() {
   const hash = window.location.hash || "";
+
   const ag = hash.match(/^#\/?detail\/agent\/([a-z0-9-]+)/);
-  if (ag) return "agent/" + ag[1];
+  if (ag) return { soort: "detail", key: "agent/" + ag[1], tab: "prestaties" };
+
   const m = hash.match(/^#\/?detail\/([a-z]+)/);
-  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
-  return null;
+  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) {
+    return { soort: "detail", key: m[1], tab: DETAIL_TAB[m[1]] || "vandaag" };
+  }
+
+  const dom = hash.match(/^#\/data\/([a-z0-9_]+)/);
+  if (dom) return { soort: "data", domein: dom[1], tab: "data" };
+
+  const tab = hash.match(/^#\/([a-z]+)/);
+  if (tab && TABS.some(t => t.key === tab[1])) return { soort: "tab", tab: tab[1] };
+
+  return { soort: "tab", tab: "vandaag" };
+}
+
+
+/* f25 — Data-tab: een alleen-lezen blik op de werkdata die al in de bundel
+ * zit. Geen nieuwe fetch, geen nieuw endpoint, geen nieuwe scope: dit toont
+ * uitsluitend `bundle.domains`, dat werkruimte-loader.js sowieso al ophaalt,
+ * met de veldnamen uit het registryschema.
+ *
+ * Dit is NIET f23. f23 (entries aanmaken/wijzigen/verwijderen vanuit de
+ * browser) is bewust geparkeerd tot p10/OAuth: de daglink heeft scope "lees"
+ * en dat is precies de eigenschap die hem veilig maakt om in een chat te
+ * delen. Hier wordt niets geschreven.
+ *
+ * Alle waarden komen uit de werkruimte van de klant en zijn dus vreemde
+ * invoer: elke cel, elke kolomkop en elke domeinnaam gaat door esc(). */
+
+const DATA_MAX_RIJEN = 200;
+const DATA_MAX_KOLOMMEN = 6;
+
+// Domeinen die per opzet nooit als rijen in de bundel zitten. We laten ze
+// niet stil weg — een leeg lijstje zonder uitleg leest als "er is niets",
+// terwijl het "dit haalt dit dashboard niet op" is.
+const DATA_NIET_IN_BUNDEL = {
+  logboek: "werkgeheugen van je agents — bewust niet in het dashboard",
+  bedrijfscontext: "geen rijen maar losse onderdelen — zie Contextgezondheid",
+  teamfeed: "staat op de Team-tab",
+  dashboard_metrics: "de cijfers zelf, geen werkdata",
+  bronkoppeling: "instelling: welk domein in welk systeem woont",
+};
+
+let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
+
+function dataVelden(domein) {
+  return Array.isArray(domein && domein.velden) ? domein.velden : [];
+}
+
+function dataDatumVeld(domein) {
+  const v = dataVelden(domein).find(f => f.type === "datum");
+  return v ? v.naam : null;
+}
+
+/* Een cel kan een string, getal, checkbox, of (multi_select) een lijst zijn.
+ * Alles wordt tekst; leeg blijft leeg (nooit "undefined" op het scherm). */
+function dataCelTekst(waarde) {
+  if (waarde === null || waarde === undefined || waarde === "") return "";
+  if (Array.isArray(waarde)) return waarde.map(dataCelTekst).filter(Boolean).join(", ");
+  if (typeof waarde === "boolean") return waarde ? "ja" : "nee";
+  if (typeof waarde === "object") return "";
+  return String(waarde);
+}
+
+/* De lijst die je kunt openen: alle datadomeinen uit de registry, behalve de
+ * domeinen die per opzet niet als rijen worden opgehaald. */
+function dataBrowsbareDomeinen(schema) {
+  return Object.keys(schema.datadomeinen)
+    .filter(k => !(k in DATA_NIET_IN_BUNDEL))
+    .map(k => ({ key: k, ...schema.datadomeinen[k] }));
+}
+
+function dataRijenVan(ctx, key) {
+  const dom = ctx.bundle && ctx.bundle.domains ? ctx.bundle.domains[key] : null;
+  return dom && Array.isArray(dom.rows) ? dom.rows : null;
+}
+
+/* Metricsbestand: de Coördinator levert dan alleen totalen aan, geen rijen.
+ * Zelfde eerlijke uitleg als op de agentdetailpagina — nooit een lege tabel
+ * die suggereert dat de werkruimte leeg is. */
+function dataMetricsUitleg() {
+  return `<div class="grijs-blok">
+    <div class="grijs-kop">❔ Deze bundel draagt geen rijen</div>
+    <div class="grijs-tekst">Je dashboard leest vandaag een kant-en-klaar metricsbestand: dat bevat de tellingen,
+    niet de onderliggende regels. Wil je hier je acties, deals en lessen doorbladeren, dan moeten de werkdata-rijen
+    in je werkruimte staan in plaats van alleen een dagelijks metricsbestand. Vraag je Coördinator waar je werkdata
+    woont — dat staat in de bronkoppeling.</div>
+  </div>`;
+}
+
+// ── Overzicht (#/data) ────────────────────────────────────────────────
+function renderDataOverzicht(el, ctx) {
+  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg(); return; }
+
+  const domeinen = dataBrowsbareDomeinen(ctx.schema);
+  const rijen = domeinen.map(d => {
+    const rows = dataRijenVan(ctx, d.key);
+    const aantal = rows ? rows.length : 0;
+    const leeg = aantal === 0;
+    const spoor = leeg
+      ? `<span class="spoor geen">geen rijen in deze bundel</span>`
+      : `<span class="spoor actief">${aantal} ${aantal === 1 ? "rij" : "rijen"}</span>`;
+    const attrs = leeg ? "" : ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"`;
+    return `<div class="agent-row${leeg ? "" : " klikbaar"}"${attrs}>
+      <span class="emoji">${esc(d.emoji || "🗂️")}</span>
+      <span class="naam">${esc(d.naam || d.key)}</span>
+      ${spoor}${leeg ? "" : `<span class="pijl">→</span>`}
+    </div>`;
+  }).join("");
+
+  const nietOpgehaald = Object.entries(DATA_NIET_IN_BUNDEL)
+    .filter(([k]) => ctx.schema.datadomeinen[k])
+    .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
+    .join(" · ");
+
+  el.innerHTML = `${rijen}
+    <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
+    dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
+    het domein woont.</p>
+    ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}`;
+}
+
+// ── Eén domein (#/data/<domein>) ──────────────────────────────────────
+function renderDataDomein(el, key, ctx) {
+  const domein = ctx.schema.datadomeinen[key];
+  if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics") {
+    el.innerHTML = dataMetricsUitleg() + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    return;
+  }
+
+  const rows = dataRijenVan(ctx, key);
+  const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
+  if (!rows || !rows.length) {
+    el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
+      betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+      <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    return;
+  }
+
+  const velden = dataVelden(domein).slice(0, DATA_MAX_KOLOMMEN);
+  const datumVeld = dataDatumVeld(domein);
+
+  function zichtbareRijen() {
+    const q = dataZoek.trim().toLowerCase();
+    let uit = rows;
+    if (q) {
+      uit = rows.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+    }
+    if (datumVeld) {
+      uit = uit.slice().sort((a, b) => {
+        const da = parseDateField(getField(a, datumVeld));
+        const db = parseDateField(getField(b, datumVeld));
+        return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+      });
+    }
+    return uit;
+  }
+
+  function tabelHtml() {
+    const zicht = zichtbareRijen();
+    if (!zicht.length) {
+      return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
+    }
+    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("");
+    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r =>
+      `<tr>${velden.map(v => `<td>${esc(dataCelTekst(getField(r, v.naam)))}</td>`).join("")}</tr>`).join("");
+    const rest = zicht.length > DATA_MAX_RIJEN
+      ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
+      : "";
+    return `<div class="tabel-scroll"><table class="detail-table">
+      <thead><tr>${koppen}</tr></thead><tbody>${body}</tbody></table></div>${rest}`;
+  }
+
+  function tellingHtml() {
+    const zicht = zichtbareRijen().length;
+    return zicht === rows.length
+      ? `${rows.length} ${rows.length === 1 ? "rij" : "rijen"}`
+      : `${zicht} van ${rows.length} rijen`;
+  }
+
+  el.innerHTML = `${kop}
+    <div class="data-toolbar">
+      <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
+      <span class="data-telling" data-data-telling>${tellingHtml()}</span>
+    </div>
+    <div data-data-tabel>${tabelHtml()}</div>
+    <p class="footnote">Eerste ${velden.length} velden uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
+    Alleen lezen — dit dashboard schrijft nooit terug. Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+
+  const invoer = el.querySelector("#data-zoek");
+  if (invoer) {
+    invoer.addEventListener("input", () => {
+      dataZoek = invoer.value;
+      el.querySelector("[data-data-tabel]").innerHTML = tabelHtml();
+      el.querySelector("[data-data-telling]").textContent = tellingHtml();
+    });
+  }
+}
+
+function resetDataZoek() { dataZoek = ""; }
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen,
+    resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+  };
 }
 
 
 /* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
- * periodeschakelaar en de hash-router tussen de homepage en de
- * detailpagina's. Schrijft nooit iets terug behalve, optioneel en lokaal,
- * wanneer je de laatste keer laadde en welke minuten-per-actie-instelling
- * je koos (geen bundelinhoud) — zie rememberChoice()/rememberMinuten(). */
+ * periodeschakelaar en de hash-router tussen de vier tabs (Vandaag · Team ·
+ * Data · Prestaties) en de detailpagina's. Schrijft nooit iets terug behalve,
+ * optioneel en lokaal, wanneer je de laatste keer laadde en welke
+ * minuten-per-actie-instelling je koos (geen bundelinhoud) — zie
+ * rememberChoice()/rememberMinuten(). */
 
 const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
 const LS_MINUTEN_KEY = "agentic-team-dashboard:minuten-per-actie";
@@ -4647,28 +5249,22 @@ function restoreMinuten() {
   } catch (e) { /* zie hierboven */ }
 }
 
-function renderLastUsed() {
-  const el = document.getElementById("last-used");
+/* Alleen nog leesbaar in de herkomst-uitklap op de Prestaties-tab — dit is
+ * systeeminfo, geen antwoord op "wat moet ik nu doen?". */
+function leesLaatstGebruikt() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) { el.textContent = ""; return; }
+    if (!raw) return null;
     const { route, label, when } = JSON.parse(raw);
     const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
-    el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
-  } catch (e) { el.textContent = ""; }
-}
-
-function setStatus(msg, isError) {
-  const el = document.getElementById("status-line");
-  el.textContent = msg || "";
-  el.style.color = isError ? "var(--rood)" : "var(--grey)";
+    return `${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
+  } catch (e) { return null; }
 }
 
 async function handleBundle(bundle, route, label) {
   currentBundle = bundle;
   rememberChoice(route, label);
-  renderLastUsed();
-  window.location.hash = ""; // terug naar de homepage bij een nieuw geladen bundel
+  window.location.hash = ""; // terug naar de Vandaag-tab bij een nieuw geladen bundel
   renderAll();
 }
 
@@ -4697,6 +5293,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
       // zo zichtbaar te zijn als parse-waarschuwingen
@@ -4711,21 +5308,40 @@ function buildContext() {
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
+    minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
   };
+}
+
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
+
+/* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
+ * container (feedfilter, zoekveld). Die containers blijven bij navigatie
+ * bestaan, dus vervangen we ze door een lege kopie: zo begint elke render
+ * met precies nul listeners in plaats van er eentje bij. */
+function versContainer(id) {
+  const oud = document.getElementById(id);
+  const nieuw = oud.cloneNode(false);
+  oud.parentNode.replaceChild(nieuw, oud);
+  return nieuw;
+}
+
+function verbergAlles() {
+  for (const id of Object.values(TAB_CONTAINERS)) document.getElementById(id).style.display = "none";
+  document.getElementById("detail-view").style.display = "none";
 }
 
 function renderAll() {
   const bundle = currentBundle;
   const emptyStateEl = document.getElementById("empty-state");
-  const homeEl = document.getElementById("home-view");
-  const detailEl = document.getElementById("detail-view");
   const versionErrorEl = document.getElementById("version-error");
+  const tabbarEl = document.getElementById("tabbar");
   const periodSelect = document.getElementById("period-select");
+
   if (!bundle) {
     emptyStateEl.style.display = "";
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    tabbarEl.style.display = "none";
+    verbergAlles();
     versionErrorEl.style.display = "none";
     return;
   }
@@ -4737,16 +5353,16 @@ function renderAll() {
     // Geen dashboard tekenen op een bestand dat dit dashboard niet herkent
     // — wel duidelijk zeggen wat er aan de hand is en wat je eraan kunt
     // doen. Stil een verkeerde grafiek tekenen is erger dan niets tekenen.
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    verbergAlles();
+    tabbarEl.style.display = "none";
     versionErrorEl.style.display = "";
     renderVersionError(versionErrorEl, ctx.versionError, bundle);
     document.getElementById("warnings-box").style.display = "none";
-    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (metricsbestand) — niet gelezen, zie melding hierboven.`;
     return;
   }
   versionErrorEl.style.display = "none";
   window.__dashboardCtx = ctx; // alleen al-berekende resultaten, geen nieuwe databron
+  tabbarEl.style.display = "";
 
   // Periode is bij een kant-en-klaar metricsbestand vastgelegd door wie het
   // genereerde (de Coördinator) — die keuze kan dit dashboard niet
@@ -4761,12 +5377,19 @@ function renderAll() {
     periodSelect.value = String(currentPeriodWeeks);
   }
 
-  renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
-  renderKpiTegels(document.getElementById("kpi-grid"), ctx);
-  renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
-  renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
+  // ── Tab 1 · Vandaag ──
+  renderStatusregel(document.getElementById("statusregel"), ctx);
+  renderPrivacyBlok(document.getElementById("privacy-blok"));
   renderAandachtTop5(document.getElementById("panel-aandacht-body"), ctx.z1);
+  renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
+  renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
+
+  // ── Tab 4 · Prestaties ──
+  renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
+  renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
+  renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
   renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
+  renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
   const warnEl = document.getElementById("warnings-box");
   const waarschuwingen = ctx.waarschuwingen || [];
@@ -4775,20 +5398,6 @@ function renderAll() {
     warnEl.innerHTML = `<div class="kop">Niet alles kon gelezen worden</div><ul style="margin:0;padding-left:1.1rem;">${waarschuwingen.map(w => `<li>${esc(w)}</li>`).join("")}</ul>`;
   } else {
     warnEl.style.display = "none";
-  }
-
-  if (bundle.kind === "metrics") {
-    const meta = ctx.metricsMeta;
-    const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
-    const door = meta.door ? ` door ${meta.door}` : "";
-    const herkomst = bundle.source === "werkruimte"
-      ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
-      : `metricsbestand v${METRICS_VERSION}`;
-    document.getElementById("bundle-info").textContent =
-      `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
-  } else {
-    document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (live uit je werkruimte-instantie) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -4826,7 +5435,7 @@ function renderDetail(key) {
     gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
     opbrengst: () => [detailSectionHtml("Opbrengst", "💰", "Levert dit team genoeg op om het te blijven betalen?", "detail-inner"), () => renderZone4(document.getElementById("detail-inner"), ctx.z4, ctx.periodDays)],
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
-    adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
+    adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
@@ -4842,42 +5451,67 @@ function renderDetail(key) {
   fill();
 }
 
+const TAB_TITELS = {
+  vandaag: "Agentic Team Dashboard",
+  team: "Je team — Agentic Team Dashboard",
+  data: "Je gegevens — Agentic Team Dashboard",
+  prestaties: "Prestaties — Agentic Team Dashboard",
+};
+
 function route() {
   const bundle = currentBundle;
-  const homeEl = document.getElementById("home-view");
-  const detailEl = document.getElementById("detail-view");
   if (!bundle) return;
   // s31: niets tekenen op een bestand dat dit dashboard niet herkent. Zonder
   // deze guard toont een hashchange (bv. het leegmaken van het fragment na het
-  // laden van een daglink) alsnog de lege homepage náást de versiefout.
+  // laden van een daglink) alsnog de lege pagina náást de versiefout.
   if (document.getElementById("version-error").style.display !== "none") {
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    verbergAlles();
     return;
   }
-  const key = bepaalActieveView();
-  if (key) {
-    homeEl.style.display = "none";
-    detailEl.style.display = "";
-    renderDetail(key);
+  const ctx = window.__dashboardCtx;
+  const view = bepaalActieveView();
+  verbergAlles();
+  renderTabbar(document.getElementById("tabbar"), view.tab);
+
+  if (view.soort === "detail") {
+    document.getElementById("detail-view").style.display = "";
+    renderDetail(view.key);
     window.scrollTo(0, 0);
-  } else {
-    homeEl.style.display = "";
-    detailEl.style.display = "none";
-    document.title = "Agentic Team Dashboard";
+    return;
   }
+
+  document.getElementById(TAB_CONTAINERS[view.tab]).style.display = "";
+  document.title = TAB_TITELS[view.tab] || TAB_TITELS.vandaag;
+
+  if (view.soort === "data") {
+    renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
+  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 function wireNavigatie() {
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-stop-nav]")) return; // bv. het minuten-invoerveld
+    const domeinEl = e.target.closest("[data-data-domein]");
+    if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");
     if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
   });
   document.body.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("kpi-tile")) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const t = e.target;
+    if (!t.classList) return;
+    if (t.hasAttribute && t.hasAttribute("data-data-domein")) {
       e.preventDefault();
-      const gotoEl = e.target.closest("[data-goto]");
+      window.location.hash = `#/data/${t.getAttribute("data-data-domein")}`;
+      return;
+    }
+    if (t.classList.contains("kpi-tile")) {
+      e.preventDefault();
+      const gotoEl = t.closest("[data-goto]");
       if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
     }
   });
@@ -4894,6 +5528,20 @@ function wireNavigatie() {
     }
     route();
   });
+}
+
+/* f25 · mobiel: de kop klapt in zodra je gaat scrollen, zodat het scherm van
+ * de inhoud is en niet van de merknaam. Puur cosmetisch — geen state. */
+function wireKopInklappen() {
+  let ingeklapt = false;
+  const zet = () => {
+    const moet = (window.scrollY || window.pageYOffset || 0) > 40;
+    if (moet === ingeklapt) return;
+    ingeklapt = moet;
+    document.body.classList.toggle("kop-klein", moet);
+  };
+  window.addEventListener("scroll", zet, { passive: true });
+  zet();
 }
 
 function wireInputs() {
@@ -4925,16 +5573,13 @@ function toonLegeStaat(titel, tekst) {
 
 async function laadWerkruimte(daglink) {
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
-  setStatus("Live gegevens uit je werkruimte worden opgehaald…");
   try {
     const bundle = await loadWerkruimteBundle(daglink);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
-    setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
   } catch (err) {
     console.error(err);
     if (err.daglinkVerlopen) vergeetDaglink();
     toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
-    setStatus(err.message, true);
   }
 }
 
@@ -4942,7 +5587,8 @@ document.addEventListener("DOMContentLoaded", () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
-  renderLastUsed();
+  wireKopInklappen();
+  document.getElementById("empty-state-privacy").textContent = PRIVACY_LEGE_STAAT;
   renderAll();
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);

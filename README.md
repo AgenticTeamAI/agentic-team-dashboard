@@ -71,24 +71,108 @@ scripts/
 testdata/                → testfixture (rijen, metricsbestand, teamfeed) voor tests en mock — zie testdata/README.md
 ```
 
-## De homepage: KPI's, grafieken, adoptiescore, tijdwinst
+## De vier tabs: Vandaag · Team · Data · Prestaties (f25)
 
-De homepage toont, van boven naar beneden:
+Sinds f25 (26-08-2026) is de pagina ingedeeld op **één vraag per zone**, in
+dezelfde volgorde op desktop en mobiel. De aanleiding: de bovenkant gaf
+antwoord op "hoe goed gebruik je ons product?" terwijl de gebruiker vraagt
+"wat moet ik nu doen?".
 
-1. **Vier KPI-tegels** — adoptiescore, acties afgerond, sporen in de
-   gekozen periode, geschatte tijdwinst. Elke tegel is klikbaar (`data-goto`)
-   en springt naar zijn detailpagina.
-2. **Activiteit per week** — gestapelde staafgrafiek (inline SVG, zie
+| Tab | Route | Vraag | Inhoud |
+|-----|-------|-------|--------|
+| **Vandaag** | `#/` | wat moet ik nu doen? | statusregel · privacybelofte · Vraagt je aandacht (max 5) · feedstrook (3 berichten) · Opbrengst (acties afgerond + geschatte tijdwinst) |
+| **Team** | `#/team` | wat deden ze? | de volledige teamfeed (f22) met agentfilter |
+| **Data** | `#/data`, `#/data/<domein>` | wat staat er in mijn werkruimte? | alleen-lezen browser over de al opgehaalde bundel |
+| **Prestaties** | `#/prestaties` | hoe staat mijn team ervoor? | Ritme van je team · subscores · activiteit per week · gebruik per agent · periodekiezer · herkomst-uitklap |
+
+De detailroutes zijn **niet** gewijzigd: `#/detail/<key>` en
+`#/detail/agent/<slug>` werken precies zoals ze werkten en blijven de
+verdiepingslaag achter elke tegel en grafiek. `DETAIL_TAB` in `homepage.js`
+bepaalt welke tab gemarkeerd blijft terwijl je een detailpagina open hebt.
+
+Drie besluiten die je in de code terugziet:
+
+- **"Adoptiescore" heet naar de klant toe "Ritme van je team"** en staat niet
+  meer bovenaan: de score zegt iets over de gebruiker, niet over ons. De
+  berekening is ongewijzigd — zelfde formules, zelfde narekenbare som.
+- **Zakt het ritme onder de 70%, dan komt het wél omhoog** — als
+  aandachtspunt in zone 1, want dan is het iets waar de gebruiker vandaag
+  iets mee moet. Dat gebeurt in `voegRitmeToeAanAandacht()` (`zones.js`),
+  aangeroepen op beide dataroutes in `metrics.js`, idempotent en nooit op een
+  score die niet te berekenen is (`null` ≠ slecht).
+- **De Data-tab is geen f23.** f23 (entries aanmaken/wijzigen/verwijderen) is
+  geparkeerd tot p10/OAuth. De daglink heeft scope "lees" en dat is precies
+  de eigenschap die hem veilig maakt om in een chat te delen. `databrowser.js`
+  doet geen enkele extra fetch: het toont `bundle.domains`, dat de loader
+  sowieso al ophaalt.
+
+### Mobiel
+
+Zes ingrepen, alle in `styles.css` onder `@media (max-width: 700px)`: de
+tabbar plakt onderaan het scherm, KPI's staan 2×2 met de uitleg achter de tap
+(elke tegel opent zijn eigen herkomstpagina), n.v.t.-tegels worden verborgen
+(de reden staat in de herkomst-uitklap), grafieken en tabellen scrollen
+horizontaal binnen hun eigen kader in plaats van onleesbaar te krimpen, de
+kop klapt in bij scroll, en de uitlegtekst staat een stap verder naar achteren
+dan de cijfers. De `min-width` op de SVG's is het punt van ingreep 4: zonder
+die regel schaalt de hele grafiek mee omlaag en wordt de astekst ~4px.
+
+## Geen telemetrie — harde voorwaarde, geen voorkeur
+
+Dit dashboard belooft de bezoeker, **in de UI zelf op het moment dat de
+belofte wordt gedaan**, dat zijn bedrijfsdata niet langs onze servers komt en
+dat het dashboard zelf niets bewaart of verwerkt. Die tekst is woordelijk
+goedgekeurd in de juridische toets van 26-08-2026 en staat op één plek:
+`src/teksten.js` (`PRIVACY_REGEL` = de samenvatting, `PRIVACY_UITKLAP` = de
+juridische tekst). Wijzig ze niet zonder een nieuwe toets.
+
+Daaruit volgt: **geen analytics, geen foutrapportage, geen enkele meting die
+naar ons gaat.** Zodra dat er wel is, is de tekst onjuist en moet hij mee
+veranderen.
+
+- `test/geen-telemetrie.test.js` bewaakt het gebouwde artefact: verboden
+  patronen (sendBeacon, gtag, `_vercel/insights`, Sentry, PostHog, …), precies
+  één `fetch` en die naar de eigen werkruimte, geen host buiten de
+  allowlist, de CSP-grenzen, en of de goedgekeurde tekst er letterlijk in
+  staat.
+- **Vercel Web Analytics en Speed Insights staan uit** op zowel
+  `agentic-team-dashboard` als `at-dashboard-staging`, en horen uit te
+  blijven. Die zijn in het Vercel-dashboard aan te zetten **zonder
+  codewijziging**; de hash-only `script-src` blokkeert het script dan wel,
+  maar dat is een vangrail, niet de afspraak.
+- Wat er wél lokaal in de browser wordt bewaard staat in de uitklaptekst en
+  wordt door dezelfde test op vier sleutels vastgepind.
+
+Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
+niets naar agentic-team.ai": de pagina zelf komt van
+`dashboard.agentic-team.ai`, met de gebruikelijke technische gegevens die
+daarbij horen. Het onderscheid dat wél klopt — bedrijfsdata gaat alleen
+browser ↔ eigen werkruimte-instantie, en het daglink-token staat achter het
+`#` en bereikt nooit een server — moet in de tekst blijven staan.
+
+## De panelen: KPI's, grafieken, ritme, tijdwinst
+
+De panelen tonen, verdeeld over de Vandaag- en Prestaties-tab:
+
+1. **KPI-tegels, gesplitst over twee tabs.** Op *Vandaag* staan de twee
+   opbrengsttegels: acties afgerond (harde telling) en geschatte tijdwinst
+   (zacht — de aanname staat erbij en de tegel is bewust lichter opgemaakt,
+   zodat hij niet als meting leest). Op *Prestaties* staan ritme van je team,
+   sporen in de gekozen periode en — alleen met `ctx.intern` — correctievrij.
+   Elke tegel is klikbaar (`data-goto`) en springt naar zijn detailpagina.
+2. **Vraagt je aandacht** — bovenaan de Vandaag-tab, want de aandachtszone
+   hoort altijd te winnen van de scoreborden. Dezelfde berekening als zone 1,
+   afgekapt tot vijf items, met een doorklik naar de volledige lijst.
+3. **Activiteit per week** — gestapelde staafgrafiek (inline SVG, zie
    `charts.js`), standaard 12 weken. Series: Interacties·Datum,
    Dagverslagen·Dag, Lessen & Inzichten·Datum, Content Kalender·Publicatiedatum
    — elk uit hun eigen datumveld. Een week zonder spoor blijft staan als een
    gedimd, gestippeld streepje met het label "geen" — nooit weggelaten, want
    het gat is het signaal.
-3. **Waar de adoptiescore vandaan komt** — drie horizontale balken
+4. **Waar het ritme vandaan komt** — drie horizontale balken
    (Ritme/Breedte/Opvolging) met de subscores, plus één regel die de
-   optelsom letterlijk uitschrijft.
-4. **Vraagt je aandacht** — dezelfde berekening als zone 1, afgekapt tot
-   vijf items, met een doorklik naar de volledige lijst.
+   optelsom letterlijk uitschrijft. Die narekenregel blijft bewust bij het
+   cijfer staan: dat is geen herkomst-voetnoot maar de belofte zelf.
 5. **Gebruik per agent** — gerangschikte horizontale staafgrafiek. Ontbreekt
    het brongegeven (zie hieronder), dan een expliciet grijs blok met de
    reden, geen twintig balkjes op nul. Vanuit de detailpagina is elke agent
@@ -96,6 +180,12 @@ De homepage toont, van boven naar beneden:
    (sporen in periode/totaal, laatste spoor) plus — bij werkdata-rijen — de
    onderliggende acties en lessen van die agent; een metricsbestand draagt
    alleen totalen en zegt dat er dan eerlijk bij.
+
+Alle overige dataherkomst — bundelinfo, "niet in deze bundel"-waarschuwingen,
+de reden achter elke n.v.t., de formules en de voorbehouden — staat gebundeld
+in één uitklap **"Waar komen deze cijfers vandaan?"** onderaan de
+Prestaties-tab (`renderHerkomst()`). Uit de tegels weg: daar woog de voetnoot
+bijna even zwaar als het cijfer.
 
 Geen cirkeldiagrammen. Statuskleuren (rood/oranje/groen) worden nergens voor
 een grafiekserie gebruikt — series krijgen mint, licht mint en twee neutrale
@@ -362,6 +452,7 @@ elke PR en push naar main:
 
 ```bash
 python3 scripts/build.py            # dashboard.html opnieuw genereren uit src/ + schema/
+python3 scripts/build.py --noindex  # idem, met <meta name="robots" content="noindex"> (staging)
 python3 scripts/generate-testdata.py          # testdata/data/ (fixture) opnieuw genereren
 python3 scripts/generate-testdata-metrics.py  # testdata/notion-metrics/ (fixture) opnieuw genereren
 ```
@@ -370,6 +461,35 @@ Bewust **geen** npm/bundler-toolchain: `scripts/build.py` is een letterlijke
 tekstsamenvoeging (shell + css + schema + js-modules, in vaste volgorde) —
 dat is de hele build. Dat houdt de build netwerkloos en zonder toolchain:
 Vercel draait exact hetzelfde script (zie §Eén bron).
+
+Een nieuw bestand in `src/` moet op **drie** plekken worden aangemeld:
+`JS_MODULES_IN_ORDER` in `scripts/build.py`, en de modulelijsten bovenin
+`test/xss.test.js`, `test/correctievrij.test.js`, `test/kalenderdag.test.js` en
+`test/f25-indeling.test.js` (die laden de src-modules zelf, in build-volgorde).
+
+### Deploy: staging eerst
+
+Geen git-integratie (Hobby-plan + privé-org-repo): handmatige CLI-deploys
+vanaf een **schone clone**. Staging = Vercel-project `at-dashboard-staging`
+(https://at-dashboard-staging.vercel.app), productie = `agentic-team-dashboard`
+(dashboard.agentic-team.ai).
+
+```bash
+git clone -q --depth 1 <repo> deploy && cd deploy
+rm -rf .git                                       # anders BLOCKED bij een niet-koppelbare commit-auteur
+vercel link --yes --project at-dashboard-staging  # daarna pas: agentic-team-dashboard
+vercel deploy --prod --yes --archive=tgz
+```
+
+`--prod` betekent hier "productie-alias binnen dát project"; zonder `--prod`
+krijg je een preview-URL achter Vercel-SSO, waar een rooktest 401 op geeft.
+Volgorde: PR → CI groen → staging-deploy + rooktest → akkoord → prod-deploy.
+Prod-deploys alleen als een founder ze expliciet benoemt.
+
+Staging staat op **noindex** via de omgevingsvariabele `DASHBOARD_NOINDEX=1`
+op het staging-project; `vercel.json` geeft die door aan `build.py`. Het
+gecommitte `dashboard.html` is bewust de variant *zonder* die meta — anders
+faalt de CI-job `build-drift`.
 
 ## De vijf zones — herkomst en beslissing (nu: detailpagina's)
 

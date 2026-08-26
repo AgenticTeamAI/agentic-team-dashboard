@@ -10,6 +10,7 @@ gebruikt (geen netwerktoegang nodig om dit te bouwen of te draaien).
 
 Gebruik:
     python3 scripts/build.py
+    python3 scripts/build.py --noindex   # staging: meta robots noindex erbij
 """
 import hashlib
 import base64
@@ -22,6 +23,7 @@ ROOT = Path(__file__).parent.parent
 SRC = ROOT / "src"
 
 JS_MODULES_IN_ORDER = [
+    "teksten.js",
     "schema-helpers.js",
     "werkruimte-loader.js",
     "zones.js",
@@ -31,11 +33,19 @@ JS_MODULES_IN_ORDER = [
     "charts.js",
     "feed.js",
     "homepage.js",
+    "databrowser.js",
     "app.js",
 ]
 
 
 def main():
+    # f25: staging (at-dashboard-staging.vercel.app) is publiek bereikbaar en
+    # hoort niet in de zoekindex. Geen aparte build en geen tweede artefact:
+    # dezelfde bouw met een extra meta-regel, aangezet via de omgevingsvariabele
+    # DASHBOARD_NOINDEX op het staging-project. De CSP-hashes dekken alleen de
+    # scriptblokken, dus deze meta verandert daar niets aan.
+    noindex = "--noindex" in sys.argv
+
     schema_js = (ROOT / "schema" / "schema.generated.js").read_text(encoding="utf-8")
     styles = (SRC / "styles.css").read_text(encoding="utf-8")
     shell = (SRC / "shell.html").read_text(encoding="utf-8")
@@ -66,6 +76,7 @@ def main():
     out = (
         shell
         .replace("__CSP_META__", csp_meta)
+        .replace("__ROBOTS_META__", '<meta name="robots" content="noindex">' if noindex else "")
         .replace("__STYLES__", styles)
         .replace("__SCHEMA__", schema_js)
         .replace("__APP__", app_js)
@@ -74,7 +85,7 @@ def main():
 
     out_path = ROOT / "dashboard.html"
     out_path.write_text(out, encoding="utf-8")
-    print(f"OK: {out_path} geschreven ({len(out)} bytes).")
+    print(f"OK: {out_path} geschreven ({len(out)} bytes){' — met noindex' if noindex else ''}.")
 
     # Dezelfde hashes in de header-CSP (vercel.json), zodat de meta-tag niet
     # de enige drager is. vercel.json wordt door Vercel vóór de build gelezen:

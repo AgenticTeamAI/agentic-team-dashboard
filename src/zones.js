@@ -302,7 +302,7 @@ function computeZone1(bundle, agentLookup, today) {
   const acties = rows(bundle, "acties");
   if (acties) {
     const qcOpen = acties.filter(r => matchAgentValue(getField(r, "Agent"), agentLookup) === "quality-control" && getField(r, "Status") !== "Klaar");
-    if (qcOpen.length) items.push({ type: "qc", ernst: "rood", label: `${qcOpen.length} QC-bevinding(en) die een menselijke blik vragen`, rows: qcOpen });
+    if (qcOpen.length) items.push({ type: "qc", ernst: "rood", label: `${qcOpen.length} punt(en) uit de kwaliteitscontrole wachten op jou`, rows: qcOpen });
 
     const overDeadline = acties.filter(r => {
       const dt = parseDateField(getField(r, "Deadline"));
@@ -353,6 +353,31 @@ function voegContextToeAanAandacht(items, z2) {
     return [{ type: "context", ernst: "rood", label: `Bedrijfscontext vraagt aandacht: ${z2.reden}`, rows: null }, ...items];
   }
   return items;
+}
+
+// f25 - Ritme van je team (de oude adoptiescore) hoort in de Prestaties-zone,
+// niet als hoofdcijfer. Maar zakt hij onder de drempel, dan is hij wel degelijk
+// iets waar de gebruiker vandaag iets mee moet - dan (en alleen dan) komt hij
+// omhoog in de aandachtlijst. Zelfde vorm als voegContextToeAanAandacht:
+// puur tekstueel samenvoegen van een al berekend resultaat, geen databron,
+// en idempotent zodat de metrics-route hem niet dubbel krijgt.
+const RITME_DREMPEL_PCT = 70;
+
+function voegRitmeToeAanAandacht(items, adopt) {
+  if (items.some(it => it.type === "ritme")) return items;
+  // null = geen enkele subscore berekenbaar. Dan weten we het niet, en
+  // "niet te berekenen" is geen aandachtspunt (nooit een ontbrekende bron
+  // als een slechte score presenteren).
+  if (!adopt || adopt.adoptiescore === null || adopt.adoptiescore === undefined) return items;
+  if (adopt.adoptiescore >= RITME_DREMPEL_PCT) return items;
+  const item = {
+    type: "ritme",
+    ernst: "oranje",
+    label: `Ritme van je team staat op ${adopt.adoptiescore}% (onder ${RITME_DREMPEL_PCT}%) - kijk waar het zakt`,
+    rows: null,
+  };
+  // Oranje: achter rood en grijs aan, net als de sortering in computeZone1.
+  return items.concat([item]);
 }
 
 // -- Homepage - Activiteit per week --------------------------------------
@@ -727,7 +752,7 @@ if (typeof module !== "undefined") {
     RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
     kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen, NIET_MEETBARE_DOMEINEN,
     computeZone1, computeZone2, computeZone3, computeZone4, computeZone5,
-    voegContextToeAanAandacht, computeActiviteitPerWeek,
+    voegContextToeAanAandacht, voegRitmeToeAanAandacht, RITME_DREMPEL_PCT, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,

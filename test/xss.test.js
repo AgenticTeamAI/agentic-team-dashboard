@@ -11,6 +11,7 @@ import vm from "node:vm";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULES = [
   "schema/schema.generated.js",
+  "src/teksten.js",
   "src/schema-helpers.js",
   "src/werkruimte-loader.js",
   "src/zones.js",
@@ -20,6 +21,7 @@ const MODULES = [
   "src/charts.js",
   "src/feed.js",
   "src/homepage.js",
+  "src/databrowser.js",
 ];
 
 const XSS = '"><img src=q onerror=window.__xss=1><li class="';
@@ -142,11 +144,18 @@ describe("render met vijandig metricsbestand", () => {
     geenInjectie(c);
   });
 
-  it("kpi-tegels met minutenPerActie uit een vijandige waarde", () => {
+  it("opbrengst-tegels met minutenPerActie uit een vijandige waarde", () => {
     const c = el();
-    g.renderKpiTegels(c, { adopt: metrics.adopt, tijdwinst: metrics.tijdwinst, sporenTotaal: metrics.sporenTotaal, periodWeeks: 12, minutenPerActie: XSS });
+    g.renderOpbrengstKpis(c, { tijdwinst: metrics.tijdwinst, minutenPerActie: XSS });
     geenInjectie(c);
     expect(c.querySelector("#input-minuten").getAttribute("value")).toBe(XSS);
+  });
+
+  it("prestatie-tegels met een vijandige adopt/correctievrij-inhoud", () => {
+    const c = el();
+    g.renderPrestatieKpis(c, { adopt: metrics.adopt, sporenTotaal: metrics.sporenTotaal, periodWeeks: 12, correctievrij: { aanwezig: false, reden: XSS }, intern: true });
+    geenInjectie(c);
+    expect(c.textContent).toContain(XSS);
   });
 });
 
@@ -272,8 +281,8 @@ describe("teamfeed (f22)", () => {
     const c = el();
     g.renderFeedPanel(c, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: entries() } }));
     geenInjectie(c);
-    expect(c.querySelectorAll(".feed-rij").length).toBe(5);
-    expect(c.querySelector('[data-goto="feed"]')).not.toBeNull();
+    expect(c.querySelectorAll(".feed-rij").length).toBe(3); // f25: de strook toont er drie
+    expect(c.querySelector('a[href="#/team"]')).not.toBeNull();
 
     const leeg = el();
     g.renderFeedPanel(leeg, ctxMet({ source: "werkruimte", kind: "rows", teamfeed: { entries: [] } }));

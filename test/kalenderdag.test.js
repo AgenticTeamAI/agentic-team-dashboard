@@ -15,6 +15,7 @@ import vm from "node:vm";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULES = [
   "schema/schema.generated.js",
+  "src/teksten.js",
   "src/schema-helpers.js",
   "src/werkruimte-loader.js",
   "src/zones.js",
