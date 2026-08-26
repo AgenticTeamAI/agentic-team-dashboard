@@ -440,15 +440,20 @@ function computeRitme(bundle, today, weeks = 12) {
 // werkdata: de werkruimte-route levert ze als rijen-domein aan, het
 // metricsbestand (dashboard_metrics, teams met werkdata buiten de werkruimte)
 // kent ze niet. Meetellen zou een werkruimte-rijenklant structureel +1 à +2
-// op de noemer geven. Het schema
+// op de noemer geven.
+//
+// toolstack (f7, Informatiemanager) is het register van de tools en systemen
+// van het bedrijf: context waar de agents op steunen, geen werk dat het team
+// uitvoert. Meetellen zou de breedte-noemer +1 geven voor een domein dat
+// per opzet maar een handvol rijen kent en zelden beweegt. Het schema
 // heeft (nog) geen werkdata-vlag per domein, vandaar een expliciete lijst.
-const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken"];
+const NIET_MEETBARE_DOMEINEN = ["bedrijfscontext", "logboek", "ritmetaken", "toolstack"];
 function meetbareDomeinen(schema) {
   return Object.keys(schema.datadomeinen).filter(k => !NIET_MEETBARE_DOMEINEN.includes(k));
 }
 
-// Breedte = domeinen met minstens een rij / meetbare domeinen (17 in de
-// registry minus bedrijfscontext/logboek/ritmetaken, zie meetbareDomeinen). Altijd
+// Breedte = domeinen met minstens een rij / meetbare domeinen (19 in de
+// registry minus bedrijfscontext/logboek/ritmetaken/toolstack, zie meetbareDomeinen). Altijd
 // berekenbaar: een ontbrekend domein telt gewoon mee als "geen inhoud" - dat
 // is geen ontbrekende bron voor deze berekening (in tegenstelling tot ritme
 // en opvolging, die een specifiek brondomein nodig hebben om te draaien).

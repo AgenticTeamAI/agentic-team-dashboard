@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.45.0
+//   registryVersion : 1.46.0
 //   registry updated: 2026-08-26
-//   bron-commit     : 3571ee382be4475d628b7f60bdc3fc280745b3ab
-//   geextraheerd op : 2026-08-26T10:35:35Z
+//   bron-commit     : 8bca57dd05187073a17a1ee2a140c9934a975589
+//   geextraheerd op : 2026-08-26T14:21:27Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.45.0",
+  "registryVersion": "1.46.0",
   "registryUpdated": "2026-08-26",
-  "sourceCommit": "3571ee382be4475d628b7f60bdc3fc280745b3ab",
-  "extractedAt": "2026-08-26T10:35:35Z",
+  "sourceCommit": "8bca57dd05187073a17a1ee2a140c9934a975589",
+  "extractedAt": "2026-08-26T14:21:27Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -44,7 +44,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "backoffice": {
       "naam": "Backoffice",
-      "aantalAgents": 4
+      "aantalAgents": 5
     }
   },
   "agents": [
@@ -186,6 +186,13 @@ window.AGENTIC_TEAM_SCHEMA = {
       "displayName": "Customer Success Manager",
       "emoji": "💚",
       "module": "delivery",
+      "team": "coo"
+    },
+    {
+      "slug": "informatiemanager",
+      "displayName": "Informatiemanager",
+      "emoji": "🖥️",
+      "module": "backoffice",
       "team": "coo"
     }
   ],
@@ -793,7 +800,8 @@ window.AGENTIC_TEAM_SCHEMA = {
             "Team Coördinatie",
             "Dagelijks Ritme",
             "Content & Zichtbaarheid",
-            "Klantsucces & Retentie"
+            "Klantsucces & Retentie",
+            "Data & Tooling"
           ]
         },
         {
@@ -1272,6 +1280,83 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Besluit",
+          "type": "tekst"
+        }
+      ]
+    },
+    "toolstack": {
+      "naam": "Toolstack",
+      "module": "backoffice",
+      "emoji": "🖥️",
+      "velden": [
+        {
+          "naam": "Tool",
+          "type": "titel"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "CRM & werkdata",
+            "Communicatie",
+            "Financieel & administratie",
+            "Marketing & content",
+            "AI & automatisering",
+            "Opslag & documenten",
+            "Beveiliging & toegang",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Doel",
+          "type": "tekst"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Actief",
+            "Proef",
+            "Opzeggen",
+            "Opgezegd"
+          ]
+        },
+        {
+          "naam": "Eigenaar",
+          "type": "tekst"
+        },
+        {
+          "naam": "Kosten per maand",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Verlengdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Datalocatie",
+          "type": "select",
+          "opties": [
+            "EU",
+            "Buiten EU",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Persoonsgegevens",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Verwerkersovereenkomst",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Toegang",
+          "type": "tekst"
+        },
+        {
+          "naam": "Notities",
           "type": "tekst"
         }
       ]
