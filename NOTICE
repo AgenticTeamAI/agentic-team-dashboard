@@ -19,8 +19,8 @@ Gegenereerd uit package-lock.json (lockfileVersion 3) op
 jsdom). Ze worden niet gedistribueerd. Platform-specifieke optionele
 binaries (esbuild/rollup/lzma per OS) staan gemarkeerd met [optioneel].
 
-Opnieuw genereren: zie het node-script in de PR-beschrijving van s33, of
-lees per pakket het veld "license" uit package-lock.json / node_modules.
+Opnieuw genereren: lees per pakket in package-lock.json het veld "license"
+(terugval: node_modules/<pakket>/package.json) en groepeer per licentie.
 
 
 Apache-2.0 (2)
