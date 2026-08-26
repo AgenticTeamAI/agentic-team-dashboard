@@ -1,5 +1,5 @@
 {
-  "_schema": "Interacties - Onderwerp; Type; Richting; Datum; Samenvatting; Sentiment; Volgende Actie; Actie Deadline.",
+  "_schema": "Interacties - Onderwerp; Type; Richting; Datum; Samenvatting; Sentiment; Volgende Actie; Actie Deadline; Bericht Tekst; Organisatie; Deal (link); Actie doorgezet.",
   "items": [
     {
       "Onderwerp": "Kennismaking plantenwand",

@@ -1,125 +1,73 @@
-# Testdata — GroenBuro (volledig fictief)
+# Testdata — fixture "GroenBuro" (volledig fictief)
 
-Deze map bevat één fictieve klant ("GroenBuro", een verzonnen bedrijf in
-kantoorbeplanting en werkplekwelzijn). Sinds 25-08-2026 leest het dashboard
-alleen nog uit de werkruimte; de bestandsbundels hieronder (`agentic-team.xlsx`,
-`data/`, `notion-export/`) worden door het dashboard zelf **niet meer
-gelezen** en blijven alleen als bron voor `notion-metrics/` (tests, i25)
-en `werkruimte/` (mock-instantie). Genereer opnieuw met:
+Deze map is een **testfixture**, geen productfunctie. Het dashboard leest
+sinds 25-08-2026 uitsluitend uit de werkruimte van de klant (daglink); wat
+hier staat wordt alleen gelezen door de tests en door de lokale
+mock-instantie, die zich voordoet als zo'n werkruimte.
 
-```
-python3 scripts/generate-testdata.py
-```
+Eén fictieve klant: "GroenBuro", een verzonnen bedrijf in kantoorbeplanting
+en werkplekwelzijn. Alle namen, bedragen, e-mailadressen en gebeurtenissen
+zijn verzonnen — geen overeenkomst met een bestaande klant. "GroenBuro" is
+een andere fictieve naam dan `agent-architecture/clients/demo-fictief`
+("De Groene Wijk VvE" e.a.), om verwarring tussen de twee te voorkomen.
 
-Alle namen, bedragen, e-mailadressen en gebeurtenissen zijn verzonnen — geen
-overeenkomst met een bestaande klant. "GroenBuro" is een andere fictieve
-naam dan `agent-architecture/clients/demo-fictief` ("De Groene Wijk VvE" e.a.),
-om verwarring tussen de twee te voorkomen.
+## Wat hier staat en wie het leest
 
-De drie bundels delen dezelfde onderliggende feiten (dezelfde organisaties,
-dezelfde deals, dezelfde acties), maar zijn **met opzet niet even compleet** —
-precies zoals een echte klant niet noodzakelijk al zijn domeinen in elke
-route bijhoudt. Zo wordt niet alleen het gelukkige pad getest.
+| Pad | Inhoud | Gelezen door | Genereren |
+|---|---|---|---|
+| `data/*.json` | rijen per domein, `{"_schema": "...", "items": [...]}` — de vorm die de werkruimte per domein teruggeeft via `/dashboard/entries` | `scripts/mock-instantie.mjs`, `test/integratie.test.js` | `python3 scripts/generate-testdata.py` |
+| `notion-metrics/metrics.json` | het kant-en-klare metricsbestand (contract versie 1) zoals de Coördinator dat naar het domein `dashboard_metrics` schrijft (f24) | `scripts/mock-instantie.mjs`, `test/integratie.test.js`, `test/correctievrij.test.js` | `python3 scripts/generate-testdata-metrics.py` |
+| `werkruimte/teamfeed.json` | teamfeed-berichten (f22) in de vorm van de werkruimte | `scripts/mock-instantie.mjs`, `test/integratie.test.js` | met de hand |
 
-## `agentic-team.xlsx` (Excel-route)
+De twee generatoren delen dezelfde onderliggende feiten (dezelfde
+organisaties, deals, acties): `generate-testdata-metrics.py` importeert de
+domeinlijsten uit `generate-testdata.py` en telt ze op, precies zoals de
+Coördinator dat met een aggregatiequery zou doen. `TODAY` staat vast op
+2026-08-10, zodat beide fixtures reproduceerbaar zijn. Veldnamen komen 1-op-1
+uit `schema/schema.generated.js` — nooit hier opnieuw verzonnen.
 
-- Bevat alleen de domeinen van de modules `core`, `sales`, `delivery`,
-  `visibility` (13 tabbladen + `_schema`) — **geen** `tijdregistratie` of
-  `product_catalogus` (modules `backoffice`/`strategy` niet aangeschaft).
-- Tabblad **Delivery Rugzak is leeg** (0 rijen, wel de header) — test "leeg
-  domein" vs. "domein ontbreekt".
-- **Geen bedrijfscontext-tabblad** — test zone 2's "onbekend, niet in deze
-  bundel"-pad (grijs, expliciet anders dan rood).
-- Het **hele bestand is 45 dagen oud** gezet (drempel in het dashboard is 30
-  dagen) — test dat veroudering het hele werkboek dimt, niet per tabblad
-  (want het is één bestand).
-- Agent **Dealmaker** komt in geen enkele Acties- of Lessen-rij voor → "geen
-  spoor gevonden".
+## Bewuste gaten in `data/`
 
-## `data/*.json` (lokale-bestanden-route)
+Niet alleen het gelukkige pad wordt getest:
 
-- Vorm per bestand: `{"_schema": "...", "items": [...]}`, zoals de
-  bron-intake-fase in `agent-architecture/core/base/orchestrator/prompt.md`
-  beschrijft.
 - **`klantsucces.json` ontbreekt volledig**, terwijl de rest van de
-  delivery-domeinen er wel staan — test een ontbrekend domein in een verder
-  complete bundel.
-- **`productbacklog.json` is zelf 60 dagen oud**, terwijl de rest van de
-  bestanden vers is — test veroudering per bestand (in tegenstelling tot de
-  Excel-route, waar dat per definitie bundelbreed is).
-- **`bedrijfscontext.json` is aanwezig, compleet en vers** — dit is het
-  groene pad voor zone 2.
+  delivery-domeinen er wel staat — een ontbrekend domein in een verder
+  complete werkruimte.
+- **`productbacklog.json` is 60 dagen oud** (bestandsdatum, via `os.utime`;
+  de integratietest zet `bijgewerkt` zelf), de rest is vers — veroudering
+  per domein.
+- **`bedrijfscontext.json` is aanwezig, compleet en vers** — het groene pad
+  voor zone 2.
 - Agent **Delivery Architect** heeft geen enkele Acties/Lessen-vermelding →
   "geen spoor gevonden".
 
-## `notion-export/*.json` (Notion-route)
+## Bewuste gaten in `notion-metrics/metrics.json`
 
-Er bestaat nog geen canoniek exportmechanisme in `agent-architecture` (de
-kant van de Coördinator die dit zou wegschrijven, is nog niet gebouwd — zie
-`README.md` van deze repo, "wat ik bewust anders heb gedaan"). Dit is dus
-een eigen ontwerp: dezelfde `{_schema, items}`-vorm als de lokale route,
-aangevuld met `_geexporteerd_op` (wanneer de Coördinator exporteerde) en
-`_database_id` (fictief, ter illustratie).
+- **Geen `agents`-blok** — zone 3 (Gebruik) en de gebruik-per-agent-grafiek
+  tonen "bron ontbreekt", niet twintig agents op nul.
+- **Eén week zonder enig spoor** in de weekreeks (index 5, een fictieve
+  vakantieweek) — het gat blijft zichtbaar in de grafiek.
+- **Domein `delivery_rugzak` is 56 dagen oud** in het domeinen-blok
+  (drempel 30) — het dashboard voegt zelf een "verouderde domeinen"-regel
+  aan de aandachtlijst toe.
+- **Twee domeinen ontbreken** (`tijdregistratie`, `product_catalogus`;
+  modules backoffice/strategy niet aangeschaft) — Breedte < 100%.
+- **`correctievrij`-blok (i25)** met week 10-08 op 67% — de f19-gate wordt
+  net niet gehaald; `test/correctievrij.test.js` rekent dit na.
+- **Bedrijfscontext is het groene pad** (compleet, vers).
 
-- **`lessen-inzichten.json` is leeg** (0 items) — test zone 5's "geen lessen
-  vastgelegd = bevinding, geen leeg paneel".
-- **`bedrijfscontext.json` is verouderd (200 dagen) én heeft 3 openstaande
-  placeholders**, en de kopie in projectkennis is zelf ouder dan die
-  al-verouderde bron — test het rode pad van zone 2, inclusief de
-  S17-controle "is de kopie ouder dan de bron?".
-- Agent **Content Strateeg** heeft in deze bundel wel een actie, maar niet
-  binnen de standaardperiode van 30 dagen — test het onderscheid tussen
-  "geen spoor" en "spoor buiten de gekozen periode".
+De foutpaden — onbekende versie, leeg of onherkenbaar bestand, verouderde
+metrics naast échte werkdata, 401/500 van de instantie — hebben geen
+fixture: `test/integratie.test.js` bouwt die stubs zelf.
 
-## `notion-metrics*/metrics.json` (Notion-route, nieuwe vorm: één metricsbestand)
+## Verwijderd (s36, 26-08-2026)
 
-Sinds `ONTWERP-wekelijkse-dashboardbijwerking.md` levert de Notion-route
-niet langer vijftien bestanden met rijen, maar één klein bestand met
-kant-en-klare uitkomsten (zie de hoofdlijn van dat bestand in `README.md`
-→ "De interne metricsvorm en de Notion-route"). Drie scenario's, elk in
-zijn eigen map omdat de map-picker in het dashboard alle bestanden in de
-gekozen map leest — één bestand per scenario voorkomt dat de map-picker
-per ongeluk het verkeerde pad kiest:
-
-- **`notion-metrics/metrics.json`** — het hoofdscenario: geldig (`"versie": 1`),
-  zelfde fictieve klant GroenBuro, getallen afgeleid van dezelfde
-  onderliggende feiten als de andere drie bundels (zie
-  `scripts/generate-testdata-metrics.py`, dat de domeinlijsten uit
-  `generate-testdata.py` hergebruikt en optelt — precies zoals de
-  Coördinator dat met een aggregatiequery zou doen). Bewuste gaten:
-  - **Geen `agents`-blok** — test het "ontbrekend blok"-pad voor zone 3
-    (Gebruik) en de gebruik-per-agent-grafiek: die tonen "bron ontbreekt",
-    niet twintig agents op nul.
-  - **Eén week zonder enig spoor** in de weekreeks (index 5, een fictieve
-    vakantieweek — zelfde verhaal als de losse les in de andere bundels
-    over de contentkalender die leegliep door vakantie) — het gat blijft
-    zichtbaar in de grafiek, wordt niet weggelaten.
-  - **Domein `delivery_rugzak` is 56 dagen oud** in het domeinen-blok
-    (drempel is 30) — test dat het dashboard zelf, zonder rijen te zien,
-    een "verouderde domeinen"-regel aan de aandachtlijst toevoegt.
-  - **Twee domeinen ontbreken volledig** uit het domeinen-blok
-    (`tijdregistratie`, `product_catalogus`) — zelfde module-gat als de
-    Excel-testdata (geen backoffice/strategy aangeschaft), test Breedte
-    <100%.
-  - **Bedrijfscontext is hier het groene pad** (compleet, vers) — de oude
-    `notion-export/`-bundel hierboven laat al het rode pad zien; deze
-    bundel laat zien dat de metrics-route ook een gezonde context correct
-    meldt.
-- **`notion-metrics-onbekende-versie/metrics.json`** — zelfde inhoud, maar
-  `"versie": 2`. Test dat het dashboard hier NIETS tekent (geen homepage,
-  geen detailpagina's) en in plaats daarvan een duidelijke melding toont
-  met het gevonden en het verwachte versienummer.
-- **`notion-metrics-leeg/metrics.json`** — letterlijk `{}`. Test het "leeg
-  of onherkenbaar bestand"-pad: geen `"versie"`- of `"type"`-sleutel, dus
-  geen enkele aanname over wat er wél in zou kunnen staan — ook hier wordt
-  niets getekend, met een andere (eigen) tekst dan het versie-scenario.
-
-Genereer opnieuw met:
-
-```
-python3 scripts/generate-testdata-metrics.py
-```
+`agentic-team.xlsx`, `notion-export/`, `notion-metrics-onbekende-versie/`
+en `notion-metrics-leeg/` hoorden bij de bestandsroutes (Excel-werkboek,
+Notion-export-map) die met het besluit "alleen werkruimte" zijn verdwenen.
+Niets las ze nog (grep over `src/`, `test/`, `scripts/` en CI); de
+generatoren schrijven ze niet meer. Wie de geschiedenis wil zien: git-log
+op deze map.
 
 **De echte Five Forward-export (zie §Getest in `README.md`) is nooit als
-testdata gebruikt en niets daarvan is naar deze repo gekopieerd** — alle
-drie de scenario's hierboven zijn volledig fictief, "GroenBuro"-stijl.
+testdata gebruikt en niets daarvan is naar deze repo gekopieerd.**

@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Genereert de fictieve testbundel voor het Agentic Team Dashboard, in alle drie
-de formaten die het dashboard moet kunnen lezen: Excel-werkboek, data/*.json
-en een Notion-export-map. Fictieve klant: "GroenBuro" (kantoorbeplanting en
-werkplekwelzijn voor MKB) - geen enkele overeenkomst met een echte klant.
+Genereert de fictieve testfixture voor het Agentic Team Dashboard:
+testdata/data/*.json, de rijen per domein die scripts/mock-instantie.mjs en
+test/integratie.test.js als werkruimte-inhoud serveren. Fictieve klant:
+"GroenBuro" (kantoorbeplanting en werkplekwelzijn voor MKB) - geen enkele
+overeenkomst met een echte klant.
+
+Sinds 25-08-2026 leest het dashboard alleen nog uit de werkruimte; de
+Excel- en Notion-export-bundels die dit script vroeger ook schreef zijn
+verwijderd (s36) omdat niets ze meer las.
 
 Veldnamen komen 1-op-1 uit schema/schema.generated.js (zelf afgeleid uit
 core/agents.json -> datadomeinen), nooit hier opnieuw verzonnen.
 
-Bewuste gaten, verspreid over de drie bundels (zie README testdata/ voor een
-overzicht per bundel):
- - een leeg domein (0 rijen, wel het bestand/tabblad/sheet zelf)
- - een verouderd domein of hele bundel (bestandsdatum ouder dan de
-   veroudering-drempel van 30 dagen)
- - een ontbrekend domein in een verder complete bundel
+Bewuste gaten (zie testdata/README.md):
+ - een ontbrekend domein in een verder complete bundel (klantsucces)
+ - een verouderd domein (productbacklog.json, 60 dagen) naast verse rest
  - een agent die in de Acties/Lessen-sporen geen enkele vermelding heeft
- - een bedrijfscontext-bestand dat volledig ontbreekt, dat stale is, en dat
-   compleet is - drie verschillende zone 2-situaties over de drie bundels
+ - een complete, verse bedrijfscontext (het groene zone 2-pad)
 
 Alle namen, bedragen en gebeurtenissen zijn verzonnen.
 """
@@ -26,11 +27,6 @@ import os
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
-
-try:
-    from openpyxl import Workbook
-except ImportError:
-    raise SystemExit("openpyxl ontbreekt. Installeer met: pip install openpyxl")
 
 ROOT = Path(__file__).parent.parent
 TESTDATA = ROOT / "testdata"
@@ -305,59 +301,7 @@ def kebab(key):
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Route 1: Excel-werkboek
-#   Gaten: geen 'strategy'/'backoffice' sheets (product_catalogus,
-#   tijdregistratie) - dus productbacklog/segmenten wél maar die twee niet;
-#   delivery_rugzak leeg (0 rijen); geen bedrijfscontext-tabblad; hele
-#   bestand achteraf op 45 dagen oud gezet (drempel is 30) om
-#   bundle-brede veroudering te testen; agent "dealmaker" komt nergens in
-#   Acties/Lessen voor -> geen spoor.
-# ─────────────────────────────────────────────────────────────────────────
-def build_excel(domains, registry_domains, out_path):
-    wb = Workbook()
-    first = True
-    included_keys = [k for k in domains.keys() if k not in ("tijdregistratie", "product_catalogus")]
-    sheet_meta = []
-    for key in included_keys:
-        naam = registry_domains[key]["naam"]
-        velden = [v["naam"] for v in registry_domains[key]["velden"]]
-        rows = domains[key]
-        if key == "delivery_rugzak":
-            rows = []  # bewust leeg domein
-        if first:
-            ws = wb.active
-            ws.title = naam
-            first = False
-        else:
-            ws = wb.create_sheet(naam)
-        ws.append(velden)
-        for row in rows:
-            ws.append([_cellval(row.get(v, "")) for v in velden])
-        sheet_meta.append((naam, velden))
-
-    schema_ws = wb.create_sheet("_schema")
-    schema_ws.append(["Tabblad", "Kolommen", "Beschrijving"])
-    for naam, velden in sheet_meta:
-        schema_ws.append([naam, " · ".join(velden), f"{naam} - testdata, zie testdata/README.md"])
-
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(out_path)
-    # Bestand bewust "verouderen": 45 dagen terug, ouder dan de standaard
-    # veroudering-drempel van 30 dagen in het dashboard.
-    oud = time.time() - 45 * 86400
-    os.utime(out_path, (oud, oud))
-
-
-def _cellval(v):
-    if isinstance(v, list):
-        return ", ".join(v)
-    if isinstance(v, bool):
-        return "Ja" if v else "Nee"
-    return v
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# Route 2: data/*.json
+# data/*.json (de enige fixture die nog gelezen wordt)
 #   Vorm per bestand: {"_schema": "...", "items": [...]}  (zoals de
 #   bron-intake-fase in core/base/orchestrator/prompt.md beschrijft).
 #   Gaten: klantsucces-bestand ontbreekt volledig (delivery-module wel deels
@@ -396,63 +340,14 @@ def build_json_bundle(domains, registry_domains, out_dir):
     if pb.exists():
         os.utime(pb, (oud, oud))
 
-# ─────────────────────────────────────────────────────────────────────────
-# Route 3: Notion-export
-#   Er bestaat nog geen canoniek exportmechanisme (de Coördinator-kant van
-#   deze route is nog niet gebouwd) - dit is dus een eigen, expliciet als
-#   zodanig gelabeld ontwerp: één JSON-bestand per domein, met dezelfde
-#   "_schema" + "items"-vorm als de lokale route, aangevuld met twee
-#   Notion-specifieke velden per bestand: "_geexporteerd_op" (wanneer de
-#   Coördinator deze export maakte) en "_database_id" (fictief, ter
-#   illustratie). Zie testdata/README.md en README.md ("wat ik bewust
-#   anders heb gedaan") voor de onderbouwing.
-#   Gaten: lessen_inzichten leeg (0 items) -> test "geen lessen = bevinding";
-#   bedrijfscontext aanwezig maar verouderd (200 dagen) én met 2 open
-#   placeholders -> rood/oranje zone 2-pad; agent "content-strateeg" heeft
-#   geen enkele Acties/Lessen-vermelding -> geen spoor.
-# ─────────────────────────────────────────────────────────────────────────
-def build_notion_export(domains, registry_domains, out_dir):
-    out_dir.mkdir(parents=True, exist_ok=True)
-    export_moment = d(-1)  # de Coördinator exporteerde gisteren
-    for key, rows in domains.items():
-        naam = registry_domains[key]["naam"]
-        schema_desc = naam + " - " + "; ".join(v["naam"] for v in registry_domains[key]["velden"]) + "."
-        if key == "lessen_inzichten":
-            rows = []  # bewust leeg domein
-        payload = {
-            "_schema": schema_desc,
-            "_geexporteerd_op": export_moment,
-            "_database_id": f"notion-db-fictief-{kebab(key)}",
-            "items": rows,
-        }
-        fname = kebab(key) + ".json"
-        (out_dir / fname).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-
-    ctx = dict(BEDRIJFSCONTEXT_COMPLEET)
-    ctx["Laatst_bijgewerkt"] = d(-200)
-    ctx["Placeholders_ingevuld"] = ["BEDRIJFSNAAM", "DOELGROEP", "SEGMENT_1"]
-    ctx["Placeholders_open"] = ["SEGMENT_2", "SEGMENT_3", "POSITIONERING"]
-    ctx["Projectkennis_kopie_laatst_bijgewerkt"] = d(-250)  # kopie is OUDER dan de bron -> precies het S17-controlegeval
-    ctx["_geexporteerd_op"] = export_moment
-    (out_dir / "bedrijfscontext.json").write_text(json.dumps(ctx, indent=2, ensure_ascii=False), encoding="utf-8")
-
-    now = time.time()
-    for f in out_dir.glob("*.json"):
-        os.utime(f, (now, now))
-
-
 def main():
     registry_domains = load_registry_domains()
     domains = build_domain_files()
 
-    build_excel(domains, registry_domains, TESTDATA / "agentic-team.xlsx")
     build_json_bundle(domains, registry_domains, TESTDATA / "data")
-    build_notion_export(domains, registry_domains, TESTDATA / "notion-export")
 
     print("Testdata gegenereerd:")
-    print(" -", TESTDATA / "agentic-team.xlsx")
     print(" -", TESTDATA / "data")
-    print(" -", TESTDATA / "notion-export")
 
 
 if __name__ == "__main__":
