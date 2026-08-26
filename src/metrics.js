@@ -32,7 +32,7 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
 
   const z1ruw = computeZone1(bundle, agentLookup, today);
   const z2 = computeZone2(bundle, today);
-  const z1 = voegContextToeAanAandacht(z1ruw, z2);
+  const z1MetContext = voegContextToeAanAandacht(z1ruw, z2);
   const z3 = computeZone3(bundle, agentLookup, schema, today, periodDays);
   const z4 = computeZone4(bundle, today, periodDays);
   const z5 = computeZone5(bundle, today, periodDays);
@@ -43,6 +43,9 @@ function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWe
   const agentUsage = computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDays);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
   const correctievrij = computeCorrectievrij(bundle, today);
+  // f25: het ritme (de oude adoptiescore) komt alleen omhoog in de aandachtlijst
+  // als hij onder de drempel zakt — daarom pas hier, na computeAdoptiescore().
+  const z1 = voegRitmeToeAanAandacht(z1MetContext, adopt);
 
   return {
     versie: METRICS_VERSION,
@@ -98,7 +101,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const activiteit = buildActiviteitFromMetrics(weekreeksBlock, (raw.periode && raw.periode.weken) || 12);
   const z1 = buildZone1FromMetricsAandacht(raw.aandacht, domeinenBlock, today);
   const z2 = computeZone2({ bedrijfscontext: raw.bedrijfscontext ? mapBedrijfscontextBlock(raw.bedrijfscontext) : "niet-ondersteund-door-bundel" }, today);
-  const z1Compleet = voegContextToeAanAandacht(z1, z2);
+  const z1MetContext = voegContextToeAanAandacht(z1, z2);
   const z3 = buildZone3FromMetrics(agentsBlock, schema);
   const z4 = buildZone4FromMetrics(raw);
   const z5 = buildZone5FromMetrics(raw.lessen);
@@ -107,6 +110,8 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   const agentUsage = buildAgentUsageFromMetrics(agentsBlock, schema);
   const sporenTotaal = activiteit.buckets.reduce((s, b) => s + b.totaal, 0);
   const correctievrij = buildCorrectievrijFromMetrics(raw.correctievrij || null, today);
+  // f25: zie de rijenroute — zelfde regel, zelfde drempel, op beide routes.
+  const z1Compleet = voegRitmeToeAanAandacht(z1MetContext, adopt);
 
   const domeinenGevonden = domeinenBlock ? Object.keys(domeinenBlock).length : 0;
 

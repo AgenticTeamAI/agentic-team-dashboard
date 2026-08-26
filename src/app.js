@@ -1,8 +1,9 @@
 /* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
- * periodeschakelaar en de hash-router tussen de homepage en de
- * detailpagina's. Schrijft nooit iets terug behalve, optioneel en lokaal,
- * wanneer je de laatste keer laadde en welke minuten-per-actie-instelling
- * je koos (geen bundelinhoud) — zie rememberChoice()/rememberMinuten(). */
+ * periodeschakelaar en de hash-router tussen de vier tabs (Vandaag · Team ·
+ * Data · Prestaties) en de detailpagina's. Schrijft nooit iets terug behalve,
+ * optioneel en lokaal, wanneer je de laatste keer laadde en welke
+ * minuten-per-actie-instelling je koos (geen bundelinhoud) — zie
+ * rememberChoice()/rememberMinuten(). */
 
 const LS_KEY = "agentic-team-dashboard:laatst-gebruikt";
 const LS_MINUTEN_KEY = "agentic-team-dashboard:minuten-per-actie";
@@ -31,28 +32,22 @@ function restoreMinuten() {
   } catch (e) { /* zie hierboven */ }
 }
 
-function renderLastUsed() {
-  const el = document.getElementById("last-used");
+/* Alleen nog leesbaar in de herkomst-uitklap op de Prestaties-tab — dit is
+ * systeeminfo, geen antwoord op "wat moet ik nu doen?". */
+function leesLaatstGebruikt() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) { el.textContent = ""; return; }
+    if (!raw) return null;
     const { route, label, when } = JSON.parse(raw);
     const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
-    el.textContent = `Laatst gebruikt: ${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
-  } catch (e) { el.textContent = ""; }
-}
-
-function setStatus(msg, isError) {
-  const el = document.getElementById("status-line");
-  el.textContent = msg || "";
-  el.style.color = isError ? "var(--rood)" : "var(--grey)";
+    return `${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
+  } catch (e) { return null; }
 }
 
 async function handleBundle(bundle, route, label) {
   currentBundle = bundle;
   rememberChoice(route, label);
-  renderLastUsed();
-  window.location.hash = ""; // terug naar de homepage bij een nieuw geladen bundel
+  window.location.hash = ""; // terug naar de Vandaag-tab bij een nieuw geladen bundel
   renderAll();
 }
 
@@ -81,6 +76,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
       // zo zichtbaar te zijn als parse-waarschuwingen
@@ -95,21 +91,40 @@ function buildContext() {
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
+    minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
   };
+}
+
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
+
+/* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
+ * container (feedfilter, zoekveld). Die containers blijven bij navigatie
+ * bestaan, dus vervangen we ze door een lege kopie: zo begint elke render
+ * met precies nul listeners in plaats van er eentje bij. */
+function versContainer(id) {
+  const oud = document.getElementById(id);
+  const nieuw = oud.cloneNode(false);
+  oud.parentNode.replaceChild(nieuw, oud);
+  return nieuw;
+}
+
+function verbergAlles() {
+  for (const id of Object.values(TAB_CONTAINERS)) document.getElementById(id).style.display = "none";
+  document.getElementById("detail-view").style.display = "none";
 }
 
 function renderAll() {
   const bundle = currentBundle;
   const emptyStateEl = document.getElementById("empty-state");
-  const homeEl = document.getElementById("home-view");
-  const detailEl = document.getElementById("detail-view");
   const versionErrorEl = document.getElementById("version-error");
+  const tabbarEl = document.getElementById("tabbar");
   const periodSelect = document.getElementById("period-select");
+
   if (!bundle) {
     emptyStateEl.style.display = "";
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    tabbarEl.style.display = "none";
+    verbergAlles();
     versionErrorEl.style.display = "none";
     return;
   }
@@ -121,16 +136,16 @@ function renderAll() {
     // Geen dashboard tekenen op een bestand dat dit dashboard niet herkent
     // — wel duidelijk zeggen wat er aan de hand is en wat je eraan kunt
     // doen. Stil een verkeerde grafiek tekenen is erger dan niets tekenen.
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    verbergAlles();
+    tabbarEl.style.display = "none";
     versionErrorEl.style.display = "";
     renderVersionError(versionErrorEl, ctx.versionError, bundle);
     document.getElementById("warnings-box").style.display = "none";
-    document.getElementById("bundle-info").textContent = `Bundel: ${bundle.sourceLabel} (metricsbestand) — niet gelezen, zie melding hierboven.`;
     return;
   }
   versionErrorEl.style.display = "none";
   window.__dashboardCtx = ctx; // alleen al-berekende resultaten, geen nieuwe databron
+  tabbarEl.style.display = "";
 
   // Periode is bij een kant-en-klaar metricsbestand vastgelegd door wie het
   // genereerde (de Coördinator) — die keuze kan dit dashboard niet
@@ -145,12 +160,19 @@ function renderAll() {
     periodSelect.value = String(currentPeriodWeeks);
   }
 
-  renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
-  renderKpiTegels(document.getElementById("kpi-grid"), ctx);
-  renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
-  renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
+  // ── Tab 1 · Vandaag ──
+  renderStatusregel(document.getElementById("statusregel"), ctx);
+  renderPrivacyBlok(document.getElementById("privacy-blok"));
   renderAandachtTop5(document.getElementById("panel-aandacht-body"), ctx.z1);
+  renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
+  renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
+
+  // ── Tab 4 · Prestaties ──
+  renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
+  renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
+  renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
   renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
+  renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
   const warnEl = document.getElementById("warnings-box");
   const waarschuwingen = ctx.waarschuwingen || [];
@@ -159,20 +181,6 @@ function renderAll() {
     warnEl.innerHTML = `<div class="kop">Niet alles kon gelezen worden</div><ul style="margin:0;padding-left:1.1rem;">${waarschuwingen.map(w => `<li>${esc(w)}</li>`).join("")}</ul>`;
   } else {
     warnEl.style.display = "none";
-  }
-
-  if (bundle.kind === "metrics") {
-    const meta = ctx.metricsMeta;
-    const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
-    const door = meta.door ? ` door ${meta.door}` : "";
-    const herkomst = bundle.source === "werkruimte"
-      ? `live uit je werkruimte — metricsbestand v${METRICS_VERSION}`
-      : `metricsbestand v${METRICS_VERSION}`;
-    document.getElementById("bundle-info").textContent =
-      `Bundel: ${meta.bronLabel} (${herkomst}) — gegenereerd op ${gen}${door}, ${meta.domeinenGevonden} domein(en) met tellingen.`;
-  } else {
-    document.getElementById("bundle-info").textContent =
-      `Bundel: ${bundle.sourceLabel} (live uit je werkruimte-instantie) — ${Object.keys(bundle.domains).length} domein(en) gevonden.`;
   }
 
   route();
@@ -210,7 +218,7 @@ function renderDetail(key) {
     gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
     opbrengst: () => [detailSectionHtml("Opbrengst", "💰", "Levert dit team genoeg op om het te blijven betalen?", "detail-inner"), () => renderZone4(document.getElementById("detail-inner"), ctx.z4, ctx.periodDays)],
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
-    adoptiescore: () => [detailSectionHtml("Adoptiescore — herkomst", "📊", "Klopt de adoptiescore, en kan ik hem zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
+    adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
@@ -226,42 +234,67 @@ function renderDetail(key) {
   fill();
 }
 
+const TAB_TITELS = {
+  vandaag: "Agentic Team Dashboard",
+  team: "Je team — Agentic Team Dashboard",
+  data: "Je gegevens — Agentic Team Dashboard",
+  prestaties: "Prestaties — Agentic Team Dashboard",
+};
+
 function route() {
   const bundle = currentBundle;
-  const homeEl = document.getElementById("home-view");
-  const detailEl = document.getElementById("detail-view");
   if (!bundle) return;
   // s31: niets tekenen op een bestand dat dit dashboard niet herkent. Zonder
   // deze guard toont een hashchange (bv. het leegmaken van het fragment na het
-  // laden van een daglink) alsnog de lege homepage náást de versiefout.
+  // laden van een daglink) alsnog de lege pagina náást de versiefout.
   if (document.getElementById("version-error").style.display !== "none") {
-    homeEl.style.display = "none";
-    detailEl.style.display = "none";
+    verbergAlles();
     return;
   }
-  const key = bepaalActieveView();
-  if (key) {
-    homeEl.style.display = "none";
-    detailEl.style.display = "";
-    renderDetail(key);
+  const ctx = window.__dashboardCtx;
+  const view = bepaalActieveView();
+  verbergAlles();
+  renderTabbar(document.getElementById("tabbar"), view.tab);
+
+  if (view.soort === "detail") {
+    document.getElementById("detail-view").style.display = "";
+    renderDetail(view.key);
     window.scrollTo(0, 0);
-  } else {
-    homeEl.style.display = "";
-    detailEl.style.display = "none";
-    document.title = "Agentic Team Dashboard";
+    return;
   }
+
+  document.getElementById(TAB_CONTAINERS[view.tab]).style.display = "";
+  document.title = TAB_TITELS[view.tab] || TAB_TITELS.vandaag;
+
+  if (view.soort === "data") {
+    renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
+    window.scrollTo(0, 0);
+    return;
+  }
+  if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
+  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 function wireNavigatie() {
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-stop-nav]")) return; // bv. het minuten-invoerveld
+    const domeinEl = e.target.closest("[data-data-domein]");
+    if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");
     if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
   });
   document.body.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("kpi-tile")) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const t = e.target;
+    if (!t.classList) return;
+    if (t.hasAttribute && t.hasAttribute("data-data-domein")) {
       e.preventDefault();
-      const gotoEl = e.target.closest("[data-goto]");
+      window.location.hash = `#/data/${t.getAttribute("data-data-domein")}`;
+      return;
+    }
+    if (t.classList.contains("kpi-tile")) {
+      e.preventDefault();
+      const gotoEl = t.closest("[data-goto]");
       if (gotoEl) window.location.hash = `#/detail/${gotoEl.getAttribute("data-goto")}`;
     }
   });
@@ -278,6 +311,20 @@ function wireNavigatie() {
     }
     route();
   });
+}
+
+/* f25 · mobiel: de kop klapt in zodra je gaat scrollen, zodat het scherm van
+ * de inhoud is en niet van de merknaam. Puur cosmetisch — geen state. */
+function wireKopInklappen() {
+  let ingeklapt = false;
+  const zet = () => {
+    const moet = (window.scrollY || window.pageYOffset || 0) > 40;
+    if (moet === ingeklapt) return;
+    ingeklapt = moet;
+    document.body.classList.toggle("kop-klein", moet);
+  };
+  window.addEventListener("scroll", zet, { passive: true });
+  zet();
 }
 
 function wireInputs() {
@@ -309,16 +356,13 @@ function toonLegeStaat(titel, tekst) {
 
 async function laadWerkruimte(daglink) {
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
-  setStatus("Live gegevens uit je werkruimte worden opgehaald…");
   try {
     const bundle = await loadWerkruimteBundle(daglink);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
-    setStatus(`${bundle.sourceLabel} geladen — live opgehaald met je daglink. Herladen = verversen.`);
   } catch (err) {
     console.error(err);
     if (err.daglinkVerlopen) vergeetDaglink();
     toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
-    setStatus(err.message, true);
   }
 }
 
@@ -326,7 +370,8 @@ document.addEventListener("DOMContentLoaded", () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
-  renderLastUsed();
+  wireKopInklappen();
+  document.getElementById("empty-state-privacy").textContent = PRIVACY_LEGE_STAAT;
   renderAll();
   const daglink = restoreDaglink();
   if (daglink) laadWerkruimte(daglink);

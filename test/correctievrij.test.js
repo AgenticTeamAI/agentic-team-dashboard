@@ -11,6 +11,7 @@ import vm from "node:vm";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MODULES = [
   "schema/schema.generated.js",
+  "src/teksten.js",
   "src/schema-helpers.js",
   "src/werkruimte-loader.js",
   "src/zones.js",
@@ -19,6 +20,7 @@ const MODULES = [
   "src/render.js",
   "src/charts.js",
   "src/homepage.js",
+  "src/databrowser.js",
 ];
 
 const TODAY = new Date(2026, 7, 24, 12, 0); // maandag, lokale tijd (TZ-onafhankelijk)
@@ -173,14 +175,14 @@ describe("render — XSS via opmerking", () => {
     expect(c.textContent).toContain(XSS);
 
     const k = el();
-    g.renderKpiTegels(k, { adopt: result.metrics.adopt, tijdwinst: result.metrics.tijdwinst, sporenTotaal: 0, periodWeeks: 12, minutenPerActie: 25, correctievrij: cv, intern: true });
+    g.renderPrestatieKpis(k, { adopt: result.metrics.adopt, tijdwinst: result.metrics.tijdwinst, sporenTotaal: 0, periodWeeks: 12, minutenPerActie: 25, correctievrij: cv, intern: true });
     geenInjectie(k);
     expect(k.querySelector('[data-goto="correctievrij"] .kpi-getal').textContent).toBe("80%");
   });
 
   it("kpi-tegel zonder correctievrij in ctx (oudere aanroep) rendert n.v.t.", () => {
     const k = el();
-    g.renderKpiTegels(k, { adopt: { adoptiescore: null }, tijdwinst: { berekenbaar: false, uren: 0, minuten: 0, afgerond: 0, minutenPerActie: 25 }, sporenTotaal: 0, periodWeeks: 12, minutenPerActie: 25, intern: true });
+    g.renderPrestatieKpis(k, { adopt: { adoptiescore: null }, tijdwinst: { berekenbaar: false, uren: 0, minuten: 0, afgerond: 0, minutenPerActie: 25 }, sporenTotaal: 0, periodWeeks: 12, minutenPerActie: 25, intern: true });
     expect(k.querySelector('[data-goto="correctievrij"] .kpi-getal').textContent).toBe("n.v.t.");
   });
 });
@@ -190,7 +192,7 @@ describe("intern-vlag — de correctievrij-tegel is nooit zichtbaar voor klanten
 
   it("zonder intern (klant, bestandsroute) ontbreekt de tegel én de detailnav-link", () => {
     const k = el();
-    g.renderKpiTegels(k, ctxBasis());
+    g.renderPrestatieKpis(k, ctxBasis());
     expect(k.querySelector('[data-goto="correctievrij"]')).toBeNull();
     expect(k.textContent).not.toContain("f19");
     const nav = el();
@@ -203,7 +205,7 @@ describe("intern-vlag — de correctievrij-tegel is nooit zichtbaar voor klanten
 
   it("met intern (werkruimte met DASHBOARD_INTERN=1) staan tegel en nav-link er wel", () => {
     const k = el();
-    g.renderKpiTegels(k, { ...ctxBasis(), intern: true });
+    g.renderPrestatieKpis(k, { ...ctxBasis(), intern: true });
     expect(k.querySelector('[data-goto="correctievrij"]')).not.toBeNull();
     const nav = el();
     g.renderDetailNav(nav, "gebruik", true);

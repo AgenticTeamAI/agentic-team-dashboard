@@ -10,6 +10,8 @@
   --oranje: #FBBF24;
   --groen-status: #34D399;
   --grijs-status: #6B7280;
+  --paars: #A78BFA;
+  --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -54,6 +56,7 @@ header.top h1 {
   display: flex; align-items: center; gap: 0.5rem;
 }
 header.top .sub { color: var(--grey); font-size: 0.9rem; margin: 0; }
+.kop-kort { display: none; }
 
 .hex-bg {
   position: absolute; inset: 0; z-index: -1; opacity: 0.35; pointer-events: none;
@@ -307,7 +310,6 @@ section.panel {
 }
 
 /* ══ f22: Teamfeed ═══════════════════════════════════════════════════ */
-:root { --paars: #A78BFA; --blauw: #60A5FA; }
 
 .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
 .feed-rij {
@@ -366,4 +368,155 @@ section.panel {
   .feed-rij { grid-template-columns: 1.9rem 1fr; }
   .feed-rij .tijd { grid-column: 2; order: -1; line-height: 1.3; }
   .feed-rij .kop, .feed-rij .bericht, .feed-rij .link { grid-column: 2; }
+}
+
+
+/* ══ f25 — waardezones + mobiel-eerst ════════════════════════════════ */
+
+/* ── Tabbar. Eén component, twee plaatsen: onder de kop op desktop, vast
+      onderaan het scherm op mobiel. Altijd dezelfde vier in dezelfde
+      volgorde, zodat je niet hoeft te herleren welk scherm je hebt. ── */
+.tabbar {
+  display: flex; gap: 0.4rem; margin: 0 0 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.6rem;
+}
+.tabbar .tab {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 44px; padding: 0.5rem 0.95rem;
+  color: var(--grey); text-decoration: none; font-size: 0.88rem; font-weight: 600;
+  border: 1px solid transparent; border-radius: 999px;
+}
+.tabbar .tab:hover:not(.actief) { color: var(--mint-light); border-color: rgba(255,255,255,0.14); }
+.tabbar .tab.actief { color: var(--navy); background: var(--mint); border-color: var(--mint); }
+.tabbar .tab-emoji { font-size: 1rem; }
+
+/* ── Vandaag: statusregel en privacybelofte ── */
+.statusregel {
+  font-size: 1.02rem; color: var(--white); font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+.privacy-blok { margin: 0 0 1.5rem; }
+.privacy-uitklap > summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: baseline; gap: 0.4rem;
+  color: var(--grey); font-size: 0.82rem; line-height: 1.5;
+}
+.privacy-uitklap > summary::-webkit-details-marker { display: none; }
+.privacy-uitklap .privacy-info { color: var(--mint-light); font-size: 0.85rem; }
+.privacy-uitklap[open] > summary .privacy-info { opacity: 0.6; }
+.privacy-volledig {
+  margin: 0.6rem 0 0; padding: 0.85rem 1rem;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+  color: var(--grey); font-size: 0.8rem; line-height: 1.6;
+}
+.privacy-regel-tekst { color: var(--grey); font-size: 0.82rem; line-height: 1.5; }
+.empty-state .privacy-regel-tekst { display: block; margin-top: 0.9rem; }
+
+/* ── Opbrengst: de harde telling en de schatting mogen niet hetzelfde
+      lezen. De schatting is lichter, met de aanname erbij. ── */
+.kpi-tile.kpi-zacht { border-style: dashed; border-color: rgba(255,255,255,0.14); }
+.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; }
+.kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
+.kpi-instelling { margin-top: 0.45rem; }
+
+/* ── Herkomst-uitklap: alle dataherkomst op één plek, uit de tegels weg ── */
+.herkomst {
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
+  padding: 0.9rem 1.25rem; margin-bottom: 1.5rem;
+}
+.herkomst > summary {
+  cursor: pointer; color: var(--mint-light); font-size: 0.85rem; font-weight: 600;
+  min-height: 32px; display: flex; align-items: center;
+}
+.herkomst .footnote:first-child { margin-top: 0.6rem; }
+
+/* ── Grafieken en tabellen scrollen binnen hun eigen kader in plaats van
+      de pagina scheef te trekken. De min-width houdt de astekst leesbaar:
+      zonder deze regel schaalt de hele SVG mee omlaag tot ~4px letters. ── */
+.chart-scroll, .tabel-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tabel-scroll { margin-top: 1rem; }
+.tabel-scroll .detail-table { margin-top: 0; }
+
+/* ── Feedstrook op de Vandaag-tab: maximaal twee regels, de rest achter
+      "meer" (feed.js vouwt de tekst al eerder in; dit vangt de ene lange
+      regel zonder harde returns af). ── */
+.feed-strook .bericht > p:first-child {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Data-tab ── */
+.data-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0 0.2rem; }
+.data-toolbar input[type="search"] {
+  flex: 1 1 220px; min-height: 40px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  color: var(--white); font-family: var(--font); font-size: 0.85rem; padding: 0.4rem 0.7rem;
+}
+.data-telling { font-size: 0.78rem; color: var(--grey); font-variant-numeric: tabular-nums; }
+
+/* ── Typografie: één stap meer contrast tussen data en uitleg ── */
+.footnote { font-size: 0.72rem; color: #8B92A5; }
+.kpi-kop { color: var(--white); }
+.card .getal, .kpi-getal { letter-spacing: -0.01em; }
+
+/* ── Touch targets ── */
+.feed-pil { min-height: 36px; padding: 0.45rem 0.8rem; }
+.detail-nav a { min-height: 36px; display: inline-flex; align-items: center; padding: 0.4rem 0.75rem; }
+
+@media (max-width: 700px) {
+  /* 1 · vaste tabbar onderaan; de rest van de pagina houdt er ruimte voor vrij */
+  body { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px)); }
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    margin: 0; padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+    gap: 0; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: none;
+    background: var(--panel);
+  }
+  .tabbar .tab {
+    flex: 1 1 0; min-height: 52px; flex-direction: column; gap: 0.15rem;
+    padding: 0.35rem 0.2rem; border-radius: 10px; font-size: 0.7rem;
+  }
+  .tabbar .tab-emoji { font-size: 1.15rem; }
+
+  /* 2 · KPI's als 2×2 compacte tegels; de uitleg zit achter de tap
+        (elke tegel opent zijn eigen herkomstpagina) */
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .kpi-tile { padding: 0.8rem 0.85rem; }
+  .kpi-getal { font-size: 1.7rem; }
+  .kpi-tile .kpi-label, .kpi-tile .kpi-som { display: none; }
+
+  /* 3 · een n.v.t.-tegel is op klein scherm ruis — de reden staat in de
+        herkomst-uitklap */
+  .kpi-tile[data-nvt] { display: none; }
+
+  /* 4 · grafieken scrollen horizontaal in plaats van onleesbaar te krimpen.
+        De weekgrafiek heeft twaalf staafjes plus astekst nodig; de
+        agentranking is smaller — die krijgt een lagere ondergrens zodat de
+        waardekolom niet standaard buiten beeld valt. */
+  .chart-scroll > svg { min-width: 620px; }
+  .chart-scroll-smal > svg { min-width: 480px; }
+
+  /* 5 · ingeklapte kop bij scroll: alleen de merkregel blijft staan */
+  header.top { padding: 1.1rem 0 0.9rem; margin-bottom: 1rem; }
+  header.top h1 { font-size: 1.15rem; }
+  .kop-vol { display: none; }
+  .kop-kort { display: inline; }
+  body.kop-klein header.top { padding: 0.5rem 0 0.4rem; margin-bottom: 0.6rem; }
+  body.kop-klein header.top h1 { font-size: 0.95rem; }
+
+  /* 6a · de agentfilter van de feed wordt op mobiel één veegbare rij; acht
+        pillen die wrappen kosten anders het hele eerste scherm — precies de
+        fout die deze herindeling elders juist weghaalt */
+  .feed-filter {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.25rem;
+  }
+  .feed-filter .feed-pil { flex: 0 0 auto; }
+  .feed-filter .lbl { flex: 0 0 auto; }
+
+  /* 6 · zones dichter op elkaar, uitleg naar de achtergrond */
+  section.panel { padding: 1.05rem 1rem; margin-bottom: 1rem; }
+  .panel-header .decision { display: none; }
+  .statusregel { font-size: 0.98rem; }
+  .agent-row .naam { flex-basis: 120px; }
 }

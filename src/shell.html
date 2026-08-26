@@ -2,8 +2,9 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 __CSP_META__
+__ROBOTS_META__
 <title>Agentic Team Dashboard</title>
 <style>
 __STYLES__
@@ -11,11 +12,79 @@ __STYLES__
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <h1>🔮 Agentic Team Dashboard</h1>
-    <p class="sub">Leest, toont en rekent — dit dashboard is nooit de bron van iets. Alle gegevens komen, via de daglink van je Coördinator, live uit je eigen werkruimte.</p>
-    <p class="sub">Er wordt niets naar agentic-team.ai verstuurd: je browser haalt de gegevens rechtstreeks op uit je eigen werkruimte-instantie en alles blijft in je browser.</p>
+  <header class="top" id="kop">
+    <h1>🔮 <span class="kop-vol">Agentic Team Dashboard</span><span class="kop-kort">Agentic Team · vandaag</span></h1>
+  </header>
 
+  <!-- ══ Vier tabs, dezelfde volgorde op desktop en mobiel (f25) ══ -->
+  <nav class="tabbar" id="tabbar" aria-label="Hoofdnavigatie" style="display:none;"></nav>
+
+  <div id="empty-state" class="empty-state">
+    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
+    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
+    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
+    verlopen, vraag je Coördinator dan om een nieuwe.</p>
+    <p class="privacy-regel-tekst" id="empty-state-privacy"></p>
+  </div>
+
+  <div id="version-error" style="display:none;"></div>
+
+  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
+
+  <!-- ══ Tab 1 · Vandaag — "wat moet ik nu doen?" ══════════════════════ -->
+  <div id="tab-vandaag" style="display:none;">
+    <p class="statusregel" id="statusregel"></p>
+    <div class="privacy-blok" id="privacy-blok"></div>
+
+    <section class="panel" id="panel-aandacht">
+      <div class="panel-header">
+        <h2>🎯 Vraagt je aandacht</h2>
+        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf.</span>
+      </div>
+      <div id="panel-aandacht-body"></div>
+    </section>
+
+    <section class="panel" id="panel-feed">
+      <div class="panel-header">
+        <h2>📣 <span data-feed-kop>Vandaag in het team</span></h2>
+        <span class="decision">Wat je agents deden — live uit je werkruimte, nieuwste boven.</span>
+      </div>
+      <div id="panel-feed-body"></div>
+    </section>
+
+    <section class="panel" id="panel-opbrengst">
+      <div class="panel-header">
+        <h2>💰 Opbrengst</h2>
+        <span class="decision">Wat levert het me op?</span>
+      </div>
+      <div class="kpi-grid" id="opbrengst-grid"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 2 · Team — de volledige feed (f22) ════════════════════════ -->
+  <div id="tab-team" style="display:none;">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📣 Je team</h2>
+        <span class="decision">Wat doet mijn team, zonder dat ik erom hoef te vragen?</span>
+      </div>
+      <div id="tab-team-body"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 3 · Data — alleen-lezen blik op je eigen werkdata ═════════ -->
+  <div id="tab-data" style="display:none;">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>🗂️ Je gegevens</h2>
+        <span class="decision">Wat staat er precies in mijn werkruimte? Alleen lezen — dit dashboard schrijft nooit.</span>
+      </div>
+      <div id="tab-data-body"></div>
+    </section>
+  </div>
+
+  <!-- ══ Tab 4 · Prestaties — "hoe staat mijn team ervoor?" ════════════ -->
+  <div id="tab-prestaties" style="display:none;">
     <div class="controls-row">
       <div class="bundle-picker">
         <span class="label">Periode:</span>
@@ -26,34 +95,16 @@ __STYLES__
         </select>
       </div>
     </div>
-    <p class="last-used" id="last-used"></p>
-    <p class="last-used" id="status-line"></p>
-    <p class="last-used" id="bundle-info"></p>
-  </header>
-
-  <div id="empty-state" class="empty-state">
-    <h2 id="empty-state-titel">Geen daglink gevonden</h2>
-    <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
-    haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
-    verlopen, vraag je Coördinator dan om een nieuwe.<br>
-    Niets wordt opgeslagen of verstuurd — je browser leest rechtstreeks uit je eigen werkruimte.</p>
-  </div>
-
-  <div id="version-error" style="display:none;"></div>
-
-  <div id="warnings-box" class="warnings-box" style="display:none;"></div>
-
-  <!-- ══ Homepage: grafieken en aandacht — tekst en uitleg zitten achter de doorklik ══ -->
-  <div id="home-view" style="display:none;">
-    <section class="panel" id="panel-feed">
-      <div class="panel-header">
-        <h2>📣 <span data-feed-kop>Vandaag in het team</span></h2>
-        <span class="decision">Wat je agents deden — live uit je werkruimte, nieuwste boven.</span>
-      </div>
-      <div id="panel-feed-body"></div>
-    </section>
 
     <section class="kpi-grid" id="kpi-grid"></section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>📊 Waar het ritme vandaan komt</h2>
+        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot het ritme hierboven.</span>
+      </div>
+      <div id="panel-adoptie-body"></div>
+    </section>
 
     <section class="panel">
       <div class="panel-header">
@@ -65,27 +116,16 @@ __STYLES__
 
     <section class="panel">
       <div class="panel-header">
-        <h2>📊 Waar de adoptiescore vandaan komt</h2>
-        <span class="decision">Drie subscores, elk 0–100, gemiddeld tot de adoptiescore hierboven.</span>
-      </div>
-      <div id="panel-adoptie-body"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
-        <h2>🎯 Vraagt je aandacht</h2>
-        <span class="decision">Waar besteed ik vandaag mijn halfuur aan? Maximaal vijf, samengevat uit de andere zones.</span>
-      </div>
-      <div id="panel-aandacht-body"></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-header">
         <h2>👥 Gebruik per agent</h2>
         <span class="decision">Welke agent laat ik links liggen, en waarom?</span>
       </div>
       <div id="panel-gebruik-body"></div>
     </section>
+
+    <details class="herkomst" id="herkomst-uitklap">
+      <summary>Waar komen deze cijfers vandaan?</summary>
+      <div id="herkomst-body"></div>
+    </details>
   </div>
 
   <!-- ══ Detail: de volledige, uitgeschreven zone-inhoud — bereikbaar via elke tegel/grafiek ══ -->
@@ -98,12 +138,10 @@ __STYLES__
   </div>
 
   <footer class="app-footer">
-    Agentic Team Dashboard — bevat geen data en bewaart niets van je bundel. Het enige netwerkverkeer dat deze
-    pagina kan doen is, als jij hem via een daglink opent, rechtstreeks naar je eigen werkruimte-instantie —
-    nooit naar agentic-team.ai. De daglink zelf leeft alleen in dit browsertabblad en verloopt na 24 uur. Verder
-    worden alleen het moment van de laatste keer laden en de minuten-per-actie-instelling onthouden
-    (lokaal, in je browser). Gegenereerd uit registryVersion
-    __REGISTRY_VERSION__ van AgenticTeamAI/agent-architecture.
+    Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
+    gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
+    op de Vandaag-tab. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van
+    AgenticTeamAI/agent-architecture.
   </footer>
 </div>
 

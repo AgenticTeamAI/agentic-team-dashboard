@@ -120,18 +120,26 @@ async function open({ domeinen = null, status = 200, klant = "Mockbedrijf BV", i
       await tick();
       if (conditie()) return;
     }
-    throw new Error("tijd verstreken: " + omschrijving + " — statusregel: " + tekst("status-line"));
+    throw new Error("tijd verstreken: " + omschrijving + " — lege staat: " + tekst("empty-state-titel") + " / " + tekst("empty-state-tekst"));
   }
+  // Klaar met laden = er staat een dashboard (tabbar), of het is bewust
+  // gestopt (versiefout), of het is misgegaan (melding in de lege staat).
   async function geladen() {
-    await tot(() => !/opgehaald…|wordt opgehaald/i.test(tekst("status-line")) && tekst("status-line") !== "", "werkruimte geladen");
-    return tekst("status-line");
+    await tot(() => zichtbaar("tabbar") || zichtbaar("version-error")
+      || /niet laden/i.test(tekst("empty-state-titel")), "werkruimte geladen");
+    return zichtbaar("tabbar") ? tekst("statusregel") : tekst("empty-state-tekst");
   }
+  const fout = () => tekst("empty-state-tekst");
   async function naar(hash) {
     w.location.hash = hash;
     const detail = hash.startsWith("#/detail/");
     await tot(() => ($("detail-view").style.display !== "none") === detail && (!detail || $("detail-inner")), "route " + hash);
   }
-  return { w, $, tekst, zichtbaar, tot, tick, naar, geladen, fouten, gevraagd };
+  async function naarTab(tab) {
+    w.location.hash = tab === "vandaag" ? "#/" : "#/" + tab;
+    await tot(() => zichtbaar("tab-" + tab.split("/")[0]), "tab " + tab);
+  }
+  return { w, $, tekst, zichtbaar, tot, tick, naar, naarTab, geladen, fout, fouten, gevraagd };
 }
 
 /* ── tests ────────────────────────────────────────────────────────────── */
@@ -139,7 +147,7 @@ describe("dashboard.html — zonder daglink", () => {
   it("toont de lege staat, draait de eigen JS, doet geen enkele fetch", async () => {
     const d = await open({ daglink: false });
     expect(d.zichtbaar("empty-state")).toBe(true);
-    expect(d.zichtbaar("home-view")).toBe(false);
+    expect(d.zichtbaar("tab-vandaag")).toBe(false);
     expect(d.zichtbaar("version-error")).toBe(false);
     // iets dat alleen de gebouwde JS kan opleveren — anders slaagt deze test ook op een kapotte build
     expect(d.w.AGENTIC_TEAM_SCHEMA.registryVersion).toMatch(/^\d+\.\d+\.\d+$/);
@@ -149,20 +157,45 @@ describe("dashboard.html — zonder daglink", () => {
 });
 
 describe("werkruimte-route — rijen", () => {
-  it("leest de instantie uit en rendert de homepage volledig", async () => {
+  it("opent op de Vandaag-tab en rendert alle vier de tabs", async () => {
     const d = await open();
-    expect(await d.geladen()).toMatch(/geladen/);
+    await d.geladen();
     expect(d.gevraagd[0]).toBe("/dashboard/overzicht");
-    expect(d.zichtbaar("home-view")).toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
     expect(d.zichtbaar("empty-state")).toBe(false);
-    expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(4);
-    expect(d.$("panel-activiteit-body").querySelectorAll("rect").length).toBeGreaterThan(0);
-    expect(d.$("panel-adoptie-body").querySelectorAll(".subscore-col").length).toBe(3);
-    expect(d.$("panel-gebruik-body").querySelector(".grijs-blok")).toBeNull(); // Agent is gevuld in de testdata
-    expect(d.tekst("bundle-info")).toMatch(/Mockbedrijf BV/);
+    expect(d.zichtbaar("tabbar")).toBe(true);
     // het token hoort uit de adresbalk te verdwijnen en in sessionStorage te staan
     expect(d.w.location.hash).toBe("");
     expect(d.w.sessionStorage.getItem("agentic-team-dashboard:daglink")).toMatch(/testtoken/);
+    expect([...d.$("tabbar").querySelectorAll("a.tab")].map((a) => a.querySelector(".tab-titel").textContent))
+      .toEqual(["Vandaag", "Team", "Data", "Prestaties"]);
+
+    // Vandaag: statusregel, privacybelofte, aandacht, feedstrook, opbrengst
+    expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit/);
+    expect(d.tekst("privacy-blok")).toMatch(/blijven in je browser/);
+    expect(d.$("panel-aandacht-body").querySelectorAll(".attention-list li").length).toBeGreaterThan(0);
+    expect(d.$("opbrengst-grid").querySelectorAll(".kpi-tile").length).toBe(2);
+    // de score staat NIET meer als tegel op de Vandaag-tab (alleen, als hij
+    // onder de drempel zakt, als aandachtspunt — zie de test hieronder)
+    expect([...d.$("tab-vandaag").querySelectorAll(".kpi-kop")].map((e) => e.textContent))
+      .toEqual(["Acties afgerond", "Geschatte tijdwinst"]);
+
+    // Prestaties: ritme, subscores, grafieken, herkomst
+    await d.naarTab("prestaties");
+    expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(2);
+    expect(d.$("kpi-grid").textContent).toMatch(/Ritme van je team/);
+    expect(d.$("panel-activiteit-body").querySelectorAll("rect").length).toBeGreaterThan(0);
+    expect(d.$("panel-adoptie-body").querySelectorAll(".subscore-col").length).toBe(3);
+    expect(d.$("panel-gebruik-body").querySelector(".grijs-blok")).toBeNull(); // Agent is gevuld in de testdata
+    expect(d.tekst("herkomst-body")).toMatch(/Mockbedrijf BV/);
+
+    // Team: de feedtab rendert (deze bundel kent het teamfeed-domein niet,
+    // dan hoort er een uitleg te staan in plaats van een leeg vlak — de
+    // gevulde variant staat in de teamfeed-test hieronder)
+    await d.naarTab("team");
+    expect(d.tekst("tab-team-body")).toMatch(/kent de teamfeed nog niet|werkronde|berichten/i);
+
+    await d.naarTab("vandaag");
     expect(d.fouten).toEqual([]);
   });
 
@@ -172,12 +205,12 @@ describe("werkruimte-route — rijen", () => {
     for (const key of ["feed", "aandacht", "context", "gebruik", "opbrengst", "leren", "adoptiescore", "tijdwinst", "activiteit"]) {
       await d.naar("#/detail/" + key);
       expect(d.zichtbaar("detail-view"), key).toBe(true);
-      expect(d.zichtbaar("home-view"), key).toBe(false);
+      expect(d.zichtbaar("tab-vandaag"), key).toBe(false);
       expect(d.tekst("detail-inner").trim().length, key).toBeGreaterThan(0);
     }
     await d.naar("#/detail/gebruik");
     d.$("btn-terug").click();
-    await d.tot(() => d.zichtbaar("home-view"), "terug naar home");
+    await d.tot(() => d.zichtbaar("tab-vandaag"), "terug naar de Vandaag-tab");
     expect(d.zichtbaar("detail-view")).toBe(false);
     // onbekende sleutel mag niet crashen
     d.w.location.hash = "#/detail/bestaat-niet";
@@ -189,6 +222,7 @@ describe("werkruimte-route — rijen", () => {
     const d = await open();
     await d.geladen();
     const rects = () => d.$("panel-activiteit-body").querySelectorAll("rect").length;
+    await d.naarTab("prestaties");
     await d.naar("#/detail/activiteit");
     const sel = d.$("period-select");
     expect(sel.disabled).toBe(false);
@@ -203,9 +237,9 @@ describe("werkruimte-route — rijen", () => {
     expect(per["8"].rects).toBeLessThan(per["24"].rects); // een no-op schakelaar zou gelijk blijven
     expect(per["8"].detail).not.toBe(per["24"].detail);
     d.$("btn-terug").click();
-    await d.tot(() => d.zichtbaar("home-view"), "terug naar home");
+    await d.tot(() => d.zichtbaar("tab-vandaag"), "terug naar de Vandaag-tab");
 
-    const tijdwinst = () => [...d.$("kpi-grid").querySelectorAll(".kpi-tile")].at(-1).querySelector(".kpi-getal").textContent;
+    const tijdwinst = () => [...d.$("opbrengst-grid").querySelectorAll(".kpi-tile")].at(-1).querySelector(".kpi-getal").textContent;
     const voor = tijdwinst();
     const inp = d.$("input-minuten");
     inp.value = "60";
@@ -219,10 +253,12 @@ describe("werkruimte-route — rijen", () => {
   it("lege werkruimte (geen enkel gevuld domein): geen crash, adoptiescore 0%, geen verzonnen nullen", async () => {
     const d = await open({ domeinen: {} });
     await d.geladen();
-    expect(d.zichtbaar("home-view")).toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
+    await d.naarTab("prestaties");
     const tegels = d.$("kpi-grid").querySelectorAll(".kpi-tile");
-    expect(tegels.length).toBe(4);
+    expect(tegels.length).toBe(2);
     expect(tegels[0].querySelector(".kpi-getal").textContent).toBe("0%");
+    expect(tegels[0].querySelector(".kpi-kop").textContent).toBe("Ritme van je team");
     expect(d.tekst("panel-adoptie-body")).toMatch(/niet te berekenen/);
     expect(d.$("panel-gebruik-body").querySelector(".grijs-blok")).not.toBeNull();
     expect(d.fouten).toEqual([]);
@@ -233,7 +269,7 @@ describe("werkruimte-route — rijen", () => {
     inhoud.verzonnen_domein = [{ domein: "verzonnen_domein", entryId: "x", data: { A: 1 }, bijgewerkt: "2026-08-20T09:30:00Z" }];
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("home-view")).toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
     expect(d.zichtbaar("warnings-box")).toBe(true);
     expect(d.tekst("warnings-box")).toMatch(/verzonnen_domein.*onbekend in deze dashboardversie/);
     expect(d.fouten).toEqual([]);
@@ -244,14 +280,18 @@ describe("werkruimte-route — rijen", () => {
     met.teamfeed = teamfeedEntries();
     const a = await open({ domeinen: met });
     await a.geladen();
-    expect(a.tekst("panel-feed-body").length).toBeGreaterThan(0);
+    expect(a.$("panel-feed-body").querySelectorAll(".feed-rij").length).toBe(3); // strook: drie
+    expect(a.$("panel-feed-body").querySelector('a[href="#/team"]')).not.toBeNull();
+    await a.naarTab("team");
+    expect(a.$("tab-team-body").querySelectorAll(".feed-rij").length).toBeGreaterThan(3);
+    expect(a.tekst("tab-team-body")).toMatch(/wacht op jou|klaar|werkronde gestart/);
     expect(a.gevraagd.some((p) => p.includes("domein=teamfeed"))).toBe(true);
     expect(a.fouten).toEqual([]);
 
     const b = await open(); // testdata/data bevat geen teamfeed-domein
     await b.geladen();
     expect(b.gevraagd.some((p) => p.includes("domein=teamfeed"))).toBe(false);
-    expect(b.zichtbaar("home-view")).toBe(true);
+    expect(b.zichtbaar("tab-vandaag")).toBe(true);
     expect(b.fouten).toEqual([]);
   });
 });
@@ -262,7 +302,7 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     inhoud.dashboard_metrics = metricsEntry({ vers: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("home-view")).toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
     expect(d.zichtbaar("version-error")).toBe(false);
     expect(d.$("period-select").disabled).toBe(true);
     expect(d.tekst("panel-gebruik-body")).toMatch(/Niet af te leiden/);
@@ -288,7 +328,7 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     inhoud.dashboard_metrics = metricsEntry({ kapot: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("home-view")).toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
     expect(d.tekst("warnings-box")).toMatch(/geen geldige JSON/);
     expect(d.fouten).toEqual([]);
   });
@@ -297,29 +337,29 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true, versie: 2 }) } });
     await d.geladen();
     expect(d.zichtbaar("version-error")).toBe(true);
-    expect(d.zichtbaar("home-view")).toBe(false);
+    expect(d.zichtbaar("tab-vandaag")).toBe(false);
     expect(d.tekst("version-error")).toMatch(/Onbekende versie|versie 2/);
     expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(0);
     // ook ná de hash-opschoning van de daglink blijft de homepage weg
     d.w.dispatchEvent(new d.w.Event("hashchange"));
     await d.tick();
-    expect(d.zichtbaar("home-view")).toBe(false);
+    expect(d.zichtbaar("tab-vandaag")).toBe(false);
   });
 });
 
 describe("werkruimte-route — foutpaden", () => {
   it("verlopen daglink (401): melding, en de link wordt vergeten", async () => {
     const d = await open({ status: 401 });
-    await d.tot(() => /verlopen/i.test(d.tekst("status-line")), "401-melding");
-    expect(d.zichtbaar("home-view")).toBe(false);
+    await d.tot(() => /verlopen/i.test(d.fout()), "401-melding");
+    expect(d.zichtbaar("tab-vandaag")).toBe(false);
     expect(d.w.sessionStorage.getItem("agentic-team-dashboard:daglink")).toBeNull();
   });
 
   it("instantie geeft 500: nette melding, geen half dashboard", async () => {
     const d = await open({ status: 500 });
-    await d.tot(() => d.tekst("status-line").length > 0 && !/opgehaald…/.test(d.tekst("status-line")), "foutmelding");
-    expect(d.tekst("status-line")).toMatch(/onverwacht antwoord|fout/i);
-    expect(d.zichtbaar("home-view")).toBe(false);
+    await d.tot(() => d.fout().length > 0, "foutmelding");
+    expect(d.fout()).toMatch(/onverwacht antwoord|fout/i);
+    expect(d.zichtbaar("tab-vandaag")).toBe(false);
     expect(d.zichtbaar("empty-state")).toBe(true);
   });
 });
@@ -333,5 +373,75 @@ describe("interne tegels (f19-gate)", () => {
     const b = await open({ domeinen: inhoud, intern: false });
     await b.geladen();
     expect(b.tekst("kpi-grid")).not.toMatch(/Correctievrij/);
+  });
+});
+
+/* ── f25: tabs, Data-tab en de ritmedrempel, in de echte gebouwde pagina ── */
+describe("f25 — waardezones in dashboard.html", () => {
+  it("Data-tab: domeinlijst, doorklik naar één domein, en terug", async () => {
+    const d = await open();
+    await d.geladen();
+    await d.naarTab("data");
+    const rij = d.$("tab-data-body").querySelector('[data-data-domein="acties"]');
+    expect(rij).not.toBeNull();
+    rij.click();
+    await d.tot(() => d.$("tab-data-body").querySelector("table") !== null, "tabel voor acties");
+    expect(d.w.location.hash).toBe("#/data/acties");
+    expect(d.$("tab-data-body").querySelectorAll("tbody tr").length).toBeGreaterThan(0);
+    // terug naar het overzicht
+    d.$("tab-data-body").querySelector('a[href="#/data"]').click();
+    await d.tot(() => d.$("tab-data-body").querySelector('[data-data-domein="acties"]') !== null, "terug naar de domeinlijst");
+    expect(d.fouten).toEqual([]);
+  });
+
+  it("Data-tab bij een metricsbestand: uitleg in plaats van een lege tabel", async () => {
+    const inhoud = domeinenUitTestdata();
+    inhoud.dashboard_metrics = metricsEntry({ vers: true });
+    const d = await open({ domeinen: inhoud });
+    await d.geladen();
+    await d.naarTab("data");
+    expect(d.$("tab-data-body").querySelector("table")).toBeNull();
+    expect(d.tekst("tab-data-body")).toMatch(/draagt geen rijen/);
+    expect(d.fouten).toEqual([]);
+  });
+
+  it("een ritme onder de drempel komt terug als aandachtspunt — op beide routes", async () => {
+    const rijen = await open();
+    await rijen.geladen();
+    await rijen.naar("#/detail/aandacht");
+    const uitRijen = rijen.tekst("detail-inner");
+    await rijen.naarTab("prestaties");
+    const score = rijen.$("kpi-grid").querySelector(".kpi-getal").textContent;
+    if (parseInt(score, 10) < 70) {
+      expect(uitRijen).toMatch(/Ritme van je team staat op \d+%/);
+      expect(uitRijen).toContain(score);
+    } else {
+      expect(uitRijen).not.toMatch(/Ritme van je team staat op/);
+    }
+
+    const inhoud = domeinenUitTestdata();
+    inhoud.dashboard_metrics = metricsEntry({ vers: true });
+    const metrics = await open({ domeinen: inhoud });
+    await metrics.geladen();
+    await metrics.naar("#/detail/aandacht");
+    const uitMetrics = metrics.tekst("detail-inner");
+    await metrics.naarTab("prestaties");
+    const scoreM = metrics.$("kpi-grid").querySelector(".kpi-getal").textContent;
+    if (parseInt(scoreM, 10) < 70) expect(uitMetrics).toMatch(/Ritme van je team staat op \d+%/);
+    // en nooit dubbel, ook niet als de Coördinator zelf al een aandachtlijst meestuurt
+    expect((uitMetrics.match(/Ritme van je team staat op/g) || []).length).toBeLessThan(2);
+    expect(metrics.fouten).toEqual([]);
+  });
+
+  it("de goedgekeurde privacybelofte staat op de Vandaag-tab, samenvatting én volledige tekst", async () => {
+    const d = await open();
+    await d.geladen();
+    const blok = d.$("privacy-blok");
+    expect(blok.textContent).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
+    expect(blok.textContent).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
+    expect(blok.querySelector("details")).not.toBeNull();
+    // de oude, te absolute claim mag nergens meer staan
+    expect(d.w.document.body.textContent).not.toMatch(/nooit naar agentic-team\.ai/i);
+    expect(d.w.document.body.textContent).not.toMatch(/niets naar agentic-team\.ai/i);
   });
 });

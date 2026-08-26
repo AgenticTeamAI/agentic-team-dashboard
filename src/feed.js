@@ -10,15 +10,18 @@
 const FEED_SOORTEN = {
   rondestart:      { icoon: "🏁", label: "werkronde gestart" },
   overdracht:      { icoon: "🤝", label: "overdracht" },
-  qc_goedgekeurd:  { icoon: "🛡️", label: "QC: goedgekeurd" },
-  qc_review_nodig: { icoon: "🛡️", label: "QC: menselijke blik nodig" },
+  // f25: mensentaal in plaats van QC-jargon — de kleurstip (styles.css)
+  // draagt het onderscheid, het label hoeft het niet te herhalen.
+  qc_goedgekeurd:  { icoon: "🛡️", label: "klaar" },
+  qc_review_nodig: { icoon: "🛡️", label: "wacht op jou" },
   voorstel:        { icoon: "💡", label: "voorstel" },
   afgerond:        { icoon: "✅", label: "afgerond" },
   update:          { icoon: "💬", label: "update" },
 };
 const FEED_OPEN_LUS_MS = 90 * 60 * 1000;
 const FEED_INVOUW_TEKENS = 450;
-const FEED_STROOK_MAX = 5;
+const FEED_STROOK_INVOUW_TEKENS = 150;  // f25: strookberichten passen in twee regels
+const FEED_STROOK_MAX = 3;   // f25: de Vandaag-tab toont drie, de rest op de Team-tab
 const FEED_FILTER_KEY = "agentic-team-dashboard:feed-filter";
 
 function feedDagKey(d) {
@@ -84,7 +87,7 @@ function feedInline(tekst) {
 
 /* Feed-markdown (conventie uit post_activity): kernzin, **vette** kopregels,
  * `- `-items. Meer niet. Lange berichten worden ingevouwen. */
-function feedTekstHtml(bericht) {
+function feedTekstHtml(bericht, invouwVanaf = FEED_INVOUW_TEKENS, kortTot = 220) {
   const regels = String(bericht || "").split(/\r?\n/);
   let html = "", lijst = [];
   const flush = () => { if (lijst.length) { html += `<ul>${lijst.map(l => `<li>${feedInline(l)}</li>`).join("")}</ul>`; lijst = []; } };
@@ -97,9 +100,9 @@ function feedTekstHtml(bericht) {
     else html += `<p>${feedInline(t)}</p>`;
   }
   flush();
-  if (bericht && bericht.length > FEED_INVOUW_TEKENS) {
+  if (bericht && bericht.length > invouwVanaf) {
     const eerste = regels.find(r => r.trim() && !/^\s*-\s+/.test(r)) || "";
-    const kort = feedInline(eerste.slice(0, 220).replace(/\*\*/g, "")) + "…";
+    const kort = feedInline(eerste.slice(0, kortTot).replace(/\*\*/g, "")) + "…";
     return `<p>${kort}</p><details><summary>meer</summary>${html}</details>`;
   }
   return html || `<p class="footnote">(leeg bericht)</p>`;
@@ -119,7 +122,7 @@ function feedDagLabel(key, today) {
   return { rel, dat: `${dagen[d.getDay()]} ${d.getDate()} ${mnd[d.getMonth()]}` };
 }
 
-function feedRijHtml(it) {
+function feedRijHtml(it, kort) {
   const so = FEED_SOORTEN[it.soort];
   const agentHtml = it.agentSlug
     ? `<a class="agent" href="#/detail/agent/${esc(it.agentSlug)}">${it.agentEmoji} ${esc(it.agentNaam)}</a>`
@@ -127,7 +130,10 @@ function feedRijHtml(it) {
   const actieHtml = it.actie
     ? `<span class="sep">·</span><span class="actie">${esc(it.actie)}</span><span class="label">${esc(so.label)}</span>`
     : `<span class="sep">·</span><span class="actie">${esc(so.label)}</span>`;
-  const bericht = it.openLus ? "<p>afgerond — geen samenvatting</p>" : feedTekstHtml(it.bericht);
+  // f25: op de Vandaag-strook maximaal twee regels, de rest achter "meer";
+  // op de Team-tab het bestaande, ruimere invouwpunt.
+  const bericht = it.openLus ? "<p>afgerond — geen samenvatting</p>"
+    : (kort ? feedTekstHtml(it.bericht, FEED_STROOK_INVOUW_TEKENS, FEED_STROOK_INVOUW_TEKENS) : feedTekstHtml(it.bericht));
   const icoon = it.openLus ? "⏱" : so.icoon;
   const title = it.openLus ? ` title="Gestart om ${feedTijd(it.tijd)}, geen afronding gemeld"` : "";
   const link = it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener noreferrer">🔗 bron</a>` : "";
@@ -170,8 +176,8 @@ function renderFeedPanel(el, ctx) {
   }
   const vandaag = feedDagKey(ctx.today);
   if (kopEl) kopEl.textContent = items[0].dag === vandaag ? "Vandaag in het team" : "Laatste activiteit in het team";
-  el.innerHTML = `<ul class="feed">${items.slice(0, FEED_STROOK_MAX).map(feedRijHtml).join("")}</ul>
-    <a class="detail-link" data-goto="feed">Alle ${items.length} berichten →</a>`;
+  el.innerHTML = `<ul class="feed feed-strook">${items.slice(0, FEED_STROOK_MAX).map(it => feedRijHtml(it, true)).join("")}</ul>
+    <a class="detail-link" href="#/team">Alle ${items.length} berichten →</a>`;
 }
 
 // ── Detail-tab ────────────────────────────────────────────────────────
@@ -222,7 +228,7 @@ function renderDetailFeed(el, ctx) {
     <p class="footnote" style="margin-top:0">Wat je agent-team doet, nieuwste boven — laatste 30 dagen, ${items.length} berichten. Signalering, geen archief: het resultaat zelf staat bij de actie.</p>
     <div class="feed-filter" data-feed-pillen>${pillen()}</div>
     <div data-feed-lijst>${lijst()}</div>
-    <div class="grijs-blok" style="margin-top:1.2rem"><div class="grijs-tekst">ℹ️ Deze feed leest live uit je eigen werkruimte via de daglink. Er wordt niets opgeslagen of naar ons verstuurd. Een <strong>werkronde gestart</strong> zonder afronding binnen 90 minuten tonen we als "afgerond — geen samenvatting".</div></div>`;
+    <div class="grijs-blok" style="margin-top:1.2rem"><div class="grijs-tekst">ℹ️ ${esc(PRIVACY_FEED)} Een <strong>werkronde gestart</strong> zonder afronding binnen 90 minuten tonen we als "afgerond — geen samenvatting".</div></div>`;
 
   el.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-feed-filter]");

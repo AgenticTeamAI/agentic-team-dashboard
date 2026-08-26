@@ -1,14 +1,27 @@
-/* Homepage: KPI-tegels, grafieken, adoptiescore-balken, aandacht-top-5 en
- * gebruik-per-agent — plus de doorklik naar het detail (de oude, volledige
- * zone-inhoud die van de homepage is verhuisd, niet verwijderd). Rendering
- * only; de berekeningen zelf staan in zones.js (puur, geen DOM) zodat ze
- * zonder browser te testen zijn. */
+/* Homepage: de vier tabs (Vandaag · Team · Data · Prestaties), hun tegels en
+ * panelen, plus de doorklik naar het detail (de volledige, uitgeschreven
+ * zone-inhoud). Rendering only; de berekeningen zelf staan in zones.js
+ * (puur, geen DOM) zodat ze zonder browser te testen zijn.
+ *
+ * f25 — de indeling volgt één vraag per zone: Vandaag = "wat moet ik nu
+ * doen?", Team = "wat deden ze?", Data = "wat staat er in mijn werkruimte?",
+ * Prestaties = "hoe staat mijn team ervoor?". De adoptiescore heet naar de
+ * gebruiker toe "Ritme van je team" en staat bewust NIET bovenaan: hij zegt
+ * iets over de gebruiker, niet over ons. Zakt hij onder de drempel, dan
+ * komt hij vanzelf omhoog als aandachtspunt (zones.js). */
+
+const TABS = [
+  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team" },
+  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data" },
+  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties" },
+];
 
 const DETAIL_VOLGORDE = [
   { key: "feed", titel: "Teamfeed", emoji: "📣" },
   { key: "aandacht", titel: "Vraagt je aandacht", emoji: "🎯" },
   { key: "context", titel: "Contextgezondheid", emoji: "🧭" },
-  { key: "adoptiescore", titel: "Adoptiescore — herkomst", emoji: "📊" },
+  { key: "adoptiescore", titel: "Ritme — herkomst", emoji: "📊" },
   { key: "activiteit", titel: "Activiteit per week", emoji: "📈" },
   { key: "gebruik", titel: "Gebruik per agent", emoji: "👥" },
   { key: "opbrengst", titel: "Opbrengst", emoji: "💰" },
@@ -17,69 +30,181 @@ const DETAIL_VOLGORDE = [
   { key: "leren", titel: "Leren", emoji: "💡" },
 ];
 
+// Onder welke tab hoort een detailpagina? Zo blijft de tabbar staan (en de
+// juiste tab gemarkeerd) terwijl je een verdieping open hebt.
+const DETAIL_TAB = {
+  feed: "team",
+  aandacht: "vandaag",
+  opbrengst: "vandaag",
+  tijdwinst: "vandaag",
+  context: "prestaties",
+  adoptiescore: "prestaties",
+  activiteit: "prestaties",
+  gebruik: "prestaties",
+  correctievrij: "prestaties",
+  leren: "prestaties",
+};
+
 function nlGetal(n, decimals = 0) {
   return Number(n).toLocaleString("nl-NL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-// ── KPI-tegels ────────────────────────────────────────────────────────
-function renderKpiTegels(el, ctx) {
-  const { adopt, tijdwinst, sporenTotaal, periodWeeks, minutenPerActie } = ctx;
-  // i25: correctievrij kan ontbreken in oudere ctx-objecten (bv. tests) —
-  // dan hetzelfde pad als "geen blok". De tegel zelf is intern: alleen
-  // zichtbaar met ctx.intern (zie werkruimte-loader), nooit voor klanten.
-  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
-  const cvKpi = correctievrijKpi(cv);
+// ── Tabbar ────────────────────────────────────────────────────────────
+// Gewone links: toetsenbordnavigatie en "open in nieuw tabblad" gratis, en
+// de hash-router doet de rest. Op mobiel plakt deze balk onderaan (styles.css).
+function renderTabbar(el, activeTab) {
+  // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
+  // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
+  const kort = document.querySelector(".kop-kort");
+  const actief = TABS.find(t => t.key === activeTab);
+  if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
+  el.innerHTML = TABS.map(t =>
+    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
+      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
+    </a>`).join("");
+}
 
-  const adoptieWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
-  const adoptieLabel = adopt.adoptiescore === null
-    ? "Geen enkele subscore is te berekenen in deze bundel"
-    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+// ── Vandaag · statusregel ─────────────────────────────────────────────
+// Antwoordt op "draaide mijn team eigenlijk?" vóór welk cijfer dan ook.
+// Leest alleen wat er al is: de nieuwste teamfeed-post, anders de nieuwste
+// tijdstempel van de opgehaalde domeinen, anders het moment waarop het
+// metricsbestand is gemaakt. Nooit een tijd verzinnen.
+function laatsteActiviteit(ctx) {
+  let nieuwste = null;
+  const bump = (d) => { if (d && !isNaN(d.getTime()) && (!nieuwste || d > nieuwste)) nieuwste = d; };
+  const feed = ctx.bundle && ctx.bundle.teamfeed;
+  if (feed && Array.isArray(feed.entries)) {
+    for (const e of feed.entries) bump(new Date(e && (e.aangemaakt || e.bijgewerkt)));
+  }
+  const domains = (ctx.bundle && ctx.bundle.domains) || {};
+  for (const d of Object.values(domains)) bump(d && d.staleAt);
+  if (ctx.metricsMeta) bump(ctx.metricsMeta.gegenereerdOp);
+  return nieuwste;
+}
 
+function renderStatusregel(el, ctx) {
+  const dt = laatsteActiviteit(ctx);
+  if (!dt) { el.textContent = "Nog geen activiteit gevonden in deze bundel."; return; }
+  const dagen = daysBetween(ctx.today, dt);
+  const tijd = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+  el.textContent = dagen === 0
+    ? `Je team draaide vandaag — laatst bijgewerkt ${tijd}.`
+    : `Laatste activiteit: ${fmtDate(dt)} (${relAge(dt, ctx.today)}).`;
+}
+
+// ── Vandaag · privacybelofte ──────────────────────────────────────────
+// De één-regelversie is de samenvatting, de uitklap is de juridische tekst
+// (toets 26-08-2026). De uitklap moet hier staan — in de UI, op het moment
+// dat de belofte wordt gedaan — en mag niet naar een andere pagina
+// verhuizen. Zie src/teksten.js.
+function renderPrivacyBlok(el) {
+  el.innerHTML = `<details class="privacy-uitklap">
+    <summary><span class="privacy-regel-tekst">${esc(PRIVACY_REGEL)}</span><span class="privacy-info" aria-hidden="true">ⓘ</span></summary>
+    <p class="privacy-volledig">${esc(PRIVACY_UITKLAP)}</p>
+  </details>`;
+}
+
+// ── Vandaag · Opbrengst — twee tegels ─────────────────────────────────
+// Eén harde telling en één schatting. De schatting krijgt bewust een andere,
+// lichtere behandeling (kpi-zacht) zodat hij niet als meting leest.
+function renderOpbrengstKpis(el, ctx) {
+  const { tijdwinst } = ctx;
   const uren = nlGetal(tijdwinst.uren, 1);
-  const som = `${tijdwinst.afgerond} afgeronde acties × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`;
-
   const actiesGetal = tijdwinst.berekenbaar ? tijdwinst.afgerond : "n.v.t.";
   const actiesLabel = tijdwinst.berekenbaar
-    ? `van ${tijdwinst.totaal} acties in de bundel (geen aanmaakdatum in dit domein — geen periodefilter mogelijk)`
+    ? `van ${tijdwinst.totaal} acties in de bundel`
     : "Geen Acties-domein aanwezig in deze bundel.";
-
   const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
-  const tijdwinstSom = tijdwinst.berekenbaar ? som : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
+  const som = tijdwinst.berekenbaar
+    ? `${tijdwinst.afgerond} × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`
+    : "Geen Acties-domein aanwezig in deze bundel — er is niets om op te tellen.";
 
   el.innerHTML = `
-    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button">
-      <div class="kpi-getal">${esc(adoptieWaarde)}</div>
-      <div class="kpi-kop">Adoptiescore</div>
-      <div class="kpi-label">${esc(adoptieLabel)}</div>
-    </div>
-    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button">
+    <div class="kpi-tile" data-goto="opbrengst" tabindex="0" role="button"${tijdwinst.berekenbaar ? "" : ' data-nvt="1"'}>
       <div class="kpi-getal">${esc(actiesGetal)}</div>
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
+    </div>
+    <div class="kpi-tile kpi-zacht" data-goto="tijdwinst" tabindex="0" role="button">
+      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
+      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-aanname">schatting op basis van jouw aanname, geen meting</div>
+      <div class="kpi-instelling" data-stop-nav="1">
+        <label class="minuten-input-label">min/actie
+          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(ctx.minutenPerActie)}">
+        </label>
+      </div>
+      <div class="kpi-som">${esc(som)}</div>
+    </div>`;
+}
+
+// ── Prestaties · tegels ───────────────────────────────────────────────
+// De adoptiescore heet hier "Ritme van je team". De berekening verandert
+// niet: het is exact dezelfde score, met dezelfde narekenbare herkomst.
+function renderPrestatieKpis(el, ctx) {
+  const { adopt, sporenTotaal, periodWeeks } = ctx;
+  const cv = ctx.correctievrij || { aanwezig: false, reden: "Correctievrij-percentage niet beschikbaar in deze bundel." };
+  const cvKpi = correctievrijKpi(cv);
+
+  const ritmeWaarde = adopt.adoptiescore === null ? "n.v.t." : `${adopt.adoptiescore}%`;
+  const ritmeLabel = adopt.adoptiescore === null
+    ? "Geen enkele subscore is te berekenen in deze bundel"
+    : `Gemiddelde van ${adopt.aantalBerekenbaar}/${adopt.aantalComponenten} subscores (ritme · breedte · opvolging)`;
+
+  el.innerHTML = `
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button"${adopt.adoptiescore === null ? ' data-nvt="1"' : ""}>
+      <div class="kpi-getal">${esc(ritmeWaarde)}</div>
+      <div class="kpi-kop">Ritme van je team</div>
+      <div class="kpi-label">${esc(ritmeLabel)}</div>
     </div>
     <div class="kpi-tile" data-goto="activiteit" tabindex="0" role="button">
       <div class="kpi-getal">${esc(sporenTotaal)}</div>
       <div class="kpi-kop">Sporen in de periode</div>
       <div class="kpi-label">dagverslagen, lessen, interacties en content — laatste ${periodWeeks} weken</div>
     </div>
-    ${ctx.intern ? `<div class="kpi-tile kpi-intern" data-goto="correctievrij" tabindex="0" role="button">
+    ${ctx.intern ? `<div class="kpi-tile kpi-intern" data-goto="correctievrij" tabindex="0" role="button"${cvKpi.getal === "n.v.t." ? ' data-nvt="1"' : ""}>
       <div class="kpi-getal">${esc(cvKpi.getal)}</div>
       <div class="kpi-kop">Correctievrij (4 wk)</div>
       <div class="kpi-som">${esc(cvKpi.gate)}</div>
       <div class="kpi-label">${esc(cvKpi.label)}</div>
-    </div>` : ""}
-    <div class="kpi-tile" data-goto="tijdwinst" tabindex="0" role="button">
-      <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
-      <div class="kpi-kop">Geschatte tijdwinst</div>
-      <div class="kpi-som">${esc(tijdwinstSom)}</div>
-      <div class="kpi-label">
-        Schatting op basis van jouw aanname, geen meting ·
-        <label class="minuten-input-label" data-stop-nav="1">
-          min/actie
-          <input type="number" id="input-minuten" min="1" max="480" step="1" value="${esc(minutenPerActie)}">
-        </label>
-      </div>
-    </div>`;
+    </div>` : ""}`;
+}
+
+// ── Prestaties · "Waar komen deze cijfers vandaan?" ───────────────────
+// Alle dataherkomst, bundelinfo en "niet in deze bundel"-waarschuwingen op
+// één plek. Uit de tegels weg: daar stond de voetnoot in bijna dezelfde
+// weging als het cijfer zelf.
+function renderHerkomst(el, ctx) {
+  const regels = [];
+
+  if (ctx.bundle.kind === "metrics") {
+    const meta = ctx.metricsMeta;
+    const gen = meta.gegenereerdOp && !isNaN(meta.gegenereerdOp.getTime()) ? meta.gegenereerdOp.toLocaleString("nl-NL") : "onbekend moment";
+    regels.push(`<strong>Bundel:</strong> ${esc(meta.bronLabel)} — kant-en-klaar metricsbestand v${METRICS_VERSION}, gegenereerd op ${esc(gen)}${meta.door ? ` door ${esc(meta.door)}` : ""}, ${esc(meta.domeinenGevonden)} domein(en) met tellingen. De periode ligt vast in dat bestand en is hier niet aanpasbaar.`);
+  } else {
+    regels.push(`<strong>Bundel:</strong> ${esc(ctx.bundle.sourceLabel)} — live opgehaald uit je werkruimte-instantie, ${esc(Object.keys(ctx.bundle.domains).length)} domein(en) gevonden.`);
+  }
+
+  const ontbrekend = RITME_BRONNEN.filter(b => !ctx.activiteit.aanwezigeBronnen.includes(b));
+  if (ontbrekend.length) {
+    regels.push(`<strong>Niet in deze bundel:</strong> ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.`);
+  }
+
+  const nvt = ctx.adopt.componenten.filter(c => !c.berekenbaar).map(c => `${esc(c.label)}: ${esc(c.reden)}`);
+  if (!ctx.tijdwinst.berekenbaar) nvt.push("Acties afgerond en geschatte tijdwinst: geen Acties-domein aanwezig in deze bundel.");
+  if (ctx.intern && ctx.correctievrij && !ctx.correctievrij.aanwezig) nvt.push(`Correctievrij: ${esc(ctx.correctievrij.reden || "niet beschikbaar in deze bundel")}`);
+  if (nvt.length) regels.push(`<strong>Waarom staat er n.v.t.:</strong><br>${nvt.join("<br>")}`);
+
+  regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
+  regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
+  regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  regels.push(`<strong>Geschatte tijdwinst</strong> is een schatting op basis van jouw eigen aanname, geen meting: afgeronde acties × de minuten-per-actie die je op de Vandaag-tab instelt.`);
+  regels.push(`Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module nergens een spoor, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt.`);
+
+  const laatst = leesLaatstGebruikt();
+  if (laatst) regels.push(`<strong>Laatst geladen:</strong> ${esc(laatst)}`);
+
+  el.innerHTML = regels.map(r => `<p class="footnote">${r}</p>`).join("");
 }
 
 // ── Activiteit per week (gestapelde staafgrafiek) ───────────────────────
@@ -95,13 +220,12 @@ function renderActiviteitPanel(el, activiteit, periodWeeks) {
   const seriesLabels = seriesKeys.map(k => RITME_SERIE_LABEL[k]);
   const chart = buildStackedBarChart({ buckets: activiteit.buckets, seriesKeys, seriesLabels });
   const ontbrekend = RITME_BRONNEN.filter(b => !activiteit.aanwezigeBronnen.includes(b));
-  el.innerHTML = `${chart}
-    <p class="footnote">Elke serie komt uit zijn eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.</p>
-    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")} — die series tonen daardoor altijd 0, niet omdat er geen activiteit was maar omdat de bron ontbreekt.</p>` : ""}
+  el.innerHTML = `<div class="chart-scroll">${chart}</div>
+    ${ontbrekend.length ? `<p class="footnote warn">Niet in deze bundel: ${ontbrekend.map(esc).join(", ")}.</p>` : ""}
     <a class="detail-link" data-goto="activiteit">Bekijk per week in detail →</a>`;
 }
 
-// ── Adoptiescore — drie balken naast elkaar ─────────────────────────────
+// ── Ritme — drie balken naast elkaar ────────────────────────────────────
 function renderAdoptieSubscores(el, adopt) {
   const kolommen = adopt.componenten.map(c => {
     if (!c.berekenbaar) {
@@ -123,9 +247,11 @@ function renderAdoptieSubscores(el, adopt) {
 
   const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
   const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
+  // De narekenbaarheid blijft bij het cijfer staan — dat is geen herkomst-
+  // voetnoot maar de belofte zelf: je moet het met de hand kunnen volgen.
   const rekenregel = berekenbaar.length
-    ? `De adoptiescore is het gemiddelde van de ${berekenbaar.length} berekenbare subscore(s) hierboven, met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
-    : "Geen van de drie subscores is in deze bundel te berekenen — de adoptiescore blijft daarom leeg (n.v.t.), nooit 0%.";
+    ? `Met de hand na te rekenen: (${som}) / ${berekenbaar.length} = ${adopt.adoptiescore}%.`
+    : "Geen van de drie subscores is in deze bundel te berekenen — het ritme blijft daarom leeg (n.v.t.), nooit 0%.";
 
   el.innerHTML = `<div class="subscore-grid">${kolommen}</div>
     <p class="footnote">${esc(rekenregel)}</p>
@@ -166,8 +292,7 @@ function renderGebruikPanel(el, agentUsage) {
   const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
   const top = agentUsage.ranking.slice(0, MAX_TONEN);
   const chart = buildHorizontalBarChart({ items: top });
-  el.innerHTML = `${chart}
-    <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" in deze grafiek betekent geen spoor gevonden in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>
+  el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
     <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
@@ -196,7 +321,7 @@ function renderDetailAdoptiescore(el, adopt, periodWeeks) {
   const berekenbaar = adopt.componenten.filter(c => c.berekenbaar);
   const som = berekenbaar.map(c => Math.round(c.waarde)).join(" + ");
   el.innerHTML = `
-    <p>De adoptiescore is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
+    <p>Het <strong>ritme van je team</strong> (voorheen: de adoptiescore) is het <strong>ongewogen gemiddelde</strong> van drie subscores, elk 0–100, over de gekozen periode (${periodWeeks} weken). Ontbreekt de bron voor een subscore, dan telt hij niet mee in het gemiddelde — nooit als 0.</p>
     <div class="grid-9">${rows}</div>
     <p class="footnote"><strong>Formules:</strong><br>
     Ritme = weken met minstens één spoor (rij met een datum in Dagverslagen, Lessen &amp; Inzichten, Interacties of Content Kalender) ÷ aantal weken in de periode.<br>
@@ -267,10 +392,10 @@ function renderDetailCorrectievrij(el, cv) {
       <div class="card ${gateKlasse}"><div class="kop">Gate f19</div><div class="getal">${g.gehaald ? "gehaald ✓" : "nog niet"}</div><div class="detail">${esc(g.wekenGehaald)}/${esc(g.wekenVereist)} weken ≥ ${esc(cv.drempel)}% · ${esc(gateTekst)}</div></div>
     </div>
     <h3>Per kalenderweek (maandag = weekstart)</h3>
-    <table class="detail-table">
+    <div class="tabel-scroll"><table class="detail-table">
       <thead><tr><th>Week van</th><th>Autonoom afgerond</th><th>Gecorrigeerd</th><th>Correctievrij</th><th>Status</th></tr></thead>
       <tbody>${rijen || `<tr><td colspan="5">Geen weekgegevens in deze bundel.</td></tr>`}</tbody>
-    </table>
+    </table></div>
     <p class="footnote"><strong>Definities.</strong> <em>Autonoom afgerond</em> = een agent zette de actie zelf op "Klaar" nadat de kwaliteitscontrole akkoord gaf; het veld <em>Afgerond door</em> draagt dan de agentnaam en <em>Afgerond op</em> de datum. <em>Gecorrigeerd</em> = een mens vinkte daarna <em>Gecorrigeerd</em> aan (met de reden in <em>Correctie</em>) óf heropende de actie (status niet meer "Klaar"). Een afkeuring door de kwaliteitscontrole vóór de afronding telt <strong>niet</strong> als correctie — dat is het normale werkproces. Het venster is de laatste ${esc(cv.vensterDagen)} dagen tot en met vandaag; de weektabel telt alle autonoom afgeronde acties per kalenderweek.</p>
     <p class="footnote"><strong>Gate f19</strong> (fase 1 en verder): ${esc(g.wekenVereist)} aaneengesloten <em>afgesloten</em> kalenderweken (weekstart + 7 dagen ≤ vandaag), elk met minstens één autonoom afgeronde actie en een weekpercentage ≥ ${esc(cv.drempel)}%. De lopende week telt nog niet mee.</p>
     ${cv.opmerking ? `<p class="footnote">Opmerking van de Coördinator: ${esc(cv.opmerking)}</p>` : ""}
@@ -288,11 +413,11 @@ function renderDetailActiviteit(el, activiteit, periodWeeks) {
   const tabelRijen = activiteit.buckets.map(b =>
     `<tr><td>${esc(b.label)}</td><td>${b.values.interacties}</td><td>${b.values.dagverslagen}</td><td>${b.values.lessen_inzichten}</td><td>${b.values.content_kalender}</td><td><strong>${b.totaal}</strong>${b.leeg ? " — geen" : ""}</td></tr>`
   ).join("");
-  el.innerHTML = `${chart}
-    <table class="detail-table">
+  el.innerHTML = `<div class="chart-scroll">${chart}</div>
+    <div class="tabel-scroll"><table class="detail-table">
       <thead><tr><th>Week van</th><th>Interacties</th><th>Dagverslagen</th><th>Lessen</th><th>Content</th><th>Totaal</th></tr></thead>
       <tbody>${tabelRijen}</tbody>
-    </table>
+    </table></div>
     <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
 }
 
@@ -344,7 +469,7 @@ function renderDetailAgent(el, slug, ctx) {
         `<tr><td>${esc(i.titel)}</td><td>${i.status ? esc(String(i.status)) : ""}</td><td>${i.datum ? fmtDate(i.datum) : "—"}</td></tr>`).join("");
       const rest = items.length > MAX ? `<p class="footnote">… en nog ${items.length - MAX} — zie de bron zelf.</p>` : "";
       return `<h3>${kop} (${items.length})</h3>
-        <table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table>${rest}`;
+        <div class="tabel-scroll"><table class="detail-table"><thead><tr><th>Titel</th><th>Status</th><th>${datumLabel}</th></tr></thead><tbody>${rows}</tbody></table></div>${rest}`;
     }
     lijsten = lijstHtml("Acties van deze agent", acties, "Deadline") + lijstHtml("Lessen van deze agent", lessen, "Datum");
   } else {
@@ -360,11 +485,28 @@ function renderDetailAgent(el, slug, ctx) {
 }
 
 // ── Router ────────────────────────────────────────────────────────────
+// Vier top-level tabs plus de bestaande detailroutes, die ongewijzigd
+// blijven: elke bestaande #/detail/…-link (en de f4-agentdoorklik) werkt
+// precies zoals hij werkte. Geeft altijd {soort, …} terug.
+//   {soort:"tab", tab}                 #/ · #/team · #/data · #/prestaties
+//   {soort:"data", domein}             #/data/<domein>
+//   {soort:"detail", key, tab}         #/detail/<key> · #/detail/agent/<slug>
 function bepaalActieveView() {
   const hash = window.location.hash || "";
+
   const ag = hash.match(/^#\/?detail\/agent\/([a-z0-9-]+)/);
-  if (ag) return "agent/" + ag[1];
+  if (ag) return { soort: "detail", key: "agent/" + ag[1], tab: "prestaties" };
+
   const m = hash.match(/^#\/?detail\/([a-z]+)/);
-  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) return m[1];
-  return null;
+  if (m && DETAIL_VOLGORDE.some(d => d.key === m[1])) {
+    return { soort: "detail", key: m[1], tab: DETAIL_TAB[m[1]] || "vandaag" };
+  }
+
+  const dom = hash.match(/^#\/data\/([a-z0-9_]+)/);
+  if (dom) return { soort: "data", domein: dom[1], tab: "data" };
+
+  const tab = hash.match(/^#\/([a-z]+)/);
+  if (tab && TABS.some(t => t.key === tab[1])) return { soort: "tab", tab: tab[1] };
+
+  return { soort: "tab", tab: "vandaag" };
 }
