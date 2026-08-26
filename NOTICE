@@ -1,0 +1,195 @@
+NOTICE — agentic-team-dashboard
+(s33, 26-08-2026; concept, zie <<JURIST-REVIEW>> in LICENSE)
+
+Agentic Team Dashboard
+Copyright (c) 2026 Obeya Insights B.V. Alle rechten voorbehouden.
+Licentie: zie LICENSE (bron-inzage, proprietary).
+
+Runtime: geen derden
+--------------------
+Het uitgeleverde artefact (dashboard.html, gebouwd door scripts/build.py uit
+src/ + schema/) bevat geen code van derden: geen bundler-output, geen
+chart-library, geen extern script. Wat de browser van een klant laadt is
+uitsluitend eigen code.
+
+Ontwikkel- en testafhankelijkheden (npm, niet meegeleverd)
+----------------------------------------------------------
+Gegenereerd uit package-lock.json (lockfileVersion 3) op
+26-08-2026: 138 pakketten, alleen gebruikt door `npm test` (vitest +
+jsdom). Ze worden niet gedistribueerd. Platform-specifieke optionele
+binaries (esbuild/rollup/lzma per OS) staan gemarkeerd met [optioneel].
+
+Opnieuw genereren: zie het node-script in de PR-beschrijving van s33, of
+lees per pakket het veld "license" uit package-lock.json / node_modules.
+
+
+Apache-2.0 (2)
+---------------
+- expect-type@1.4.0
+- xml-name-validator@5.0.0
+
+BSD-2-Clause (2)
+-----------------
+- entities@6.0.1
+- webidl-conversions@7.0.0
+
+BSD-3-Clause (2)
+-----------------
+- source-map-js@1.2.1
+- tough-cookie@5.1.2
+
+ISC (4)
+--------
+- lru-cache@10.4.3
+- picocolors@1.1.1
+- saxes@6.0.0
+- siginfo@2.0.0
+
+MIT (127)
+----------
+- @asamuzakjp/css-color@3.2.0
+- @csstools/css-calc@2.1.4
+- @csstools/css-color-parser@3.1.0
+- @csstools/css-parser-algorithms@3.0.5
+- @csstools/css-tokenizer@3.0.4
+- @esbuild/aix-ppc64@0.28.2 [optioneel]
+- @esbuild/android-arm@0.28.2 [optioneel]
+- @esbuild/android-arm64@0.28.2 [optioneel]
+- @esbuild/android-x64@0.28.2 [optioneel]
+- @esbuild/darwin-arm64@0.28.2 [optioneel]
+- @esbuild/darwin-x64@0.28.2 [optioneel]
+- @esbuild/freebsd-arm64@0.28.2 [optioneel]
+- @esbuild/freebsd-x64@0.28.2 [optioneel]
+- @esbuild/linux-arm@0.28.2 [optioneel]
+- @esbuild/linux-arm64@0.28.2 [optioneel]
+- @esbuild/linux-ia32@0.28.2 [optioneel]
+- @esbuild/linux-loong64@0.28.2 [optioneel]
+- @esbuild/linux-mips64el@0.28.2 [optioneel]
+- @esbuild/linux-ppc64@0.28.2 [optioneel]
+- @esbuild/linux-riscv64@0.28.2 [optioneel]
+- @esbuild/linux-s390x@0.28.2 [optioneel]
+- @esbuild/linux-x64@0.28.2 [optioneel]
+- @esbuild/netbsd-arm64@0.28.2 [optioneel]
+- @esbuild/netbsd-x64@0.28.2 [optioneel]
+- @esbuild/openbsd-arm64@0.28.2 [optioneel]
+- @esbuild/openbsd-x64@0.28.2 [optioneel]
+- @esbuild/openharmony-arm64@0.28.2 [optioneel]
+- @esbuild/sunos-x64@0.28.2 [optioneel]
+- @esbuild/win32-arm64@0.28.2 [optioneel]
+- @esbuild/win32-ia32@0.28.2 [optioneel]
+- @esbuild/win32-x64@0.28.2 [optioneel]
+- @jridgewell/sourcemap-codec@1.5.5
+- @napi-rs/lzma-linux-x64-gnu@1.5.1 [optioneel]
+- @rollup/rollup-android-arm-eabi@4.62.5 [optioneel]
+- @rollup/rollup-android-arm64@4.62.5 [optioneel]
+- @rollup/rollup-darwin-arm64@4.62.5 [optioneel]
+- @rollup/rollup-darwin-x64@4.62.5 [optioneel]
+- @rollup/rollup-freebsd-arm64@4.62.5 [optioneel]
+- @rollup/rollup-freebsd-x64@4.62.5 [optioneel]
+- @rollup/rollup-linux-arm-gnueabihf@4.62.5 [optioneel]
+- @rollup/rollup-linux-arm-musleabihf@4.62.5 [optioneel]
+- @rollup/rollup-linux-arm64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-arm64-musl@4.62.5 [optioneel]
+- @rollup/rollup-linux-loong64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-loong64-musl@4.62.5 [optioneel]
+- @rollup/rollup-linux-ppc64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-ppc64-musl@4.62.5 [optioneel]
+- @rollup/rollup-linux-riscv64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-riscv64-musl@4.62.5 [optioneel]
+- @rollup/rollup-linux-s390x-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-x64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-linux-x64-musl@4.62.5 [optioneel]
+- @rollup/rollup-openbsd-x64@4.62.5 [optioneel]
+- @rollup/rollup-openharmony-arm64@4.62.5 [optioneel]
+- @rollup/rollup-win32-arm64-msvc@4.62.5 [optioneel]
+- @rollup/rollup-win32-ia32-msvc@4.62.5 [optioneel]
+- @rollup/rollup-win32-x64-gnu@4.62.5 [optioneel]
+- @rollup/rollup-win32-x64-msvc@4.62.5 [optioneel]
+- @types/chai@5.2.3
+- @types/deep-eql@4.0.2
+- @types/estree@1.0.9
+- @vitest/expect@3.2.7
+- @vitest/mocker@3.2.7
+- @vitest/pretty-format@3.2.7
+- @vitest/runner@3.2.7
+- @vitest/snapshot@3.2.7
+- @vitest/spy@3.2.7
+- @vitest/utils@3.2.7
+- agent-base@7.1.4
+- assertion-error@2.0.1
+- cac@6.7.14
+- chai@5.3.3
+- check-error@2.1.3
+- cssstyle@4.6.0
+- data-urls@5.0.0
+- debug@4.4.3
+- decimal.js@10.6.0
+- deep-eql@5.0.2
+- es-module-lexer@1.7.0
+- esbuild@0.28.2
+- estree-walker@3.0.3
+- fdir@6.5.0
+- fsevents@2.3.3 [optioneel]
+- html-encoding-sniffer@4.0.0
+- http-proxy-agent@7.0.2
+- https-proxy-agent@7.0.6
+- iconv-lite@0.6.3
+- is-potential-custom-element-name@1.0.1
+- js-tokens@9.0.1
+- jsdom@26.1.0
+- loupe@3.2.1
+- magic-string@0.30.21
+- ms@2.1.3
+- nanoid@3.3.18
+- nwsapi@2.2.24
+- parse5@7.3.0
+- pathe@2.0.3
+- pathval@2.0.1
+- picomatch@4.0.7
+- postcss@8.5.26
+- punycode@2.3.1
+- rollup@4.62.5
+- rrweb-cssom@0.8.0
+- safer-buffer@2.1.2
+- stackback@0.0.2
+- std-env@3.10.0
+- strip-literal@3.1.0
+- symbol-tree@3.2.4
+- tinybench@2.9.0
+- tinyexec@0.3.2
+- tinyglobby@0.2.17
+- tinypool@1.1.1
+- tinyrainbow@2.0.0
+- tinyspy@4.0.4
+- tldts@6.1.86
+- tldts-core@6.1.86
+- tr46@5.1.1
+- vite@7.3.6
+- vite-node@3.2.4
+- vitest@3.2.7
+- w3c-xmlserializer@5.0.0
+- whatwg-encoding@3.1.1
+- whatwg-mimetype@4.0.0
+- whatwg-url@14.2.0
+- why-is-node-running@2.3.0
+- ws@8.21.3
+- xmlchars@2.2.0
+
+MIT-0 (1)
+----------
+- @csstools/color-helpers@5.1.0
+
+Licentieteksten
+---------------
+De volledige tekst van elke bovengenoemde licentie staat in het betreffende
+pakket onder node_modules/<pakket>/LICENSE (of in package.json). MIT, ISC,
+BSD-2-Clause, BSD-3-Clause, MIT-0 en Apache-2.0 zijn permissieve licenties
+die vermelding van de auteursrechthouder vereisen; die vermelding is via
+deze lijst en de pakketbronnen gegeven.
+
+Python (scripts/)
+-----------------
+scripts/build.py, extract-schema.py, sync-schema.py en generate-testdata*.py
+gebruiken de Python-standaardbibliotheek (Python Software Foundation
+License). generate-testdata.py gebruikt optioneel openpyxl (MIT) — alleen
+voor de historische Excel-fixture, niet voor het artefact.

@@ -1,0 +1,115 @@
+<<JURIST-REVIEW>>  CONCEPT — nog niet juridisch beoordeeld.
+Deze licentietekst is een werkversie (s33, 26-08-2026) die door de jurist
+van Obeya Insights moet worden nagekeken vóór hij als definitief geldt. Tot
+die beoordeling is afgerond, geldt: alle rechten voorbehouden. Open punten
+voor de review staan onderaan dit bestand.
+<<JURIST-REVIEW>>
+
+AGENTIC TEAM — BRON-INZAGE LICENTIE (source-available, proprietary)
+Versie 0.1-concept
+
+Copyright (c) 2026 Obeya Insights B.V. Alle rechten voorbehouden.
+
+Deze licentie geldt voor de inhoud van de repository "AgenticTeamAI/agentic-team-dashboard" (hierna:
+de "Software"), inclusief alle broncode, configuratie, documentatie en
+gegenereerde bestanden daarin, tenzij een bestand uitdrukkelijk een andere
+licentie vermeldt (zie NOTICE voor onderdelen van derden).
+
+1. Definities
+   a. "Licentiegever": Obeya Insights B.V., handelend onder de naam
+      Agentic Team (www.agentic-team.ai).
+   b. "Licentiehouder": een natuurlijke of rechtspersoon met een geldige,
+      niet-opgezegde Agentic Team-licentie (abonnement of proeflicentie)
+      volgens de Productvoorwaarden van Licentiegever.
+   c. "Gebruik": installeren, uitvoeren, laden en weergeven van de Software
+      voor het doel waarvoor Licentiegever haar aanbiedt.
+
+2. Wat is toegestaan
+   a. Iedereen mag de Software in deze repository lezen en bestuderen
+      (bron-inzage), onder meer om de werking, veiligheid en gegevensstromen
+      te controleren.
+   b. Een Licentiehouder mag de Software Gebruiken voor de duur en binnen de
+      omvang van zijn Agentic Team-licentie, op zijn eigen systemen en in de
+      omgevingen waarvoor Licentiegever de Software bestemt (zoals Claude,
+      Notion, ChatGPT of GitHub Copilot).
+   c. Een Licentiehouder mag voor eigen gebruik kopieën maken voor zover
+      dat technisch nodig is voor installatie, back-up en bijwerking.
+   d. Bijdragen (pull requests, issues) zijn welkom. Door een bijdrage in te
+      dienen verleent de indiener Licentiegever een onherroepelijk,
+      wereldwijd, royaltyvrij recht om die bijdrage te gebruiken, te wijzigen
+      en onder deze of een andere licentie te verspreiden.
+
+3. Wat niet is toegestaan (zonder voorafgaande schriftelijke toestemming
+   van Licentiegever)
+   a. De Software of een wezenlijk deel ervan herpubliceren, doorverkopen,
+      sublicentiëren, verhuren, hosten voor derden of anderszins aan derden
+      beschikbaar stellen, al dan niet gewijzigd.
+   b. Afgeleide producten maken die de Software of de daarin vervatte
+      werkwijzen, agentdefinities, schema's of teksten geheel of gedeeltelijk
+      overnemen, om die aan te bieden aan anderen dan de eigen organisatie
+      van de Licentiehouder.
+   c. Technische of contractuele beperkingen in de Software omzeilen,
+      waaronder licentie- en toegangscontroles, of de Software gebruiken om
+      zonder geldige licentie toegang te krijgen tot diensten van
+      Licentiegever.
+   d. Reverse engineering, decompilatie of disassemblage van onderdelen die
+      niet als leesbare bron in deze repository staan, behalve voor zover
+      dwingend recht (zoals artikel 45m Auteurswet / artikel 6 Richtlijn
+      2009/24/EG) dit toestaat.
+   e. Merken, namen, logo's of auteursrechtvermeldingen van Licentiegever
+      verwijderen, wijzigen of gebruiken op een wijze die verwarring over de
+      herkomst kan wekken.
+
+4. Eigendom
+   De Software is en blijft eigendom van Licentiegever en haar
+   licentiegevers. Deze licentie draagt geen intellectuele-eigendomsrechten
+   over; zij verleent uitsluitend de rechten die hierboven uitdrukkelijk
+   zijn genoemd.
+
+5. Onderdelen van derden
+   Onderdelen van derden die in of met de Software worden meegeleverd vallen
+   onder hun eigen licentievoorwaarden, zoals vermeld in het bestand NOTICE.
+   Bij strijdigheid gaan die voorwaarden voor dat onderdeel voor.
+
+6. Beëindiging
+   De rechten onder artikel 2b en 2c eindigen automatisch zodra de Agentic
+   Team-licentie van de Licentiehouder eindigt, of bij een schending van
+   artikel 3 die niet binnen 14 dagen na kennisgeving is hersteld. Het recht
+   op bron-inzage (artikel 2a) blijft bestaan zolang Licentiegever de
+   repository openbaar houdt.
+
+7. Garantie en aansprakelijkheid
+   De Software wordt geleverd "zoals zij is". Voor Licentiehouders gelden de
+   garantie- en aansprakelijkheidsbepalingen van de Productvoorwaarden en
+   de eventuele verwerkersovereenkomst; die gaan bij strijdigheid voor. Voor
+   anderen geldt, voor zover de wet dit toelaat: geen enkele garantie en
+   geen aansprakelijkheid voor welke schade dan ook die voortvloeit uit het
+   lezen of gebruiken van de Software.
+
+8. Toepasselijk recht en forum
+   Op deze licentie is Nederlands recht van toepassing. Geschillen worden
+   voorgelegd aan de bevoegde rechter in het arrondissement van de
+   vestigingsplaats van Licentiegever, tenzij dwingend recht anders bepaalt.
+
+9. Verhouding tot andere documenten
+   Deze licentie regelt uitsluitend het gebruik van de Software in deze
+   repository. De Agentic Team-dienst zelf (connector, playbooks, werkruimte)
+   valt onder de Productvoorwaarden, het privacybeleid en — waar van
+   toepassing — de verwerkersovereenkomst op www.agentic-team.ai.
+
+Contact: via www.agentic-team.ai.
+
+----------------------------------------------------------------------
+<<JURIST-REVIEW>> Open punten voor de juridische beoordeling
+1. Klopt de rechtspersoon en handelsnaam (Obeya Insights B.V. / Agentic
+   Team) en moet het KvK-nummer worden opgenomen?
+2. Is de bijdrage-clausule (2d) voldoende als "inbound = outbound"-regeling,
+   of is een aparte CLA/DCO nodig?
+3. Reverse-engineering-uitzondering (3d): formulering toetsen aan art. 45j
+   t/m 45m Auteurswet en de Softwarerichtlijn.
+4. Verhouding tot de Productvoorwaarden 2.1 / DPA 2.0 (artikel 7 en 9):
+   voorrangsregel correct en volledig?
+5. Wil Licentiegever "bron-inzage" (2a) ook expliciet bevestigen voor
+   AI-crawlers/indexering, of juist uitsluiten?
+6. Engelse vertaling nodig voor niet-Nederlandstalige licentiehouders?
+<<JURIST-REVIEW>>
