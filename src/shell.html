@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 __CSP_META__
 __ROBOTS_META__
+__OAUTH_META__
 <title>Agentic Team Dashboard</title>
 <style>
 __STYLES__
@@ -24,6 +25,12 @@ __STYLES__
     <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
     haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
     verlopen, vraag je Coördinator dan om een nieuwe.</p>
+    <!-- p10 fase 3: de tweede ingang — inloggen met je eigen licentie. Alleen
+         zichtbaar op een http(s)-pagina van een build met OAUTH_DASHBOARD aan;
+         via file:// en zonder de vlag blijft dit blok verborgen. -->
+    <p class="empty-state-acties" id="empty-state-acties" style="display:none;">
+      <button type="button" id="btn-oauth-login">Inloggen met je licentie</button>
+    </p>
     <p class="privacy-regel-tekst" id="empty-state-privacy"></p>
   </div>
 

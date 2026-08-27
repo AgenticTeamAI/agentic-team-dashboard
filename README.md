@@ -43,9 +43,12 @@ src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
   shell.html             → HTML-skelet met __PLACEHOLDERS__ (homepage + detail-view)
   styles.css              → huisstijl (zie §Vormgeving)
   schema-helpers.js       → matching van domeinen/agents op het schema
-  werkruimte-loader.js    → de enige route: leest de interne bundelvorm live uit de
-                             eigen werkruimte-instantie, via een daglink (zie §De
-                             werkruimte-route)
+  werkruimte-loader.js    → de enige databron: leest de interne bundelvorm live uit
+                             de eigen werkruimte-instantie, via een daglink óf een
+                             OAuth-access-token (zie §De werkruimte-route)
+  oauth-client.js         → p10: de OAuth-clientkant (PKCE S256, autorisatie-URL,
+                             code uit het #fragment, token-uitwisseling, refresh) —
+                             zie §Inloggen met je licentie
   zones.js                → alle berekeningen (puur, geen DOM): de vijf zones, de
                              adoptiescore (ritme/breedte/opvolging), activiteit per
                              week, tijdwinst-som, gebruik-per-agent-ranglijst — dit
@@ -58,8 +61,9 @@ src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
                              plus de "onbekende versie"-melding
   charts.js                → inline-SVG-grafiekbouwers (gestapelde staaf, horizontale staaf) — puur, geen DOM
   homepage.js              → KPI-tegels, grafiekpanelen, adoptiescore-balken, detail-router
-  app.js                  → wiring: daglink laden, periode (weken), minuten-per-actie,
-                             hash-routering, en de keuze tussen rijen en metricsbestand
+  app.js                  → wiring: bron laden (daglink of login), periode (weken),
+                             minuten-per-actie, hash-routering, en de keuze tussen
+                             rijen en metricsbestand
 schema/
   schema.generated.js     → GEGENEREERD uit core/agents.json — nooit met de hand bewerken
 scripts/
@@ -68,6 +72,7 @@ scripts/
   generate-testdata-metrics.py → genereert de fixture testdata/notion-metrics/ (metricsbestand v1)
   mock-instantie.mjs      → lokale nep-werkruimte die de fixture serveert (ontwikkelen zonder klant)
   build.py                → plakt src/ + schema/ samen tot dashboard.html
+                             (--noindex = staging-meta, --oauth = loginknop aan)
 testdata/                → testfixture (rijen, metricsbestand, teamfeed) voor tests en mock — zie testdata/README.md
 ```
 
@@ -132,9 +137,15 @@ veranderen.
 
 - `test/geen-telemetrie.test.js` bewaakt het gebouwde artefact: verboden
   patronen (sendBeacon, gtag, `_vercel/insights`, Sentry, PostHog, …), precies
-  één `fetch` en die naar de eigen werkruimte, geen host buiten de
-  allowlist, de CSP-grenzen, en of de goedgekeurde tekst er letterlijk in
-  staat.
+  **twee** `fetch`-plaatsen — de eigen werkruimte via de router, en sinds p10
+  de OAuth-token-uitwisseling — geen host buiten de allowlist, de CSP-grenzen
+  (`connect-src` én `script-src` exact-match, verbod 10/11 uit het
+  OAuth-contract), en of de goedgekeurde tekst er letterlijk in staat.
+- **De token-call is geen telemetrie.** Hij gaat naar ons domein, maar draagt
+  geen enkel gegeven over jou of je werk: alleen een autorisatiecode of
+  refresh-token, de PKCE-verifier en de client-identificatie. Hij gebeurt
+  alleen als je zelf op "Inloggen met je licentie" klikt of een lopende sessie
+  vernieuwt — nooit uit zichzelf, en nooit in de lege staat.
 - **Vercel Web Analytics en Speed Insights staan uit** op zowel
   `agentic-team-dashboard` als `at-dashboard-staging`, en horen uit te
   blijven. Die zijn in het Vercel-dashboard aan te zetten **zonder
@@ -146,9 +157,19 @@ veranderen.
 Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
 niets naar agentic-team.ai": de pagina zelf komt van
 `dashboard.agentic-team.ai`, met de gebruikelijke technische gegevens die
-daarbij horen. Het onderscheid dat wél klopt — bedrijfsdata gaat alleen
-browser ↔ eigen werkruimte-instantie, en het daglink-token staat achter het
-`#` en bereikt nooit een server — moet in de tekst blijven staan.
+daarbij horen, en sinds p10 gaat de token-call daar ook heen. Het onderscheid
+dat wél klopt — bedrijfsdata gaat alleen browser ↔ eigen werkruimte-instantie,
+en het daglink-token staat achter het `#` en bereikt nooit een server — moet in
+de tekst blijven staan.
+
+> **Openstaand vóór de vlag naar een klant gaat.** `PRIVACY_UITKLAP` in
+> `src/teksten.js` beschrijft vandaag alleen de daglink. Die tekst is woordelijk
+> goedgekeurd in de juridische toets van 26-08-2026 en is hier bewust **niet**
+> gewijzigd: aanpassen vraagt een nieuwe toets. Zolang `OAUTH_DASHBOARD` uit
+> staat is de tekst juist (er is dan geen loginknop en geen token-call). Vóórdat
+> de vlag bij een klant aangaat moet er een zin bij over de login: dat er dan
+> één verzoek naar `www.agentic-team.ai` gaat, wat daar wel en niet in zit, en
+> dat de tokens in `sessionStorage` staan (tabblad dicht = weg).
 
 ## De panelen: KPI's, grafieken, ritme, tijdwinst
 
@@ -435,12 +456,14 @@ elke PR en push naar main:
   verouderd / onleesbaar / onbekende versie), teamfeed, onbekend domein, lege
   werkruimte, 401 en 500, interne tegels, hash-router en de periode- en
   minutenschakelaar. Daarnaast `test/xss.test.js` (b32),
-  `test/correctievrij.test.js` (i25), `test/kalenderdag.test.js` (b37) en
+  `test/correctievrij.test.js` (i25), `test/kalenderdag.test.js` (b37),
   `test/geen-derden-in-artefact.test.js` (juridische toets 26-08-2026: de
   NOTICE-claim dat er geen code, fonts of afbeeldingen van derden in
   `dashboard.html` zitten — herkomst byte voor byte plus een signatuurscan op
   fonts, icoonsets, polyfills, geminificeerde bundels, licentieteksten en
-  externe bronnen).
+  externe bronnen), `test/geen-telemetrie.test.js` (f25 + verbod 10/11 uit het
+  OAuth-contract) en — sinds p10 fase 3 — `test/oauth-client.test.js` en
+  `test/oauth-login.test.js` (zie §Inloggen met je licentie).
 - **build-drift** — `python3 scripts/build.py` moet `dashboard.html` en
   `vercel.json` (CSP-hashes) ongewijzigd laten; wie `src/` of `schema/`
   wijzigt zonder te herbouwen, faalt hier.
@@ -457,6 +480,7 @@ elke PR en push naar main:
 
 ```bash
 python3 scripts/build.py            # dashboard.html opnieuw genereren uit src/ + schema/
+python3 scripts/build.py --oauth    # idem, met de loginknop aan (Vercel: OAUTH_DASHBOARD)
 python3 scripts/build.py --noindex  # idem, met <meta name="robots" content="noindex"> (staging)
 python3 scripts/generate-testdata.py          # testdata/data/ (fixture) opnieuw genereren
 python3 scripts/generate-testdata-metrics.py  # testdata/notion-metrics/ (fixture) opnieuw genereren
@@ -809,6 +833,67 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   rendering is gegate. Dit is "nooit per ongeluk zichtbaar", geen
   afscherming: wie de pagina openbreekt ziet hooguit zijn eigen percentage.
 
+### Inloggen met je licentie (p10 fase 3)
+
+Naast de daglink kan het dashboard sinds p10 zijn gegevens ook halen met een
+**OAuth-access-token**: je klikt in de lege staat op "Inloggen met je
+licentie", geeft op `www.agentic-team.ai/oauth/authorize` je licentiesleutel
+op, en komt terug met een token dat een uur meegaat. De daglink blijft
+onveranderd bestaan en blijft de route van de dagstart — dit is een tweede
+ingang, geen vervanging.
+
+Alles hangt aan het OAuth-contract
+(`agent-architecture/architectuur/oauth-p10-contract.md`, v1.4):
+
+| | waarde |
+|---|---|
+| `client_id` | `https://www.agentic-team.ai/oauth/clients/dashboard` (§5a) |
+| `redirect_uri` | `https://dashboard.agentic-team.ai/` (§5a) |
+| `scope` | `dashboard:lees` — alleen uitgegeven aan een hosted licentie (§2) |
+| `resource` | `https://connector.agentic-team.ai/dashboard` (§1) |
+| PKCE | S256, WebCrypto, geen client secret (publieke client) |
+
+Wat `src/oauth-client.js` doet, en waarom zo:
+
+- **De `code` komt terug in het `#fragment`, niet in de query.** Precies zoals
+  het daglink-token: een fragment gaat nooit naar een server, dus een
+  inwisselbare code belandt in geen enkel access log. Direct na het lezen wordt
+  de adresbalk leeggemaakt (`history.replaceState`). De code wordt alleen
+  ingewisseld als `state` klopt en, als de server hem meestuurt, `iss` gelijk
+  is aan onze issuer (RFC 9207).
+- **Tokens staan in `sessionStorage`, niet in `localStorage`.** Tabblad dicht =
+  weg, dezelfde eigenschap als de daglink. Een dashboard dat op een gedeelde
+  laptop maandenlang ingelogd blijft is geen dashboard maar een lek.
+- **Eén refreshpoging, gedeeld.** Krijgt een verzoek aan de router een 401, dan
+  vernieuwt de loader het token één keer en doet het verzoek opnieuw. Lukt dat
+  niet, dan valt de pagina terug op de lege staat mét de loginknop en een
+  leesbare melding — nooit een lus. De poging is gedeeld over de vier
+  gelijktijdige verzoeken: vier refreshes tegelijk zou de refresh-familie
+  intrekken (contract §4). Een 403 (verkeerde scope) is geen expiry en leidt
+  meteen naar opnieuw inloggen.
+- **Eén bronvorm.** OAuth en daglink leveren allebei hetzelfde
+  `{token, instantieUrl}`-object en praten met dezelfde endpoints op dezelfde
+  router; alleen de 401-afhandeling kent het verschil. De router herkent een
+  JWT aan zijn drie segmenten en routeert dan op de `lic`-claim in plaats van
+  op de sleutel-hash van een daglink.
+- **Aan/uit is build-time.** `OAUTH_DASHBOARD` op het Vercel-project zet
+  `python3 scripts/build.py --oauth` aan, en die zet één meta-tag in het
+  artefact; loginknop en tokenflow zitten daarachter. Terugrollen is een
+  redeploy, geen env-flip (contract §9). De CSP-verbreding staat er bewust
+  **buiten**: die is onvoorwaardelijk, zodat de header van staging en productie
+  niet met de vlag uiteen kan lopen.
+- **Nooit via `file://`.** De loginknop verschijnt alleen op een http(s)-pagina.
+  Een lokaal geopend bestand doet nul netwerkaanroepen — dat blijft zo, met of
+  zonder vlag (`test/oauth-login.test.js`).
+
+Getest in `test/oauth-client.test.js` (PKCE tegen de RFC 7636-vector,
+`state`-mismatch, fragment-parsing, de token-uitwisseling met een gemockte
+`fetch`, en de refresh-boekhouding) en `test/oauth-login.test.js` (dezelfde
+route end-to-end op het gebouwde `dashboard.html` in jsdom). Het
+dashboard-token uit de gedeelde contractfixture
+(`test/fixtures/oauth-fixture.json`) dient daarbij als realistisch
+access-token.
+
 ### Eén bron: deze repo heeft zijn eigen Vercel-project
 
 `dashboard.agentic-team.ai` is een eigen Vercel-project op deze repo —
@@ -816,10 +901,29 @@ bewust niet ondergebracht in `agentic-team-site`, zodat er geen tweede
 kopie van het artefact bestaat die uit de pas kan lopen. Bij deploy bouwt
 Vercel de pagina vers uit `src/` (zie `vercel.json`: hetzelfde
 `scripts/build.py` als lokaal, artefact wordt `index.html`) en serveert
-hem met een strakke CSP: geen extern script of analytics, en `connect-src`
-beperkt tot de instantie-domeinen — de pagina kán technisch nergens anders
-heen praten, ook niet naar agentic-team.ai zelf. Wisselt de
-instantie-provider (nu Azure Container Apps), dan moet de CSP in
+hem met een strakke CSP: geen extern script of analytics, en een
+`connect-src` met precies drie bestemmingen.
+
+**Waar de pagina heen mag praten — en wat daar langs gaat.** Tot p10 stond
+hier "de pagina kán technisch nergens anders heen praten, ook niet naar
+agentic-team.ai zelf". Sinds fase 3 klopt dat laatste niet meer, dus preciezer:
+
+| Bestemming in `connect-src` | Waarvoor | Wat er langs gaat |
+|---|---|---|
+| `https://connector.agentic-team.ai` | de router naar je eigen werkruimte-instantie | **al je bedrijfsdata**, in beide richtingen alleen-lezen |
+| `https://*.azurecontainerapps.io` | een instantie rechtstreeks (legacy/lokaal testen) | idem |
+| `https://www.agentic-team.ai` | **uitsluitend** `POST /api/oauth/token` | **geen klantdata** — een autorisatiecode of refresh-token eruit, een access-token erin |
+
+Die derde regel is nieuw en is een bewuste verruiming: zonder hem kan het
+dashboard de OAuth-code niet inwisselen. Wat er níet verandert is de grens die
+de privacytekst noemt: **je bedrijfsdata komt nog steeds niet langs onze
+servers.** De token-call draagt alleen OAuth-parameters — een code of
+refresh-token, de PKCE-verifier en de client-identificatie — en geen enkel
+veld uit je werkruimte. `test/geen-telemetrie.test.js` pint dat vast: precies
+twee `fetch`-plaatsen in het artefact, elk met bestemming, plus de volledige
+`connect-src`-string exact.
+
+Wisselt de instantie-provider (nu Azure Container Apps), dan moet de CSP in
 `vercel.json` mee veranderen. Het gecommitte `dashboard.html` in de
 repo-root is hetzelfde artefact (zelfde bron, zelfde build) en bestaat
 alleen zodat de integratietest en de build-driftgate op de release draaien —
@@ -827,13 +931,19 @@ het is geen distributiekanaal en wordt niet los aan klanten gegeven.
 
 ## Acceptatiecriteria (§11 van het ontwerp)
 
-1. **Geen extern script, geen login, geen data via onze servers** —
-   gehaald. Geen `<script src>` naar extern. Het enige `fetch`-pad is de
-   daglink (sinds f15) en dat gaat uitsluitend, en alleen op initiatief
-   van de gebruiker zelf, naar zijn eigen werkruimte-instantie; zonder
-   daglink doet de pagina geen enkele netwerkaanroep. (Het oorspronkelijke
-   criterium "werkt via `file://`" is met het besluit van 25-08-2026
-   vervallen: er is geen offline-bestand meer.)
+1. **Geen extern script, geen data via onze servers** — gehaald, met één
+   gewijzigde formulering sinds p10. Geen `<script src>` naar extern. Er zijn
+   twee `fetch`-paden, allebei alleen op initiatief van de gebruiker zelf:
+   de daglink/het access-token naar zijn eigen werkruimte-instantie (sinds
+   f15), en de OAuth-token-uitwisseling naar `www.agentic-team.ai` (sinds
+   p10 fase 3, en alleen met `OAUTH_DASHBOARD` aan). Door dat tweede pad
+   luidt het criterium niet langer "geen login": er ís nu een login, maar er
+   gaat nog steeds **geen klantdata langs onze servers**. Zonder daglink en
+   zonder inlogsessie doet de pagina geen enkele netwerkaanroep; via
+   `file://` evenmin. (Het oorspronkelijke criterium "werkt via `file://`"
+   is met het besluit van 25-08-2026 vervallen als distributievorm: er is
+   geen offline-bestand meer. Dat een lokaal geopende pagina nul verkeer doet
+   blijft wél getest.)
 2. **De route is met de fictieve fixture end-to-end ingelezen** — gehaald,
    zie §Getest: werkdata-rijen én metricsbestand, plus de foutpaden
    (onbekende versie, onleesbaar bestand, verlopen daglink, 401/500).
@@ -888,6 +998,21 @@ het is geen distributiekanaal en wordt niet los aan klanten gegeven.
     §Ontbrekende blokken.
 
 ## Wat er nog moet gebeuren voor dit naar een klant kan
+
+- **p10 fase 3 kan nog niet aan.** De clientkant staat er (achter
+  `OAUTH_DASHBOARD`), maar de tegenkant is nog niet af: op de site bestaan
+  `/oauth/authorize` en het CIMD-document `/oauth/clients/dashboard` nog niet,
+  en `ACCESS_TTL_S` is nog niet vastgesteld (contract §3). Zolang die er niet
+  zijn levert een klik op de loginknop een 404 op het consentscherm. De vlag
+  hoort dus uit te blijven tot de site-kant live is, en dan eerst op staging.
+- **`PRIVACY_UITKLAP` moet mee vóórdat de vlag aangaat** — zie het kader in
+  §Geen telemetrie. Nieuwe juridische toets nodig; deze sessie heeft die tekst
+  bewust niet aangeraakt.
+- **Het antwoord van `/oauth/authorize` moet in het `#fragment` komen**
+  (`#code=…&state=…&iss=…`), niet in de query. Het contract legt de
+  response-mode niet vast; dit dashboard leest alleen het fragment, precies
+  zodat een inwisselbare code nooit in een access log belandt. Als de site voor
+  een query-redirect kiest, moeten contract en client eerst mee.
 
 - **Echte visuele/browsertest** (zie §Getest) — deze sessie had geen
   werkende Chrome-koppeling en geen headless Chromium beschikbaar. De

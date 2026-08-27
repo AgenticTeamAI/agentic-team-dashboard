@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-0RBogKLTPpFQD+gVjJsoTlz9Bg4ZFyGRZQCbPOLWMqI=' 'sha256-01vhbron71ShqbKN0OD0qm7O3vDqUij1qNeMhDlIwWE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-0RBogKLTPpFQD+gVjJsoTlz9Bg4ZFyGRZQCbPOLWMqI=' 'sha256-yHpG6lrNTU6e0GIkVFJYX72Flaha7adybhAd38g8Qi4='">
+
 
 <title>Agentic Team Dashboard</title>
 <style>
@@ -103,6 +104,8 @@ select#period-select {
   text-align: center; padding: 5rem 1rem; color: var(--grey);
 }
 .empty-state h2 { color: var(--white); font-size: 1.15rem; }
+/* p10: de loginknop staat náást de daglink-uitleg, niet in de plaats ervan. */
+.empty-state-acties { margin-top: 1.2rem; }
 
 
 /* Onbekende versie of onherkenbaar metricsbestand — geen statuskleur (dit
@@ -546,6 +549,12 @@ section.panel {
     <p id="empty-state-tekst">Dit dashboard opent via de daglink die je Coördinator je bij de dagstart geeft — die
     haalt je gegevens live uit je eigen werkruimte. Open je deze pagina zonder daglink, of is de link
     verlopen, vraag je Coördinator dan om een nieuwe.</p>
+    <!-- p10 fase 3: de tweede ingang — inloggen met je eigen licentie. Alleen
+         zichtbaar op een http(s)-pagina van een build met OAUTH_DASHBOARD aan;
+         via file:// en zonder de vlag blijft dit blok verborgen. -->
+    <p class="empty-state-acties" id="empty-state-acties" style="display:none;">
+      <button type="button" id="btn-oauth-login">Inloggen met je licentie</button>
+    </p>
     <p class="privacy-regel-tekst" id="empty-state-privacy"></p>
   </div>
 
@@ -2208,13 +2217,22 @@ if (typeof module !== "undefined") {
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
- * aan te pas, en de CSP van de pagina staat ook geen ander verkeer toe.
+ * aan te pas. (Sinds p10 staat de CSP één extra bestemming toe: het
+ * token-endpoint op www.agentic-team.ai. Daar gaat nooit klantdata langs;
+ * zie het README-hoofdstuk "Eén bron".)
  *
- * Dit is sinds 25-08-2026 de enige route: er is altijd een werkruimte, dus
- * de vroegere bestandsroutes (Excel-werkboek, data-map, Notion-export-map)
- * en het losse offline dashboard.html zijn verwijderd. Deze module levert
- * de uniforme bundelvorm (kind "rows" of "metrics") waar alles
- * stroomafwaarts (zones, metrics, render) op rekent.
+ * Sinds 25-08-2026 is de werkruimte de enige databron: er is altijd een
+ * werkruimte, dus de vroegere bestandsroutes (Excel-werkboek, data-map,
+ * Notion-export-map) en het losse offline dashboard.html zijn verwijderd.
+ * Deze module levert de uniforme bundelvorm (kind "rows" of "metrics") waar
+ * alles stroomafwaarts (zones, metrics, render) op rekent.
+ *
+ * p10 fase 3 geeft die ene bron een tweede ingang: naast de daglink kun je
+ * inloggen met je licentie (OAuth, zie src/oauth-client.js). Beide leveren
+ * hetzelfde `bron`-object — {token, instantieUrl}, bij OAuth met
+ * `oauth: true` — en praten met exact dezelfde endpoints op dezelfde router.
+ * Het enige verschil zit in de 401-afhandeling: een JWT is één keer te
+ * vernieuwen, een daglink niet.
  *
  * Bundelvorm:
  *   { source: "werkruimte", sourceLabel, kind, domains: { [domein]:
@@ -2296,20 +2314,74 @@ function vergeetDaglink() {
   try { sessionStorage.removeItem(DAGLINK_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
-async function fetchWerkruimte(daglink, pad) {
-  let res;
+/* De bron is óf een daglink óf een OAuth-sessie — in beide gevallen
+ * {token, instantieUrl}, en bij OAuth met `oauth: true` erbij. Alles
+ * stroomafwaarts merkt het verschil niet; alleen de 401-afhandeling hieronder
+ * kent het, want alleen een JWT is te vernieuwen. */
+async function doeVerzoek(bron, pad) {
   try {
-    res = await fetch(daglink.instantieUrl + pad, {
-      headers: { Authorization: "Bearer " + daglink.token },
+    return await fetch(bron.instantieUrl + pad, {
+      headers: { Authorization: "Bearer " + bron.token },
     });
   } catch (e) {
-    throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding of vraag je Coördinator om een nieuwe daglink.");
+    throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
   }
+}
+
+/* p10: hooguit ÉÉN refreshpoging per sessie, gedeeld over alle gelijktijdige
+ * verzoeken. De loader vuurt vier verzoeken tegelijk af (metPlafond); zonder
+ * deze gedeelde belofte zouden er bij een verlopen token vier refreshes
+ * uitgaan, en zou refresh-rotatie (contract §4) drie daarvan als hergebruik
+ * zien en de hele familie intrekken. Faalt de poging, dan is opnieuw inloggen
+ * de enige uitweg — nooit een tweede ronde. */
+let oauthVernieuwing = null;
+let oauthVernieuwingKlaar = false;
+
+function resetOauthVernieuwing() {
+  oauthVernieuwing = null;
+  oauthVernieuwingKlaar = false;
+}
+
+function eenmaligVernieuwen() {
+  if (oauthVernieuwingKlaar) return Promise.resolve(null);
+  if (!oauthVernieuwing) {
+    oauthVernieuwing = Promise.resolve()
+      .then(() => vernieuwOauthSessie())
+      .then((s) => { oauthVernieuwingKlaar = true; return s; });
+  }
+  return oauthVernieuwing;
+}
+
+async function fetchWerkruimte(bron, pad) {
+  let res = await doeVerzoek(bron, pad);
+
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      // Het bron-object is gedeeld met alle lopende verzoeken: het nieuwe
+      // token geldt meteen ook voor hen.
+      bron.token = nieuw.access_token;
+      res = await doeVerzoek(bron, pad);
+    }
+  }
+
   let body = null;
   try { body = await res.json(); } catch (e) { /* geen JSON — valt hieronder in de foutpaden */ }
   if (res.status === 401) {
+    if (bron.oauth) {
+      const err = new Error("Je sessie is verlopen. Log opnieuw in met je licentie.");
+      err.oauthVerlopen = true;
+      throw err;
+    }
     const err = new Error((body && body.fout) || "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
     err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (res.status === 403 && bron.oauth) {
+    // insufficient_scope (contract §6): een token zonder dashboard:lees.
+    // Vernieuwen helpt niet — de grant zelf klopt niet.
+    const err = new Error("Deze licentie geeft geen toegang tot het dashboard.");
+    err.oauthVerlopen = true;
     throw err;
   }
   if (!res.ok || body === null) {
@@ -2383,15 +2455,15 @@ const TEAMFEED_LIMIET = 500;
  * élke route (rows én metrics) op de bundle. Fail-open: een werkruimte die
  * het domein nog niet kent geeft 400 "Onbekend domein" — dan is de feed er
  * gewoon niet, met een uitleg in de feed zelf (geen waarschuwingsbalk). */
-async function haalTeamfeed(daglink, vandaag) {
+async function haalTeamfeed(bron, vandaag) {
   // b37: op lokale kalenderdag (toISOString gaf de UTC-dag: 's avonds een dag te weinig)
   const sinds = feedDagKey(dagVanIndex(kalenderDag(vandaag) - TEAMFEED_DAGEN));
   try {
-    const body = await fetchWerkruimte(daglink,
+    const body = await fetchWerkruimte(bron,
       "/dashboard/entries?domein=" + TEAMFEED_DOMEIN + "&limiet=" + TEAMFEED_LIMIET + "&sinds=" + sinds);
     return { entries: Array.isArray(body.entries) ? body.entries : [], opgehaaldOp: vandaag.toISOString() };
   } catch (e) {
-    if (e && e.daglinkVerlopen) throw e;
+    if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
     return null;
   }
 }
@@ -2407,8 +2479,8 @@ function isVanVandaag(isoTekst, vandaag) {
 /* Haalt de metrics-entry op en geeft {payload, gegenereerdOp} of null.
  * Onleesbaar (geen JSON, of niet de vorm van een metricsbestand) telt als
  * "geen metrics", met een zichtbare waarschuwing — nooit stil negeren. */
-async function haalMetricsEntry(daglink, bundle) {
-  const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
+async function haalMetricsEntry(bron, bundle) {
+  const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
   const entry = entries.find(e => e.entryId === "metrics")
     || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
@@ -2436,8 +2508,8 @@ function werkruimteDomeinen(schema) {
   return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
 }
 
-async function loadWerkruimteBundle(daglink) {
-  const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
+async function loadWerkruimteBundle(bron) {
+  const overzicht = await fetchWerkruimte(bron, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
@@ -2452,7 +2524,7 @@ async function loadWerkruimteBundle(daglink) {
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
   // actief op deze werkruimte".
   bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
-    ? await haalTeamfeed(daglink, new Date())
+    ? await haalTeamfeed(bron, new Date())
     : null;
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
@@ -2464,7 +2536,7 @@ async function loadWerkruimteBundle(daglink) {
   const systeemPerDomein = {};
   if (gevuld.some(d => d.domein === "bronkoppeling")) {
     try {
-      const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=bronkoppeling&limiet=50");
+      const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=bronkoppeling&limiet=50");
       for (const e of (body.entries || [])) {
         if (e && e.data && e.data.Systeem) systeemPerDomein[e.entryId] = e.data.Systeem;
       }
@@ -2480,7 +2552,7 @@ async function loadWerkruimteBundle(daglink) {
   // getoond mét verouderd-waarschuwing (iets ouds met stempel is beter dan
   // een leeg dashboard).
   if (gevuld.some(d => d.domein === METRICS_DOMEIN)) {
-    const metrics = await haalMetricsEntry(daglink, bundle);
+    const metrics = await haalMetricsEntry(bron, bundle);
     if (metrics) {
       const vers = isVanVandaag(metrics.gegenereerdOp, new Date());
       const datumLabel = String(metrics.gegenereerdOp).slice(0, 10);
@@ -2508,7 +2580,7 @@ async function loadWerkruimteBundle(daglink) {
   // de eerste schermvulling snel zonder de instantie plat te leggen.
   const opgehaald = await metPlafond(metInhoud, 4, async (d) => ({
     domein: d.domein,
-    body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
+    body: await fetchWerkruimte(bron, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
   }));
 
   for (const { domein, body } of opgehaald) {
@@ -2533,11 +2605,344 @@ async function loadWerkruimteBundle(daglink) {
   return bundle;
 }
 
+/* p10: welke bron gebruikt deze pagina? Een verse daglink in het fragment is
+ * een expliciete actie van de gebruiker en wint altijd; daarna telt een
+ * lopende inlogsessie (het JWT), en pas daarna een eerder opgeslagen daglink.
+ * Zonder alle drie blijft de lege staat staan. */
+function restoreBron() {
+  if (parseDaglinkFragment(window.location.hash)) return restoreDaglink();
+  const sessie = leesOauthSessie();
+  if (sessie) return oauthBron(sessie);
+  return restoreDaglink();
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
+    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+  };
+}
+
+
+/* p10 fase 3 — inloggen met je licentie, náást de daglink.
+ *
+ * Dit is de OAuth 2.1-clientkant van het dashboard: een publieke browser-client
+ * met PKCE (S256), zonder client secret. Hij volgt het contract
+ * `agent-architecture/architectuur/oauth-p10-contract.md` (v1.4):
+ *
+ *   client_id     https://www.agentic-team.ai/oauth/clients/dashboard   (§5a)
+ *   redirect_uri  https://dashboard.agentic-team.ai/                    (§5a)
+ *   scope         dashboard:lees                                       (§2)
+ *   resource      https://connector.agentic-team.ai/dashboard           (§1)
+ *
+ * Drie eigenschappen die bewust zo zijn, en die de tests vastpinnen:
+ *
+ * 1. **De `code` komt terug in het #fragment**, niet in de query. Een fragment
+ *    wordt door de browser nooit naar een server gestuurd, dus de code belandt
+ *    in geen enkel access log — niet bij ons en niet bij de hostingprovider.
+ *    Dat is exact de eigenschap die de daglink al had, en hij is hier zo
+ *    mogelijk nóg belangrijker: de code is inwisselbaar voor een token.
+ *    Direct na het lezen wordt de adresbalk leeggemaakt (history.replaceState).
+ * 2. **Tokens staan in sessionStorage, niet in localStorage.** Tabblad dicht =
+ *    weg. Dezelfde privacy-eigenschap als de daglink; een dashboard dat op een
+ *    gedeelde laptop maandenlang ingelogd blijft is geen dashboard maar een lek.
+ * 3. **Er gaat precies één soort verzoek naar agentic-team.ai: de
+ *    token-uitwisseling.** Geen klantdata, in geen enkele richting: alleen de
+ *    code/refresh-token eruit, een access-token erin. Alle bedrijfsdata loopt
+ *    onveranderd browser ↔ eigen werkruimte-instantie via de router.
+ *
+ * De loginknop en deze hele flow zitten achter de build-vlag `--oauth`
+ * (`OAUTH_DASHBOARD` op het Vercel-project, contract §9): build.py zet dan een
+ * meta-tag `at-oauth` in het artefact. Terugrollen is een redeploy, geen
+ * env-flip. De CSP-verbreding valt bewust buiten die vlag.
+ * (Deze regel noemt de tag met opzet niet letterlijk: test/oauth-login.test.js
+ * pint erop dat de release-build de tag zelf niet draagt.)
+ */
+
+const OAUTH_AUTORISATIE_URL = "https://www.agentic-team.ai/oauth/authorize";
+const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token";
+const OAUTH_CLIENT_ID = "https://www.agentic-team.ai/oauth/clients/dashboard";
+const OAUTH_REDIRECT_URI = "https://dashboard.agentic-team.ai/";
+const OAUTH_SCOPE = "dashboard:lees";
+const OAUTH_RESOURCE = "https://connector.agentic-team.ai/dashboard";
+const OAUTH_ISSUER = "https://www.agentic-team.ai";
+
+// Beide sleutels zijn sessionStorage (zie 2 hierboven). De naamgeving volgt de
+// bestaande sleutels; test/geen-telemetrie.test.js pint de volledige lijst.
+const OAUTH_SS_KEY = "agentic-team-dashboard:oauth";
+const OAUTH_PKCE_SS_KEY = "agentic-team-dashboard:oauth-pkce";
+
+/* De build-vlag als meta-tag, in de trant van DASHBOARD_NOINDEX (contract §9).
+ * Een meta is build-time (build.py zet hem alleen met --oauth), zichtbaar in
+ * het artefact, en hij valt buiten de scripthashes — dus geen tweede build en
+ * geen tweede artefact. */
+function oauthDashboardAan() {
+  try {
+    return document.querySelector('meta[name="at-oauth"][content="1"]') !== null;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* Inloggen kan alleen op een echte http(s)-pagina: een redirect terug naar
+ * https://dashboard.agentic-team.ai/ heeft geen betekenis als je het bestand
+ * via file:// hebt geopend, en de tokenflow zou dan bovendien de belofte
+ * breken dat een lokaal geopende pagina nul netwerkcalls doet. */
+function oauthMogelijk() {
+  if (!oauthDashboardAan()) return false;
+  try {
+    const p = window.location.protocol;
+    return p === "https:" || p === "http:";
+  } catch (e) {
+    return false;
+  }
+}
+
+/* ── PKCE (RFC 7636, S256) ─────────────────────────────────────────────── */
+
+function base64url(bytes) {
+  let s = "";
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function willekeurigeBytes(n) {
+  const uit = new Uint8Array(n);
+  crypto.getRandomValues(uit);
+  return uit;
+}
+
+/** 32 random bytes base64url = 43 tekens, ruim binnen de 43–128 van RFC 7636. */
+function maakVerifier() {
+  return base64url(willekeurigeBytes(32));
+}
+
+/** S256: base64url(sha256(ascii(verifier))). WebCrypto, geen eigen hash. */
+async function maakChallenge(verifier) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  return base64url(new Uint8Array(digest));
+}
+
+/* ── De autorisatie-URL (contract §5a) ─────────────────────────────────── */
+
+function bouwAutorisatieUrl({ challenge, state }) {
+  const p = new URLSearchParams();
+  p.set("response_type", "code");
+  p.set("client_id", OAUTH_CLIENT_ID);
+  p.set("redirect_uri", OAUTH_REDIRECT_URI);
+  p.set("scope", OAUTH_SCOPE);
+  // RFC 8707: waar dit token voor bedoeld is. Buiten de allowlist van §1 geeft
+  // de site invalid_target — dat is precies de bedoeling.
+  p.set("resource", OAUTH_RESOURCE);
+  p.set("code_challenge", challenge);
+  p.set("code_challenge_method", "S256");
+  p.set("state", state);
+  return OAUTH_AUTORISATIE_URL + "?" + p.toString();
+}
+
+/* ── Opslag ────────────────────────────────────────────────────────────── */
+
+function bewaarPkce(waarde) {
+  try { sessionStorage.setItem(OAUTH_PKCE_SS_KEY, JSON.stringify(waarde)); } catch (e) { /* privémodus */ }
+}
+
+function leesPkce() {
+  try {
+    const raw = sessionStorage.getItem(OAUTH_PKCE_SS_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw);
+    if (v && typeof v.verifier === "string" && typeof v.state === "string") return v;
+  } catch (e) { /* privémodus of kapotte waarde */ }
+  return null;
+}
+
+function vergeetPkce() {
+  try { sessionStorage.removeItem(OAUTH_PKCE_SS_KEY); } catch (e) { /* zie boven */ }
+}
+
+function bewaarOauthSessie(sessie) {
+  try { sessionStorage.setItem(OAUTH_SS_KEY, JSON.stringify(sessie)); } catch (e) { /* privémodus */ }
+}
+
+function leesOauthSessie() {
+  try {
+    const raw = sessionStorage.getItem(OAUTH_SS_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s && typeof s.access_token === "string" && s.access_token) return s;
+  } catch (e) { /* privémodus of kapotte waarde */ }
+  return null;
+}
+
+function vergeetOauthSessie() {
+  try { sessionStorage.removeItem(OAUTH_SS_KEY); } catch (e) { /* zie boven */ }
+}
+
+/* ── Stap 1: wegsturen naar het consentscherm ──────────────────────────── */
+
+async function startOauthLogin() {
+  const verifier = maakVerifier();
+  const state = base64url(willekeurigeBytes(16));
+  const challenge = await maakChallenge(verifier);
+  // Eerst opslaan, dán navigeren: andersom is er een venster waarin de
+  // redirect terugkomt zonder dat de verifier bestaat.
+  bewaarPkce({ verifier, state });
+  window.location.href = bouwAutorisatieUrl({ challenge, state });
+}
+
+/* ── Stap 2: de redirect terug ─────────────────────────────────────────── */
+
+/**
+ * Leest `code`, `state` en `iss` uit het #fragment. Detailroutes ("#/…") en de
+ * daglink (`#t=…`) blijven buiten schot; alles zonder `code` geeft null.
+ */
+function parseOauthRedirect(hash) {
+  if (!hash || hash.startsWith("#/")) return null;
+  const p = new URLSearchParams(hash.replace(/^#/, ""));
+  const code = p.get("code");
+  const fout = p.get("error");
+  if (!code && !fout) return null;
+  return {
+    code: code || null,
+    state: p.get("state"),
+    iss: p.get("iss"),
+    fout: fout || null,
+    foutTekst: p.get("error_description"),
+  };
+}
+
+/** Haalt de OAuth-parameters uit de adresbalk zodat ze niet in de history of
+ *  in een per ongeluk gedeelde URL blijven staan — zelfde greep als de daglink. */
+function schoonAdresbalk() {
+  try {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  } catch (e) { /* geen history (bv. file://) */ }
+}
+
+class OauthFout extends Error {}
+
+/**
+ * Wisselt de code in en levert de sessie. Gooit OauthFout met een leesbare
+ * Nederlandse tekst; de aanroeper toont die naast de loginknop.
+ */
+async function voltooiOauthLogin(redirect) {
+  const bewaard = leesPkce();
+  vergeetPkce();
+  schoonAdresbalk();
+
+  if (redirect.fout) {
+    throw new OauthFout(
+      redirect.fout === "access_denied"
+        ? "Je hebt de koppeling afgebroken. Probeer opnieuw in te loggen."
+        : "Inloggen is niet gelukt (" + redirect.fout + "). Probeer het opnieuw."
+    );
+  }
+  if (!bewaard) {
+    throw new OauthFout("Deze inlogpoging hoort niet bij dit tabblad. Klik opnieuw op inloggen.");
+  }
+  // CSRF: een `code` die bij een andere (of geen) state hoort komt niet van
+  // onze eigen inlogpoging. Nooit inwisselen — dan is de aanvaller ingelogd
+  // in jouw tabblad, of andersom.
+  if (!redirect.state || redirect.state !== bewaard.state) {
+    throw new OauthFout("Inloggen is afgebroken: het antwoord hoorde niet bij deze inlogpoging.");
+  }
+  // RFC 9207, geadverteerd in onze metadata: is `iss` er, dan moet hij kloppen.
+  if (redirect.iss && redirect.iss !== OAUTH_ISSUER) {
+    throw new OauthFout("Inloggen is afgebroken: het antwoord kwam niet van agentic-team.ai.");
+  }
+
+  const antwoord = await tokenAanvraag({
+    grant_type: "authorization_code",
+    code: redirect.code,
+    code_verifier: bewaard.verifier,
+    redirect_uri: OAUTH_REDIRECT_URI,
+    client_id: OAUTH_CLIENT_ID,
+    resource: OAUTH_RESOURCE,
+  });
+  bewaarOauthSessie(antwoord);
+  return antwoord;
+}
+
+/* ── De token-aanvraag: de enige call naar agentic-team.ai ─────────────── */
+
+/**
+ * POST naar /api/oauth/token, `application/x-www-form-urlencoded` (RFC 6749
+ * §4.1.3 — nooit JSON). Er gaat geen enkel bedrijfsgegeven mee: alleen de
+ * code of het refresh-token, de verifier en de client-identificatie.
+ */
+async function tokenAanvraag(velden) {
+  const body = new URLSearchParams();
+  for (const [k, v] of Object.entries(velden)) if (v != null) body.set(k, String(v));
+
+  let res;
+  try {
+    res = await fetch(OAUTH_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+  } catch (e) {
+    throw new OauthFout("agentic-team.ai is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+  }
+  let payload = null;
+  try { payload = await res.json(); } catch (e) { /* geen JSON — hieronder afgevangen */ }
+  if (!res.ok || !payload || typeof payload.access_token !== "string") {
+    // 503 = storing bij ons (contract §6), nooit "je grant is ongeldig".
+    if (res.status === 503) {
+      throw new OauthFout("Inloggen kan nu even niet — er is een storing aan onze kant. Probeer het zo opnieuw.");
+    }
+    throw new OauthFout("Inloggen is niet gelukt. Klik opnieuw op inloggen, of gebruik de daglink van je Coördinator.");
+  }
+  return payload;
+}
+
+/**
+ * Eén refreshpoging. Levert de nieuwe sessie, of null als er niets meer te
+ * vernieuwen valt — dan is de enige uitweg opnieuw inloggen. Bewust géén
+ * herhaalde pogingen: een refresh die faalt faalt bij de tweede poging ook,
+ * en een lus zou van een verlopen sessie een verzoekenregen maken.
+ */
+async function vernieuwOauthSessie() {
+  const sessie = leesOauthSessie();
+  if (!sessie || typeof sessie.refresh_token !== "string" || !sessie.refresh_token) return null;
+  let nieuw;
+  try {
+    nieuw = await tokenAanvraag({
+      grant_type: "refresh_token",
+      refresh_token: sessie.refresh_token,
+      client_id: OAUTH_CLIENT_ID,
+      resource: OAUTH_RESOURCE,
+    });
+  } catch (e) {
+    vergeetOauthSessie();
+    return null;
+  }
+  bewaarOauthSessie(nieuw);
+  return nieuw;
+}
+
+/**
+ * De bronvorm die werkruimte-loader.js verwacht — hetzelfde
+ * {token, instantieUrl}-paar als een daglink, met `oauth: true` erbij zodat de
+ * loader weet dat een 401 hier één refreshpoging waard is. De bestemming is
+ * altijd de router: het access-token draagt `aud`
+ * https://connector.agentic-team.ai/dashboard, dus een andere host zou het
+ * token toch weigeren.
+ */
+function oauthBron(sessie) {
+  return { token: sessie.access_token, instantieUrl: CONNECTOR_ORIGIN, oauth: true };
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    OAUTH_AUTORISATIE_URL, OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_REDIRECT_URI,
+    OAUTH_SCOPE, OAUTH_RESOURCE, OAUTH_SS_KEY, OAUTH_PKCE_SS_KEY,
+    oauthDashboardAan, oauthMogelijk, base64url, maakVerifier, maakChallenge,
+    bouwAutorisatieUrl, parseOauthRedirect, startOauthLogin, voltooiOauthLogin,
+    tokenAanvraag, vernieuwOauthSessie, oauthBron, OauthFout,
+    bewaarOauthSessie, leesOauthSessie, vergeetOauthSessie, bewaarPkce, leesPkce, vergeetPkce,
   };
 }
 
@@ -5256,7 +5661,9 @@ function leesLaatstGebruikt() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
+    // p10: dezelfde route, twee ingangen (daglink of inloggen) — het label
+    // noemt de bron, niet de ingang.
+    const routeLabel = { werkruimte: "Werkruimte (live)" }[route] || route;
     return `${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { return null; }
 }
@@ -5566,32 +5973,82 @@ function wireInputs() {
  * sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets te
  * kiezen, de link wijst al naar zijn eigen instantie. Zonder (of met een
  * verlopen) daglink blijft de lege staat staan met de uitleg. */
-function toonLegeStaat(titel, tekst) {
+function toonLegeStaat(titel, tekst, { login = null } = {}) {
   document.getElementById("empty-state-titel").textContent = titel;
   document.getElementById("empty-state-tekst").textContent = tekst;
+  // `login: null` = laat staan wat er stond; true/false zet hem expliciet.
+  if (login !== null) toonLoginknop(login);
 }
 
-async function laadWerkruimte(daglink) {
-  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
+/* p10: de loginknop is er alleen op een build met OAUTH_DASHBOARD aan én op
+ * een echte http(s)-pagina. Via file:// blijft hij weg — die pagina hoort nul
+ * netwerkverkeer te doen, en een redirect naar dashboard.agentic-team.ai zou
+ * daar sowieso niet terugkomen. */
+function toonLoginknop(aan) {
+  document.getElementById("empty-state-acties").style.display = aan && oauthMogelijk() ? "" : "none";
+}
+
+async function laadWerkruimte(bron) {
+  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
-    const bundle = await loadWerkruimteBundle(daglink);
+    const bundle = await loadWerkruimteBundle(bron);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
   } catch (err) {
     console.error(err);
+    if (err.oauthVerlopen) {
+      // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
+      // knop er meteen bij in plaats van een doodlopende melding.
+      vergeetOauthSessie();
+      resetOauthVernieuwing();
+      toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
+      return;
+    }
     if (err.daglinkVerlopen) vergeetDaglink();
-    toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
+    toonLegeStaat("Kon je werkruimte niet laden",
+      err.message + " Vraag je Coördinator om een nieuwe daglink.", { login: true });
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+/* p10: de terugkomst van het consentscherm. Staat er een `code` in het
+ * fragment, dan wisselen we die in vóórdat we een bron kiezen — de adresbalk
+ * is daarna leeg en de sessie staat in sessionStorage. */
+async function verwerkOauthRedirect() {
+  const redirect = parseOauthRedirect(window.location.hash);
+  if (!redirect) return null;
+  toonLegeStaat("Je wordt ingelogd…", "", { login: false });
+  try {
+    const sessie = await voltooiOauthLogin(redirect);
+    resetOauthVernieuwing();
+    return oauthBron(sessie);
+  } catch (err) {
+    console.error(err);
+    toonLegeStaat("Inloggen is niet gelukt", err.message, { login: true });
+    return null;
+  }
+}
+
+function wireLoginknop() {
+  document.getElementById("btn-oauth-login").addEventListener("click", () => {
+    toonLegeStaat("Je wordt doorgestuurd naar agentic-team.ai…", "", { login: false });
+    startOauthLogin().catch((err) => {
+      console.error(err);
+      toonLegeStaat("Inloggen kon niet starten", err.message || String(err), { login: true });
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
   wireKopInklappen();
+  wireLoginknop();
   document.getElementById("empty-state-privacy").textContent = PRIVACY_LEGE_STAAT;
   renderAll();
-  const daglink = restoreDaglink();
-  if (daglink) laadWerkruimte(daglink);
+  toonLoginknop(true);
+  const uitRedirect = await verwerkOauthRedirect();
+  const bron = uitRedirect || restoreBron();
+  if (bron) laadWerkruimte(bron);
 });
 
 </script>

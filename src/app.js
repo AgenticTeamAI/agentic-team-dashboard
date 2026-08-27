@@ -39,7 +39,9 @@ function leesLaatstGebruikt() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
     const { route, label, when } = JSON.parse(raw);
-    const routeLabel = { werkruimte: "Werkruimte (daglink)" }[route] || route;
+    // p10: dezelfde route, twee ingangen (daglink of inloggen) — het label
+    // noemt de bron, niet de ingang.
+    const routeLabel = { werkruimte: "Werkruimte (live)" }[route] || route;
     return `${routeLabel} — ${label} (${new Date(when).toLocaleString("nl-NL")})`;
   } catch (e) { return null; }
 }
@@ -349,30 +351,80 @@ function wireInputs() {
  * sessie), dan laden we de werkruimte-bundel vanzelf — er valt niets te
  * kiezen, de link wijst al naar zijn eigen instantie. Zonder (of met een
  * verlopen) daglink blijft de lege staat staan met de uitleg. */
-function toonLegeStaat(titel, tekst) {
+function toonLegeStaat(titel, tekst, { login = null } = {}) {
   document.getElementById("empty-state-titel").textContent = titel;
   document.getElementById("empty-state-tekst").textContent = tekst;
+  // `login: null` = laat staan wat er stond; true/false zet hem expliciet.
+  if (login !== null) toonLoginknop(login);
 }
 
-async function laadWerkruimte(daglink) {
-  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "");
+/* p10: de loginknop is er alleen op een build met OAUTH_DASHBOARD aan én op
+ * een echte http(s)-pagina. Via file:// blijft hij weg — die pagina hoort nul
+ * netwerkverkeer te doen, en een redirect naar dashboard.agentic-team.ai zou
+ * daar sowieso niet terugkomen. */
+function toonLoginknop(aan) {
+  document.getElementById("empty-state-acties").style.display = aan && oauthMogelijk() ? "" : "none";
+}
+
+async function laadWerkruimte(bron) {
+  toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
-    const bundle = await loadWerkruimteBundle(daglink);
+    const bundle = await loadWerkruimteBundle(bron);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
   } catch (err) {
     console.error(err);
+    if (err.oauthVerlopen) {
+      // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
+      // knop er meteen bij in plaats van een doodlopende melding.
+      vergeetOauthSessie();
+      resetOauthVernieuwing();
+      toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
+      return;
+    }
     if (err.daglinkVerlopen) vergeetDaglink();
-    toonLegeStaat("Kon je werkruimte niet laden", err.message + " Vraag je Coördinator om een nieuwe daglink.");
+    toonLegeStaat("Kon je werkruimte niet laden",
+      err.message + " Vraag je Coördinator om een nieuwe daglink.", { login: true });
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+/* p10: de terugkomst van het consentscherm. Staat er een `code` in het
+ * fragment, dan wisselen we die in vóórdat we een bron kiezen — de adresbalk
+ * is daarna leeg en de sessie staat in sessionStorage. */
+async function verwerkOauthRedirect() {
+  const redirect = parseOauthRedirect(window.location.hash);
+  if (!redirect) return null;
+  toonLegeStaat("Je wordt ingelogd…", "", { login: false });
+  try {
+    const sessie = await voltooiOauthLogin(redirect);
+    resetOauthVernieuwing();
+    return oauthBron(sessie);
+  } catch (err) {
+    console.error(err);
+    toonLegeStaat("Inloggen is niet gelukt", err.message, { login: true });
+    return null;
+  }
+}
+
+function wireLoginknop() {
+  document.getElementById("btn-oauth-login").addEventListener("click", () => {
+    toonLegeStaat("Je wordt doorgestuurd naar agentic-team.ai…", "", { login: false });
+    startOauthLogin().catch((err) => {
+      console.error(err);
+      toonLegeStaat("Inloggen kon niet starten", err.message || String(err), { login: true });
+    });
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   restoreMinuten();
   wireInputs();
   wireNavigatie();
   wireKopInklappen();
+  wireLoginknop();
   document.getElementById("empty-state-privacy").textContent = PRIVACY_LEGE_STAAT;
   renderAll();
-  const daglink = restoreDaglink();
-  if (daglink) laadWerkruimte(daglink);
+  toonLoginknop(true);
+  const uitRedirect = await verwerkOauthRedirect();
+  const bron = uitRedirect || restoreBron();
+  if (bron) laadWerkruimte(bron);
 });

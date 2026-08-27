@@ -94,6 +94,8 @@ select#period-select {
   text-align: center; padding: 5rem 1rem; color: var(--grey);
 }
 .empty-state h2 { color: var(--white); font-size: 1.15rem; }
+/* p10: de loginknop staat náást de daglink-uitleg, niet in de plaats ervan. */
+.empty-state-acties { margin-top: 1.2rem; }
 
 
 /* Onbekende versie of onherkenbaar metricsbestand — geen statuskleur (dit

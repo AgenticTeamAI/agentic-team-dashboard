@@ -201,7 +201,9 @@ function cspDirectief(csp, naam) {
     .find((d) => d === naam || d.startsWith(naam + " "));
   return deel === undefined ? null : deel.slice(naam.length).trim();
 }
-const CONNECT_SRC = "https://connector.agentic-team.ai https://*.azurecontainerapps.io";
+// p10 fase 3: www.agentic-team.ai staat er alleen voor de token-uitwisseling
+// (POST /api/oauth/token). Zie test/geen-telemetrie.test.js voor de grens.
+const CONNECT_SRC = "https://connector.agentic-team.ai https://*.azurecontainerapps.io https://www.agentic-team.ai";
 
 describe("CSP (b32 fase 2)", () => {
   it("dashboard.html draagt script-src-hashes die exact bij de twee inline scriptblokken horen", async () => {

@@ -6,13 +6,22 @@
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
- * aan te pas, en de CSP van de pagina staat ook geen ander verkeer toe.
+ * aan te pas. (Sinds p10 staat de CSP één extra bestemming toe: het
+ * token-endpoint op www.agentic-team.ai. Daar gaat nooit klantdata langs;
+ * zie het README-hoofdstuk "Eén bron".)
  *
- * Dit is sinds 25-08-2026 de enige route: er is altijd een werkruimte, dus
- * de vroegere bestandsroutes (Excel-werkboek, data-map, Notion-export-map)
- * en het losse offline dashboard.html zijn verwijderd. Deze module levert
- * de uniforme bundelvorm (kind "rows" of "metrics") waar alles
- * stroomafwaarts (zones, metrics, render) op rekent.
+ * Sinds 25-08-2026 is de werkruimte de enige databron: er is altijd een
+ * werkruimte, dus de vroegere bestandsroutes (Excel-werkboek, data-map,
+ * Notion-export-map) en het losse offline dashboard.html zijn verwijderd.
+ * Deze module levert de uniforme bundelvorm (kind "rows" of "metrics") waar
+ * alles stroomafwaarts (zones, metrics, render) op rekent.
+ *
+ * p10 fase 3 geeft die ene bron een tweede ingang: naast de daglink kun je
+ * inloggen met je licentie (OAuth, zie src/oauth-client.js). Beide leveren
+ * hetzelfde `bron`-object — {token, instantieUrl}, bij OAuth met
+ * `oauth: true` — en praten met exact dezelfde endpoints op dezelfde router.
+ * Het enige verschil zit in de 401-afhandeling: een JWT is één keer te
+ * vernieuwen, een daglink niet.
  *
  * Bundelvorm:
  *   { source: "werkruimte", sourceLabel, kind, domains: { [domein]:
@@ -94,20 +103,74 @@ function vergeetDaglink() {
   try { sessionStorage.removeItem(DAGLINK_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
-async function fetchWerkruimte(daglink, pad) {
-  let res;
+/* De bron is óf een daglink óf een OAuth-sessie — in beide gevallen
+ * {token, instantieUrl}, en bij OAuth met `oauth: true` erbij. Alles
+ * stroomafwaarts merkt het verschil niet; alleen de 401-afhandeling hieronder
+ * kent het, want alleen een JWT is te vernieuwen. */
+async function doeVerzoek(bron, pad) {
   try {
-    res = await fetch(daglink.instantieUrl + pad, {
-      headers: { Authorization: "Bearer " + daglink.token },
+    return await fetch(bron.instantieUrl + pad, {
+      headers: { Authorization: "Bearer " + bron.token },
     });
   } catch (e) {
-    throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding of vraag je Coördinator om een nieuwe daglink.");
+    throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
   }
+}
+
+/* p10: hooguit ÉÉN refreshpoging per sessie, gedeeld over alle gelijktijdige
+ * verzoeken. De loader vuurt vier verzoeken tegelijk af (metPlafond); zonder
+ * deze gedeelde belofte zouden er bij een verlopen token vier refreshes
+ * uitgaan, en zou refresh-rotatie (contract §4) drie daarvan als hergebruik
+ * zien en de hele familie intrekken. Faalt de poging, dan is opnieuw inloggen
+ * de enige uitweg — nooit een tweede ronde. */
+let oauthVernieuwing = null;
+let oauthVernieuwingKlaar = false;
+
+function resetOauthVernieuwing() {
+  oauthVernieuwing = null;
+  oauthVernieuwingKlaar = false;
+}
+
+function eenmaligVernieuwen() {
+  if (oauthVernieuwingKlaar) return Promise.resolve(null);
+  if (!oauthVernieuwing) {
+    oauthVernieuwing = Promise.resolve()
+      .then(() => vernieuwOauthSessie())
+      .then((s) => { oauthVernieuwingKlaar = true; return s; });
+  }
+  return oauthVernieuwing;
+}
+
+async function fetchWerkruimte(bron, pad) {
+  let res = await doeVerzoek(bron, pad);
+
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      // Het bron-object is gedeeld met alle lopende verzoeken: het nieuwe
+      // token geldt meteen ook voor hen.
+      bron.token = nieuw.access_token;
+      res = await doeVerzoek(bron, pad);
+    }
+  }
+
   let body = null;
   try { body = await res.json(); } catch (e) { /* geen JSON — valt hieronder in de foutpaden */ }
   if (res.status === 401) {
+    if (bron.oauth) {
+      const err = new Error("Je sessie is verlopen. Log opnieuw in met je licentie.");
+      err.oauthVerlopen = true;
+      throw err;
+    }
     const err = new Error((body && body.fout) || "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
     err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (res.status === 403 && bron.oauth) {
+    // insufficient_scope (contract §6): een token zonder dashboard:lees.
+    // Vernieuwen helpt niet — de grant zelf klopt niet.
+    const err = new Error("Deze licentie geeft geen toegang tot het dashboard.");
+    err.oauthVerlopen = true;
     throw err;
   }
   if (!res.ok || body === null) {
@@ -181,15 +244,15 @@ const TEAMFEED_LIMIET = 500;
  * élke route (rows én metrics) op de bundle. Fail-open: een werkruimte die
  * het domein nog niet kent geeft 400 "Onbekend domein" — dan is de feed er
  * gewoon niet, met een uitleg in de feed zelf (geen waarschuwingsbalk). */
-async function haalTeamfeed(daglink, vandaag) {
+async function haalTeamfeed(bron, vandaag) {
   // b37: op lokale kalenderdag (toISOString gaf de UTC-dag: 's avonds een dag te weinig)
   const sinds = feedDagKey(dagVanIndex(kalenderDag(vandaag) - TEAMFEED_DAGEN));
   try {
-    const body = await fetchWerkruimte(daglink,
+    const body = await fetchWerkruimte(bron,
       "/dashboard/entries?domein=" + TEAMFEED_DOMEIN + "&limiet=" + TEAMFEED_LIMIET + "&sinds=" + sinds);
     return { entries: Array.isArray(body.entries) ? body.entries : [], opgehaaldOp: vandaag.toISOString() };
   } catch (e) {
-    if (e && e.daglinkVerlopen) throw e;
+    if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
     return null;
   }
 }
@@ -205,8 +268,8 @@ function isVanVandaag(isoTekst, vandaag) {
 /* Haalt de metrics-entry op en geeft {payload, gegenereerdOp} of null.
  * Onleesbaar (geen JSON, of niet de vorm van een metricsbestand) telt als
  * "geen metrics", met een zichtbare waarschuwing — nooit stil negeren. */
-async function haalMetricsEntry(daglink, bundle) {
-  const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
+async function haalMetricsEntry(bron, bundle) {
+  const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
   const entry = entries.find(e => e.entryId === "metrics")
     || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
@@ -234,8 +297,8 @@ function werkruimteDomeinen(schema) {
   return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
 }
 
-async function loadWerkruimteBundle(daglink) {
-  const overzicht = await fetchWerkruimte(daglink, "/dashboard/overzicht");
+async function loadWerkruimteBundle(bron) {
+  const overzicht = await fetchWerkruimte(bron, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
@@ -250,7 +313,7 @@ async function loadWerkruimteBundle(daglink) {
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
   // actief op deze werkruimte".
   bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
-    ? await haalTeamfeed(daglink, new Date())
+    ? await haalTeamfeed(bron, new Date())
     : null;
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
@@ -262,7 +325,7 @@ async function loadWerkruimteBundle(daglink) {
   const systeemPerDomein = {};
   if (gevuld.some(d => d.domein === "bronkoppeling")) {
     try {
-      const body = await fetchWerkruimte(daglink, "/dashboard/entries?domein=bronkoppeling&limiet=50");
+      const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=bronkoppeling&limiet=50");
       for (const e of (body.entries || [])) {
         if (e && e.data && e.data.Systeem) systeemPerDomein[e.entryId] = e.data.Systeem;
       }
@@ -278,7 +341,7 @@ async function loadWerkruimteBundle(daglink) {
   // getoond mét verouderd-waarschuwing (iets ouds met stempel is beter dan
   // een leeg dashboard).
   if (gevuld.some(d => d.domein === METRICS_DOMEIN)) {
-    const metrics = await haalMetricsEntry(daglink, bundle);
+    const metrics = await haalMetricsEntry(bron, bundle);
     if (metrics) {
       const vers = isVanVandaag(metrics.gegenereerdOp, new Date());
       const datumLabel = String(metrics.gegenereerdOp).slice(0, 10);
@@ -306,7 +369,7 @@ async function loadWerkruimteBundle(daglink) {
   // de eerste schermvulling snel zonder de instantie plat te leggen.
   const opgehaald = await metPlafond(metInhoud, 4, async (d) => ({
     domein: d.domein,
-    body: await fetchWerkruimte(daglink, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
+    body: await fetchWerkruimte(bron, "/dashboard/entries?domein=" + encodeURIComponent(d.domein) + "&limiet=5000"),
   }));
 
   for (const { domein, body } of opgehaald) {
@@ -331,10 +394,22 @@ async function loadWerkruimteBundle(daglink) {
   return bundle;
 }
 
+/* p10: welke bron gebruikt deze pagina? Een verse daglink in het fragment is
+ * een expliciete actie van de gebruiker en wint altijd; daarna telt een
+ * lopende inlogsessie (het JWT), en pas daarna een eerder opgeslagen daglink.
+ * Zonder alle drie blijft de lege staat staan. */
+function restoreBron() {
+  if (parseDaglinkFragment(window.location.hash)) return restoreDaglink();
+  const sessie = leesOauthSessie();
+  if (sessie) return oauthBron(sessie);
+  return restoreDaglink();
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
+    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
   };
 }
