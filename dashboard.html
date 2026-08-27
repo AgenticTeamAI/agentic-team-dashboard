@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-0RBogKLTPpFQD+gVjJsoTlz9Bg4ZFyGRZQCbPOLWMqI=' 'sha256-yHpG6lrNTU6e0GIkVFJYX72Flaha7adybhAd38g8Qi4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-0RBogKLTPpFQD+gVjJsoTlz9Bg4ZFyGRZQCbPOLWMqI=' 'sha256-U58rZxSaW/oF+ia8E5KUCPcgJVCwvj7p+9C3AjAV1wc='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -5463,13 +5463,20 @@ function dataDatumVeld(domein) {
   return v ? v.naam : null;
 }
 
-/* Een cel kan een string, getal, checkbox, of (multi_select) een lijst zijn.
- * Alles wordt tekst; leeg blijft leeg (nooit "undefined" op het scherm). */
+/* Een cel kan een string, getal, checkbox, een lijst (multi_select) of sinds
+ * f28 een verwijzing zijn. Alles wordt tekst; leeg blijft leeg (nooit
+ * "undefined" op het scherm). */
 function dataCelTekst(waarde) {
   if (waarde === null || waarde === undefined || waarde === "") return "";
   if (Array.isArray(waarde)) return waarde.map(dataCelTekst).filter(Boolean).join(", ");
   if (typeof waarde === "boolean") return waarde ? "ja" : "nee";
-  if (typeof waarde === "object") return "";
+  if (typeof waarde === "object") {
+    // f28: een verwijzing is {id, titel}. Zonder deze tak viel hij in de
+    // objectregel hieronder en bleef de cel leeg — een lege cel leest als
+    // "niet ingevuld", terwijl er wel degelijk een koppeling staat.
+    if (typeof waarde.titel === "string") return waarde.titel;
+    return "";
+  }
   return String(waarde);
 }
 

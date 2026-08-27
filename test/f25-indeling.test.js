@@ -176,6 +176,14 @@ describe("Data-tab — alleen-lezen browser over de bundel", () => {
     expect(g.dataCelTekst(true)).toBe("ja");
     expect(g.dataCelTekst(false)).toBe("nee");
     expect(g.dataCelTekst(null)).toBe("");
+    // f28: een verwijzing toont zijn label, niet niets en niet [object Object].
+    expect(g.dataCelTekst({ id: "acme-holding-a3f1c9", titel: "Acme Holding" })).toBe("Acme Holding");
+    expect(g.dataCelTekst([
+      { id: "a-1", titel: "Acme Holding" },
+      { id: "b-2", titel: "Bravo BV" },
+    ])).toBe("Acme Holding, Bravo BV");
+    // Een object zonder titel blijft leeg in plaats van rommel te tonen.
+    expect(g.dataCelTekst({ id: "a-1" })).toBe("");
     expect(g.dataCelTekst(undefined)).toBe("");
     expect(g.dataCelTekst({ a: 1 })).toBe("");
     expect(g.dataCelTekst(0)).toBe("0");

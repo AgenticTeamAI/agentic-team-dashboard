@@ -36,13 +36,20 @@ function dataDatumVeld(domein) {
   return v ? v.naam : null;
 }
 
-/* Een cel kan een string, getal, checkbox, of (multi_select) een lijst zijn.
- * Alles wordt tekst; leeg blijft leeg (nooit "undefined" op het scherm). */
+/* Een cel kan een string, getal, checkbox, een lijst (multi_select) of sinds
+ * f28 een verwijzing zijn. Alles wordt tekst; leeg blijft leeg (nooit
+ * "undefined" op het scherm). */
 function dataCelTekst(waarde) {
   if (waarde === null || waarde === undefined || waarde === "") return "";
   if (Array.isArray(waarde)) return waarde.map(dataCelTekst).filter(Boolean).join(", ");
   if (typeof waarde === "boolean") return waarde ? "ja" : "nee";
-  if (typeof waarde === "object") return "";
+  if (typeof waarde === "object") {
+    // f28: een verwijzing is {id, titel}. Zonder deze tak viel hij in de
+    // objectregel hieronder en bleef de cel leeg — een lege cel leest als
+    // "niet ingevuld", terwijl er wel degelijk een koppeling staat.
+    if (typeof waarde.titel === "string") return waarde.titel;
+    return "";
+  }
   return String(waarde);
 }
 
