@@ -1,7 +1,7 @@
 {
   "_doc": "Gepinde commit van AgenticTeamAI/agent-architecture waaruit schema/schema.generated.js is geëxtraheerd (backlog s31 + s28). CI extraheert opnieuw op precies deze commit en faalt bij verschil, en faalt ook zodra core/ op arch-main verder is dan de pin — code uit arch draait hier nooit, alleen core/agents.json wordt gelezen. Bijwerken: python3 scripts/sync-schema.py (schrijft schema + dit bestand). Niet met de hand bewerken.",
   "repository": "AgenticTeamAI/agent-architecture",
-  "commit": "e84fa5b7e0f9d16fd74ba82079e5e958fc41eeab",
+  "commit": "db1de01d1b3c76e60cec45d057d0e57187c8fa62",
   "registryVersion": "1.47.0",
   "bijgewerkt": "2026-08-27"
 }
