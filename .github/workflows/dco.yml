@@ -1,0 +1,59 @@
+name: DCO
+
+# Elke commit in een pull request moet een Signed-off-by-regel hebben
+# (Developer Certificate of Origin 1.1, zie CONTRIBUTING.md en artikel 2d
+# van de LICENSE). Bewust géén externe GitHub App: dit is een paar regels
+# shell op de commits van de PR zelf, zonder rechten buiten deze repo.
+# s28: minimale rechten, actions op commit-SHA (Dependabot houdt de pins bij).
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dco-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-off-by:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Elke commit ondertekend?
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          # Merge-commits overslaan (--no-merges): die maakt GitHub zelf en
+          # daar zet niemand een sign-off onder.
+          commits=$(git rev-list --no-merges "$BASE..$HEAD")
+          if [ -z "$commits" ]; then
+            echo "Geen commits om te controleren."
+            exit 0
+          fi
+          fout=0
+          for sha in $commits; do
+            onderwerp=$(git log -1 --format=%s "$sha")
+            # Naam + e-mailadres verplicht; een lege of adresloze regel telt niet.
+            if git log -1 --format=%B "$sha" \
+                 | grep -qiE '^ *Signed-off-by: .+ <[^@<>[:space:]]+@[^@<>[:space:]]+> *$'; then
+              echo "✅ ${sha:0:8}  $onderwerp"
+            else
+              echo "::error::${sha:0:8} \"$onderwerp\" mist een geldige Signed-off-by-regel."
+              fout=1
+            fi
+          done
+          if [ "$fout" -ne 0 ]; then
+            echo ""
+            echo "Herstellen: 'git commit --amend -s --no-edit' (laatste commit) of"
+            echo "'git rebase --signoff ${BASE}' (alle commits), daarna"
+            echo "'git push --force-with-lease'. Zie CONTRIBUTING.md."
+            exit 1
+          fi
+          echo "✅ Alle commits zijn ondertekend conform DCO 1.1."

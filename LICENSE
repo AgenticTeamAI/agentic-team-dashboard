@@ -1,12 +1,18 @@
-<<JURIST-REVIEW>>  CONCEPT — nog niet juridisch beoordeeld.
-Deze licentietekst is een werkversie (s33, 26-08-2026) die door de jurist
-van Obeya Insights moet worden nagekeken vóór hij als definitief geldt. Tot
-die beoordeling is afgerond, geldt: alle rechten voorbehouden. Open punten
-voor de review staan onderaan dit bestand.
+<<JURIST-REVIEW>>  CONCEPT — eerste juridische ronde verwerkt.
+Deze licentietekst is een werkversie (s33, 26-08-2026; het juristadvies van
+26-08-2026 is op 27-08-2026 verwerkt) die nog een tweede beoordeling nodig
+heeft vóór hij als definitief geldt. Tot die beoordeling is afgerond, geldt:
+alle rechten voorbehouden. De tenaamstelling van Licentiegever staat nog
+niet vast. Open punten voor de tweede ronde staan onderaan dit bestand.
 <<JURIST-REVIEW>>
 
 AGENTIC TEAM — BRON-INZAGE LICENTIE (source-available, proprietary)
-Versie 0.1-concept
+Versie 0.2-concept
+
+This repository is source-available, not open source. Anyone may read and study
+the code; only holders of a valid Agentic Team licence may use it. See LICENSE
+(Dutch, authoritative) or LICENSE.en.md (English translation, for convenience).
+In case of any discrepancy, the Dutch text prevails.
 
 Copyright (c) 2026 Obeya Insights B.V. Alle rechten voorbehouden.
 
@@ -28,34 +34,74 @@ licentie vermeldt (zie NOTICE voor onderdelen van derden).
    a. Iedereen mag de Software in deze repository lezen en bestuderen
       (bron-inzage), onder meer om de werking, veiligheid en gegevensstromen
       te controleren.
+      Dit leesrecht omvat het raadplegen en indexeren door zoekmachines en
+      vergelijkbare geautomatiseerde hulpmiddelen. Licentiegever behoudt zich
+      uitdrukkelijk het recht voor als bedoeld in artikel 15o Auteurswet en
+      artikel 4 lid 3 van Richtlijn (EU) 2019/790: de Software mag niet worden
+      gebruikt voor tekst- en datamining ten behoeve van het ontwikkelen of
+      trainen van modellen voor kunstmatige intelligentie, behoudens
+      voorafgaande schriftelijke toestemming van Licentiegever. Licentiegever
+      legt dit voorbehoud tevens machineleesbaar vast op www.agentic-team.ai.
    b. Een Licentiehouder mag de Software Gebruiken voor de duur en binnen de
       omvang van zijn Agentic Team-licentie, op zijn eigen systemen en in de
-      omgevingen waarvoor Licentiegever de Software bestemt (zoals Claude,
-      Notion, ChatGPT of GitHub Copilot).
+      omgevingen waarvoor Licentiegever de Software bestemt (zoals door
+      Licentiegever gedocumenteerd).
    c. Een Licentiehouder mag voor eigen gebruik kopieën maken voor zover
       dat technisch nodig is voor installatie, back-up en bijwerking.
    d. Bijdragen (pull requests, issues) zijn welkom. Door een bijdrage in te
-      dienen verleent de indiener Licentiegever een onherroepelijk,
-      wereldwijd, royaltyvrij recht om die bijdrage te gebruiken, te wijzigen
-      en onder deze of een andere licentie te verspreiden.
+      dienen:
+      i.   verklaart de indiener gerechtigd te zijn die bijdrage te leveren en
+           te licentiëren, en dat de bijdrage geen rechten van derden schendt;
+      ii.  verleent de indiener Licentiegever een onherroepelijk, wereldwijd,
+           royaltyvrij, niet-exclusief en sublicentieerbaar recht om die
+           bijdrage te gebruiken, te wijzigen, te combineren en onder deze of
+           een andere licentie te verspreiden;
+      iii. verleent de indiener Licentiegever onder dezelfde voorwaarden een
+           licentie onder de octrooirechten die hij bezit of beheert en die
+           noodzakelijk worden geschonden door de bijdrage of door de
+           combinatie van de bijdrage met de Software;
+      iv.  doet de indiener, voor zover de wet dat toelaat, afstand van het
+           recht zich te verzetten tegen wijziging van de bijdrage (artikel 25
+           lid 1 onder c Auteurswet), met behoud van het recht op
+           naamsvermelding.
+      De indiener bevestigt dit door zijn commits te ondertekenen conform de
+      Developer Certificate of Origin 1.1 (zie CONTRIBUTING.md).
 
 3. Wat niet is toegestaan (zonder voorafgaande schriftelijke toestemming
    van Licentiegever)
    a. De Software of een wezenlijk deel ervan herpubliceren, doorverkopen,
       sublicentiëren, verhuren, hosten voor derden of anderszins aan derden
       beschikbaar stellen, al dan niet gewijzigd.
-   b. Afgeleide producten maken die de Software of de daarin vervatte
-      werkwijzen, agentdefinities, schema's of teksten geheel of gedeeltelijk
-      overnemen, om die aan te bieden aan anderen dan de eigen organisatie
-      van de Licentiehouder.
+   b. De Software geheel of in wezenlijke delen overnemen — daaronder
+      begrepen de letterlijke of vrijwel letterlijke overname van broncode,
+      agentdefinities, schema's, prompts of teksten — in een product of dienst
+      die aan anderen dan de eigen organisatie van de Licentiehouder wordt
+      aangeboden.
+      Deze bepaling ziet uitsluitend op de auteursrechtelijk beschermde
+      uitdrukking. Zij beperkt niet het recht van de Licentiehouder om de aan
+      de Software ten grondslag liggende ideeën en beginselen te achterhalen
+      en toe te passen (artikel 45l Auteurswet, artikel 5 lid 3 Richtlijn
+      2009/24/EG).
    c. Technische of contractuele beperkingen in de Software omzeilen,
       waaronder licentie- en toegangscontroles, of de Software gebruiken om
       zonder geldige licentie toegang te krijgen tot diensten van
       Licentiegever.
    d. Reverse engineering, decompilatie of disassemblage van onderdelen die
-      niet als leesbare bron in deze repository staan, behalve voor zover
-      dwingend recht (zoals artikel 45m Auteurswet / artikel 6 Richtlijn
-      2009/24/EG) dit toestaat.
+      niet als leesbare bron in deze repository staan.
+      Deze bepaling laat onverlet de rechten die de Licentiehouder als
+      rechtmatige verkrijger dwingendrechtelijk toekomen, waaronder:
+      - het laden, in beeld brengen en verbeteren van fouten (artikel 45j
+        Auteurswet, tweede zin);
+      - het maken van een reservekopie (artikel 45k Auteurswet, artikel 5
+        lid 2 Richtlijn 2009/24/EG);
+      - het observeren, bestuderen en testen van de werking van de Software om
+        de daaraan ten grondslag liggende ideeën en beginselen te achterhalen
+        (artikel 45l Auteurswet, artikel 5 lid 3 Richtlijn 2009/24/EG);
+      - decompilatie voor zover onmisbaar om interoperabiliteit tot stand te
+        brengen (artikel 45m Auteurswet, artikel 6 Richtlijn 2009/24/EG).
+      Een beding dat in strijd is met de hierboven genoemde rechten uit
+      artikel 45k, 45l of 45m Auteurswet is nietig op grond van artikel 8 van
+      Richtlijn 2009/24/EG.
    e. Merken, namen, logo's of auteursrechtvermeldingen van Licentiegever
       verwijderen, wijzigen of gebruiken op een wijze die verwarring over de
       herkomst kan wekken.
@@ -77,14 +123,20 @@ licentie vermeldt (zie NOTICE voor onderdelen van derden).
    artikel 3 die niet binnen 14 dagen na kennisgeving is hersteld. Het recht
    op bron-inzage (artikel 2a) blijft bestaan zolang Licentiegever de
    repository openbaar houdt.
+   Licentiegever wijst erop dat het platform waarop deze repository wordt
+   gepubliceerd derden kan toestaan kopieën ("forks") te maken die buiten de
+   zeggenschap van Licentiegever vallen. Op die kopieën blijft deze licentie
+   van toepassing, maar Licentiegever kan hun beschikbaarheid niet beëindigen.
 
 7. Garantie en aansprakelijkheid
    De Software wordt geleverd "zoals zij is". Voor Licentiehouders gelden de
-   garantie- en aansprakelijkheidsbepalingen van de Productvoorwaarden en
-   de eventuele verwerkersovereenkomst; die gaan bij strijdigheid voor. Voor
-   anderen geldt, voor zover de wet dit toelaat: geen enkele garantie en
-   geen aansprakelijkheid voor welke schade dan ook die voortvloeit uit het
-   lezen of gebruiken van de Software.
+   garantie- en aansprakelijkheidsbepalingen van de Algemene Voorwaarden, de
+   Productvoorwaarden en de eventuele verwerkersovereenkomst; die gaan bij
+   strijdigheid voor, in die rangorde. Voor anderen geldt, voor zover de wet
+   dit toelaat: geen enkele garantie en geen aansprakelijkheid voor welke
+   schade dan ook die voortvloeit uit het lezen of gebruiken van de Software.
+   Deze uitsluiting geldt niet bij opzet of bewuste roekeloosheid van
+   Licentiegever, noch bij schade door dood of lichamelijk letsel.
 
 8. Toepasselijk recht en forum
    Op deze licentie is Nederlands recht van toepassing. Geschillen worden
@@ -92,24 +144,38 @@ licentie vermeldt (zie NOTICE voor onderdelen van derden).
    vestigingsplaats van Licentiegever, tenzij dwingend recht anders bepaalt.
 
 9. Verhouding tot andere documenten
-   Deze licentie regelt uitsluitend het gebruik van de Software in deze
+   Deze licentie regelt uitsluitend de rechten op de bestanden in deze
    repository. De Agentic Team-dienst zelf (connector, playbooks, werkruimte)
-   valt onder de Productvoorwaarden, het privacybeleid en — waar van
-   toepassing — de verwerkersovereenkomst op www.agentic-team.ai.
+   valt onder de Algemene Voorwaarden, de Productvoorwaarden, het
+   privacybeleid en — waar van toepassing — de verwerkersovereenkomst op
+   www.agentic-team.ai. Bij strijdigheid tussen die documenten en deze
+   licentie gaan die documenten voor.
 
 Contact: via www.agentic-team.ai.
 
 ----------------------------------------------------------------------
-<<JURIST-REVIEW>> Open punten voor de juridische beoordeling
-1. Klopt de rechtspersoon en handelsnaam (Obeya Insights B.V. / Agentic
-   Team) en moet het KvK-nummer worden opgenomen?
-2. Is de bijdrage-clausule (2d) voldoende als "inbound = outbound"-regeling,
-   of is een aparte CLA/DCO nodig?
-3. Reverse-engineering-uitzondering (3d): formulering toetsen aan art. 45j
-   t/m 45m Auteurswet en de Softwarerichtlijn.
-4. Verhouding tot de Productvoorwaarden 2.1 / DPA 2.0 (artikel 7 en 9):
-   voorrangsregel correct en volledig?
-5. Wil Licentiegever "bron-inzage" (2a) ook expliciet bevestigen voor
-   AI-crawlers/indexering, of juist uitsluiten?
-6. Engelse vertaling nodig voor niet-Nederlandstalige licentiehouders?
+<<JURIST-REVIEW>> Open punten voor de tweede juridische ronde
+Het juristadvies van 26-08-2026 is verwerkt in versie 0.2 (2b, 2d, 3b, 3d,
+6, 7, 9, TDM-voorbehoud in 2a, Engels blok + LICENSE.en.md, DCO). Wat nog
+openstaat:
+1. BLOKKEREND — de tenaamstelling. De aanhef en artikel 1a noemen nu nog
+   Obeya Insights B.V.; DPA en privacybeleid noemen Agile Operators B.V.
+   (KvK 85384437) en er is een derde kandidaat (Five Forward Group B.V.).
+   Zolang de IE-akte en de contractsoverneming niet rond zijn, is deze naam
+   niet gewijzigd. Bij vaststelling: naam, statutaire vestigingsplaats en
+   KvK-nummer invullen in de aanhef, artikel 1a, NOTICE en LICENSE.en.md,
+   met de formulering "mede handelend onder de naam Agentic Team".
+2. Artikel 3b en 3d door een gekwalificeerde IE-jurist laten nalezen vóór
+   versie 1.0 (het advies noemt dit zelf als het punt met de meeste
+   onzekerheid: de nietigheidssanctie van artikel 8 Richtlijn 2009/24/EG en
+   de grens tussen achterhalen en toepassen van ideeën).
+3. Rangorde in artikel 7 en 9 kruislings controleren tegen de Algemene
+   Voorwaarden en de Productvoorwaarden: kennen die onderling al een
+   rangorde die hiermee botst?
+4. Het machineleesbare TDM-voorbehoud (TDMRep, .well-known/tdmrep.json plus
+   een tdm-reservation-header) staat nog niet op www.agentic-team.ai —
+   artikel 2a belooft dat wel. Aparte taak op de site; de specificatie moet
+   daarbij geverifieerd worden.
+5. De octrooiclausule in 2d iii is ontleend aan de Apache-2.0-systematiek en
+   is niet door een octrooigemachtigde bekeken.
 <<JURIST-REVIEW>>
