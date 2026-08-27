@@ -11,6 +11,7 @@ gebruikt (geen netwerktoegang nodig om dit te bouwen of te draaien).
 Gebruik:
     python3 scripts/build.py
     python3 scripts/build.py --noindex   # staging: meta robots noindex erbij
+    python3 scripts/build.py --oauth     # p10: loginknop + tokenflow aan
 """
 import hashlib
 import base64
@@ -26,6 +27,7 @@ JS_MODULES_IN_ORDER = [
     "teksten.js",
     "schema-helpers.js",
     "werkruimte-loader.js",
+    "oauth-client.js",
     "zones.js",
     "metrics-sanitize.js",
     "metrics.js",
@@ -45,6 +47,14 @@ def main():
     # DASHBOARD_NOINDEX op het staging-project. De CSP-hashes dekken alleen de
     # scriptblokken, dus deze meta verandert daar niets aan.
     noindex = "--noindex" in sys.argv
+
+    # p10 fase 3 (OAuth-contract §9): OAUTH_DASHBOARD is BUILD-TIME, in de
+    # trant van DASHBOARD_NOINDEX hierboven. De vlag reist als meta-tag mee in
+    # het artefact; alleen de loginknop en de tokenflow zitten erachter.
+    # Terugrollen is dus een redeploy, geen env-flip. De CSP-verbreding in
+    # vercel.json staat er bewust BUITEN: die is onvoorwaardelijk, zodat de
+    # header van staging en productie niet uiteen kan lopen met de vlag.
+    oauth = "--oauth" in sys.argv
 
     schema_js = (ROOT / "schema" / "schema.generated.js").read_text(encoding="utf-8")
     styles = (SRC / "styles.css").read_text(encoding="utf-8")
@@ -77,6 +87,7 @@ def main():
         shell
         .replace("__CSP_META__", csp_meta)
         .replace("__ROBOTS_META__", '<meta name="robots" content="noindex">' if noindex else "")
+        .replace("__OAUTH_META__", '<meta name="at-oauth" content="1">' if oauth else "")
         .replace("__STYLES__", styles)
         .replace("__SCHEMA__", schema_js)
         .replace("__APP__", app_js)
@@ -85,7 +96,8 @@ def main():
 
     out_path = ROOT / "dashboard.html"
     out_path.write_text(out, encoding="utf-8")
-    print(f"OK: {out_path} geschreven ({len(out)} bytes){' — met noindex' if noindex else ''}.")
+    vlaggen = "".join(f" — met {naam}" for naam, aan in (("noindex", noindex), ("oauth-login", oauth)) if aan)
+    print(f"OK: {out_path} geschreven ({len(out)} bytes){vlaggen}.")
 
     # Dezelfde hashes in de header-CSP (vercel.json), zodat de meta-tag niet
     # de enige drager is. vercel.json wordt door Vercel vóór de build gelezen:

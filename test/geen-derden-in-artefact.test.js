@@ -40,6 +40,7 @@ const JS_MODULES = [
   "teksten.js",
   "schema-helpers.js",
   "werkruimte-loader.js",
+  "oauth-client.js",
   "zones.js",
   "metrics-sanitize.js",
   "metrics.js",
@@ -82,6 +83,7 @@ describe("herkomst — het artefact komt volledig uit src/ + schema/", () => {
     const verwacht = shell
       .replaceAll("__CSP_META__", cspMeta)
       .replaceAll("__ROBOTS_META__", "") // productiebouw: geen noindex
+      .replaceAll("__OAUTH_META__", "") // productiebouw: OAUTH_DASHBOARD uit
       .replaceAll("__STYLES__", styles)
       .replaceAll("__SCHEMA__", schema)
       .replaceAll("__APP__", app)
