@@ -29,6 +29,29 @@ const TOEGESTANE_URLS = [
   "https://dashboard.agentic-team.ai", // de eigen herkomst, genoemd in de privacytekst
 ];
 
+const CSP = VERCEL.headers
+  .flatMap((r) => r.headers)
+  .find((h) => h.key === "Content-Security-Policy").value;
+
+/* Verbod 10/11 uit het OAuth-contract (p10, §11): de dashboard-CSP wordt
+ * exact-match getest op `connect-src` én `script-src`, niet met `toContain`
+ * of een niet-geankerde regex. Reden: een verbreding van connect-src (een
+ * extra bestemming) of een verslapping van script-src ('unsafe-inline',
+ * 'strict-dynamic', een host) moet híer zichtbaar rood worden vóórdat hij in
+ * vercel.json staat — een `toContain` op het eerste stuk laat een toegevoegde
+ * bron ongemerkt door. */
+function cspDirectief(csp, naam) {
+  const deel = csp
+    .split(";")
+    .map((s) => s.trim())
+    .find((d) => d === naam || d.startsWith(naam + " "));
+  return deel === undefined ? null : deel.slice(naam.length).trim();
+}
+
+// De volledige, letterlijke waarde. Wijzigen is een bewuste beslissing en
+// hoort samen te gaan met de privacytekst en het README-hoofdstuk.
+const CONNECT_SRC = "https://connector.agentic-team.ai https://*.azurecontainerapps.io";
+
 const VERBODEN = [
   ["sendBeacon", /sendBeacon/i],
   ["navigator.send", /navigator\s*\.\s*send/i],
@@ -67,15 +90,27 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     expect(HTML).toMatch(/fetch\(daglink\.instantieUrl \+ pad/);
   });
 
-  it("de CSP laat alleen de eigen werkruimte-bestemmingen toe", () => {
-    const csp = VERCEL.headers
-      .flatMap((r) => r.headers)
-      .find((h) => h.key === "Content-Security-Policy").value;
-    expect(csp).toContain("default-src 'none'");
-    expect(csp).toMatch(/connect-src https:\/\/connector\.agentic-team\.ai https:\/\/\*\.azurecontainerapps\.io\b/);
-    expect(csp).toContain("frame-ancestors 'none'");
-    // geen 'unsafe-eval', geen wildcard-scriptbron
-    expect(csp).not.toMatch(/unsafe-eval|script-src[^;]*\*/);
+  it("de CSP laat alleen de eigen werkruimte-bestemmingen toe — connect-src exact", () => {
+    expect(cspDirectief(CSP, "default-src")).toBe("'none'");
+    expect(cspDirectief(CSP, "connect-src")).toBe(CONNECT_SRC);
+    expect(cspDirectief(CSP, "frame-ancestors")).toBe("'none'");
+    expect(cspDirectief(CSP, "base-uri")).toBe("'none'");
+    expect(cspDirectief(CSP, "form-action")).toBe("'none'");
+    expect(CSP).not.toMatch(/unsafe-eval/);
+  });
+
+  it("script-src is exact de twee scripthashes, en gelijk aan de meta in het artefact", () => {
+    const scriptSrc = cspDirectief(CSP, "script-src");
+    const meta = HTML.match(/<meta http-equiv="Content-Security-Policy" content="script-src ([^"]+)">/);
+    expect(meta, "dashboard.html draagt zijn eigen script-src-meta").not.toBeNull();
+    // Header en artefact dragen letterlijk dezelfde lijst — geen van beide is
+    // de enige drager, dus drift tussen build en vercel.json wordt hier rood.
+    expect(scriptSrc).toBe(meta[1]);
+    const bronnen = scriptSrc.split(" ");
+    expect(bronnen).toHaveLength(2);
+    // Verbod 11: uitsluitend sha256-hashes. Geen 'unsafe-inline', geen
+    // 'unsafe-eval', geen 'strict-dynamic', geen host, geen nonce.
+    for (const bron of bronnen) expect(bron).toMatch(/^'sha256-[A-Za-z0-9+/]{43}='$/);
   });
 
   it("de goedgekeurde privacytekst staat letterlijk in het artefact", () => {

@@ -191,6 +191,18 @@ describe("parseDaglinkFragment (b32 fase 2: altijd via de router)", () => {
   });
 });
 
+/* Zelfde geankerde vorm als in test/geen-telemetrie.test.js — bewust
+ * gedupliceerd: beide tests worden in het contract bij naam genoemd als het
+ * bewijs van verbod 10/11 en moeten los van elkaar rood kunnen worden. */
+function cspDirectief(csp, naam) {
+  const deel = csp
+    .split(";")
+    .map((s) => s.trim())
+    .find((d) => d === naam || d.startsWith(naam + " "));
+  return deel === undefined ? null : deel.slice(naam.length).trim();
+}
+const CONNECT_SRC = "https://connector.agentic-team.ai https://*.azurecontainerapps.io";
+
 describe("CSP (b32 fase 2)", () => {
   it("dashboard.html draagt script-src-hashes die exact bij de twee inline scriptblokken horen", async () => {
     const { createHash } = await import("node:crypto");
@@ -205,9 +217,13 @@ describe("CSP (b32 fase 2)", () => {
     expect(html).not.toMatch(/ on[a-z]+="/i);
     const vercel = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));
     const header = vercel.headers[0].headers[0].value;
-    expect(header).toContain("connect-src https://connector.agentic-team.ai");
-    // Header en meta dragen dezelfde hashes; 'unsafe-inline' staat niet meer in script-src.
-    expect(header).toContain(`script-src ${verwacht.join(" ")};`);
+    // Verbod 10/11 (OAuth-contract p10 §11): exact-match op de vólledige
+    // connect-src- én script-src-string, niet `toContain`. Een extra
+    // bestemming of scriptbron wordt zo rood in plaats van stil doorgelaten.
+    expect(cspDirectief(header, "connect-src")).toBe(CONNECT_SRC);
+    // Header en meta dragen exact dezelfde hashes; 'unsafe-inline' staat niet
+    // meer in script-src (en kan er door de exacte match ook niet bij komen).
+    expect(cspDirectief(header, "script-src")).toBe(verwacht.join(" "));
     expect(header).not.toMatch(/script-src[^;]*unsafe-inline/);
   });
 });
