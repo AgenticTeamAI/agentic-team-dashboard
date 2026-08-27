@@ -56,10 +56,24 @@ def main():
                         "--source", tmp, "--source-commit", commit,
                         "--output", str(ROOT / "schema" / "schema.generated.js")], check=True)
 
+    # p10: de OAuth-fixture volgt dezelfde route als het schema — letterlijke kopie
+    # van dezelfde pin, zodat site, werkruimte en dashboard tegen één versie
+    # verifiëren (contract §12). Ontbreekt hij op die commit, dan is dat geen
+    # fout: pins van vóór p10 kennen het bestand niet.
+    fixture_versie = None
+    try:
+        fixture = subprocess.run(["git", "-C", str(arch), "show", f"{commit}:architectuur/oauth-fixture.json"],
+                                 capture_output=True, text=True, check=True).stdout
+        (ROOT / "test" / "fixtures").mkdir(parents=True, exist_ok=True)
+        (ROOT / "test" / "fixtures" / "oauth-fixture.json").write_text(fixture, encoding="utf-8")
+        fixture_versie = json.loads(fixture).get("contract_versie", "?")
+    except subprocess.CalledProcessError:
+        print("sync-schema: geen architectuur/oauth-fixture.json op deze commit — overgeslagen")
+
     lock = {"_doc": DOC, "repository": "AgenticTeamAI/agent-architecture", "commit": commit,
             "registryVersion": registry.get("registryVersion"), "bijgewerkt": datetime.now(timezone.utc).date().isoformat()}
     (ROOT / "agent-architecture.lock.json").write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"sync-schema: schema ← registry {lock['registryVersion']} @ {commit[:7]}; pin bijgewerkt. Nu: python3 scripts/build.py en commit schema/, dashboard.html, vercel.json en agent-architecture.lock.json.")
+    print(f"sync-schema: schema ← registry {lock['registryVersion']}" + (f", oauth-fixture ← contract {fixture_versie}" if fixture_versie else "") + f" @ {commit[:7]}; pin bijgewerkt. Nu: python3 scripts/build.py en commit schema/, dashboard.html, vercel.json en agent-architecture.lock.json.")
 
 
 if __name__ == "__main__":

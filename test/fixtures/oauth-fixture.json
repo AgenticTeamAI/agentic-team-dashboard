@@ -1,0 +1,159 @@
+{
+  "_": "Testfixture bij oauth-p10-contract.md §12. NOOIT in productie: dit keypair is publiek.",
+  "contract_versie": "1.3",
+  "kid": "test-2026-08",
+  "clock": 1756300000,
+  "fixture_ttl_s": 3600,
+  "jwk_private": {
+    "kty": "EC",
+    "x": "E7tchwaDO6xCwEjmDalokVLkQbOvJqZzdc5k25-sihw",
+    "y": "6TDkR7BqVyTFHPVhB6WRi_V-lhgnJnUCMcr3hWcf0rY",
+    "crv": "P-256",
+    "d": "f62fTMYYCI5U5qxdQjzINq6vvdghZUtdXW9DvrRgcYc",
+    "kid": "test-2026-08",
+    "alg": "ES256",
+    "use": "sig"
+  },
+  "jwk_public": {
+    "kty": "EC",
+    "x": "E7tchwaDO6xCwEjmDalokVLkQbOvJqZzdc5k25-sihw",
+    "y": "6TDkR7BqVyTFHPVhB6WRi_V-lhgnJnUCMcr3hWcf0rY",
+    "crv": "P-256",
+    "kid": "test-2026-08",
+    "alg": "ES256",
+    "use": "sig"
+  },
+  "jwks": {
+    "keys": [
+      {
+        "kty": "EC",
+        "x": "E7tchwaDO6xCwEjmDalokVLkQbOvJqZzdc5k25-sihw",
+        "y": "6TDkR7BqVyTFHPVhB6WRi_V-lhgnJnUCMcr3hWcf0rY",
+        "crv": "P-256",
+        "kid": "test-2026-08",
+        "alg": "ES256",
+        "use": "sig"
+      }
+    ]
+  },
+  "tokens": {
+    "connector_mcp": {
+      "claims": {
+        "iss": "https://www.agentic-team.ai",
+        "lic": "at_fixture-t3st",
+        "seat": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "sub": "at_fixture-t3st#a1b2c3d4e5f6a7b8",
+        "client_id": "https://claude.ai/oauth/claude-code-client-metadata",
+        "hosted": true,
+        "aud": "https://connector.agentic-team.ai/mcp",
+        "scope": "agentic-team",
+        "auth_time": 1756300000,
+        "jti": "fixture-connector_mcp",
+        "iat": 1756300000,
+        "exp": 1756303600
+      },
+      "signing_input": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjp0cnVlLCJhdWQiOiJodHRwczovL2Nvbm5lY3Rvci5hZ2VudGljLXRlYW0uYWkvbWNwIiwic2NvcGUiOiJhZ2VudGljLXRlYW0iLCJhdXRoX3RpbWUiOjE3NTYzMDAwMDAsImp0aSI6ImZpeHR1cmUtY29ubmVjdG9yX21jcCIsImlhdCI6MTc1NjMwMDAwMCwiZXhwIjoxNzU2MzAzNjAwfQ",
+      "jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjp0cnVlLCJhdWQiOiJodHRwczovL2Nvbm5lY3Rvci5hZ2VudGljLXRlYW0uYWkvbWNwIiwic2NvcGUiOiJhZ2VudGljLXRlYW0iLCJhdXRoX3RpbWUiOjE3NTYzMDAwMDAsImp0aSI6ImZpeHR1cmUtY29ubmVjdG9yX21jcCIsImlhdCI6MTc1NjMwMDAwMCwiZXhwIjoxNzU2MzAzNjAwfQ.G4UlL6E-plK2zzIkO7nzY8Q2VQSJJPkOPCWZdM1mfXxurwsDcgto_zDz-zvzESIdd90_RHa2RFER8QPiNqSEQw"
+    },
+    "site_mcp": {
+      "claims": {
+        "iss": "https://www.agentic-team.ai",
+        "lic": "at_fixture-t3st",
+        "seat": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "sub": "at_fixture-t3st#a1b2c3d4e5f6a7b8",
+        "client_id": "https://claude.ai/oauth/claude-code-client-metadata",
+        "hosted": false,
+        "aud": "https://www.agentic-team.ai/api/mcp/mcp",
+        "scope": "agentic-team",
+        "auth_time": 1756300000,
+        "jti": "fixture-site_mcp",
+        "iat": 1756300000,
+        "exp": 1756303600
+      },
+      "signing_input": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjpmYWxzZSwiYXVkIjoiaHR0cHM6Ly93d3cuYWdlbnRpYy10ZWFtLmFpL2FwaS9tY3AvbWNwIiwic2NvcGUiOiJhZ2VudGljLXRlYW0iLCJhdXRoX3RpbWUiOjE3NTYzMDAwMDAsImp0aSI6ImZpeHR1cmUtc2l0ZV9tY3AiLCJpYXQiOjE3NTYzMDAwMDAsImV4cCI6MTc1NjMwMzYwMH0",
+      "jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjpmYWxzZSwiYXVkIjoiaHR0cHM6Ly93d3cuYWdlbnRpYy10ZWFtLmFpL2FwaS9tY3AvbWNwIiwic2NvcGUiOiJhZ2VudGljLXRlYW0iLCJhdXRoX3RpbWUiOjE3NTYzMDAwMDAsImp0aSI6ImZpeHR1cmUtc2l0ZV9tY3AiLCJpYXQiOjE3NTYzMDAwMDAsImV4cCI6MTc1NjMwMzYwMH0.07wDiJSjyHnYB_glNPPYEHSg3Kn81N7i1yhnx3bNk_N5sEvvlb4stzev7d5bXHbpprHM-OzhAPtWV0kaNvplgw"
+    },
+    "dashboard": {
+      "claims": {
+        "iss": "https://www.agentic-team.ai",
+        "lic": "at_fixture-t3st",
+        "seat": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "sub": "at_fixture-t3st#a1b2c3d4e5f6a7b8",
+        "client_id": "https://claude.ai/oauth/claude-code-client-metadata",
+        "hosted": true,
+        "aud": "https://connector.agentic-team.ai/dashboard",
+        "scope": "dashboard:lees",
+        "auth_time": 1756300000,
+        "jti": "fixture-dashboard",
+        "iat": 1756300000,
+        "exp": 1756303600
+      },
+      "signing_input": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjp0cnVlLCJhdWQiOiJodHRwczovL2Nvbm5lY3Rvci5hZ2VudGljLXRlYW0uYWkvZGFzaGJvYXJkIiwic2NvcGUiOiJkYXNoYm9hcmQ6bGVlcyIsImF1dGhfdGltZSI6MTc1NjMwMDAwMCwianRpIjoiZml4dHVyZS1kYXNoYm9hcmQiLCJpYXQiOjE3NTYzMDAwMDAsImV4cCI6MTc1NjMwMzYwMH0",
+      "jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjp0cnVlLCJhdWQiOiJodHRwczovL2Nvbm5lY3Rvci5hZ2VudGljLXRlYW0uYWkvZGFzaGJvYXJkIiwic2NvcGUiOiJkYXNoYm9hcmQ6bGVlcyIsImF1dGhfdGltZSI6MTc1NjMwMDAwMCwianRpIjoiZml4dHVyZS1kYXNoYm9hcmQiLCJpYXQiOjE3NTYzMDAwMDAsImV4cCI6MTc1NjMwMzYwMH0.VnldziiNfo6p_kBIECE7NlXUyilK3QEQt_qGiwwMjLk2uGLBkv2dLzPZV8mx3Q4-8vPxn0Esk8eT-qQGZ3ol-Q"
+    },
+    "router_fallback": {
+      "claims": {
+        "iss": "https://www.agentic-team.ai",
+        "lic": "at_fixture-t3st",
+        "seat": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "sub": "at_fixture-t3st#a1b2c3d4e5f6a7b8",
+        "client_id": "https://claude.ai/oauth/claude-code-client-metadata",
+        "hosted": false,
+        "aud": "https://connector.agentic-team.ai/mcp",
+        "scope": "agentic-team",
+        "auth_time": 1756300000,
+        "jti": "fixture-router_fallback",
+        "iat": 1756300000,
+        "exp": 1756303600
+      },
+      "signing_input": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjpmYWxzZSwiYXVkIjoiaHR0cHM6Ly9jb25uZWN0b3IuYWdlbnRpYy10ZWFtLmFpL21jcCIsInNjb3BlIjoiYWdlbnRpYy10ZWFtIiwiYXV0aF90aW1lIjoxNzU2MzAwMDAwLCJqdGkiOiJmaXh0dXJlLXJvdXRlcl9mYWxsYmFjayIsImlhdCI6MTc1NjMwMDAwMCwiZXhwIjoxNzU2MzAzNjAwfQ",
+      "jwt": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InRlc3QtMjAyNi0wOCJ9.eyJpc3MiOiJodHRwczovL3d3dy5hZ2VudGljLXRlYW0uYWkiLCJsaWMiOiJhdF9maXh0dXJlLXQzc3QiLCJzZWF0IjoiYTFiMmMzZDRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYwYTFiMiIsInN1YiI6ImF0X2ZpeHR1cmUtdDNzdCNhMWIyYzNkNGU1ZjZhN2I4IiwiY2xpZW50X2lkIjoiaHR0cHM6Ly9jbGF1ZGUuYWkvb2F1dGgvY2xhdWRlLWNvZGUtY2xpZW50LW1ldGFkYXRhIiwiaG9zdGVkIjpmYWxzZSwiYXVkIjoiaHR0cHM6Ly9jb25uZWN0b3IuYWdlbnRpYy10ZWFtLmFpL21jcCIsInNjb3BlIjoiYWdlbnRpYy10ZWFtIiwiYXV0aF90aW1lIjoxNzU2MzAwMDAwLCJqdGkiOiJmaXh0dXJlLXJvdXRlcl9mYWxsYmFjayIsImlhdCI6MTc1NjMwMDAwMCwiZXhwIjoxNzU2MzAzNjAwfQ.DStuX5S-6WU-2ieO_V190X9KUkliHuXKUt0KLbFjDvciApoe9BTjY7ZyxWHJOjsztkAxx-eSCATtZVKPYN_tvg"
+    }
+  },
+  "router_hop": {
+    "_": "Deterministische vector voor de router→site-hop, contract §10.",
+    "secret": "fixture-router-secret-nooit-in-productie",
+    "kid": "hop-2026-08",
+    "iat": 1756300000,
+    "jti": "0123456789abcdef0123456789abcdef",
+    "token_ref": "tokens.router_fallback.jwt",
+    "tokenhash": "75f696535eb864b0da486c0aa4ff58c258a093cbd3d537efe9a51fda3091ce5e",
+    "canonieke_invoer": "POST\n/api/mcp-router/mcp\n1756300000\n0123456789abcdef0123456789abcdef\n75f696535eb864b0da486c0aa4ff58c258a093cbd3d537efe9a51fda3091ce5e",
+    "header": "X-Router-Auth: hop-2026-08.1756300000.0123456789abcdef0123456789abcdef.p5Ayw136_uGESxxRc9LawUo-CfX-MUY4BfvkJP7sO8g",
+    "codering": {
+      "secret": "rauwe UTF-8",
+      "mac": "base64url"
+    }
+  },
+  "seat_vectoren": {
+    "_": "Contract §3: sha256(lic + \":\" + n(naam)), hex lowercase.",
+    "lic": "at_fixture-t3st",
+    "gevallen": [
+      {
+        "invoer": "Jan  de Vries",
+        "genormaliseerd": "jan de vries",
+        "seat": "bc6249d0121fb554530cf81c37d76b6fd627a0ed6664533b1c2955b91b65dd7a"
+      },
+      {
+        "invoer": " jan de vries ",
+        "genormaliseerd": "jan de vries",
+        "seat": "bc6249d0121fb554530cf81c37d76b6fd627a0ed6664533b1c2955b91b65dd7a"
+      },
+      {
+        "invoer": "JAN DE VRIES",
+        "genormaliseerd": "jan de vries",
+        "seat": "bc6249d0121fb554530cf81c37d76b6fd627a0ed6664533b1c2955b91b65dd7a"
+      },
+      {
+        "invoer": "Renée O’Brien",
+        "genormaliseerd": "renée o’brien",
+        "seat": "88be10ac210585e205df094c2a7aa1e7f1b63a7aff216ae095a344e4dfcc594f"
+      }
+    ]
+  },
+  "protected_header_volgorde": [
+    "alg",
+    "typ",
+    "kid"
+  ]
+}
