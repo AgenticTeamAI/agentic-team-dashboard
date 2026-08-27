@@ -1,195 +1,216 @@
 NOTICE — agentic-team-dashboard
-(s33, 26-08-2026; concept, zie <<JURIST-REVIEW>> in LICENSE)
+(s33, 26-08-2026; juristadvies van 26-08-2026 verwerkt op 27-08-2026 —
+concept, zie <<JURIST-REVIEW>> in LICENSE)
 
 Agentic Team Dashboard
 Copyright (c) 2026 Obeya Insights B.V. Alle rechten voorbehouden.
-Licentie: zie LICENSE (bron-inzage, proprietary).
+Licentie: zie LICENSE (bron-inzage, proprietary) en LICENSE.en.md
+(Engelse vertaling; bij verschil gaat de Nederlandse tekst voor).
 
-Runtime: geen derden
---------------------
+Runtime: geen onderdelen van derden
+-----------------------------------
 Het uitgeleverde artefact (dashboard.html, gebouwd door scripts/build.py uit
-src/ + schema/) bevat geen code van derden: geen bundler-output, geen
-chart-library, geen extern script. Wat de browser van een klant laadt is
-uitsluitend eigen code.
+src/ + schema/) bevat geen code, fonts of afbeeldingen van derden: geen
+bundler-output, geen chart-library, geen extern script, geen icoonset, geen
+polyfill. Wat de browser van een klant laadt is uitsluitend eigen code.
 
-Ontwikkel- en testafhankelijkheden (npm, niet meegeleverd)
-----------------------------------------------------------
-Gegenereerd uit package-lock.json (lockfileVersion 3) op
-26-08-2026: 138 pakketten, alleen gebruikt door `npm test` (vitest +
-jsdom). Ze worden niet gedistribueerd. Platform-specifieke optionele
-binaries (esbuild/rollup/lzma per OS) staan gemarkeerd met [optioneel].
+Deze bewering wordt bewaakt door test/geen-derden-in-artefact.test.js in de
+testsuite (`npm test`, en op elke PR via de CI). Die test herleidt het
+artefact byte voor byte tot src/ + schema/ en scant het daarnaast op sporen
+van derden — fonts (@font-face, ingesloten fontbestanden), icoonsets,
+polyfills, geminificeerde bundels, licentie- en copyrightteksten, externe
+bronnen en SVG-metadata van tekenprogramma's. De fontnamen in de CSS worden
+alleen genóemd; er wordt geen fontbestand meegeleverd, dus er rust ook geen
+attributieplicht (SIL OFL, CC-BY) op.
+
+Ontwikkelafhankelijkheden (informatief, niet gedistribueerd — hierop rust
+geen attributieplicht)
+-----------------------------------------------------------------------
+De onderstaande pakketten worden uitsluitend gebruikt bij `npm test`
+(vitest + jsdom) en maken geen deel uit van het uitgeleverde artefact. De
+attributieverplichtingen van MIT, ISC, BSD-2/3-Clause, MIT-0 en Apache-2.0
+worden geactiveerd door distributie; omdat deze pakketten niet worden
+gedistribueerd, gelden die verplichtingen hier niet. Deze lijst is opgenomen
+uit oogpunt van transparantie, niet omdat de licenties haar eisen.
+
+Gegenereerd op 27-08-2026 uit package-lock.json (lockfileVersion 3): 138
+pakketten, met de SPDX-identifier per pakket uit het veld "license".
+Platform-specifieke optionele binaries (esbuild/rollup/lzma per OS) staan
+gemarkeerd met [optioneel].
 
 Opnieuw genereren: lees per pakket in package-lock.json het veld "license"
-(terugval: node_modules/<pakket>/package.json) en groepeer per licentie.
-
+(terugval: node_modules/<pakket>/package.json), groepeer per licentie, zet de
+SPDX-identifier achter elk pakket en werk de datum hierboven bij.
 
 Apache-2.0 (2)
 ---------------
-- expect-type@1.4.0
-- xml-name-validator@5.0.0
+- expect-type@1.4.0 — SPDX: Apache-2.0
+- xml-name-validator@5.0.0 — SPDX: Apache-2.0
 
 BSD-2-Clause (2)
 -----------------
-- entities@6.0.1
-- webidl-conversions@7.0.0
+- entities@6.0.1 — SPDX: BSD-2-Clause
+- webidl-conversions@7.0.0 — SPDX: BSD-2-Clause
 
 BSD-3-Clause (2)
 -----------------
-- source-map-js@1.2.1
-- tough-cookie@5.1.2
+- source-map-js@1.2.1 — SPDX: BSD-3-Clause
+- tough-cookie@5.1.2 — SPDX: BSD-3-Clause
 
 ISC (4)
 --------
-- lru-cache@10.4.3
-- picocolors@1.1.1
-- saxes@6.0.0
-- siginfo@2.0.0
+- lru-cache@10.4.3 — SPDX: ISC
+- picocolors@1.1.1 — SPDX: ISC
+- saxes@6.0.0 — SPDX: ISC
+- siginfo@2.0.0 — SPDX: ISC
 
 MIT (127)
 ----------
-- @asamuzakjp/css-color@3.2.0
-- @csstools/css-calc@2.1.4
-- @csstools/css-color-parser@3.1.0
-- @csstools/css-parser-algorithms@3.0.5
-- @csstools/css-tokenizer@3.0.4
-- @esbuild/aix-ppc64@0.28.2 [optioneel]
-- @esbuild/android-arm@0.28.2 [optioneel]
-- @esbuild/android-arm64@0.28.2 [optioneel]
-- @esbuild/android-x64@0.28.2 [optioneel]
-- @esbuild/darwin-arm64@0.28.2 [optioneel]
-- @esbuild/darwin-x64@0.28.2 [optioneel]
-- @esbuild/freebsd-arm64@0.28.2 [optioneel]
-- @esbuild/freebsd-x64@0.28.2 [optioneel]
-- @esbuild/linux-arm@0.28.2 [optioneel]
-- @esbuild/linux-arm64@0.28.2 [optioneel]
-- @esbuild/linux-ia32@0.28.2 [optioneel]
-- @esbuild/linux-loong64@0.28.2 [optioneel]
-- @esbuild/linux-mips64el@0.28.2 [optioneel]
-- @esbuild/linux-ppc64@0.28.2 [optioneel]
-- @esbuild/linux-riscv64@0.28.2 [optioneel]
-- @esbuild/linux-s390x@0.28.2 [optioneel]
-- @esbuild/linux-x64@0.28.2 [optioneel]
-- @esbuild/netbsd-arm64@0.28.2 [optioneel]
-- @esbuild/netbsd-x64@0.28.2 [optioneel]
-- @esbuild/openbsd-arm64@0.28.2 [optioneel]
-- @esbuild/openbsd-x64@0.28.2 [optioneel]
-- @esbuild/openharmony-arm64@0.28.2 [optioneel]
-- @esbuild/sunos-x64@0.28.2 [optioneel]
-- @esbuild/win32-arm64@0.28.2 [optioneel]
-- @esbuild/win32-ia32@0.28.2 [optioneel]
-- @esbuild/win32-x64@0.28.2 [optioneel]
-- @jridgewell/sourcemap-codec@1.5.5
-- @napi-rs/lzma-linux-x64-gnu@1.5.1 [optioneel]
-- @rollup/rollup-android-arm-eabi@4.62.5 [optioneel]
-- @rollup/rollup-android-arm64@4.62.5 [optioneel]
-- @rollup/rollup-darwin-arm64@4.62.5 [optioneel]
-- @rollup/rollup-darwin-x64@4.62.5 [optioneel]
-- @rollup/rollup-freebsd-arm64@4.62.5 [optioneel]
-- @rollup/rollup-freebsd-x64@4.62.5 [optioneel]
-- @rollup/rollup-linux-arm-gnueabihf@4.62.5 [optioneel]
-- @rollup/rollup-linux-arm-musleabihf@4.62.5 [optioneel]
-- @rollup/rollup-linux-arm64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-arm64-musl@4.62.5 [optioneel]
-- @rollup/rollup-linux-loong64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-loong64-musl@4.62.5 [optioneel]
-- @rollup/rollup-linux-ppc64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-ppc64-musl@4.62.5 [optioneel]
-- @rollup/rollup-linux-riscv64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-riscv64-musl@4.62.5 [optioneel]
-- @rollup/rollup-linux-s390x-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-x64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-linux-x64-musl@4.62.5 [optioneel]
-- @rollup/rollup-openbsd-x64@4.62.5 [optioneel]
-- @rollup/rollup-openharmony-arm64@4.62.5 [optioneel]
-- @rollup/rollup-win32-arm64-msvc@4.62.5 [optioneel]
-- @rollup/rollup-win32-ia32-msvc@4.62.5 [optioneel]
-- @rollup/rollup-win32-x64-gnu@4.62.5 [optioneel]
-- @rollup/rollup-win32-x64-msvc@4.62.5 [optioneel]
-- @types/chai@5.2.3
-- @types/deep-eql@4.0.2
-- @types/estree@1.0.9
-- @vitest/expect@3.2.7
-- @vitest/mocker@3.2.7
-- @vitest/pretty-format@3.2.7
-- @vitest/runner@3.2.7
-- @vitest/snapshot@3.2.7
-- @vitest/spy@3.2.7
-- @vitest/utils@3.2.7
-- agent-base@7.1.4
-- assertion-error@2.0.1
-- cac@6.7.14
-- chai@5.3.3
-- check-error@2.1.3
-- cssstyle@4.6.0
-- data-urls@5.0.0
-- debug@4.4.3
-- decimal.js@10.6.0
-- deep-eql@5.0.2
-- es-module-lexer@1.7.0
-- esbuild@0.28.2
-- estree-walker@3.0.3
-- fdir@6.5.0
-- fsevents@2.3.3 [optioneel]
-- html-encoding-sniffer@4.0.0
-- http-proxy-agent@7.0.2
-- https-proxy-agent@7.0.6
-- iconv-lite@0.6.3
-- is-potential-custom-element-name@1.0.1
-- js-tokens@9.0.1
-- jsdom@26.1.0
-- loupe@3.2.1
-- magic-string@0.30.21
-- ms@2.1.3
-- nanoid@3.3.18
-- nwsapi@2.2.24
-- parse5@7.3.0
-- pathe@2.0.3
-- pathval@2.0.1
-- picomatch@4.0.7
-- postcss@8.5.26
-- punycode@2.3.1
-- rollup@4.62.5
-- rrweb-cssom@0.8.0
-- safer-buffer@2.1.2
-- stackback@0.0.2
-- std-env@3.10.0
-- strip-literal@3.1.0
-- symbol-tree@3.2.4
-- tinybench@2.9.0
-- tinyexec@0.3.2
-- tinyglobby@0.2.17
-- tinypool@1.1.1
-- tinyrainbow@2.0.0
-- tinyspy@4.0.4
-- tldts@6.1.86
-- tldts-core@6.1.86
-- tr46@5.1.1
-- vite@7.3.6
-- vite-node@3.2.4
-- vitest@3.2.7
-- w3c-xmlserializer@5.0.0
-- whatwg-encoding@3.1.1
-- whatwg-mimetype@4.0.0
-- whatwg-url@14.2.0
-- why-is-node-running@2.3.0
-- ws@8.21.3
-- xmlchars@2.2.0
+- @asamuzakjp/css-color@3.2.0 — SPDX: MIT
+- @csstools/css-calc@2.1.4 — SPDX: MIT
+- @csstools/css-color-parser@3.1.0 — SPDX: MIT
+- @csstools/css-parser-algorithms@3.0.5 — SPDX: MIT
+- @csstools/css-tokenizer@3.0.4 — SPDX: MIT
+- @esbuild/aix-ppc64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/android-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/android-arm@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/android-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/darwin-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/darwin-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/freebsd-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/freebsd-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-arm@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-ia32@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-loong64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-mips64el@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-ppc64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-riscv64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-s390x@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/linux-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/netbsd-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/netbsd-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/openbsd-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/openbsd-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/openharmony-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/sunos-x64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/win32-arm64@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/win32-ia32@0.28.2 — SPDX: MIT [optioneel]
+- @esbuild/win32-x64@0.28.2 — SPDX: MIT [optioneel]
+- @jridgewell/sourcemap-codec@1.5.5 — SPDX: MIT
+- @napi-rs/lzma-linux-x64-gnu@1.5.1 — SPDX: MIT [optioneel]
+- @rollup/rollup-android-arm-eabi@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-android-arm64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-darwin-arm64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-darwin-x64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-freebsd-arm64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-freebsd-x64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-arm-gnueabihf@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-arm-musleabihf@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-arm64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-arm64-musl@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-loong64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-loong64-musl@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-ppc64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-ppc64-musl@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-riscv64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-riscv64-musl@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-s390x-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-x64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-linux-x64-musl@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-openbsd-x64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-openharmony-arm64@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-win32-arm64-msvc@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-win32-ia32-msvc@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-win32-x64-gnu@4.62.5 — SPDX: MIT [optioneel]
+- @rollup/rollup-win32-x64-msvc@4.62.5 — SPDX: MIT [optioneel]
+- @types/chai@5.2.3 — SPDX: MIT
+- @types/deep-eql@4.0.2 — SPDX: MIT
+- @types/estree@1.0.9 — SPDX: MIT
+- @vitest/expect@3.2.7 — SPDX: MIT
+- @vitest/mocker@3.2.7 — SPDX: MIT
+- @vitest/pretty-format@3.2.7 — SPDX: MIT
+- @vitest/runner@3.2.7 — SPDX: MIT
+- @vitest/snapshot@3.2.7 — SPDX: MIT
+- @vitest/spy@3.2.7 — SPDX: MIT
+- @vitest/utils@3.2.7 — SPDX: MIT
+- agent-base@7.1.4 — SPDX: MIT
+- assertion-error@2.0.1 — SPDX: MIT
+- cac@6.7.14 — SPDX: MIT
+- chai@5.3.3 — SPDX: MIT
+- check-error@2.1.3 — SPDX: MIT
+- cssstyle@4.6.0 — SPDX: MIT
+- data-urls@5.0.0 — SPDX: MIT
+- debug@4.4.3 — SPDX: MIT
+- decimal.js@10.6.0 — SPDX: MIT
+- deep-eql@5.0.2 — SPDX: MIT
+- es-module-lexer@1.7.0 — SPDX: MIT
+- esbuild@0.28.2 — SPDX: MIT
+- estree-walker@3.0.3 — SPDX: MIT
+- fdir@6.5.0 — SPDX: MIT
+- fsevents@2.3.3 — SPDX: MIT [optioneel]
+- html-encoding-sniffer@4.0.0 — SPDX: MIT
+- http-proxy-agent@7.0.2 — SPDX: MIT
+- https-proxy-agent@7.0.6 — SPDX: MIT
+- iconv-lite@0.6.3 — SPDX: MIT
+- is-potential-custom-element-name@1.0.1 — SPDX: MIT
+- js-tokens@9.0.1 — SPDX: MIT
+- jsdom@26.1.0 — SPDX: MIT
+- loupe@3.2.1 — SPDX: MIT
+- magic-string@0.30.21 — SPDX: MIT
+- ms@2.1.3 — SPDX: MIT
+- nanoid@3.3.18 — SPDX: MIT
+- nwsapi@2.2.24 — SPDX: MIT
+- parse5@7.3.0 — SPDX: MIT
+- pathe@2.0.3 — SPDX: MIT
+- pathval@2.0.1 — SPDX: MIT
+- picomatch@4.0.7 — SPDX: MIT
+- postcss@8.5.26 — SPDX: MIT
+- punycode@2.3.1 — SPDX: MIT
+- rollup@4.62.5 — SPDX: MIT
+- rrweb-cssom@0.8.0 — SPDX: MIT
+- safer-buffer@2.1.2 — SPDX: MIT
+- stackback@0.0.2 — SPDX: MIT
+- std-env@3.10.0 — SPDX: MIT
+- strip-literal@3.1.0 — SPDX: MIT
+- symbol-tree@3.2.4 — SPDX: MIT
+- tinybench@2.9.0 — SPDX: MIT
+- tinyexec@0.3.2 — SPDX: MIT
+- tinyglobby@0.2.17 — SPDX: MIT
+- tinypool@1.1.1 — SPDX: MIT
+- tinyrainbow@2.0.0 — SPDX: MIT
+- tinyspy@4.0.4 — SPDX: MIT
+- tldts-core@6.1.86 — SPDX: MIT
+- tldts@6.1.86 — SPDX: MIT
+- tr46@5.1.1 — SPDX: MIT
+- vite-node@3.2.4 — SPDX: MIT
+- vite@7.3.6 — SPDX: MIT
+- vitest@3.2.7 — SPDX: MIT
+- w3c-xmlserializer@5.0.0 — SPDX: MIT
+- whatwg-encoding@3.1.1 — SPDX: MIT
+- whatwg-mimetype@4.0.0 — SPDX: MIT
+- whatwg-url@14.2.0 — SPDX: MIT
+- why-is-node-running@2.3.0 — SPDX: MIT
+- ws@8.21.3 — SPDX: MIT
+- xmlchars@2.2.0 — SPDX: MIT
 
 MIT-0 (1)
 ----------
-- @csstools/color-helpers@5.1.0
+- @csstools/color-helpers@5.1.0 — SPDX: MIT-0
 
 Licentieteksten
 ---------------
 De volledige tekst van elke bovengenoemde licentie staat in het betreffende
 pakket onder node_modules/<pakket>/LICENSE (of in package.json). MIT, ISC,
 BSD-2-Clause, BSD-3-Clause, MIT-0 en Apache-2.0 zijn permissieve licenties
-die vermelding van de auteursrechthouder vereisen; die vermelding is via
-deze lijst en de pakketbronnen gegeven.
+die bij distributie vermelding van de auteursrechthouder vereisen; die
+vermelding is — hoewel hier niet vereist — via deze lijst en de
+pakketbronnen gegeven.
 
-Python (scripts/)
------------------
+Python (scripts/) — informatief, niet gedistribueerd
+----------------------------------------------------
 scripts/build.py, extract-schema.py, sync-schema.py en generate-testdata*.py
-gebruiken de Python-standaardbibliotheek (Python Software Foundation
-License). generate-testdata.py gebruikt optioneel openpyxl (MIT) — alleen
-voor de historische Excel-fixture, niet voor het artefact.
+gebruiken de Python-standaardbibliotheek (SPDX: Python-2.0).
+generate-testdata.py gebruikt optioneel openpyxl (SPDX: MIT) — alleen voor
+de historische Excel-fixture, niet voor het artefact; openpyxl wordt niet
+meegeleverd.

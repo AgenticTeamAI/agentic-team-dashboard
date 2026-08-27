@@ -435,7 +435,12 @@ elke PR en push naar main:
   verouderd / onleesbaar / onbekende versie), teamfeed, onbekend domein, lege
   werkruimte, 401 en 500, interne tegels, hash-router en de periode- en
   minutenschakelaar. Daarnaast `test/xss.test.js` (b32),
-  `test/correctievrij.test.js` (i25) en `test/kalenderdag.test.js` (b37).
+  `test/correctievrij.test.js` (i25), `test/kalenderdag.test.js` (b37) en
+  `test/geen-derden-in-artefact.test.js` (juridische toets 26-08-2026: de
+  NOTICE-claim dat er geen code, fonts of afbeeldingen van derden in
+  `dashboard.html` zitten — herkomst byte voor byte plus een signatuurscan op
+  fonts, icoonsets, polyfills, geminificeerde bundels, licentieteksten en
+  externe bronnen).
 - **build-drift** — `python3 scripts/build.py` moet `dashboard.html` en
   `vercel.json` (CSP-hashes) ongewijzigd laten; wie `src/` of `schema/`
   wijzigt zonder te herbouwen, faalt hier.
@@ -463,9 +468,11 @@ dat is de hele build. Dat houdt de build netwerkloos en zonder toolchain:
 Vercel draait exact hetzelfde script (zie §Eén bron).
 
 Een nieuw bestand in `src/` moet op **drie** plekken worden aangemeld:
-`JS_MODULES_IN_ORDER` in `scripts/build.py`, en de modulelijsten bovenin
+`JS_MODULES_IN_ORDER` in `scripts/build.py`, de modulelijsten bovenin
 `test/xss.test.js`, `test/correctievrij.test.js`, `test/kalenderdag.test.js` en
-`test/f25-indeling.test.js` (die laden de src-modules zelf, in build-volgorde).
+`test/f25-indeling.test.js` (die laden de src-modules zelf, in build-volgorde),
+en `JS_MODULES` in `test/geen-derden-in-artefact.test.js` (die herbouwt het
+artefact en vergelijkt het byte voor byte).
 
 ### Deploy: staging eerst
 
@@ -888,9 +895,16 @@ het is geen distributiekanaal en wordt niet los aan klanten gegeven.
   hash-routering, maar geen lay-out op een echt scherm (overlap, responsive
   gedrag op smalle breedtes, leesbaarheid van de SVG-grafieken op
   mobiel/tablet).
-- **Licentie is een concept.** `LICENSE` en `NOTICE` (s33) staan in de
-  repo, maar de licentietekst wacht op juridische beoordeling (gemarkeerd
-  met `<<JURIST-REVIEW>>`).
+- **Licentie is nog een concept.** De eerste juridische ronde is verwerkt
+  (versie 0.2, 27-08-2026), maar `LICENSE`, `LICENSE.en.md` en `NOTICE`
+  wachten op een tweede beoordeling (gemarkeerd met `<<JURIST-REVIEW>>`).
+  Blokkerend punt: de tenaamstelling van Licentiegever staat nog niet vast —
+  daarom is er in deze ronde geen partijnaam gewijzigd.
+- **Het machineleesbare TDM-voorbehoud staat nog niet op de site.** Artikel
+  2a van de LICENSE zegt dat Licentiegever het voorbehoud "tevens
+  machineleesbaar vastlegt op www.agentic-team.ai"; dat bestand
+  (`.well-known/tdmrep.json` plus een `tdm-reservation`-header) is een aparte
+  taak in de site-repo en is nog niet gedaan.
 - **Bedrijfscontext-schema moet landen in `core/agents.json`** (f13/S17) —
   daarna kan de uitzondering in §Bedrijfscontext hierboven vervallen.
 - **Metricsbestand (versie 1) tegen een échte Coördinator-export.** Sinds
@@ -913,3 +927,32 @@ het is geen distributiekanaal en wordt niet los aan klanten gegeven.
   wijzigen, kan een net iets ander percentage zien — dat verdient een
   zichtbare toelichting op het scherm zelf (nu alleen in deze README) als
   dit vaker een vraag oplevert.
+
+
+## Licentie
+
+Deze repository is **bron-inzage (source-available), geen open source**:
+lezen en bestuderen mag iedereen, gebruiken mag met een geldige Agentic
+Team-licentie, herpubliceren of doorverkopen niet. Zie [LICENSE](LICENSE)
+(Nederlands, leidend), [LICENSE.en.md](LICENSE.en.md) (Engelse vertaling; bij
+verschil gaat de Nederlandse tekst voor) en [NOTICE](NOTICE). De
+licentietekst is een concept: de eerste juridische ronde is verwerkt, een
+tweede volgt (gemarkeerd met `<<JURIST-REVIEW>>`).
+
+> **This repository is source-available, not open source.** Anyone may read
+> and study the code; only holders of a valid Agentic Team licence may use
+> it. **No text and data mining for AI training.** The rightsholder expressly
+> reserves the rights referred to in section 15o of the Dutch Copyright Act
+> and article 4(3) of Directive (EU) 2019/790: this material may not be used
+> for text and data mining for the development or training of artificial
+> intelligence models without prior written permission. Reading and indexing
+> by search engines and comparable automated tools is welcome.
+
+**Tekst- en datamining (TDM).** Indexeren en lezen door zoekmachines mag —
+daar is deze repo openbaar voor. Gebruik van de inhoud als trainingsdata voor
+AI-modellen niet: dat recht is uitdrukkelijk voorbehouden (artikel 15o
+Auteurswet, artikel 4 lid 3 Richtlijn (EU) 2019/790), zie artikel 2a van de
+LICENSE.
+
+**Bijdragen** zijn welkom onder de DCO 1.1 — onderteken je commits met
+`git commit -s`. Zie [CONTRIBUTING.md](CONTRIBUTING.md).
