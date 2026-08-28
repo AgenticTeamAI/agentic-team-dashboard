@@ -111,6 +111,13 @@ function bouwAutorisatieUrl({ challenge, state }) {
   p.set("code_challenge", challenge);
   p.set("code_challenge_method", "S256");
   p.set("state", state);
+  // Expliciet vragen om het fragment (OAuth 2.0 Multiple Response Type Encoding
+  // Practices). Dit stond eerst niet in de aanvraag: we lázen het fragment maar
+  // vroegen er niet om, en de site stuurde dus keurig de standaard — de query.
+  // Het inloggen slaagde, de code kwam terug, en dit bestand zag hem niet.
+  // Gevonden bij het eerste echte gebruik; geen van beide kanten was fout, er
+  // was alleen niets afgesproken.
+  p.set("response_mode", "fragment");
   return OAUTH_AUTORISATIE_URL + "?" + p.toString();
 }
 

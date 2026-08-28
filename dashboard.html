@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-r5Cq/1lqKIxYA/0VexbpDQbk+2S0uigT15L07CFI3lU=' 'sha256-BPaX2IislIZ0l2PVU2+I49bC6QufK7MuugLUhQ71A4Y='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-r5Cq/1lqKIxYA/0VexbpDQbk+2S0uigT15L07CFI3lU=' 'sha256-YehngVGHzKYvwG1FjXXx3pa5I/e+5chLnQCq1Rrk1PI='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -2889,6 +2889,13 @@ function bouwAutorisatieUrl({ challenge, state }) {
   p.set("code_challenge", challenge);
   p.set("code_challenge_method", "S256");
   p.set("state", state);
+  // Expliciet vragen om het fragment (OAuth 2.0 Multiple Response Type Encoding
+  // Practices). Dit stond eerst niet in de aanvraag: we lázen het fragment maar
+  // vroegen er niet om, en de site stuurde dus keurig de standaard — de query.
+  // Het inloggen slaagde, de code kwam terug, en dit bestand zag hem niet.
+  // Gevonden bij het eerste echte gebruik; geen van beide kanten was fout, er
+  // was alleen niets afgesproken.
+  p.set("response_mode", "fragment");
   return OAUTH_AUTORISATIE_URL + "?" + p.toString();
 }
 
