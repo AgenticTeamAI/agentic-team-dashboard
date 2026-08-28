@@ -277,9 +277,40 @@ function route() {
   if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
+/* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
+ * opnieuw getekend, dus geen directe listener maar delegatie, net als de rest.
+ * De statusregel is er niet voor de sier: een volle werkruimte kan tientallen
+ * megabytes zijn en dan gebeurt er even niets zichtbaars. */
+async function startExport(formaat, knop) {
+  const status = document.getElementById("export-status");
+  const knoppen = Array.from(document.querySelectorAll("[data-export]"));
+  const zeg = (tekst) => { if (status) status.textContent = tekst; };
+  // Zonder bron valt er niets op te halen. Dat kan alleen in de seconden
+  // tussen tabwissel en geladen bundel, maar een knop die dan níets doet is
+  // erger dan een knop die zegt waarom — dat leest als kapot.
+  if (!huidigeBron) { zeg("Je werkruimte is nog niet geladen. Probeer het zo nog eens."); return; }
+  knoppen.forEach((k) => { k.disabled = true; });
+  zeg("Je export wordt klaargemaakt…");
+  try {
+    await downloadExport(huidigeBron, formaat);
+    zeg("Klaar — je download staat in je downloadmap.");
+  } catch (err) {
+    console.error(err);
+    zeg(err.message || "Het downloaden is niet gelukt.");
+  } finally {
+    knoppen.forEach((k) => { k.disabled = false; });
+    if (knop) knop.focus();
+  }
+}
+
 function wireNavigatie() {
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-stop-nav]")) return; // bv. het minuten-invoerveld
+    const exportEl = e.target.closest("[data-export]");
+    if (exportEl) {
+      startExport(exportEl.getAttribute("data-export"), exportEl);
+      return;
+    }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");
@@ -366,7 +397,13 @@ function toonLoginknop(aan) {
   document.getElementById("empty-state-acties").style.display = aan && oauthMogelijk() ? "" : "none";
 }
 
+/* f30: de exportknop heeft dezelfde bron nodig als de bundel. Bewaren in
+ * plaats van opnieuw afleiden — bij OAuth is dit object gedeeld en draagt het
+ * een eventueel vernieuwd token. */
+let huidigeBron = null;
+
 async function laadWerkruimte(bron) {
+  huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);

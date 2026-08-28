@@ -756,10 +756,24 @@ t.o.v. wat een browser draait. Wat de suite bewijst (`npm test`):
   waarschuwingenblok, nooit stil genegeerd), **interne tegels** alleen bij
   `intern: true`, **401/500** van de instantie → duidelijke melding, geen
   half dashboard.
+- **Export als download** (f30) — de knop op de Data-tab roept
+  `/dashboard/export` aan, neemt de bestandsnaam uit de `Content-Disposition`
+  over en biedt hem als bestand aan; een verlopen link geeft een melding in
+  plaats van een stille mislukking. `test/f30-export.test.js` toetst daarnaast
+  dat een rare of ontbrekende header nooit letterlijk in `a.download` belandt.
 - Daarnaast: `test/xss.test.js` (b32, sanitizer), `test/correctievrij.test.js`
   (i25, rekent de gate na op de fixture: week 10-08 op 67%),
   `test/kalenderdag.test.js` (b37), `test/gelijktijdigheid.test.js` (s26,
   begrensd parallel ophalen van domeinen).
+
+**Wat jsdom niet kan bewijzen: de CSP.** Het dashboard draait onder
+`default-src 'none'` en de download gaat via `URL.createObjectURL` — of dat
+mag, beslist de browser, niet jsdom. `scripts/mock-instantie.mjs` serveert
+`dashboard.html` daarom mét de échte CSP-header uit `vercel.json` (alleen de
+mock-origin erbij in `connect-src`, waar in productie de connector staat), en
+serveert ook `/dashboard/export`. Zo is de knop lokaal in een echte browser te
+proberen. Op 28-08-2026 zo gedaan: beide formaten kwamen als bestand binnen,
+met de naam uit de header, zonder CSP-schending.
 
 **Extra, tegen een echte klantexport (niet gecommit, niet gekopieerd,
 alleen lokaal gelezen tijdens de bouwsessie):** de adoptiescore-formule
