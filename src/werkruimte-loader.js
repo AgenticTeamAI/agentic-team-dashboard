@@ -180,6 +180,58 @@ async function fetchWerkruimte(bron, pad) {
 }
 
 /**
+ * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
+ *
+ * Bewust níet via fetchWerkruimte: die verwacht JSON en zou een export van
+ * tientallen megabytes eerst door JSON.parse duwen (en bij markdown meteen
+ * struikelen). Wel dezelfde 401-afhandeling, want een verlopen daglink of
+ * sessie moet hier dezelfde melding geven als overal elders.
+ *
+ * De naam komt uit de Content-Disposition van de instantie en wordt niet
+ * geraden: die kant kent de klantnaam en heeft hem al door een strikte zeef
+ * gehaald. Herkennen we hem niet, dan een neutrale terugval — nooit een naam
+ * uit serverinvoer letterlijk in `a.download` zetten.
+ */
+async function downloadExport(bron, formaat) {
+  let res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+    }
+  }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    throw new Error("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ").");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = bestandsnaamUitHeader(res.headers.get("content-disposition"), formaat);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Direct vrijgeven kan de download in Safari afbreken; een tik later is genoeg.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Alleen een naam die eruitziet als de onze; anders een neutrale terugval. */
+function bestandsnaamUitHeader(kop, formaat) {
+  const treffer = /filename="([A-Za-z0-9._-]{1,120})"/.exec(kop || "");
+  if (treffer) return treffer[1];
+  return "werkruimte-export." + (formaat === "json" ? "json" : "md");
+}
+
+/**
  * Voert `werk` uit over `items` met hooguit `plafond` tegelijk, en levert de
  * uitkomsten in dezelfde volgorde als de invoer (s26/016). Faalt er één, dan
  * faalt het geheel — net als Promise.all, zodat de foutafhandeling erboven
@@ -411,5 +463,6 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
     fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    downloadExport, bestandsnaamUitHeader,
   };
 }

@@ -112,6 +112,15 @@ if (domeinen._strayActies) {
 // alleen de dashboard-origin mag deze routes vanuit de browser aanroepen.
 const DASHBOARD_ORIGIN = process.env.DASHBOARD_ORIGIN ?? 'http://localhost:3000'
 
+/** De productie-CSP uit vercel.json, met deze mock-origin erbij in connect-src. */
+function csp() {
+  const vercel = JSON.parse(readFileSync(join(REPO, 'vercel.json'), 'utf8'))
+  const regel = vercel.headers
+    .flatMap((h) => h.headers)
+    .find((h) => h.key === 'Content-Security-Policy').value
+  return regel.replace('connect-src ', `connect-src http://localhost:${POORT} `)
+}
+
 const server = createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost')
   const json = (status, body) => {
@@ -128,7 +137,11 @@ const server = createServer((req, res) => {
     if (req.method === 'OPTIONS') return res.writeHead(origin === DASHBOARD_ORIGIN ? 204 : 403).end()
   }
   if (url.pathname === '/werkruimte') {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+    // Mét de échte CSP uit vercel.json, alleen met deze origin erbij in
+    // connect-src (in productie staat de connector daar). Zonder die header
+    // test je de pagina zonder de grens die hem in productie omringt — en
+    // juist dingen als de blob-download van f30 staan of vallen daarmee.
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'content-security-policy': csp() })
     return res.end(readFileSync(join(REPO, 'dashboard.html')))
   }
   if (url.pathname.startsWith('/dashboard/')) {
@@ -148,6 +161,22 @@ const server = createServer((req, res) => {
       const sinds = url.searchParams.get('sinds')
       const lijst = sinds ? domeinen[d].filter((e) => String(e.bijgewerkt) >= sinds) : domeinen[d]
       return json(200, { domein: d, entries: lijst.slice(0, limiet) })
+    }
+    // f30 — dezelfde route als de echte instantie, inclusief de
+    // download-headers. Zonder deze mock is de knop lokaal niet te proberen.
+    if (url.pathname === '/dashboard/export') {
+      const formaat = url.searchParams.get('formaat') ?? 'markdown'
+      if (formaat !== 'json' && formaat !== 'markdown') return json(400, { fout: "Parameter 'formaat' is 'json' of 'markdown'" })
+      const alles = Object.values(domeinen).flat()
+      const inhoud = formaat === 'json'
+        ? JSON.stringify({ werkruimte: 'Mockbedrijf BV', aantalEntries: alles.length, entries: alles }, null, 2)
+        : `# Werkruimte-export — Mockbedrijf BV\n\n${alles.length} entries\n`
+      res.writeHead(200, {
+        'content-type': formaat === 'json' ? 'application/json; charset=utf-8' : 'text/markdown; charset=utf-8',
+        'content-disposition': `attachment; filename="werkruimte-export-mockbedrijf-bv-2026-08-28.${formaat === 'json' ? 'json' : 'md'}"`,
+        'cache-control': 'no-store',
+      })
+      return res.end(inhoud)
     }
   }
   json(404, { fout: 'Onbekende route' })

@@ -81,7 +81,17 @@ button, .btn {
   transition: background 0.15s, color 0.15s;
 }
 button:hover, .btn:hover { background: var(--mint); color: var(--navy); }
+button[disabled] { opacity: 0.5; cursor: progress; }
+button[disabled]:hover { background: transparent; color: var(--mint); }
 input[type="file"] { display: none; }
+
+/* f30 — het exportblok onderaan de Data-tab. */
+.export-blok {
+  margin-top: 1.25rem; padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.export-knoppen { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.6rem 0 0.4rem; }
+#export-status:empty { display: none; }
 
 select#period-select {
   background: var(--panel); color: var(--white); border: 1px solid rgba(255,255,255,0.15);

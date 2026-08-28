@@ -88,6 +88,11 @@ async function open({ domeinen = null, status = 200, klant = "Mockbedrijf BV", i
       // jsdom heeft geen Fetch API; Node's Response voldoet voor de loader
       // (hij leest alleen .status en .json()).
       w.Response = Response;
+      // f30: jsdom kent createObjectURL niet. De download zelf kan hier dus
+      // niet echt gebeuren; wat we wél toetsen is dat de pagina de route
+      // aanroept, de naam uit de header overneemt en de link aanklikt.
+      w.URL.createObjectURL = () => "blob:nep";
+      w.URL.revokeObjectURL = () => {};
       w.fetch = async (url, opties = {}) => {
         const u = new URL(String(url));
         gevraagd.push(u.pathname + u.search);
@@ -104,6 +109,16 @@ async function open({ domeinen = null, status = 200, klant = "Mockbedrijf BV", i
           const sinds = u.searchParams.get("sinds");
           const lijst = sinds ? inhoud[d].filter((e) => String(e.bijgewerkt) >= sinds) : inhoud[d];
           return json(200, { domein: d, entries: lijst.slice(0, limiet) });
+        }
+        if (u.pathname === "/dashboard/export") {
+          const formaat = u.searchParams.get("formaat");
+          return new Response(formaat === "json" ? '{"werkruimte":"Mockbedrijf BV"}' : "# Werkruimte-export — Mockbedrijf BV", {
+            status: 200,
+            headers: {
+              "content-type": formaat === "json" ? "application/json" : "text/markdown",
+              "content-disposition": `attachment; filename="werkruimte-export-mockbedrijf-bv-2026-08-28.${formaat === "json" ? "json" : "md"}"`,
+            },
+          });
         }
         return json(404, { fout: "Onbekende route" });
       };
@@ -373,6 +388,44 @@ describe("interne tegels (f19-gate)", () => {
     const b = await open({ domeinen: inhoud, intern: false });
     await b.geladen();
     expect(b.tekst("kpi-grid")).not.toMatch(/Correctievrij/);
+  });
+});
+
+/* ── f30: de exportknop, in de echte gebouwde pagina ─────────────────── */
+describe("f30 — statische export als knop", () => {
+  it("staat op de Data-tab, haalt de route op en neemt de naam uit de header over", async () => {
+    const d = await open();
+    await d.geladen();
+    await d.naarTab("data");
+
+    const knop = d.$("tab-data-body").querySelector('[data-export="markdown"]');
+    expect(knop).not.toBeNull();
+    expect(d.tekst("tab-data-body")).toMatch(/Alles meenemen/);
+
+    // Vastleggen welke anchor de pagina aanmaakt: dat is de download.
+    const aangeklikt = [];
+    const origineel = d.w.HTMLAnchorElement.prototype.click;
+    d.w.HTMLAnchorElement.prototype.click = function () {
+      if (this.hasAttribute("download")) { aangeklikt.push({ download: this.download, href: this.href }); return; }
+      return origineel.call(this);
+    };
+
+    knop.click();
+    await d.tot(() => aangeklikt.length > 0, "download aangeboden");
+    expect(d.gevraagd).toContain("/dashboard/export?formaat=markdown");
+    expect(aangeklikt[0].download).toBe("werkruimte-export-mockbedrijf-bv-2026-08-28.md");
+    await d.tot(() => /Klaar/.test(d.tekst("export-status")), "statusregel klaar");
+    expect(d.fouten).toEqual([]);
+  });
+
+  it("meldt een verlopen link in plaats van een stille mislukking", async () => {
+    const d = await open();
+    await d.geladen();
+    await d.naarTab("data");
+    // De sessie verloopt tussen laden en klikken: elk volgend verzoek geeft 401.
+    d.w.fetch = async () => new Response(JSON.stringify({ fout: "weg" }), { status: 401 });
+    d.$("tab-data-body").querySelector('[data-export="json"]').click();
+    await d.tot(() => /verlopen/.test(d.tekst("export-status")), "melding over de verlopen link");
   });
 });
 

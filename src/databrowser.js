@@ -108,7 +108,30 @@ function renderDataOverzicht(el, ctx) {
     <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
     dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
     het domein woont.</p>
-    ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}`;
+    ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
+    ${exportBlok()}`;
+}
+
+/* f30 — je hele werkruimte meenemen, wanneer je maar wilt.
+ *
+ * De export is een recht dat je op elk moment kunt uitoefenen, geen
+ * noodprocedure bij vertrek. Daarom staat hij hier gewoon onderaan je
+ * gegevens, en niet weggestopt bij "opzeggen".
+ *
+ * Dit haalt méér op dan de tabellen erboven: die tonen alleen wat in de bundel
+ * zit, de export bevat alles wat er in je werkruimte staat. Dat verschil hoort
+ * er expliciet bij te staan, anders lijkt de knop overbodig.
+ */
+function exportBlok() {
+  return `<div class="export-blok">
+    <p class="footnote"><strong>Alles meenemen.</strong> Een volledige export van je werkruimte —
+    ook de domeinen die hierboven niet worden opgehaald. Van jou, wanneer je maar wilt.</p>
+    <div class="export-knoppen">
+      <button type="button" class="knop" data-export="markdown">Download als Markdown</button>
+      <button type="button" class="knop" data-export="json">Download als JSON</button>
+    </div>
+    <p class="footnote" id="export-status" role="status" aria-live="polite"></p>
+  </div>`;
 }
 
 // ── Eén domein (#/data/<domein>) ──────────────────────────────────────
@@ -194,7 +217,7 @@ function resetDataZoek() { dataZoek = ""; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }

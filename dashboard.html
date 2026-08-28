@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-r5Cq/1lqKIxYA/0VexbpDQbk+2S0uigT15L07CFI3lU=' 'sha256-YehngVGHzKYvwG1FjXXx3pa5I/e+5chLnQCq1Rrk1PI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-r5Cq/1lqKIxYA/0VexbpDQbk+2S0uigT15L07CFI3lU=' 'sha256-1D23USznAgZvqrS3thd5/vUAD/+tvDU/V8e4AuwlyxM='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -91,7 +91,17 @@ button, .btn {
   transition: background 0.15s, color 0.15s;
 }
 button:hover, .btn:hover { background: var(--mint); color: var(--navy); }
+button[disabled] { opacity: 0.5; cursor: progress; }
+button[disabled]:hover { background: transparent; color: var(--mint); }
 input[type="file"] { display: none; }
+
+/* f30 — het exportblok onderaan de Data-tab. */
+.export-blok {
+  margin-top: 1.25rem; padding-top: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.export-knoppen { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0.6rem 0 0.4rem; }
+#export-status:empty { display: none; }
 
 select#period-select {
   background: var(--panel); color: var(--white); border: 1px solid rgba(255,255,255,0.15);
@@ -2541,6 +2551,58 @@ async function fetchWerkruimte(bron, pad) {
 }
 
 /**
+ * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
+ *
+ * Bewust níet via fetchWerkruimte: die verwacht JSON en zou een export van
+ * tientallen megabytes eerst door JSON.parse duwen (en bij markdown meteen
+ * struikelen). Wel dezelfde 401-afhandeling, want een verlopen daglink of
+ * sessie moet hier dezelfde melding geven als overal elders.
+ *
+ * De naam komt uit de Content-Disposition van de instantie en wordt niet
+ * geraden: die kant kent de klantnaam en heeft hem al door een strikte zeef
+ * gehaald. Herkennen we hem niet, dan een neutrale terugval — nooit een naam
+ * uit serverinvoer letterlijk in `a.download` zetten.
+ */
+async function downloadExport(bron, formaat) {
+  let res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+    }
+  }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    throw new Error("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ").");
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = bestandsnaamUitHeader(res.headers.get("content-disposition"), formaat);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Direct vrijgeven kan de download in Safari afbreken; een tik later is genoeg.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** Alleen een naam die eruitziet als de onze; anders een neutrale terugval. */
+function bestandsnaamUitHeader(kop, formaat) {
+  const treffer = /filename="([A-Za-z0-9._-]{1,120})"/.exec(kop || "");
+  if (treffer) return treffer[1];
+  return "werkruimte-export." + (formaat === "json" ? "json" : "md");
+}
+
+/**
  * Voert `werk` uit over `items` met hooguit `plafond` tegelijk, en levert de
  * uitkomsten in dezelfde volgorde als de invoer (s26/016). Faalt er één, dan
  * faalt het geheel — net als Promise.all, zodat de foutafhandeling erboven
@@ -2772,6 +2834,7 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
     fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    downloadExport, bestandsnaamUitHeader,
   };
 }
 
@@ -5696,7 +5759,30 @@ function renderDataOverzicht(el, ctx) {
     <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
     dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
     het domein woont.</p>
-    ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}`;
+    ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
+    ${exportBlok()}`;
+}
+
+/* f30 — je hele werkruimte meenemen, wanneer je maar wilt.
+ *
+ * De export is een recht dat je op elk moment kunt uitoefenen, geen
+ * noodprocedure bij vertrek. Daarom staat hij hier gewoon onderaan je
+ * gegevens, en niet weggestopt bij "opzeggen".
+ *
+ * Dit haalt méér op dan de tabellen erboven: die tonen alleen wat in de bundel
+ * zit, de export bevat alles wat er in je werkruimte staat. Dat verschil hoort
+ * er expliciet bij te staan, anders lijkt de knop overbodig.
+ */
+function exportBlok() {
+  return `<div class="export-blok">
+    <p class="footnote"><strong>Alles meenemen.</strong> Een volledige export van je werkruimte —
+    ook de domeinen die hierboven niet worden opgehaald. Van jou, wanneer je maar wilt.</p>
+    <div class="export-knoppen">
+      <button type="button" class="knop" data-export="markdown">Download als Markdown</button>
+      <button type="button" class="knop" data-export="json">Download als JSON</button>
+    </div>
+    <p class="footnote" id="export-status" role="status" aria-live="polite"></p>
+  </div>`;
 }
 
 // ── Eén domein (#/data/<domein>) ──────────────────────────────────────
@@ -5782,7 +5868,7 @@ function resetDataZoek() { dataZoek = ""; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }
@@ -6067,9 +6153,40 @@ function route() {
   if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
+/* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
+ * opnieuw getekend, dus geen directe listener maar delegatie, net als de rest.
+ * De statusregel is er niet voor de sier: een volle werkruimte kan tientallen
+ * megabytes zijn en dan gebeurt er even niets zichtbaars. */
+async function startExport(formaat, knop) {
+  const status = document.getElementById("export-status");
+  const knoppen = Array.from(document.querySelectorAll("[data-export]"));
+  const zeg = (tekst) => { if (status) status.textContent = tekst; };
+  // Zonder bron valt er niets op te halen. Dat kan alleen in de seconden
+  // tussen tabwissel en geladen bundel, maar een knop die dan níets doet is
+  // erger dan een knop die zegt waarom — dat leest als kapot.
+  if (!huidigeBron) { zeg("Je werkruimte is nog niet geladen. Probeer het zo nog eens."); return; }
+  knoppen.forEach((k) => { k.disabled = true; });
+  zeg("Je export wordt klaargemaakt…");
+  try {
+    await downloadExport(huidigeBron, formaat);
+    zeg("Klaar — je download staat in je downloadmap.");
+  } catch (err) {
+    console.error(err);
+    zeg(err.message || "Het downloaden is niet gelukt.");
+  } finally {
+    knoppen.forEach((k) => { k.disabled = false; });
+    if (knop) knop.focus();
+  }
+}
+
 function wireNavigatie() {
   document.body.addEventListener("click", (e) => {
     if (e.target.closest("[data-stop-nav]")) return; // bv. het minuten-invoerveld
+    const exportEl = e.target.closest("[data-export]");
+    if (exportEl) {
+      startExport(exportEl.getAttribute("data-export"), exportEl);
+      return;
+    }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");
@@ -6156,7 +6273,13 @@ function toonLoginknop(aan) {
   document.getElementById("empty-state-acties").style.display = aan && oauthMogelijk() ? "" : "none";
 }
 
+/* f30: de exportknop heeft dezelfde bron nodig als de bundel. Bewaren in
+ * plaats van opnieuw afleiden — bij OAuth is dit object gedeeld en draagt het
+ * een eventueel vernieuwd token. */
+let huidigeBron = null;
+
 async function laadWerkruimte(bron) {
+  huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
