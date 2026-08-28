@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.48.0
-//   registry updated: 2026-08-26
-//   bron-commit     : f424350cf4a79681fab20522d4fae272bdc53fc5
-//   geextraheerd op : 2026-08-27T23:16:24Z
+//   registryVersion : 1.49.0
+//   registry updated: 2026-08-28
+//   bron-commit     : 522c9c7947dc81c4cebdccb418f468da91b1d1d3
+//   geextraheerd op : 2026-08-28T07:28:00Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.48.0",
-  "registryUpdated": "2026-08-26",
-  "sourceCommit": "f424350cf4a79681fab20522d4fae272bdc53fc5",
-  "extractedAt": "2026-08-27T23:16:24Z",
+  "registryVersion": "1.49.0",
+  "registryUpdated": "2026-08-28",
+  "sourceCommit": "522c9c7947dc81c4cebdccb418f468da91b1d1d3",
+  "extractedAt": "2026-08-28T07:28:00Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -340,6 +340,11 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "relatie",
+          "naar": "organisaties"
         }
       ]
     },
@@ -406,7 +411,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Organisatie",
-          "type": "tekst"
+          "type": "relatie",
+          "naar": "organisaties"
         },
         {
           "naam": "Deal (link)",
@@ -415,6 +421,21 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Actie doorgezet",
           "type": "checkbox"
+        },
+        {
+          "naam": "Contactpersoon",
+          "type": "relatie",
+          "naar": "contactpersonen"
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Project",
+          "type": "relatie",
+          "naar": "projecten"
         }
       ]
     },
@@ -498,6 +519,23 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Contactpersonen",
+          "type": "relatie",
+          "naar": "contactpersonen",
+          "meervoud": true
+        },
+        {
+          "naam": "Producten",
+          "type": "relatie",
+          "naar": "product_catalogus",
+          "meervoud": true
         }
       ]
     },
@@ -550,6 +588,34 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Contactpersonen",
+          "type": "relatie",
+          "naar": "contactpersonen",
+          "meervoud": true
+        },
+        {
+          "naam": "Uitvoerenden",
+          "type": "relatie",
+          "naar": "contactpersonen",
+          "meervoud": true
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Producten",
+          "type": "relatie",
+          "naar": "product_catalogus",
+          "meervoud": true
         }
       ]
     },
@@ -603,6 +669,27 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Contactpersoon",
+          "type": "relatie",
+          "naar": "contactpersonen"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Producten",
+          "type": "relatie",
+          "naar": "product_catalogus",
+          "meervoud": true
         }
       ]
     },
@@ -1050,6 +1137,11 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Persoon",
           "type": "mensen"
+        },
+        {
+          "naam": "Project",
+          "type": "relatie",
+          "naar": "projecten"
         }
       ]
     },
@@ -1116,7 +1208,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Organisatie",
-          "type": "tekst"
+          "type": "relatie",
+          "naar": "organisaties"
         },
         {
           "naam": "Bron (link)",
@@ -1137,6 +1230,26 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Correctie",
           "type": "tekst"
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Project",
+          "type": "relatie",
+          "naar": "projecten"
+        },
+        {
+          "naam": "Contactpersoon",
+          "type": "relatie",
+          "naar": "contactpersonen"
+        },
+        {
+          "naam": "Interactie",
+          "type": "relatie",
+          "naar": "interacties"
         }
       ]
     },
@@ -1235,6 +1348,11 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Eigenaar",
           "type": "tekst"
+        },
+        {
+          "naam": "Klant",
+          "type": "relatie",
+          "naar": "organisaties"
         }
       ]
     },
