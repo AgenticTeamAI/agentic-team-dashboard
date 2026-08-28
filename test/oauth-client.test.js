@@ -145,6 +145,20 @@ describe("autorisatie-URL", () => {
     expect(p.get("client_secret")).toBeNull();
   });
 
+  it("vraagt expliciet om het fragment", () => {
+    /* Dit ontbrak, en het kostte een werkende inlog. Dit bestand LÁS het
+     * fragment (zie de uitleg bovenin: een fragment komt in geen enkel access
+     * log) maar VROEG er niet om. De site stuurde dus keurig de standaard — de
+     * code in de query — en `parseOauthRedirect` keek naar het fragment en zag
+     * niets. Het inloggen slaagde, de code kwam terug, en het dashboard bleef
+     * leeg.
+     *
+     * De aanname stond alleen in een comment. Nu staat hij in de aanvraag én
+     * hier, zodat hij niet opnieuw stilzwijgend kan verdwijnen. */
+    const p = new URL(g.bouwAutorisatieUrl({ challenge: "CH", state: "ST" })).searchParams;
+    expect(p.get("response_mode")).toBe("fragment");
+  });
+
   it("startOauthLogin bewaart verifier + state en navigeert met de bijbehorende challenge", async () => {
     await g.startOauthLogin();
     const bewaard = JSON.parse(sessionStorage.getItem("agentic-team-dashboard:oauth-pkce"));
