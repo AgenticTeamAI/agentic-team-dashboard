@@ -196,7 +196,14 @@ describe("privacybelofte — de goedgekeurde formulering, in de UI zelf", () => 
     const c = el();
     g.renderPrivacyBlok(c);
     expect(c.textContent).toContain(lees("PRIVACY_REGEL"));
-    expect(c.textContent).toContain(lees("PRIVACY_UITKLAP"));
+    // Per alinea, niet op de samengevoegde string: sinds de B3-toets staat de
+    // tekst in vier <p>'s (art. 12 lid 1 AVG). textContent plakt die zonder
+    // spatie aan elkaar, dus de join(" ")-versie zit er per definitie niet in.
+    // Elke alinea afzonderlijk toetsen is bovendien preciezer — dit faalt ook
+    // als er één alinea wegvalt.
+    const alineas = lees("PRIVACY_UITKLAP_ALINEAS");
+    expect(alineas.length).toBe(4);
+    for (const alinea of alineas) expect(c.textContent).toContain(alinea);
     // de volledige tekst moet hier staan, niet achter een tweede klik of op
     // een andere pagina — een <details> op dezelfde tab voldoet daaraan
     expect(c.querySelector("details > summary")).not.toBeNull();

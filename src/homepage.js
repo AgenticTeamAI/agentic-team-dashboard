@@ -98,9 +98,13 @@ function renderStatusregel(el, ctx) {
 // dat de belofte wordt gedaan — en mag niet naar een andere pagina
 // verhuizen. Zie src/teksten.js.
 function renderPrivacyBlok(el) {
+  // Eén <p> per alinea (art. 12 lid 1 AVG: beknopt en begrijpelijk). De tekst
+  // zelf is onveranderd; alleen de opmaak is anders dan het blok van tien
+  // zinnen dat het was.
+  const alineas = PRIVACY_UITKLAP_ALINEAS.map((a) => `<p class="privacy-volledig">${esc(a)}</p>`).join("");
   el.innerHTML = `<details class="privacy-uitklap">
     <summary><span class="privacy-regel-tekst">${esc(PRIVACY_REGEL)}</span><span class="privacy-info" aria-hidden="true">ⓘ</span></summary>
-    <p class="privacy-volledig">${esc(PRIVACY_UITKLAP)}</p>
+    ${alineas}
   </details>`;
 }
 

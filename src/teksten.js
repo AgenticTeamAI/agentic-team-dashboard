@@ -30,8 +30,25 @@ const PRIVACY_REGEL =
  * gaat er één call naar agentic-team.ai, en daar zit geen bedrijfsdata in — in
  * geen van beide richtingen. Zie test/geen-telemetrie.test.js, dat die grens
  * op de gebouwde bundel afdwingt. */
-const PRIVACY_UITKLAP =
-  "Je bedrijfsgegevens komen rechtstreeks uit je eigen werkruimte en gaan niet langs onze servers. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie. De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres). Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken; daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.";
+/* Vier alinea's in plaats van één blok van tien zinnen: art. 12 lid 1 AVG vraagt
+ * een beknopte en begrijpelijke vorm, en dit kost niets (advies jurist, B3-toets
+ * 28-08). PRIVACY_UITKLAP blijft de volledige tekst als één string — dat is de
+ * versie die getoetst is en waarop de regressiecontrole staat. */
+const PRIVACY_UITKLAP_ALINEAS = [
+  "Je bedrijfsgegevens komen rechtstreeks uit je eigen werkruimte en gaan niet langs onze servers. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie.",
+  "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
+  /* De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
+   * zei alleen dat er geen bedrijfsdata meegaat — waar, maar een lezer kon
+   * daaruit opmaken dat inloggen spoorloos is. Dat is het niet: de inlogwissel
+   * is een verzoek aan onze server, en die legt vast wélke licentie inlogt en
+   * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
+   * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
+   * teksten elkaar tegenspreken. */
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
+  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.",
+];
+
+const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
 
 /* Dezelfde belofte, in de lege staat (nog geen daglink geladen). Bewust
  * dezelfde strekking en dezelfde grens als hierboven — twee varianten van
@@ -46,5 +63,5 @@ const PRIVACY_FEED =
   "Deze feed leest rechtstreeks uit je eigen werkruimte via de daglink; die berichten komen niet langs onze servers.";
 
 if (typeof module !== "undefined") {
-  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
+  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
 }
