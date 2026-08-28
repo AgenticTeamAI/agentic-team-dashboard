@@ -139,6 +139,49 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     expect(HTML).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser");
     expect(HTML).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
     expect(HTML).toContain("De pagina zelf wordt wel van dashboard.agentic-team.ai geladen");
+    // p10/B3: de inlogroute is een tweede manier om binnen te komen, en de
+    // tekst moet allebei beschrijven. Verdwijnt deze zin, dan beschrijft de
+    // verklaring nog maar de helft van wat het dashboard doet.
+    expect(HTML).toContain("wisselt je browser eenmalig een inlogcode om bij agentic-team.ai");
+    expect(HTML).toContain("In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad");
+    // B3-toets: zonder deze zin kan een lezer opmaken dat inloggen spoorloos
+    // is. Dat is het niet — de inlogwissel legt vast wélke licentie inlogt en
+    // wanneer, en het privacyblok op de site vertelt dat ook. Valt deze zin
+    // weg, dan spreken twee eigen teksten elkaar tegen.
+    expect(HTML).toContain("wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer");
+  });
+
+  /* Twee zinnen uit de versie van vóór de dashboard-login. Ze waren toen waar
+   * en worden onwaar zodra er ingelogd kan worden: er staan dan inlogtokens in
+   * de browser. Een herschrijving of een teruggedraaide merge kan ze zomaar
+   * terugbrengen, en dan klopt de verklaring niet meer met wat de code doet —
+   * zonder dat iemand het merkt. Juristronde 3, 28-08-2026, punt B3.
+   *
+   * ┌─ WAT DEZE TEST NIET KAN, EN JIJ WEL ────────────────────────────────┐
+   * │ Deze lijst herkent alleen claims die we al kennen. Een NIEUWE       │
+   * │ onjuiste zin — een die hier nog niet staat omdat niemand hem had    │
+   * │ bedacht — komt er ongehinderd langs. Automatisering vervangt de     │
+   * │ toets niet, ze bewaakt de uitkomst ervan.                           │
+   * │                                                                     │
+   * │ Leg de privacytekst opnieuw voor aan een jurist zodra:              │
+   * │  · er iets bij komt dat de browser opslaat of naar ons stuurt;      │
+   * │  · er een route bij komt om binnen te komen (nu: daglink, login);   │
+   * │  · er iets aan onze kant wordt vastgelegd dat er nog niet stond;    │
+   * │  · een zin met "alleen", "geen" of "nooit" wordt aangeraakt — dat   │
+   * │    zijn uitputtende claims, en juist daar zat het in ronde 3 fout.  │
+   * │                                                                     │
+   * │ Voeg na zo'n toets de nieuwe zinnen hierboven toe én de vervangen   │
+   * │ zinnen hieronder. Dan bewaakt deze test ook die ronde.              │
+   * │ (Advies jurist bij de B3-toets, 28-08-2026.)                        │
+   * └─────────────────────────────────────────────────────────────────────┘ */
+  it("draagt geen claim meer die door de inlogroute onwaar is geworden", () => {
+    const verboden = [
+      [/bewaart en verwerkt zelf geen gegevens/i, "het dashboard bewaart nu inlogtokens in de browser"],
+      [/Lokaal in je browser worden alleen het moment van laatst laden/i, "er staat nu ook een inlogtoken in de browser; 'alleen' is uitputtend"],
+    ];
+    for (const [patroon, waarom] of verboden) {
+      expect(HTML, `oude claim staat weer in het artefact — ${waarom}`).not.toMatch(patroon);
+    }
   });
 
   it("bewaart lokaal alleen wat de privacytekst noemt", () => {
