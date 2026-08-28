@@ -15,8 +15,23 @@
 const PRIVACY_REGEL =
   "Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.";
 
+/* Herzien voor p10 (dashboard-login) — juristronde 3, 28-08-2026, punt B3.
+ *
+ * De vorige tekst opende met "Dit dashboard bewaart en verwerkt zelf geen
+ * gegevens" en sloot met "Lokaal in je browser worden ALLEEN het moment van
+ * laatst laden en je minuten-per-actie-instelling bewaard". Allebei worden ze
+ * onwaar zodra er ingelogd kan worden: er staan dan ook inlogtokens in de
+ * browser. Dat ze in sessionStorage staan en bij het sluiten van het tabblad
+ * verdwijnen maakt ze korter houdbaar, niet onbestaand — en "alleen" is een
+ * uitputtende claim.
+ *
+ * Wat wél overeind blijft en daarom het hart van de tekst is: bedrijfsdata gaat
+ * browser ↔ eigen werkruimte en komt niet langs onze servers. Bij het inloggen
+ * gaat er één call naar agentic-team.ai, en daar zit geen bedrijfsdata in — in
+ * geen van beide richtingen. Zie test/geen-telemetrie.test.js, dat die grens
+ * op de gebouwde bundel afdwingt. */
 const PRIVACY_UITKLAP =
-  "Dit dashboard bewaart en verwerkt zelf geen gegevens. Alles wat je hier ziet, haalt je browser rechtstreeks op bij jouw eigen werkruimte-instantie met de daglink; jouw bedrijfsdata komt niet langs onze servers. De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres). Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Lokaal in je browser worden alleen het moment van laatst laden en je minuten-per-actie-instelling bewaard.";
+  "Je bedrijfsgegevens komen rechtstreeks uit je eigen werkruimte en gaan niet langs onze servers. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie. De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres). Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken; daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.";
 
 /* Dezelfde belofte, in de lege staat (nog geen daglink geladen). Bewust
  * dezelfde strekking en dezelfde grens als hierboven — twee varianten van

@@ -139,6 +139,26 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     expect(HTML).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser");
     expect(HTML).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
     expect(HTML).toContain("De pagina zelf wordt wel van dashboard.agentic-team.ai geladen");
+    // p10/B3: de inlogroute is een tweede manier om binnen te komen, en de
+    // tekst moet allebei beschrijven. Verdwijnt deze zin, dan beschrijft de
+    // verklaring nog maar de helft van wat het dashboard doet.
+    expect(HTML).toContain("wisselt je browser eenmalig een inlogcode om bij agentic-team.ai");
+    expect(HTML).toContain("In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad");
+  });
+
+  /* Twee zinnen uit de versie van vóór de dashboard-login. Ze waren toen waar
+   * en worden onwaar zodra er ingelogd kan worden: er staan dan inlogtokens in
+   * de browser. Een herschrijving of een teruggedraaide merge kan ze zomaar
+   * terugbrengen, en dan klopt de verklaring niet meer met wat de code doet —
+   * zonder dat iemand het merkt. Juristronde 3, 28-08-2026, punt B3. */
+  it("draagt geen claim meer die door de inlogroute onwaar is geworden", () => {
+    const verboden = [
+      [/bewaart en verwerkt zelf geen gegevens/i, "het dashboard bewaart nu inlogtokens in de browser"],
+      [/Lokaal in je browser worden alleen het moment van laatst laden/i, "er staat nu ook een inlogtoken in de browser; 'alleen' is uitputtend"],
+    ];
+    for (const [patroon, waarom] of verboden) {
+      expect(HTML, `oude claim staat weer in het artefact — ${waarom}`).not.toMatch(patroon);
+    }
   });
 
   it("bewaart lokaal alleen wat de privacytekst noemt", () => {
