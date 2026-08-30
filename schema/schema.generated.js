@@ -4,8 +4,8 @@
 // AgenticTeamAI/agent-architecture, core/agents.json.
 //   registryVersion : 1.50.0
 //   registry updated: 2026-08-28
-//   bron-commit     : 892a35e2ff2d8c94deaedbe80dc0ca3a6d4aacc5
-//   geextraheerd op : 2026-08-28T18:53:52Z
+//   bron-commit     : 622f3aac6ba5c0b58b9333d7e4bc43875382d055
+//   geextraheerd op : 2026-08-30T19:04:22Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
@@ -14,8 +14,8 @@
 window.AGENTIC_TEAM_SCHEMA = {
   "registryVersion": "1.50.0",
   "registryUpdated": "2026-08-28",
-  "sourceCommit": "892a35e2ff2d8c94deaedbe80dc0ca3a6d4aacc5",
-  "extractedAt": "2026-08-28T18:53:52Z",
+  "sourceCommit": "622f3aac6ba5c0b58b9333d7e4bc43875382d055",
+  "extractedAt": "2026-08-30T19:04:22Z",
   "modules": {
     "core": {
       "naam": "Core",
