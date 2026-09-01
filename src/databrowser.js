@@ -101,9 +101,40 @@ function dataMetricsUitleg() {
   </div>`;
 }
 
+/* f29 (metricscontract v2): ook zonder rijen zijn de verbánden te tonen —
+ * de Coördinator telt ze bij de bron en levert ze als aggregaten aan.
+ * `key` = alleen de kaarten waar dit domein aan meedoet; null = allemaal. */
+function dataRelatieKaarten(ctx, key) {
+  const rels = Array.isArray(ctx.relaties) ? ctx.relaties : [];
+  const items = key ? rels.filter(r => r.van === key || r.naar === key) : rels;
+  if (!items.length) return "";
+  const naam = slug => {
+    const d = ctx.schema.datadomeinen[slug];
+    return d ? `${d.emoji ? d.emoji + " " : ""}${d.naam || slug}` : slug;
+  };
+  const kaarten = items.map(r => {
+    const totaal = Number(r.totaal) || 0;
+    const gekoppeld = Number(r.gekoppeld) || 0;
+    const doelen = Number(r.doelen) || 0;
+    const top = Array.isArray(r.top) && r.top.length
+      ? `<div class="relatie-top">Meest gekoppeld: ${r.top.map(t => `${esc(t.titel)} (${Number(t.aantal) || 0})`).join(" · ")}</div>`
+      : "";
+    return `<div class="relatie-kaart">
+      <div class="relatie-kop">${esc(naam(r.van))} <span class="relatie-pijl">→</span> ${esc(naam(r.naar))}</div>
+      <div class="relatie-tekst">${gekoppeld} van de ${totaal} ${esc(String(r.veld || "").toLowerCase() || "rijen")}-verwijzingen gevuld${doelen ? `, naar ${doelen} verschillende` : ""}.</div>
+      ${top}
+    </div>`;
+  }).join("");
+  return `<div class="relatie-blok">
+    <p><strong>🔗 Verbanden</strong></p>
+    <p class="footnote">Geteld bij de bron door je Coördinator — de onderliggende rijen wonen in je eigen werkdata-systeem.</p>
+    ${kaarten}
+  </div>`;
+}
+
 // ── Overzicht (#/data) ────────────────────────────────────────────────
 function renderDataOverzicht(el, ctx) {
-  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg(); return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
   const rijen = domeinen.map(d => {
@@ -161,7 +192,7 @@ function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
   if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
   if (ctx.bundle && ctx.bundle.kind === "metrics") {
-    el.innerHTML = dataMetricsUitleg() + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, key) + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
     return;
   }
 
@@ -254,7 +285,7 @@ function resetDataZoek() { dataZoek = ""; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataBrowsbareDomeinen, exportBlok,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }

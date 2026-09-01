@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-fL/9ZYaitDqLr2xx8ULF2lTKTJOuPwngfzQomqRKW20=' 'sha256-hUBVneF4GnZ6KBpULPoIvFbyxmAeFguJgt7av7lG/sU='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-fL/9ZYaitDqLr2xx8ULF2lTKTJOuPwngfzQomqRKW20=' 'sha256-1Al7Y04E52gW2S96px1q0JcpC2FTrZUtj3bqvfI8jrU='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -546,6 +546,13 @@ section.panel {
 /* f23/f29 fase A — klikbare verwijzing in de Data-tab */
 .relatie-link { color: var(--mint-light); text-decoration: none; cursor: pointer; }
 .relatie-link:hover { text-decoration: underline; }
+/* f29: relatiekaarten in de Data-tab bij een metricsbundel */
+.relatie-blok { margin-top: 16px; }
+.relatie-kaart { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.relatie-kop { font-weight: 600; margin-bottom: 4px; }
+.relatie-pijl { color: var(--muted); font-weight: 400; }
+.relatie-tekst { color: var(--text); font-size: 0.92em; }
+.relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
 
 </style>
 </head>
@@ -4102,6 +4109,32 @@ function saneerMetricsPayload(raw, schema) {
     if (onbekend.length) waarschuw(ctx, `domeinen (${onbekend.length} onbekende sleutel(s))`, onbekend[0]);
   }
 
+  // f29 (contract v2): relatie-aggregaten — alleen tellingen en top-titels,
+  // nooit rijen. Spiegel van agentic-team-werkruimte src/domeinen/metrics.ts;
+  // een item zonder geldig van/naar-domein valt volledig weg.
+  if (Array.isArray(raw.relaties)) {
+    uit.relaties = raw.relaties.filter(isObject).slice(0, METRICS_MAX.lijst).flatMap((r, i) => {
+      const pad = `relaties[${i}]`;
+      const van = typeof r.van === "string" && domeinSlugs.includes(r.van) ? r.van : null;
+      const naar = typeof r.naar === "string" && domeinSlugs.includes(r.naar) ? r.naar : null;
+      if (!van || !naar) { waarschuw(ctx, pad, r.van || r.naar); return []; }
+      const top = Array.isArray(r.top) ? r.top.filter(isObject).slice(0, 3).flatMap((t, j) => {
+        const titel = saneerTekstOfNull(t.titel, METRICS_MAX.tekstKort);
+        if (!titel) { waarschuw(ctx, `${pad}.top[${j}].titel`, t.titel); return []; }
+        return [{ titel, aantal: saneerGetal(t.aantal, ctx, `${pad}.top[${j}].aantal`) }];
+      }) : [];
+      return [{
+        van,
+        veld: saneerTekst(r.veld, METRICS_MAX.sleutel),
+        naar,
+        gekoppeld: saneerGetal(r.gekoppeld, ctx, `${pad}.gekoppeld`),
+        totaal: saneerGetal(r.totaal, ctx, `${pad}.totaal`),
+        doelen: saneerGetal(r.doelen, ctx, `${pad}.doelen`),
+        top,
+      }];
+    });
+  }
+
   if (isObject(raw.acties)) {
     uit.acties = {
       totaal: saneerGetal(raw.acties.totaal, ctx, "acties.totaal"),
@@ -4261,7 +4294,9 @@ if (typeof module !== "undefined") {
  * verkeerde grafiek tekenen is erger dan niets tekenen.
  */
 
-const METRICS_VERSION = 1;
+const METRICS_VERSION = 2; // hoogste versie die dit dashboard kent
+// f29: versie 2 = versie 1 + de `relaties`-sectie; beide blijven geldig.
+const METRICS_VERSIES = [1, 2];
 
 // ── Route 1 & 2: rijen → metrics (bestaande berekening, nu met een naam) ──
 function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWeeks, minutenPerActie) {
@@ -4316,7 +4351,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   if (!heeftKenmerk) {
     return { ok: false, kind: "leeg-of-onherkenbaar", tekst: "Dit bestand heeft geen \"versie\"- of \"type\"-veld en wordt daarom niet als metricsbestand herkend. Is dit een leeg bestand, of een export in het oude rijenformaat?" };
   }
-  if (raw.versie !== METRICS_VERSION) {
+  if (!METRICS_VERSIES.includes(raw.versie)) {
     return {
       ok: false,
       kind: "onbekende-versie",
@@ -4325,8 +4360,8 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
       tekst: raw.versie == null
         ? `Dit metricsbestand heeft geen herkenbaar versienummer. Dit dashboard herkent versie ${METRICS_VERSION}.`
         : raw.versie > METRICS_VERSION
-          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
-          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
+          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (t/m versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
+          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (t/m versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
     };
   }
 
@@ -4355,8 +4390,10 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   return {
     ok: true,
     metrics: {
-      versie: METRICS_VERSION,
+      versie: raw.versie,
       bron: "notion",
+      // f29: relatie-aggregaten (v2) — al gesaneerd; de Data-tab tekent ze.
+      relaties: Array.isArray(raw.relaties) ? raw.relaties : null,
       z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,
@@ -5756,9 +5793,40 @@ function dataMetricsUitleg() {
   </div>`;
 }
 
+/* f29 (metricscontract v2): ook zonder rijen zijn de verbánden te tonen —
+ * de Coördinator telt ze bij de bron en levert ze als aggregaten aan.
+ * `key` = alleen de kaarten waar dit domein aan meedoet; null = allemaal. */
+function dataRelatieKaarten(ctx, key) {
+  const rels = Array.isArray(ctx.relaties) ? ctx.relaties : [];
+  const items = key ? rels.filter(r => r.van === key || r.naar === key) : rels;
+  if (!items.length) return "";
+  const naam = slug => {
+    const d = ctx.schema.datadomeinen[slug];
+    return d ? `${d.emoji ? d.emoji + " " : ""}${d.naam || slug}` : slug;
+  };
+  const kaarten = items.map(r => {
+    const totaal = Number(r.totaal) || 0;
+    const gekoppeld = Number(r.gekoppeld) || 0;
+    const doelen = Number(r.doelen) || 0;
+    const top = Array.isArray(r.top) && r.top.length
+      ? `<div class="relatie-top">Meest gekoppeld: ${r.top.map(t => `${esc(t.titel)} (${Number(t.aantal) || 0})`).join(" · ")}</div>`
+      : "";
+    return `<div class="relatie-kaart">
+      <div class="relatie-kop">${esc(naam(r.van))} <span class="relatie-pijl">→</span> ${esc(naam(r.naar))}</div>
+      <div class="relatie-tekst">${gekoppeld} van de ${totaal} ${esc(String(r.veld || "").toLowerCase() || "rijen")}-verwijzingen gevuld${doelen ? `, naar ${doelen} verschillende` : ""}.</div>
+      ${top}
+    </div>`;
+  }).join("");
+  return `<div class="relatie-blok">
+    <p><strong>🔗 Verbanden</strong></p>
+    <p class="footnote">Geteld bij de bron door je Coördinator — de onderliggende rijen wonen in je eigen werkdata-systeem.</p>
+    ${kaarten}
+  </div>`;
+}
+
 // ── Overzicht (#/data) ────────────────────────────────────────────────
 function renderDataOverzicht(el, ctx) {
-  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg(); return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
   const rijen = domeinen.map(d => {
@@ -5816,7 +5884,7 @@ function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
   if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
   if (ctx.bundle && ctx.bundle.kind === "metrics") {
-    el.innerHTML = dataMetricsUitleg() + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, key) + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
     return;
   }
 
@@ -5909,7 +5977,7 @@ function resetDataZoek() { dataZoek = ""; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataBrowsbareDomeinen, exportBlok,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }
@@ -5995,6 +6063,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net

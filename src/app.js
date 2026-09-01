@@ -78,6 +78,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
