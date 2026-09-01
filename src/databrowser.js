@@ -157,10 +157,14 @@ function renderDataOverzicht(el, ctx) {
     .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
     .join(" · ");
 
-  el.innerHTML = `${rijen}
-    <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
+  const leesregel = ctx.kanSchrijven
+    ? `Dit is wat er nú in je werkruimte staat. Je bent ingelogd: open een domein om rijen toe te voegen,
+    te bewerken of te verwijderen. Domeinen die in een ander systeem wonen blijven daar — en bewerk je daar.`
+    : `Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
     dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
-    het domein woont.</p>
+    het domein woont.`;
+  el.innerHTML = `${rijen}
+    <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
 }
@@ -198,10 +202,16 @@ function renderDataDomein(el, key, ctx) {
 
   const rows = dataRijenVan(ctx, key);
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
+  // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
+  const bewerk = magDomeinBewerken(ctx, key);
+  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
+  const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
       betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+      ${bewerkUitleg}${nieuwKnop}<div data-bewerk-paneel></div>
       <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
     return;
   }
 
@@ -236,9 +246,15 @@ function renderDataDomein(el, key, ctx) {
     if (!zicht.length) {
       return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
     }
-    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("");
-    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r =>
-      `<tr>${velden.map(v => `<td>${dataCelHtml(getField(r, v.naam), v)}</td>`).join("")}</tr>`).join("");
+    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("")
+      + (bewerk.ok ? `<th class="bewerk-kolom" aria-label="acties"></th>` : "");
+    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r => {
+      const cellen = velden.map(v => `<td>${dataCelHtml(getField(r, v.naam), v)}</td>`).join("");
+      const acties = bewerk.ok && r.__entryId
+        ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
+        : (bewerk.ok ? `<td class="bewerk-kolom"></td>` : "");
+      return `<tr>${cellen}${acties}</tr>`;
+    }).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
       : "";
@@ -260,7 +276,8 @@ function renderDataDomein(el, key, ctx) {
     </div>
     <div data-data-tabel>${tabelHtml()}</div>
     <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
-    Alleen lezen — dit dashboard schrijft nooit terug. Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    ${bewerk.ok ? "Bewerken schrijft rechtstreeks naar je eigen werkruimte." : "Alleen lezen — dit dashboard schrijft nooit terug."} Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    ${bewerkUitleg}${nieuwKnop ? `<div class="data-toolbar">${nieuwKnop}</div>` : ""}<div data-bewerk-paneel></div>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
 
   // Fase A: klik op een verwijzing → de zoekterm wordt de titel, en de
@@ -279,6 +296,9 @@ function renderDataDomein(el, key, ctx) {
       el.querySelector("[data-data-telling]").textContent = tellingHtml();
     });
   }
+
+  // f23 fase D: nieuwe rij / bewerken / verwijderen — alleen in een schrijfsessie.
+  if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
 function resetDataZoek() { dataZoek = ""; }

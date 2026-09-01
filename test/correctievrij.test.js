@@ -21,6 +21,7 @@ const MODULES = [
   "src/charts.js",
   "src/homepage.js",
   "src/databrowser.js",
+  "src/data-bewerken.js",
 ];
 
 const TODAY = new Date(2026, 7, 24, 12, 0); // maandag, lokale tijd (TZ-onafhankelijk)

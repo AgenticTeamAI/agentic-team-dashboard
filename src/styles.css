@@ -543,3 +543,20 @@ section.panel {
 .relatie-pijl { color: var(--muted); font-weight: 400; }
 .relatie-tekst { color: var(--text); font-size: 0.92em; }
 .relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
+/* f23 fase D: bewerken in de Data-tab */
+.knop-mini { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 0.95em; }
+.knop-mini:hover { transform: scale(1.15); }
+.knop-mini:disabled { opacity: 0.4; cursor: default; }
+.bewerk-kolom { white-space: nowrap; width: 1%; }
+.knop-secundair { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.bewerk-formulier { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 12px 0; max-width: 560px; }
+.bewerk-veld { display: block; margin-bottom: 10px; }
+.bewerk-label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
+.bewerk-veld input[type="text"], .bewerk-veld input[type="url"], .bewerk-veld input[type="email"],
+.bewerk-veld input[type="date"], .bewerk-veld input[type="number"], .bewerk-veld select, .bewerk-veld textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.bewerk-checkbox { display: inline-flex; align-items: center; gap: 6px; }
+.bewerk-fout { color: #e5484d; font-size: 0.9em; min-height: 1em; }
+.bewerk-knoppen { display: flex; gap: 8px; margin-top: 6px; }

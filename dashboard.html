@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-tmOqqYwJPDF8FSbjb0JtOkvdpEnRAhxcoI3yFz0T/XI=' 'sha256-1Al7Y04E52gW2S96px1q0JcpC2FTrZUtj3bqvfI8jrU='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-tmOqqYwJPDF8FSbjb0JtOkvdpEnRAhxcoI3yFz0T/XI=' 'sha256-onDDfvUKdur5yBpbCaPOfuYT+PRhwsyJVyi7wj3s0Zw='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -553,6 +553,23 @@ section.panel {
 .relatie-pijl { color: var(--muted); font-weight: 400; }
 .relatie-tekst { color: var(--text); font-size: 0.92em; }
 .relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
+/* f23 fase D: bewerken in de Data-tab */
+.knop-mini { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 0.95em; }
+.knop-mini:hover { transform: scale(1.15); }
+.knop-mini:disabled { opacity: 0.4; cursor: default; }
+.bewerk-kolom { white-space: nowrap; width: 1%; }
+.knop-secundair { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.bewerk-formulier { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 12px 0; max-width: 560px; }
+.bewerk-veld { display: block; margin-bottom: 10px; }
+.bewerk-label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
+.bewerk-veld input[type="text"], .bewerk-veld input[type="url"], .bewerk-veld input[type="email"],
+.bewerk-veld input[type="date"], .bewerk-veld input[type="number"], .bewerk-veld select, .bewerk-veld textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.bewerk-checkbox { display: inline-flex; align-items: center; gap: 6px; }
+.bewerk-fout { color: #e5484d; font-size: 0.9em; min-height: 1em; }
+.bewerk-knoppen { display: flex; gap: 8px; margin-top: 6px; }
 
 </style>
 </head>
@@ -2561,6 +2578,50 @@ async function fetchWerkruimte(bron, pad) {
   return body;
 }
 
+/* f23: een schrijfverzoek (POST/PUT/DELETE) naar de instantie, met dezelfde
+ * 401-vernieuwing als fetchWerkruimte. Een 403/409/422 komt als leesbare
+ * Error terug (de instantie stuurt een `fout`-tekst mee), met `status` erop
+ * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
+async function schrijfWerkruimte(bron, methode, pad, payload) {
+  const doe = async () => {
+    try {
+      return await fetch(bron.instantieUrl + pad, {
+        method: methode,
+        headers: Object.assign(
+          { Authorization: "Bearer " + bron.token },
+          payload === undefined ? {} : { "Content-Type": "application/json" },
+        ),
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      });
+    } catch (e) {
+      throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    }
+  };
+  let res = await doe();
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doe();
+    }
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* geen JSON — valt in de foutpaden */ }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 /**
  * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
  *
@@ -2819,11 +2880,16 @@ async function loadWerkruimteBundle(bron) {
     }
     bundle.domains[domein] = {
       aanwezig: true,
-      rows: entries.map(e => e.data),
+      // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
+      // schemaveld en komt dus nooit als kolom in beeld.
+      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
   }
+  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
+  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
+  bundle.systeemPerDomein = systeemPerDomein;
   if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
   return bundle;
 }
@@ -2844,7 +2910,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
-    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };
 }
@@ -5849,10 +5915,14 @@ function renderDataOverzicht(el, ctx) {
     .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
     .join(" · ");
 
-  el.innerHTML = `${rijen}
-    <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
+  const leesregel = ctx.kanSchrijven
+    ? `Dit is wat er nú in je werkruimte staat. Je bent ingelogd: open een domein om rijen toe te voegen,
+    te bewerken of te verwijderen. Domeinen die in een ander systeem wonen blijven daar — en bewerk je daar.`
+    : `Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
     dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
-    het domein woont.</p>
+    het domein woont.`;
+  el.innerHTML = `${rijen}
+    <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
 }
@@ -5890,10 +5960,16 @@ function renderDataDomein(el, key, ctx) {
 
   const rows = dataRijenVan(ctx, key);
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
+  // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
+  const bewerk = magDomeinBewerken(ctx, key);
+  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
+  const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
       betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+      ${bewerkUitleg}${nieuwKnop}<div data-bewerk-paneel></div>
       <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
     return;
   }
 
@@ -5928,9 +6004,15 @@ function renderDataDomein(el, key, ctx) {
     if (!zicht.length) {
       return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
     }
-    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("");
-    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r =>
-      `<tr>${velden.map(v => `<td>${dataCelHtml(getField(r, v.naam), v)}</td>`).join("")}</tr>`).join("");
+    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("")
+      + (bewerk.ok ? `<th class="bewerk-kolom" aria-label="acties"></th>` : "");
+    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r => {
+      const cellen = velden.map(v => `<td>${dataCelHtml(getField(r, v.naam), v)}</td>`).join("");
+      const acties = bewerk.ok && r.__entryId
+        ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
+        : (bewerk.ok ? `<td class="bewerk-kolom"></td>` : "");
+      return `<tr>${cellen}${acties}</tr>`;
+    }).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
       : "";
@@ -5952,7 +6034,8 @@ function renderDataDomein(el, key, ctx) {
     </div>
     <div data-data-tabel>${tabelHtml()}</div>
     <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
-    Alleen lezen — dit dashboard schrijft nooit terug. Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    ${bewerk.ok ? "Bewerken schrijft rechtstreeks naar je eigen werkruimte." : "Alleen lezen — dit dashboard schrijft nooit terug."} Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    ${bewerkUitleg}${nieuwKnop ? `<div class="data-toolbar">${nieuwKnop}</div>` : ""}<div data-bewerk-paneel></div>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
 
   // Fase A: klik op een verwijzing → de zoekterm wordt de titel, en de
@@ -5971,6 +6054,9 @@ function renderDataDomein(el, key, ctx) {
       el.querySelector("[data-data-telling]").textContent = tellingHtml();
     });
   }
+
+  // f23 fase D: nieuwe rij / bewerken / verwijderen — alleen in een schrijfsessie.
+  if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
 function resetDataZoek() { dataZoek = ""; }
@@ -5979,6 +6065,228 @@ if (typeof module !== "undefined") {
   module.exports = {
     renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+  };
+}
+
+
+/* f23 fase D — bewerken in de Data-tab.
+ *
+ * Registry-gedreven: het formulier wordt volledig uit het schema opgebouwd
+ * (veldtypen, selectopties, verwijzingen), en de instantie valideert met
+ * exact dezelfde regels via werkruimte.schrijf — dit formulier is gemak,
+ * geen grens. Knoppen bestaan alleen bij een ingelogde sessie waarvan het
+ * token `dashboard:schrijf` draagt; op de daglink en bij een domein dat
+ * volgens de bronkoppeling extern woont blijft alles lezen, met uitleg.
+ * Verwijderen vraagt altijd een expliciete bevestiging (i38-lijn).
+ */
+
+/* Scope uit het access-token, client-side alleen om knoppen te tonen — de
+ * instantie handhaaft de scope zelf (403 bij een te oud token). */
+function tokenScopes(token) {
+  try {
+    const stuk = String(token).split(".")[1];
+    const p = JSON.parse(atob(stuk.replace(/-/g, "+").replace(/_/g, "/")));
+    return String(p.scope || "").split(/\s+/).filter(Boolean);
+  } catch (e) { return []; }
+}
+
+function bronKanSchrijven(bron) {
+  return !!(bron && bron.oauth && tokenScopes(bron.token).indexOf("dashboard:schrijf") !== -1);
+}
+
+/* Mag dít domein hier bewerkt worden? Nee is altijd mét reden, zodat de UI
+ * kan uitleggen in plaats van stil een knop weg te laten. */
+function magDomeinBewerken(ctx, key) {
+  if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
+  if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
+  if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
+  const systeem = ctx.bundle.systeemPerDomein ? ctx.bundle.systeemPerDomein[key] : null;
+  if (systeem && systeem !== "werkruimte" && systeem !== "geen") {
+    return { ok: false, reden: `Dit domein woont volgens je bronkoppeling in ${systeem} — bewerken doe je daar.` };
+  }
+  return { ok: true, reden: null };
+}
+
+/* Grote-tekst-heuristiek: het schema kent geen "lang tekstveld", maar deze
+ * canonieke velden zijn in de praktijk alinea's. */
+const TEXTAREA_VELDEN = ["Resultaat", "Inhoud", "Notitie", "Vervolg", "Omschrijving", "Samenvatting"];
+
+function veldInvoerHtml(veld, waarde, ctx) {
+  const naam = esc(veld.naam);
+  const w = waarde === undefined || waarde === null ? "" : waarde;
+  switch (veld.type) {
+    case "select": {
+      const opties = (veld.opties || []).map(o =>
+        `<option value="${esc(o)}"${o === w ? " selected" : ""}>${esc(o)}</option>`).join("");
+      return `<select name="${naam}" data-veldtype="select"><option value=""></option>${opties}</select>`;
+    }
+    case "multi_select": {
+      const gekozen = Array.isArray(w) ? w : [];
+      const opties = (veld.opties || []).map(o =>
+        `<option value="${esc(o)}"${gekozen.indexOf(o) !== -1 ? " selected" : ""}>${esc(o)}</option>`).join("");
+      return `<select name="${naam}" data-veldtype="multi_select" multiple size="${Math.min((veld.opties || []).length || 3, 5)}">${opties}</select>`;
+    }
+    case "datum":
+      return `<input type="date" name="${naam}" data-veldtype="datum" value="${esc(String(w).slice(0, 10))}">`;
+    case "getal":
+      return `<input type="number" step="any" name="${naam}" data-veldtype="getal" value="${esc(String(w))}">`;
+    case "checkbox":
+      return `<label class="bewerk-checkbox"><input type="checkbox" name="${naam}" data-veldtype="checkbox"${w === true ? " checked" : ""}> ja</label>`;
+    case "url":
+      return `<input type="url" name="${naam}" data-veldtype="url" value="${esc(String(w))}" placeholder="https://…">`;
+    case "email":
+      return `<input type="email" name="${naam}" data-veldtype="email" value="${esc(String(w))}">`;
+    case "mensen": {
+      const tekst = Array.isArray(w) ? w.join(", ") : String(w);
+      return `<input type="text" name="${naam}" data-veldtype="mensen" value="${esc(tekst)}" placeholder="namen, gescheiden door komma's">`;
+    }
+    case "relatie": {
+      // Kiezen uit de al geladen rijen van het doeldomein; de waarde is het
+      // entryId (de instantie schrijft {id, titel} zelf, f28). Zonder geladen
+      // doelrijen valt het veld terug op een titel-invoer — de instantie
+      // zoekt dan op titel.
+      const doel = ctx.bundle.domains[veld.naar];
+      const doelDomein = ctx.schema.datadomeinen[veld.naar];
+      const rijen = doel && Array.isArray(doel.rows) ? doel.rows : [];
+      const titelVeld = doelDomein && doelDomein.velden && doelDomein.velden.length ? doelDomein.velden[0].naam : null;
+      const gekozenIds = (Array.isArray(w) ? w : (w ? [w] : []))
+        .map(v => (v && typeof v === "object" ? v.id : v)).filter(Boolean);
+      if (!rijen.length || !titelVeld) {
+        const tekst = (Array.isArray(w) ? w : (w ? [w] : []))
+          .map(v => (v && typeof v === "object" ? v.titel : v)).filter(Boolean).join(", ");
+        return `<input type="text" name="${naam}" data-veldtype="relatie-titel" data-meervoud="${veld.meervoud ? "1" : ""}" value="${esc(tekst)}" placeholder="titel van de ${esc(veld.naar)}-rij">`;
+      }
+      const opties = rijen.filter(r => r.__entryId).map(r => {
+        const titel = dataCelTekst(getField(r, titelVeld)) || r.__entryId;
+        return `<option value="${esc(r.__entryId)}"${gekozenIds.indexOf(r.__entryId) !== -1 ? " selected" : ""}>${esc(titel)}</option>`;
+      }).join("");
+      return veld.meervoud
+        ? `<select name="${naam}" data-veldtype="relatie" data-meervoud="1" multiple size="${Math.min(rijen.length, 5)}">${opties}</select>`
+        : `<select name="${naam}" data-veldtype="relatie"><option value=""></option>${opties}</select>`;
+    }
+    default: { // titel, tekst
+      if (veld.type === "tekst" && TEXTAREA_VELDEN.indexOf(veld.naam) !== -1) {
+        return `<textarea name="${naam}" data-veldtype="tekst" rows="3">${esc(String(w))}</textarea>`;
+      }
+      return `<input type="text" name="${naam}" data-veldtype="${esc(veld.type)}" value="${esc(String(w))}">`;
+    }
+  }
+}
+
+function dataFormulierHtml(domein, ctx, bestaande, entryId) {
+  const rijen = (domein.velden || []).map(v =>
+    `<label class="bewerk-veld"><span class="bewerk-label">${esc(v.naam)}</span>${veldInvoerHtml(v, bestaande ? getField(bestaande, v.naam) : undefined, ctx)}</label>`).join("");
+  return `<form class="bewerk-formulier" data-bewerk-formulier data-entry-id="${esc(entryId || "")}">
+    <p><strong>${entryId ? "Rij bewerken" : "Nieuwe rij"}</strong></p>
+    ${rijen}
+    <p class="bewerk-fout" data-bewerk-fout role="alert"></p>
+    <div class="bewerk-knoppen">
+      <button type="submit" class="knop">${entryId ? "Opslaan" : "Toevoegen"}</button>
+      <button type="button" class="knop knop-secundair" data-bewerk-annuleer>Annuleren</button>
+    </div>
+  </form>`;
+}
+
+/* Formulier → het data-object dat werkruimte.schrijf verwacht. Lege waarden
+ * blijven weg (een leeg veld is "niet ingevuld", geen lege string opslaan). */
+function leesFormulier(formEl) {
+  const data = {};
+  for (const el of formEl.querySelectorAll("[data-veldtype]")) {
+    const naam = el.getAttribute("name");
+    const type = el.getAttribute("data-veldtype");
+    if (type === "checkbox") { data[naam] = el.checked; continue; }
+    if (type === "multi_select" || (type === "relatie" && el.getAttribute("data-meervoud"))) {
+      const gekozen = Array.from(el.selectedOptions || []).map(o => o.value).filter(Boolean);
+      if (gekozen.length) data[naam] = gekozen;
+      continue;
+    }
+    const waarde = String(el.value || "").trim();
+    if (!waarde) continue;
+    if (type === "getal") { data[naam] = Number(waarde.replace(",", ".")); continue; }
+    if (type === "mensen") { data[naam] = waarde.split(",").map(s => s.trim()).filter(Boolean); continue; }
+    if (type === "relatie-titel" && el.getAttribute("data-meervoud")) {
+      data[naam] = waarde.split(",").map(s => s.trim()).filter(Boolean);
+      continue;
+    }
+    data[naam] = waarde;
+  }
+  return data;
+}
+
+async function verstuurEntry(ctx, key, entryId, data) {
+  if (entryId) {
+    return schrijfWerkruimte(ctx.bron, "PUT",
+      "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data });
+  }
+  return schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data });
+}
+
+function verwijderEntry(ctx, key, entryId) {
+  return schrijfWerkruimte(ctx.bron, "DELETE",
+    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId));
+}
+
+/* Hangt de bewerk-interactie aan een gerenderd domein. `herteken` is de
+ * verversing na een geslaagde write (app.js herlaadt de bundel). */
+function wireDataBewerken(el, key, ctx, herteken) {
+  const domein = ctx.schema.datadomeinen[key];
+  const paneel = el.querySelector("[data-bewerk-paneel]");
+  if (!paneel || !domein) return;
+
+  function toonFormulier(bestaande, entryId) {
+    paneel.innerHTML = dataFormulierHtml(domein, ctx, bestaande, entryId);
+    const form = paneel.querySelector("[data-bewerk-formulier]");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const foutEl = form.querySelector("[data-bewerk-fout]");
+      const knop = form.querySelector('button[type="submit"]');
+      knop.disabled = true;
+      foutEl.textContent = "";
+      try {
+        await verstuurEntry(ctx, key, entryId, leesFormulier(form));
+        paneel.innerHTML = "";
+        await herteken();
+      } catch (fout) {
+        foutEl.textContent = fout.message || "Het opslaan is niet gelukt.";
+        knop.disabled = false;
+      }
+    });
+    form.querySelector("[data-bewerk-annuleer]").addEventListener("click", () => { paneel.innerHTML = ""; });
+    const eerste = form.querySelector("input, select, textarea");
+    if (eerste) eerste.focus();
+  }
+
+  el.addEventListener("click", async (e) => {
+    const nieuw = e.target.closest && e.target.closest("[data-bewerk-nieuw]");
+    if (nieuw) { toonFormulier(null, null); return; }
+    const bewerk = e.target.closest && e.target.closest("[data-bewerk-rij]");
+    if (bewerk) {
+      const id = bewerk.getAttribute("data-bewerk-rij");
+      const rij = (dataRijenVan(ctx, key) || []).find(r => r.__entryId === id);
+      toonFormulier(rij || null, id);
+      return;
+    }
+    const weg = e.target.closest && e.target.closest("[data-verwijder-rij]");
+    if (weg) {
+      const id = weg.getAttribute("data-verwijder-rij");
+      // i38-lijn: een destructieve actie bevestigt een mens expliciet.
+      if (!window.confirm("Deze rij definitief verwijderen? Dit is niet ongedaan te maken.")) return;
+      weg.disabled = true;
+      try {
+        await verwijderEntry(ctx, key, id);
+        await herteken();
+      } catch (fout) {
+        weg.disabled = false;
+        window.alert(fout.message || "Het verwijderen is niet gelukt.");
+      }
+    }
+  });
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    bronKanSchrijven, magDomeinBewerken, dataFormulierHtml, leesFormulier,
+    veldInvoerHtml, wireDataBewerken, tokenScopes,
   };
 }
 
@@ -6081,6 +6389,12 @@ function buildContext() {
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
+    // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
+    // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
+    // bundel zodat de tabel de waarheid van de instantie toont.
+    bron: huidigeBron,
+    kanSchrijven: bronKanSchrijven(huidigeBron),
+    herlaad: () => laadWerkruimte(huidigeBron),
   };
 }
 

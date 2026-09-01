@@ -96,6 +96,12 @@ function buildContext() {
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
+    // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
+    // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
+    // bundel zodat de tabel de waarheid van de instantie toont.
+    bron: huidigeBron,
+    kanSchrijven: bronKanSchrijven(huidigeBron),
+    herlaad: () => laadWerkruimte(huidigeBron),
   };
 }
 
