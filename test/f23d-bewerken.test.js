@@ -206,3 +206,47 @@ describe("aandacht-doorklik (f23-klikproef)", () => {
     expect(a.getAttribute("href")).toBe("#/data/acties");
   });
 });
+
+describe("alert-voorselectie (klikproef-ronde 2)", () => {
+  it("een alert draagt zijn rijen als filter mee en de Data-tab toont alleen die set", () => {
+    const c = document.createElement("div");
+    document.body.appendChild(c);
+    g.renderZone1(c, [{
+      type: "acties-deadline", ernst: "rood", label: "2 actie(s) over de deadline",
+      rows: [{ Actie: "Voorstel Hendriks", __entryId: "a1" }, { Actie: "Budget Terwolde", __entryId: "a2" }],
+    }]);
+    const link = c.querySelector("a.aandacht-link");
+    expect(link.getAttribute("data-filter-ids")).toBe("a1,a2");
+
+    g.zetDataVoorselectie("interacties", "2 actie(s) over de deadline", ["e1"]);
+    const ctx = {
+      schema: g.AGENTIC_TEAM_SCHEMA, kanSchrijven: false,
+      bundle: { kind: "rows", source: "werkruimte", domains: { interacties: {
+        rows: [{ Onderwerp: "Kennismaking", __entryId: "e1" }, { Onderwerp: "Andere rij", __entryId: "e2" }],
+      } } },
+    };
+    const d = document.createElement("div");
+    document.body.appendChild(d);
+    g.renderDataDomein(d, "interacties", ctx);
+    expect(d.querySelectorAll("tbody tr")).toHaveLength(1);
+    expect(d.textContent).toContain("Kennismaking");
+    expect(d.textContent).not.toContain("Andere rij");
+    expect(d.querySelector(".filter-chip")).not.toBeNull();
+
+    // ✕ wist de voorselectie en toont weer alles
+    d.querySelector("[data-filter-wis]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    expect(d.querySelectorAll("tbody tr")).toHaveLength(2);
+    g.wisDataVoorselectie();
+  });
+
+  it("namen in een alert zijn links naar hun rij (zoekterm = naam)", () => {
+    const c = document.createElement("div");
+    g.renderZone1(c, [{
+      type: "klantsucces", ernst: "oranje", label: "1 klant(en) op oranje",
+      rows: [{ Klantnaam: "Hazenberg Groothandel", __entryId: "k1" }],
+    }]);
+    const naam = c.querySelector('a.relatie-link[data-relatie-zoek="Hazenberg Groothandel"]');
+    expect(naam).not.toBeNull();
+    expect(naam.getAttribute("href")).toBe("#/data/klantsucces");
+  });
+});

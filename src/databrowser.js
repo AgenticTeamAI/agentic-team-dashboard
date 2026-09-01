@@ -227,9 +227,11 @@ function renderDataDomein(el, key, ctx) {
 
   function zichtbareRijen() {
     const q = dataZoek.trim().toLowerCase();
-    let uit = rows;
+    const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
+    let uit = vs ? rows.filter(r => vs.ids.indexOf(r.__entryId) !== -1) : rows;
     if (q) {
-      uit = rows.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+      // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
+      uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
     }
     if (datumVeld) {
       uit = uit.slice().sort((a, b) => {
@@ -244,7 +246,7 @@ function renderDataDomein(el, key, ctx) {
   function tabelHtml() {
     const zicht = zichtbareRijen();
     if (!zicht.length) {
-      return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
+      return `<p class="footnote">${dataZoek.trim() ? `Geen rij in dit domein bevat "${esc(dataZoek)}".` : "Geen rijen in deze selectie."}</p>`;
     }
     const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("")
       + (bewerk.ok ? `<th class="bewerk-kolom" aria-label="acties"></th>` : "");
@@ -269,9 +271,11 @@ function renderDataDomein(el, key, ctx) {
       : `${zicht} van ${rows.length} rijen`;
   }
 
+  const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
   el.innerHTML = `${kop}
     <div class="data-toolbar">
       <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
+      ${vs ? `<span class="filter-chip">🔎 ${esc(vs.label)} <button type="button" class="filter-wis" data-filter-wis aria-label="Filter wissen">✕</button></span>` : ""}
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
     <div data-data-tabel>${tabelHtml()}</div>
@@ -286,6 +290,14 @@ function renderDataDomein(el, key, ctx) {
   el.addEventListener("click", (e) => {
     const link = e.target.closest && e.target.closest("[data-relatie-zoek]");
     if (link) dataZoek = link.getAttribute("data-relatie-zoek") || "";
+    const wisEl = e.target.closest && e.target.closest("[data-filter-wis]");
+    if (wisEl) {
+      wisDataVoorselectie();
+      const chip = el.querySelector(".filter-chip");
+      if (chip) chip.remove();
+      el.querySelector("[data-data-tabel]").innerHTML = tabelHtml();
+      el.querySelector("[data-data-telling]").textContent = tellingHtml();
+    }
   });
 
   const invoer = el.querySelector("#data-zoek");
@@ -302,10 +314,22 @@ function renderDataDomein(el, key, ctx) {
 }
 
 function resetDataZoek() { dataZoek = ""; }
+function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
+
+/* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
+ * De voorselectie is een set entry-ids met een label; hij geldt alleen voor
+ * het domein waar hij bij hoort en verdwijnt via het ✕ of terug op het
+ * overzicht. Zoeken werkt gewoon bínnen de voorselectie. */
+let dataVoorselectie = null;
+function zetDataVoorselectie(domein, label, ids) {
+  const schoon = (Array.isArray(ids) ? ids : []).filter(i => typeof i === "string" && i);
+  dataVoorselectie = schoon.length ? { domein, label: String(label || ""), ids: schoon } : null;
+}
+function wisDataVoorselectie() { dataVoorselectie = null; }
 
 if (typeof module !== "undefined") {
   module.exports = {
     renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
-    resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+    resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }
