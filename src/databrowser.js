@@ -8,6 +8,10 @@
  * en dat is precies de eigenschap die hem veilig maakt om in een chat te
  * delen. Hier wordt niets geschreven.
  *
+ * f23/f29 fase A: verwijzingen (veldtype "relatie", f28) zijn klikbaar —
+ * de link springt naar het doeldomein met de titel als zoekterm, zodat de
+ * gekoppelde rij direct in beeld staat. Nog steeds alleen-lezen.
+ *
  * Alle waarden komen uit de werkruimte van de klant en zijn dus vreemde
  * invoer: elke cel, elke kolomkop en elke domeinnaam gaat door esc(). */
 
@@ -51,6 +55,24 @@ function dataCelTekst(waarde) {
     return "";
   }
   return String(waarde);
+}
+
+/* f23/f29 fase A — een relatiecel wordt een sprong naar het doeldomein.
+ * De opgeslagen vorm is {id, titel} (of een lijst daarvan, bij meervoud);
+ * de titel is server-side gezet en dus betrouwbaar genoeg als zoekterm.
+ * Zonder titel (of naar een domein dat niet in de bundel zit) blijft het
+ * gewoon tekst — een dode link is erger dan geen link. */
+function dataCelHtml(waarde, veld) {
+  if (veld && veld.type === "relatie" && veld.naar && !(veld.naar in DATA_NIET_IN_BUNDEL)) {
+    const lijst = Array.isArray(waarde) ? waarde : (waarde === null || waarde === undefined || waarde === "" ? [] : [waarde]);
+    const stukken = lijst.map(w => {
+      const titel = w && typeof w === "object" && typeof w.titel === "string" ? w.titel : "";
+      if (!titel) return esc(dataCelTekst(w));
+      return `<a href="#/data/${esc(veld.naar)}" class="relatie-link" data-relatie-zoek="${esc(titel)}">${esc(titel)}</a>`;
+    }).filter(Boolean);
+    if (stukken.length) return stukken.join(", ");
+  }
+  return esc(dataCelTekst(waarde));
 }
 
 /* De lijst die je kunt openen: alle datadomeinen uit de registry, behalve de
@@ -152,7 +174,14 @@ function renderDataDomein(el, key, ctx) {
     return;
   }
 
-  const velden = dataVelden(domein).slice(0, DATA_MAX_KOLOMMEN);
+  // Fase A: verwijzingsvelden horen altijd in beeld — dat is waar de
+  // verbanden zitten — ook als ze buiten de eerste kolommen vallen. De
+  // tabel scrolt horizontaal, dus extra kolommen kosten geen leesbaarheid.
+  const basisVelden = dataVelden(domein).slice(0, DATA_MAX_KOLOMMEN);
+  const relatieVelden = dataVelden(domein)
+    .slice(DATA_MAX_KOLOMMEN)
+    .filter(v => v.type === "relatie");
+  const velden = basisVelden.concat(relatieVelden);
   const datumVeld = dataDatumVeld(domein);
 
   function zichtbareRijen() {
@@ -178,7 +207,7 @@ function renderDataDomein(el, key, ctx) {
     }
     const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("");
     const body = zicht.slice(0, DATA_MAX_RIJEN).map(r =>
-      `<tr>${velden.map(v => `<td>${esc(dataCelTekst(getField(r, v.naam)))}</td>`).join("")}</tr>`).join("");
+      `<tr>${velden.map(v => `<td>${dataCelHtml(getField(r, v.naam), v)}</td>`).join("")}</tr>`).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
       : "";
@@ -199,9 +228,17 @@ function renderDataDomein(el, key, ctx) {
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
     <div data-data-tabel>${tabelHtml()}</div>
-    <p class="footnote">Eerste ${velden.length} velden uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
+    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
     Alleen lezen — dit dashboard schrijft nooit terug. Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+
+  // Fase A: klik op een verwijzing → de zoekterm wordt de titel, en de
+  // href (#/data/<doeldomein>) doet de navigatie. renderDataDomein van het
+  // doeldomein leest dataZoek en toont zo direct de gekoppelde rij.
+  el.addEventListener("click", (e) => {
+    const link = e.target.closest && e.target.closest("[data-relatie-zoek]");
+    if (link) dataZoek = link.getAttribute("data-relatie-zoek") || "";
+  });
 
   const invoer = el.querySelector("#data-zoek");
   if (invoer) {
@@ -217,7 +254,7 @@ function resetDataZoek() { dataZoek = ""; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen, exportBlok,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }
