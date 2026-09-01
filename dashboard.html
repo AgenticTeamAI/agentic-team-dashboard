@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-A5DqlqqrDjSrJms7eWWrbaI/+4jtTPVVLtgwakPVcZc=' 'sha256-onDDfvUKdur5yBpbCaPOfuYT+PRhwsyJVyi7wj3s0Zw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-A5DqlqqrDjSrJms7eWWrbaI/+4jtTPVVLtgwakPVcZc=' 'sha256-ENDE76t+dmbErftEjgtPn9xGFjGaCQUUQ8SSjSao8Uw='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -2955,12 +2955,16 @@ const OAUTH_AUTORISATIE_URL = "https://www.agentic-team.ai/oauth/authorize";
 const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token";
 const OAUTH_CLIENT_ID = "https://www.agentic-team.ai/oauth/clients/dashboard";
 const OAUTH_REDIRECT_URI = "https://dashboard.agentic-team.ai/";
-const OAUTH_SCOPE = "dashboard:lees";
+// f23: de login vraagt lezen én schrijven; de site bepaalt wat hij echt
+// uitgeeft (contract 1.6 — beide, voor elke p10-login van de licentie).
+const OAUTH_SCOPE = "dashboard:lees dashboard:schrijf";
 const OAUTH_RESOURCE = "https://connector.agentic-team.ai/dashboard";
 const OAUTH_ISSUER = "https://www.agentic-team.ai";
 
-// Beide sleutels zijn sessionStorage (zie 2 hierboven). De naamgeving volgt de
-// bestaande sleutels; test/geen-telemetrie.test.js pint de volledige lijst.
+// Sessie in sessionStorage (zie 2 hierboven); de PKCE-verifier in
+// localStorage met een kwartier-TTL (zie de uitleg bij bewaarPkce). De
+// naamgeving volgt de bestaande sleutels; test/geen-telemetrie.test.js pint
+// de volledige lijst.
 const OAUTH_SS_KEY = "agentic-team-dashboard:oauth";
 const OAUTH_PKCE_SS_KEY = "agentic-team-dashboard:oauth-pkce";
 
@@ -3041,22 +3045,35 @@ function bouwAutorisatieUrl({ challenge, state }) {
 
 /* ── Opslag ────────────────────────────────────────────────────────────── */
 
+/* De PKCE-verifier is de éne, bewuste uitzondering op regel 2 hierboven
+ * (tokens in sessionStorage): de magic-link uit de mail opent vrijwel altijd
+ * een níeuw tabblad, en sessionStorage is per tabblad — daarmee kon een
+ * maillogin nooit afronden ("hoort niet bij dit tabblad", f23-klikproef
+ * 1 sep). localStorage is gedeeld binnen dezelfde browser, zodat het nieuwe
+ * tabblad de poging wél herkent. Het risico is klein en kort: een verifier is
+ * waardeloos zonder de bijbehorende eenmalige code, en hij leeft hooguit zo
+ * lang als de inloglink zelf (een kwartier) — daarna leest leesPkce hem niet
+ * meer en ruimt hij zichzelf op. De tokens blijven gewoon in sessionStorage. */
+const OAUTH_PKCE_TTL_MS = 15 * 60 * 1000;
+
 function bewaarPkce(waarde) {
-  try { sessionStorage.setItem(OAUTH_PKCE_SS_KEY, JSON.stringify(waarde)); } catch (e) { /* privémodus */ }
+  try { localStorage.setItem(OAUTH_PKCE_SS_KEY, JSON.stringify(Object.assign({}, waarde, { t: Date.now() }))); } catch (e) { /* privémodus */ }
 }
 
 function leesPkce() {
   try {
-    const raw = sessionStorage.getItem(OAUTH_PKCE_SS_KEY);
+    const raw = localStorage.getItem(OAUTH_PKCE_SS_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw);
-    if (v && typeof v.verifier === "string" && typeof v.state === "string") return v;
+    if (v && typeof v.verifier === "string" && typeof v.state === "string"
+      && typeof v.t === "number" && Date.now() - v.t <= OAUTH_PKCE_TTL_MS) return v;
+    localStorage.removeItem(OAUTH_PKCE_SS_KEY);
   } catch (e) { /* privémodus of kapotte waarde */ }
   return null;
 }
 
 function vergeetPkce() {
-  try { sessionStorage.removeItem(OAUTH_PKCE_SS_KEY); } catch (e) { /* zie boven */ }
+  try { localStorage.removeItem(OAUTH_PKCE_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
 function bewaarOauthSessie(sessie) {
