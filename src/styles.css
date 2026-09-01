@@ -532,3 +532,7 @@ section.panel {
   .statusregel { font-size: 0.98rem; }
   .agent-row .naam { flex-basis: 120px; }
 }
+
+/* f23/f29 fase A — klikbare verwijzing in de Data-tab */
+.relatie-link { color: var(--mint-light); text-decoration: none; cursor: pointer; }
+.relatie-link:hover { text-decoration: underline; }
