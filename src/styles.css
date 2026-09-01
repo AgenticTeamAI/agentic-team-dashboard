@@ -543,6 +543,10 @@ section.panel {
 .relatie-pijl { color: var(--muted); font-weight: 400; }
 .relatie-tekst { color: var(--text); font-size: 0.92em; }
 .relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
+/* f23: voorselectie-chip in de Data-tab (doorklik vanuit een alert) */
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--mint-light); border-radius: 999px; padding: 3px 10px; font-size: 0.85em; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.filter-wis { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 2px; font: inherit; }
+.filter-wis:hover { color: var(--text); }
 /* f23: doorklikbare aandacht-items */
 .aandacht-link { color: inherit; text-decoration: none; display: block; }
 .aandacht-link:hover strong, .aandacht-link:hover div { text-decoration: underline; }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-A5DqlqqrDjSrJms7eWWrbaI/+4jtTPVVLtgwakPVcZc=' 'sha256-Evjw7Jp/eXWTAktAgtqs5HQu2uoG4gw3LDXyJHvXEd4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-A5DqlqqrDjSrJms7eWWrbaI/+4jtTPVVLtgwakPVcZc=' 'sha256-xVPioa+G2cuBrWPWAWa9Qm2nBKg9/sK5P9FeVVXajcg='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -553,6 +553,10 @@ section.panel {
 .relatie-pijl { color: var(--muted); font-weight: 400; }
 .relatie-tekst { color: var(--text); font-size: 0.92em; }
 .relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
+/* f23: voorselectie-chip in de Data-tab (doorklik vanuit een alert) */
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--mint-light); border-radius: 999px; padding: 3px 10px; font-size: 0.85em; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.filter-wis { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 2px; font: inherit; }
+.filter-wis:hover { color: var(--text); }
 /* f23: doorklikbare aandacht-items */
 .aandacht-link { color: inherit; text-decoration: none; display: block; }
 .aandacht-link:hover strong, .aandacht-link:hover div { text-decoration: underline; }
@@ -4789,11 +4793,22 @@ function aandachtDoelHref(it) {
   return null;
 }
 
+/* Klikproef-ronde 2 (1 sep): de doorklik hoort de gefilterde set te tonen,
+ * niet de hele lijst. De rijen van het item reizen als entry-ids mee op de
+ * link; app.js zet daarmee de voorselectie in de Data-tab. */
+function aandachtFilterAttrs(it) {
+  const doel = AANDACHT_DOEL[it.type];
+  if (!doel || !it.rows || !it.rows.length) return "";
+  const ids = it.rows.map(r => r && r.__entryId).filter(Boolean);
+  if (!ids.length) return "";
+  return ` data-filter-domein="${esc(doel)}" data-filter-label="${esc(it.label)}" data-filter-ids="${esc(ids.join(","))}"`;
+}
+
 function aandachtWrap(it, binnen) {
   const href = aandachtDoelHref(it);
   if (!href) return binnen;
   const extern = /^https:/.test(href);
-  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}>${binnen}</a>`;
+  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}${aandachtFilterAttrs(it)}>${binnen}</a>`;
 }
 
 // ── Zone 1 ────────────────────────────────────────────────────────────
@@ -4804,15 +4819,24 @@ function renderZone1(el, items) {
     return;
   }
   const lis = items.map(it => {
+    // De namen zijn zelf links naar hun rij (zoekterm = naam, zelfde
+    // mechanisme als de relatiecellen in de Data-tab, fase A) — daarom is
+    // niet het hele item één link maar alleen het label.
+    const doel = AANDACHT_DOEL[it.type];
     let detail = "";
     if (it.rows && it.rows.length) {
-      const names = it.rows.slice(0, 4).map(r => esc(getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || getField(r, "Actie") || "")).filter(Boolean);
+      const names = it.rows.slice(0, 4)
+        .map(r => getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || "")
+        .filter(Boolean)
+        .map(n => doel
+          ? `<a class="relatie-link" href="#/data/${esc(doel)}" data-relatie-zoek="${esc(n)}">${esc(n)}</a>`
+          : esc(n));
       if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
     }
     if (it.domeinen) {
       detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span>${aandachtWrap(it, `<div><strong>${esc(it.label)}</strong>${detail}</div>`)}</li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${aandachtWrap(it, `<strong>${esc(it.label)}</strong>`)}${detail}</div></li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
@@ -6025,9 +6049,11 @@ function renderDataDomein(el, key, ctx) {
 
   function zichtbareRijen() {
     const q = dataZoek.trim().toLowerCase();
-    let uit = rows;
+    const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
+    let uit = vs ? rows.filter(r => vs.ids.indexOf(r.__entryId) !== -1) : rows;
     if (q) {
-      uit = rows.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+      // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
+      uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
     }
     if (datumVeld) {
       uit = uit.slice().sort((a, b) => {
@@ -6042,7 +6068,7 @@ function renderDataDomein(el, key, ctx) {
   function tabelHtml() {
     const zicht = zichtbareRijen();
     if (!zicht.length) {
-      return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
+      return `<p class="footnote">${dataZoek.trim() ? `Geen rij in dit domein bevat "${esc(dataZoek)}".` : "Geen rijen in deze selectie."}</p>`;
     }
     const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("")
       + (bewerk.ok ? `<th class="bewerk-kolom" aria-label="acties"></th>` : "");
@@ -6067,9 +6093,11 @@ function renderDataDomein(el, key, ctx) {
       : `${zicht} van ${rows.length} rijen`;
   }
 
+  const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
   el.innerHTML = `${kop}
     <div class="data-toolbar">
       <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
+      ${vs ? `<span class="filter-chip">🔎 ${esc(vs.label)} <button type="button" class="filter-wis" data-filter-wis aria-label="Filter wissen">✕</button></span>` : ""}
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
     <div data-data-tabel>${tabelHtml()}</div>
@@ -6084,6 +6112,14 @@ function renderDataDomein(el, key, ctx) {
   el.addEventListener("click", (e) => {
     const link = e.target.closest && e.target.closest("[data-relatie-zoek]");
     if (link) dataZoek = link.getAttribute("data-relatie-zoek") || "";
+    const wisEl = e.target.closest && e.target.closest("[data-filter-wis]");
+    if (wisEl) {
+      wisDataVoorselectie();
+      const chip = el.querySelector(".filter-chip");
+      if (chip) chip.remove();
+      el.querySelector("[data-data-tabel]").innerHTML = tabelHtml();
+      el.querySelector("[data-data-telling]").textContent = tellingHtml();
+    }
   });
 
   const invoer = el.querySelector("#data-zoek");
@@ -6100,11 +6136,23 @@ function renderDataDomein(el, key, ctx) {
 }
 
 function resetDataZoek() { dataZoek = ""; }
+function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
+
+/* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
+ * De voorselectie is een set entry-ids met een label; hij geldt alleen voor
+ * het domein waar hij bij hoort en verdwijnt via het ✕ of terug op het
+ * overzicht. Zoeken werkt gewoon bínnen de voorselectie. */
+let dataVoorselectie = null;
+function zetDataVoorselectie(domein, label, ids) {
+  const schoon = (Array.isArray(ids) ? ids : []).filter(i => typeof i === "string" && i);
+  dataVoorselectie = schoon.length ? { domein, label: String(label || ""), ids: schoon } : null;
+}
+function wisDataVoorselectie() { dataVoorselectie = null; }
 
 if (typeof module !== "undefined") {
   module.exports = {
     renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
-    resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+    resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
   };
 }
 
@@ -6614,7 +6662,7 @@ function route() {
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
-  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
@@ -6651,6 +6699,19 @@ function wireNavigatie() {
       startExport(exportEl.getAttribute("data-export"), exportEl);
       return;
     }
+    // Klikproef-ronde 2: een alert draagt zijn rijen als voorselectie mee, en
+    // een naam-link elders zet de zoekterm — de href doet daarna de navigatie.
+    const filterEl = e.target.closest("[data-filter-domein]");
+    if (filterEl) {
+      zetDataVoorselectie(
+        filterEl.getAttribute("data-filter-domein"),
+        filterEl.getAttribute("data-filter-label") || "",
+        (filterEl.getAttribute("data-filter-ids") || "").split(","),
+      );
+      return;
+    }
+    const zoekEl = e.target.closest("[data-relatie-zoek]");
+    if (zoekEl) { zetDataZoek(zoekEl.getAttribute("data-relatie-zoek") || ""); return; }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");

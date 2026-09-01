@@ -54,11 +54,22 @@ function aandachtDoelHref(it) {
   return null;
 }
 
+/* Klikproef-ronde 2 (1 sep): de doorklik hoort de gefilterde set te tonen,
+ * niet de hele lijst. De rijen van het item reizen als entry-ids mee op de
+ * link; app.js zet daarmee de voorselectie in de Data-tab. */
+function aandachtFilterAttrs(it) {
+  const doel = AANDACHT_DOEL[it.type];
+  if (!doel || !it.rows || !it.rows.length) return "";
+  const ids = it.rows.map(r => r && r.__entryId).filter(Boolean);
+  if (!ids.length) return "";
+  return ` data-filter-domein="${esc(doel)}" data-filter-label="${esc(it.label)}" data-filter-ids="${esc(ids.join(","))}"`;
+}
+
 function aandachtWrap(it, binnen) {
   const href = aandachtDoelHref(it);
   if (!href) return binnen;
   const extern = /^https:/.test(href);
-  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}>${binnen}</a>`;
+  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}${aandachtFilterAttrs(it)}>${binnen}</a>`;
 }
 
 // ── Zone 1 ────────────────────────────────────────────────────────────
@@ -69,15 +80,24 @@ function renderZone1(el, items) {
     return;
   }
   const lis = items.map(it => {
+    // De namen zijn zelf links naar hun rij (zoekterm = naam, zelfde
+    // mechanisme als de relatiecellen in de Data-tab, fase A) — daarom is
+    // niet het hele item één link maar alleen het label.
+    const doel = AANDACHT_DOEL[it.type];
     let detail = "";
     if (it.rows && it.rows.length) {
-      const names = it.rows.slice(0, 4).map(r => esc(getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || getField(r, "Actie") || "")).filter(Boolean);
+      const names = it.rows.slice(0, 4)
+        .map(r => getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || "")
+        .filter(Boolean)
+        .map(n => doel
+          ? `<a class="relatie-link" href="#/data/${esc(doel)}" data-relatie-zoek="${esc(n)}">${esc(n)}</a>`
+          : esc(n));
       if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
     }
     if (it.domeinen) {
       detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span>${aandachtWrap(it, `<div><strong>${esc(it.label)}</strong>${detail}</div>`)}</li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${aandachtWrap(it, `<strong>${esc(it.label)}</strong>`)}${detail}</div></li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;

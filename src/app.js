@@ -281,7 +281,7 @@ function route() {
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
-  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
@@ -318,6 +318,19 @@ function wireNavigatie() {
       startExport(exportEl.getAttribute("data-export"), exportEl);
       return;
     }
+    // Klikproef-ronde 2: een alert draagt zijn rijen als voorselectie mee, en
+    // een naam-link elders zet de zoekterm — de href doet daarna de navigatie.
+    const filterEl = e.target.closest("[data-filter-domein]");
+    if (filterEl) {
+      zetDataVoorselectie(
+        filterEl.getAttribute("data-filter-domein"),
+        filterEl.getAttribute("data-filter-label") || "",
+        (filterEl.getAttribute("data-filter-ids") || "").split(","),
+      );
+      return;
+    }
+    const zoekEl = e.target.closest("[data-relatie-zoek]");
+    if (zoekEl) { zetDataZoek(zoekEl.getAttribute("data-relatie-zoek") || ""); return; }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");
