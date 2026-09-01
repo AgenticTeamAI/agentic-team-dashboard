@@ -61,7 +61,7 @@ async function open({
       w.Response = Response;
       try {
         if (sessie) w.sessionStorage.setItem("agentic-team-dashboard:oauth", JSON.stringify(sessie));
-        if (pkce) w.sessionStorage.setItem("agentic-team-dashboard:oauth-pkce", JSON.stringify(pkce));
+        if (pkce) w.localStorage.setItem("agentic-team-dashboard:oauth-pkce", JSON.stringify(Object.assign({ t: Date.now() }, pkce)));
       } catch (e) { /* file:// heeft geen sessionStorage — dan hoort dit ook niet nodig te zijn */ }
       w.fetch = async (u, opties = {}) => {
         const full = String(u);
