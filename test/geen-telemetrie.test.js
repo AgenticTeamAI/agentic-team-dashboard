@@ -90,15 +90,16 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     expect(onbekend, "nieuwe bestemming in dashboard.html — bewuste keuze, of een lek?").toEqual([]);
   });
 
-  /* p10 fase 3: er zijn er nu precies twee, en allebei staan ze hier met naam
-   * en bestemming. De eerste draagt klantdata (browser ↔ eigen werkruimte via
-   * de router), de tweede nadrukkelijk niet: die wisselt alleen een
-   * autorisatiecode of refresh-token in voor een access-token. Komt er een
-   * derde bij, dan is dat hier een bewuste beslissing. */
-  it("doet precies twee netwerkaanroepen: de eigen werkruimte, en de token-uitwisseling", () => {
+  /* p10 fase 3: elke aanroep staat hier met naam en bestemming. Lezen en
+   * schrijven (f23 fase D) dragen klantdata en gaan allebei uitsluitend naar
+   * de eigen werkruimte via de router; de token-uitwisseling draagt
+   * nadrukkelijk géén klantdata. Komt er een nieuwe bij, dan is dat hier een
+   * bewuste beslissing. */
+  it("doet precies drie netwerkaanroepen: werkruimte lezen, werkruimte schrijven, token-uitwisseling", () => {
     const fetches = HTML.match(/\bfetch\s*\(/g) || [];
-    expect(fetches.length).toBe(2);
-    expect(HTML).toMatch(/fetch\(bron\.instantieUrl \+ pad/);
+    expect(fetches.length).toBe(3);
+    // lezen én schrijven: allebei alleen naar bron.instantieUrl
+    expect((HTML.match(/fetch\(bron\.instantieUrl \+ pad/g) || []).length).toBe(2);
     expect(HTML).toMatch(/fetch\(OAUTH_TOKEN_URL/);
   });
 

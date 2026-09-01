@@ -179,6 +179,50 @@ async function fetchWerkruimte(bron, pad) {
   return body;
 }
 
+/* f23: een schrijfverzoek (POST/PUT/DELETE) naar de instantie, met dezelfde
+ * 401-vernieuwing als fetchWerkruimte. Een 403/409/422 komt als leesbare
+ * Error terug (de instantie stuurt een `fout`-tekst mee), met `status` erop
+ * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
+async function schrijfWerkruimte(bron, methode, pad, payload) {
+  const doe = async () => {
+    try {
+      return await fetch(bron.instantieUrl + pad, {
+        method: methode,
+        headers: Object.assign(
+          { Authorization: "Bearer " + bron.token },
+          payload === undefined ? {} : { "Content-Type": "application/json" },
+        ),
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      });
+    } catch (e) {
+      throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    }
+  };
+  let res = await doe();
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doe();
+    }
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* geen JSON — valt in de foutpaden */ }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 /**
  * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
  *
@@ -437,11 +481,16 @@ async function loadWerkruimteBundle(bron) {
     }
     bundle.domains[domein] = {
       aanwezig: true,
-      rows: entries.map(e => e.data),
+      // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
+      // schemaveld en komt dus nooit als kolom in beeld.
+      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
   }
+  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
+  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
+  bundle.systeemPerDomein = systeemPerDomein;
   if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
   return bundle;
 }
@@ -462,7 +511,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
-    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };
 }

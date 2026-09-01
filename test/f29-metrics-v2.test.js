@@ -25,6 +25,7 @@ const MODULES = [
   "src/feed.js",
   "src/homepage.js",
   "src/databrowser.js",
+  "src/data-bewerken.js",
 ];
 
 const XSS = '"><img src=q onerror=window.__xss=1><li class="';
