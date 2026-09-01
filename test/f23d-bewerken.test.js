@@ -187,3 +187,22 @@ describe("verwijderen", () => {
     expect(opties.method).toBe("DELETE");
   });
 });
+
+describe("aandacht-doorklik (f23-klikproef)", () => {
+  it("wijst elk itemtype naar zijn domein; context blijft tekst, https-link wint", () => {
+    expect(g.aandachtDoelHref({ type: "acties-deadline" })).toBe("#/data/acties");
+    expect(g.aandachtDoelHref({ type: "deals-stil" })).toBe("#/data/sales_funnel");
+    expect(g.aandachtDoelHref({ type: "klantsucces" })).toBe("#/data/klantsucces");
+    expect(g.aandachtDoelHref({ type: "verouderd" })).toBe("#/data");
+    expect(g.aandachtDoelHref({ type: "context" })).toBeNull();
+    expect(g.aandachtDoelHref({ type: "overig", link: "https://notion.so/x" })).toBe("https://notion.so/x");
+  });
+
+  it("rendert het alert als link in zone 1", () => {
+    const c = document.createElement("div");
+    g.renderZone1(c, [{ type: "acties-deadline", ernst: "rood", label: "9 actie(s) over de deadline", rows: [] }]);
+    const a = c.querySelector("a.aandacht-link");
+    expect(a).not.toBeNull();
+    expect(a.getAttribute("href")).toBe("#/data/acties");
+  });
+});

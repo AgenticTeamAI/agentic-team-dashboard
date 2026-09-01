@@ -277,7 +277,7 @@ function renderAandachtTop5(el, items) {
     return;
   }
   const top5 = items.slice(0, 5);
-  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span>${aandachtWrap(it, `<div>${esc(it.label)}</div>`)}</li>`).join("");
   const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
   el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
 }

@@ -41,6 +41,26 @@ function stempelHtml(staleAt, today) {
   return `<div class="stempel${stale ? " timestamp stale" : " timestamp"}">Stand van ${fmtDate(staleAt)} (${relAge(staleAt, today)})${stale ? " — verouderd" : ""}</div>`;
 }
 
+/* f23-klikproef (1 sep): een alert hoort dóór te klikken naar de rijen waar
+ * hij over gaat. Elk itemtype wijst naar zijn domein in de Data-tab; items
+ * zonder rijenweergave (bedrijfscontext, ritme) blijven tekst, en een
+ * metrics-item met een eigen https-link volgt die link. */
+const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel" };
+
+function aandachtDoelHref(it) {
+  if (it.link) return it.link;
+  if (AANDACHT_DOEL[it.type]) return "#/data/" + AANDACHT_DOEL[it.type];
+  if (it.type === "verouderd") return "#/data";
+  return null;
+}
+
+function aandachtWrap(it, binnen) {
+  const href = aandachtDoelHref(it);
+  if (!href) return binnen;
+  const extern = /^https:/.test(href);
+  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}>${binnen}</a>`;
+}
+
 // ── Zone 1 ────────────────────────────────────────────────────────────
 function renderZone1(el, items) {
   if (!items.length) {
@@ -57,7 +77,7 @@ function renderZone1(el, items) {
     if (it.domeinen) {
       detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span>${aandachtWrap(it, `<div><strong>${esc(it.label)}</strong>${detail}</div>`)}</li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
