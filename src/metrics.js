@@ -24,7 +24,9 @@
  * verkeerde grafiek tekenen is erger dan niets tekenen.
  */
 
-const METRICS_VERSION = 1;
+const METRICS_VERSION = 2; // hoogste versie die dit dashboard kent
+// f29: versie 2 = versie 1 + de `relaties`-sectie; beide blijven geldig.
+const METRICS_VERSIES = [1, 2];
 
 // ── Route 1 & 2: rijen → metrics (bestaande berekening, nu met een naam) ──
 function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWeeks, minutenPerActie) {
@@ -79,7 +81,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   if (!heeftKenmerk) {
     return { ok: false, kind: "leeg-of-onherkenbaar", tekst: "Dit bestand heeft geen \"versie\"- of \"type\"-veld en wordt daarom niet als metricsbestand herkend. Is dit een leeg bestand, of een export in het oude rijenformaat?" };
   }
-  if (raw.versie !== METRICS_VERSION) {
+  if (!METRICS_VERSIES.includes(raw.versie)) {
     return {
       ok: false,
       kind: "onbekende-versie",
@@ -88,8 +90,8 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
       tekst: raw.versie == null
         ? `Dit metricsbestand heeft geen herkenbaar versienummer. Dit dashboard herkent versie ${METRICS_VERSION}.`
         : raw.versie > METRICS_VERSION
-          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
-          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
+          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (t/m versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
+          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (t/m versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
     };
   }
 
@@ -118,8 +120,10 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   return {
     ok: true,
     metrics: {
-      versie: METRICS_VERSION,
+      versie: raw.versie,
       bron: "notion",
+      // f29: relatie-aggregaten (v2) — al gesaneerd; de Data-tab tekent ze.
+      relaties: Array.isArray(raw.relaties) ? raw.relaties : null,
       z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,

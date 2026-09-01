@@ -166,6 +166,32 @@ function saneerMetricsPayload(raw, schema) {
     if (onbekend.length) waarschuw(ctx, `domeinen (${onbekend.length} onbekende sleutel(s))`, onbekend[0]);
   }
 
+  // f29 (contract v2): relatie-aggregaten — alleen tellingen en top-titels,
+  // nooit rijen. Spiegel van agentic-team-werkruimte src/domeinen/metrics.ts;
+  // een item zonder geldig van/naar-domein valt volledig weg.
+  if (Array.isArray(raw.relaties)) {
+    uit.relaties = raw.relaties.filter(isObject).slice(0, METRICS_MAX.lijst).flatMap((r, i) => {
+      const pad = `relaties[${i}]`;
+      const van = typeof r.van === "string" && domeinSlugs.includes(r.van) ? r.van : null;
+      const naar = typeof r.naar === "string" && domeinSlugs.includes(r.naar) ? r.naar : null;
+      if (!van || !naar) { waarschuw(ctx, pad, r.van || r.naar); return []; }
+      const top = Array.isArray(r.top) ? r.top.filter(isObject).slice(0, 3).flatMap((t, j) => {
+        const titel = saneerTekstOfNull(t.titel, METRICS_MAX.tekstKort);
+        if (!titel) { waarschuw(ctx, `${pad}.top[${j}].titel`, t.titel); return []; }
+        return [{ titel, aantal: saneerGetal(t.aantal, ctx, `${pad}.top[${j}].aantal`) }];
+      }) : [];
+      return [{
+        van,
+        veld: saneerTekst(r.veld, METRICS_MAX.sleutel),
+        naar,
+        gekoppeld: saneerGetal(r.gekoppeld, ctx, `${pad}.gekoppeld`),
+        totaal: saneerGetal(r.totaal, ctx, `${pad}.totaal`),
+        doelen: saneerGetal(r.doelen, ctx, `${pad}.doelen`),
+        top,
+      }];
+    });
+  }
+
   if (isObject(raw.acties)) {
     uit.acties = {
       totaal: saneerGetal(raw.acties.totaal, ctx, "acties.totaal"),
