@@ -1,21 +1,22 @@
 <<JURIST-REVIEW>>  CONCEPT — eerste juridische ronde verwerkt.
 Deze licentietekst is een werkversie (s33, 26-08-2026; het juristadvies van
-26-08-2026 is op 27-08-2026 verwerkt) die door de jurist van Obeya Insights
-nog een tweede keer moet worden nagekeken vóór hij als definitief geldt. Tot
-die beoordeling is afgerond, geldt: alle rechten voorbehouden. De
-tenaamstelling van Licentiegever staat nog niet vast. Open punten voor de
-tweede ronde staan onderaan dit bestand.
+26-08-2026 is op 27-08-2026 verwerkt) die door onze jurist nog een tweede
+keer moet worden nagekeken vóór hij als definitief geldt. Tot die
+beoordeling is afgerond, geldt: alle rechten voorbehouden. De tenaamstelling
+van Licentiegever is vastgesteld: Five Forward Group B.V. (besluit
+28-08-2026, doorgevoerd in versie 0.3). Open punten voor de tweede ronde
+staan onderaan dit bestand.
 <<JURIST-REVIEW>>
 
 AGENTIC TEAM — BRON-INZAGE LICENTIE (source-available, proprietary)
-Versie 0.2-concept
+Versie 0.3-concept
 
 This repository is source-available, not open source. Anyone may read and study
 the code; only holders of a valid Agentic Team licence may use it. See LICENSE
 (Dutch, authoritative) or LICENSE.en.md (English translation, for convenience).
 In case of any discrepancy, the Dutch text prevails.
 
-Copyright (c) 2026 Obeya Insights B.V. Alle rechten voorbehouden.
+Copyright (c) 2026 Five Forward Group B.V. Alle rechten voorbehouden.
 
 Deze licentie geldt voor de inhoud van de repository "AgenticTeamAI/agentic-team-dashboard" (hierna:
 de "Software"), inclusief alle broncode, configuratie, documentatie en
@@ -23,8 +24,9 @@ gegenereerde bestanden daarin, tenzij een bestand uitdrukkelijk een andere
 licentie vermeldt (zie NOTICE voor onderdelen van derden).
 
 1. Definities
-   a. "Licentiegever": Obeya Insights B.V., handelend onder de naam
-      Agentic Team (www.agentic-team.ai).
+   a. "Licentiegever": Five Forward Group B.V., ingeschreven bij de KvK
+      onder nummer 42143676, gevestigd te IJsselburcht 3, 6825 BS Arnhem,
+      mede handelend onder de naam Agentic Team (www.agentic-team.ai).
    b. "Licentiehouder": een natuurlijke of rechtspersoon met een geldige,
       niet-opgezegde Agentic Team-licentie (abonnement of proeflicentie)
       volgens de Productvoorwaarden van Licentiegever.
@@ -157,15 +159,14 @@ Contact: via www.agentic-team.ai.
 ----------------------------------------------------------------------
 <<JURIST-REVIEW>> Open punten voor de tweede juridische ronde
 Het juristadvies van 26-08-2026 is verwerkt in versie 0.2 (2b, 2d, 3b, 3d,
-6, 7, 9, TDM-voorbehoud in 2a, Engels blok + LICENSE.en.md, DCO). Wat nog
-openstaat:
-1. BLOKKEREND — de tenaamstelling. De aanhef en artikel 1a noemen nu nog
-   Obeya Insights B.V.; DPA en privacybeleid noemen Agile Operators B.V.
-   (KvK 85384437) en er is een derde kandidaat (Five Forward Group B.V.).
-   Zolang de IE-akte en de contractsoverneming niet rond zijn, is deze naam
-   niet gewijzigd. Bij vaststelling: naam, statutaire vestigingsplaats en
-   KvK-nummer invullen in de aanhef, artikel 1a, NOTICE en LICENSE.en.md,
-   met de formulering "mede handelend onder de naam Agentic Team".
+6, 7, 9, TDM-voorbehoud in 2a, Engels blok + LICENSE.en.md, DCO). In versie
+0.3 (02-09-2026) is de tenaamstelling doorgevoerd. Wat nog openstaat:
+1. AFGEHANDELD in 0.3 (02-09-2026) — de tenaamstelling. Besluit 28-08-2026:
+   Five Forward Group B.V. (KvK 42143676) is de contracterende entiteit; de
+   partijnaam is diezelfde dag al doorgevoerd in privacybeleid (2.3), DPA
+   (2.2) en productvoorwaarden (2.2) op www.agentic-team.ai, en nu ook in de
+   aanhef, artikel 1a, NOTICE en LICENSE.en.md van deze repository, met de
+   formulering "mede handelend onder de naam Agentic Team".
 2. Artikel 3b en 3d door een gekwalificeerde IE-jurist laten nalezen vóór
    versie 1.0 (het advies noemt dit zelf als het punt met de meeste
    onzekerheid: de nietigheidssanctie van artikel 8 Richtlijn 2009/24/EG en
@@ -173,10 +174,10 @@ openstaat:
 3. Rangorde in artikel 7 en 9 kruislings controleren tegen de Algemene
    Voorwaarden en de Productvoorwaarden: kennen die onderling al een
    rangorde die hiermee botst?
-4. Het machineleesbare TDM-voorbehoud (TDMRep, .well-known/tdmrep.json plus
-   een tdm-reservation-header) staat nog niet op www.agentic-team.ai —
-   artikel 2a belooft dat wel. Aparte taak op de site; de specificatie moet
-   daarbij geverifieerd worden.
+4. AFGEHANDELD (28-08-2026, s38) — het machineleesbare TDM-voorbehoud
+   staat live op www.agentic-team.ai: tdmrep.json plus een
+   tdm-reservation-header op elk pad, met een guard-test in de site-CI.
+   Artikel 2a wordt daarmee waargemaakt.
 5. De octrooiclausule in 2d iii is ontleend aan de Apache-2.0-systematiek en
    is niet door een octrooigemachtigde bekeken.
 <<JURIST-REVIEW>>
