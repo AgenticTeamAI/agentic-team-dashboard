@@ -408,6 +408,13 @@ async function loadWerkruimteBundle(bron) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  // f33: welke domeinen kent de instantie überhaupt? Het overzicht noemt ze
+  // allemaal, ook met aantal 0 — en dat is het enige signaal of een instantie
+  // al een image draait dat een nieuw domein kent. Zonder dit zou het
+  // dashboard een notitieformulier tonen dat bij een oudere instantie een
+  // "Onbekend domein" oplevert, precies in het gat tussen een dashboarddeploy
+  // en de vlootuitrol.
+  bundle.instantieDomeinen = (overzicht.domeinen || []).map(d => d && d.domein).filter(Boolean);
 
   // f22: alleen ophalen als de instantie het domein kent (staat dan in het
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet

@@ -213,3 +213,23 @@ describe("f33 — bedienen", () => {
     expect(c.querySelector("[data-snel-status]")).toBeNull();
   });
 });
+
+describe("f33 — het notitieblok wacht op de instantie", () => {
+  it("verschijnt niet als de instantie het domein 'notities' nog niet kent", () => {
+    const ctx = ctxMet();
+    // Zoals /dashboard/overzicht het meldt: alle domeinen die de instantie
+    // kent, ook met aantal 0. Een instantie op een ouder image noemt 'notities'
+    // dus niet — en dan hoort er geen formulier te staan dat 400't.
+    ctx.bundle.instantieDomeinen = ["acties", "organisaties"];
+    const c = openRij(ctx);
+    expect(c.querySelector("[data-notitie-form]")).toBeNull();
+    expect(c.textContent).not.toContain("Nog geen notities");
+  });
+
+  it("verschijnt wel zodra de instantie hem noemt", () => {
+    const ctx = ctxMet();
+    ctx.bundle.instantieDomeinen = ["acties", "notities"];
+    const c = openRij(ctx);
+    expect(c.querySelector("[data-notitie-form]")).not.toBeNull();
+  });
+});

@@ -221,6 +221,10 @@ function bedienHtml(ctx, key, domein, rij) {
 function notitieVeldVan(ctx) {
   const dom = ctx.schema.datadomeinen.notities;
   if (!dom) return null;
+  // De instantie moet het domein ook kennen. Weet het dashboard dat niet
+  // (oudere bundel zonder deze lijst), dan geldt het oude gedrag.
+  const bekend = ctx.bundle && ctx.bundle.instantieDomeinen;
+  if (Array.isArray(bekend) && bekend.indexOf("notities") === -1) return null;
   const veld = dataVelden(dom).find(v => v.type === "relatie" && v.naar === "*");
   return veld ? { dom, veld } : null;
 }
