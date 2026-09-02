@@ -107,6 +107,78 @@ describe("detail-nav en detailpagina", () => {
     expect(html).toContain("💼 Deals");
     expect(document.getElementById("modules-verzoek-knop")).toBeTruthy();
   });
+
+  it("toont schakelen en opzeggen alleen met magSchakelen — anders het verzoekblok", () => {
+    zet("moduleOverzicht", overzicht());
+    lees("renderDetailModules")(document.getElementById("detail-inner"));
+    expect(document.getElementById("modules-schakelblok")).toBeNull();
+
+    zet("moduleOverzicht", overzicht({ magSchakelen: true }));
+    lees("renderDetailModules")(document.getElementById("detail-inner"));
+    expect(document.getElementById("modules-schakelblok")).toBeTruthy();
+    expect(document.getElementById("modules-opzeg-knop")).toBeTruthy();
+    expect(document.getElementById("modules-verzoek-knop")).toBeNull();
+    // Core is altijd inbegrepen en dus geen keuzevakje; de rest wel.
+    const keuzes = Array.from(document.querySelectorAll("[data-module-keuze]")).map((c) => c.value);
+    expect(keuzes).toEqual(["growth", "sales"]);
+  });
+});
+
+describe("schakelen en opzeggen (fase 1)", () => {
+  beforeEach(() => {
+    zet("moduleOverzicht", overzicht({ magSchakelen: true }));
+    zet("huidigeBron", { oauth: true, token: "tok-ui" });
+    lees("renderDetailModules")(document.getElementById("detail-inner"));
+  });
+
+  it("berekent een voorstel via de site en escapet het antwoord", async () => {
+    const fetchSpy = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ voorstel: { maandbedragOud: 128, maandbedragNieuw: 177, btwPercentage: 21, termijn: "maand", ingangsdatum: XSS } }),
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+    document.querySelector('[data-module-keuze][value="sales"]').checked = true; // gebruiker vinkt Sales aan
+    await lees("berekenWijziging")(document.getElementById("detail-inner"));
+    expect(fetchSpy.mock.calls[0][0]).toBe("https://www.agentic-team.ai/api/dashboard/modules/wijzig");
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).modules).toEqual(["growth", "sales"]);
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).bevestigd).toBeUndefined();
+    const voorstelHtml = document.getElementById("modules-voorstel");
+    expect(voorstelHtml.textContent).toContain("177");
+    expect(window.__xss).toBeUndefined();
+    expect(voorstelHtml.querySelector("img")).toBeNull();
+    expect(document.getElementById("modules-bevestig-knop")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("toont bij een mandaatweigering de machtigingslink", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: false,
+      status: 409,
+      json: async () => ({ fout: "Machtiging nodig.", machtigingUrl: "https://m.example/x" }),
+    })));
+    lees("renderDetailModules")(document.getElementById("detail-inner"));
+    await lees("berekenWijziging")(document.getElementById("detail-inner"));
+    // Preview weigert al → status toont de fout; bevestigen bestaat nog niet.
+    expect(document.getElementById("modules-schakel-status").textContent).toContain("Machtiging");
+    vi.unstubAllGlobals();
+  });
+
+  it("doorloopt de opzegflow: voorstel → bevestiging", async () => {
+    const antwoorden = [
+      { ok: true, status: 200, json: async () => ({ proef: false, eindeToegang: "2027-01-31" }) },
+      { ok: true, status: 200, json: async () => ({ ok: true, proef: false, eindeToegang: "2027-01-31" }) },
+    ];
+    const fetchSpy = vi.fn(async () => antwoorden.shift());
+    vi.stubGlobal("fetch", fetchSpy);
+    const el = document.getElementById("detail-inner");
+    await lees("startOpzeggen")(el);
+    expect(el.querySelector("#modules-opzeg-voorstel").textContent).toContain("2027-01-31");
+    await lees("bevestigOpzeggen")(el);
+    expect(JSON.parse(fetchSpy.mock.calls[1][1].body).bevestigd).toBe(true);
+    expect(el.querySelector("#modules-opzeg-status").textContent).toContain("Opgezegd");
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("laadModuleOverzicht", () => {
