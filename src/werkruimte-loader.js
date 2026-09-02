@@ -330,7 +330,11 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
  * vangrail. Werkgeheugen-domeinen tellen niet als werkdata voor de
  * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
 const METRICS_DOMEIN = "dashboard_metrics";
-const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+// Domeinen die wél rijen hebben maar géén "werkdata" zijn in de arbitrage
+// hieronder: werkgeheugen (logboek, bedrijfscontext) en sinds f33 notities.
+// Zonder notities hier zou één losse notitie bij een klant met een extern
+// CRM de metricsroute verdringen voor een bijna leeg rijendashboard.
+const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext", "notities"];
 const TEAMFEED_DOMEIN = "teamfeed";
 const TEAMFEED_DAGEN = 30;
 const TEAMFEED_LIMIET = 500;
@@ -450,12 +454,30 @@ async function loadWerkruimteBundle(bron) {
         }
         bundle.kind = "metrics";
         bundle.metricsRaw = metrics.payload;
+        // f33: de cijfers komen uit het metricsbestand, maar de Data-tab moet
+        // nog steeds je rijen kunnen tonen. Tot nu toe returnde deze tak
+        // meteen, waardoor detail, kanban en notities onzichtbaar waren op
+        // precies de omgevingen waar 's ochtends een dagstart draait.
+        await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+        bundle.systeemPerDomein = systeemPerDomein;
         return bundle;
       }
       bundle.waarschuwingen.push(`Verouderde metrics-entry (van ${datumLabel}) genegeerd — het dashboard rekent live uit de werkdata-rijen in je werkruimte.`);
     }
   }
 
+  await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
+  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
+  bundle.systeemPerDomein = systeemPerDomein;
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+/* De rijen van elk gevuld domein in de bundel zetten. Sinds f33 gebeurt dit in
+ * beide takken van loadWerkruimteBundle: ook naast een vers metricsbestand,
+ * want de Data-tab leest hieruit. */
+async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
   const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
   // s26/016: dit was één Promise.all over álle gevulde domeinen — bij een vol
   // team zijn dat er zeventien, elk met een verzoek om 5.000 records, allemaal
@@ -488,11 +510,6 @@ async function loadWerkruimteBundle(bron) {
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
   }
-  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
-  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
-  bundle.systeemPerDomein = systeemPerDomein;
-  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
-  return bundle;
 }
 
 /* p10: welke bron gebruikt deze pagina? Een verse daglink in het fragment is
