@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gfJOaNWWizV3Qz62bCuEQ8WcKRp6wCsqz5fEvCsdr5A=' 'sha256-bbKK2AanVU//U5YAL9W9kysoQJgvz382iVLURsg2QM0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gfJOaNWWizV3Qz62bCuEQ8WcKRp6wCsqz5fEvCsdr5A=' 'sha256-F5YaLimgMH4nZyxADGn+BNTU+tsT7EvMecc+l7CsGbA='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -627,6 +627,12 @@ tr.rij-open { background: var(--card); }
 .notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .notitie-nieuw .knop { align-self: flex-start; }
 
+/* ── f34 · Jouw modules ────────────────────────────────────────────────── */
+.modules-samenvatting { margin: 0 0 6px; }
+.modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }
+.modules-verzoek h3 { margin: 0 0 6px; }
+.modules-verzoek textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-bottom: 8px; }
+
 </style>
 </head>
 <body>
@@ -683,6 +689,16 @@ tr.rij-open { background: var(--card); }
         <span class="decision">Wat levert het me op?</span>
       </div>
       <div class="kpi-grid" id="opbrengst-grid"></div>
+    </section>
+
+    <!-- f34 fase 0: alleen zichtbaar met een ingelogde sessie én een licentie
+         in de fase-0-allowlist van de site — anders blijft dit paneel weg. -->
+    <section class="panel" id="panel-modules" style="display:none;">
+      <div class="panel-header">
+        <h2>🧩 Jouw modules</h2>
+        <span class="decision">Wat heb ik, en wat kost het per maand?</span>
+      </div>
+      <div id="panel-modules-body"></div>
     </section>
   </div>
 
@@ -5536,6 +5552,9 @@ const DETAIL_VOLGORDE = [
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
   { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️", intern: true },
   { key: "leren", titel: "Leren", emoji: "💡" },
+  // f34 fase 0: alleen in de nav zodra de site het overzicht heeft geleverd
+  // (ingelogde sessie + licentie in de allowlist) — zie modules-beheer.js.
+  { key: "modules", titel: "Jouw modules", emoji: "🧩", modulesTegel: true },
 ];
 
 // Onder welke tab hoort een detailpagina? Zo blijft de tabbar staan (en de
@@ -5551,6 +5570,7 @@ const DETAIL_TAB = {
   gebruik: "prestaties",
   correctievrij: "prestaties",
   leren: "prestaties",
+  modules: "vandaag",
 };
 
 function nlGetal(n, decimals = 0) {
@@ -5818,7 +5838,9 @@ function detailSectionHtml(titel, emoji, decision, innerId) {
 }
 
 function renderDetailNav(el, activeKey, intern) {
-  el.innerHTML = DETAIL_VOLGORDE.filter(d => !d.intern || intern).map(d =>
+  el.innerHTML = DETAIL_VOLGORDE
+    .filter(d => (!d.intern || intern) && (!d.modulesTegel || (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar())))
+    .map(d =>
     `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
   ).join("");
 }
@@ -7062,6 +7084,136 @@ if (typeof module !== "undefined") {
 }
 
 
+/* f34 fase 0 — "Jouw modules": read-only overzicht van de licentiemodules.
+ *
+ * De site rekent, dit dashboard toont: het overzicht (actief/prijs/agents/
+ * datadomeinen + maandbedrag) komt kant-en-klaar van de site-API en wordt
+ * hier nooit nagerekend — bedragen op twee plekken drijven uit elkaar.
+ * Alleen bereikbaar met een ingelogde p10-sessie (de daglink kan dit niet:
+ * de site kent alleen de dashboard-audience van het OAuth-token), en alleen
+ * voor licenties in de fase-0-allowlist van de site. In alle andere gevallen
+ * antwoordt de site niet-200 en blijven tegel én detailpagina gewoon weg —
+ * afwezig is geen fout.
+ *
+ * Schakelen kan hier nog niet; de "wijzigen?"-knop stuurt een verzoek dat
+ * bij support landt (fase 1 vervangt dit door de echte schakelketen). */
+
+const MODULES_SITE_ORIGIN = "https://www.agentic-team.ai";
+
+let moduleOverzicht = null; // laatste geslaagde site-antwoord
+let moduleOverzichtVoorToken = null; // token waarvoor (al) geladen is/wordt
+
+function moduleOverzichtBeschikbaar() {
+  return moduleOverzicht !== null;
+}
+
+/* Eén poging per token: een 404 (geen allowlist) of 401 (verlopen) hoeft
+ * niet elke render opnieuw geprobeerd — na een login/refresh wijzigt het
+ * token en laden we vanzelf opnieuw. */
+async function laadModuleOverzicht(bron) {
+  if (!bron || !bron.oauth || !bron.token) {
+    moduleOverzicht = null;
+    return null;
+  }
+  if (moduleOverzichtVoorToken === bron.token) return moduleOverzicht;
+  moduleOverzichtVoorToken = bron.token;
+  moduleOverzicht = null;
+  try {
+    const res = await fetch(`${MODULES_SITE_ORIGIN}/api/dashboard/modules`, {
+      headers: { Authorization: `Bearer ${bron.token}` },
+    });
+    if (res.ok) moduleOverzicht = await res.json();
+  } catch (e) { /* site onbereikbaar — dan geen tegel, geen foutbanner */ }
+  return moduleOverzicht;
+}
+
+/* Compact paneel op de Vandaag-tab; doorklik naar de detailpagina. */
+function renderModulesPanel(sectieEl) {
+  if (!sectieEl) return;
+  if (!moduleOverzichtBeschikbaar()) {
+    sectieEl.style.display = "none";
+    return;
+  }
+  const o = moduleOverzicht;
+  const actief = o.modules.filter((m) => m.actief);
+  sectieEl.style.display = "";
+  sectieEl.querySelector("#panel-modules-body").innerHTML = `
+    <p class="modules-samenvatting">${esc(o.pakket)} — <strong>€ ${nlGetal(o.maandbedragExclBtw)}/mnd</strong> excl. btw</p>
+    <p class="footnote">${actief.map((m) => esc(m.naam)).join(" · ")}</p>
+    <a class="detail-link" data-goto="modules">Bekijk je modules →</a>`;
+}
+
+function moduleKaartHtml(m) {
+  return `<div class="card${m.actief ? "" : " signaal-grijs"}">
+    <div class="kop">${esc(m.naam)} ${m.actief ? "✓ actief" : "— niet actief"}</div>
+    <div class="getal">€ ${nlGetal(m.prijs)}/mnd</div>
+    <div class="detail">${esc(m.belofte)}${m.altijdInbegrepen ? " (altijd inbegrepen)" : ""}<br>
+      <strong>Agents:</strong> ${m.agents.map((a) => esc(a.naam)).join(", ") || "—"}<br>
+      <strong>Datadomeinen:</strong> ${m.datadomeinen.map(esc).join(", ") || "—"}</div>
+  </div>`;
+}
+
+function renderDetailModules(el) {
+  if (!moduleOverzichtBeschikbaar()) {
+    el.innerHTML = `<p>Je moduleoverzicht is niet beschikbaar. Log opnieuw in en probeer het nog eens.</p>`;
+    return;
+  }
+  const o = moduleOverzicht;
+  el.innerHTML = `
+    <p>Je pakket: <strong>${esc(o.pakket)}</strong> — <strong>€ ${nlGetal(o.maandbedragExclBtw)}/mnd</strong> excl. ${esc(String(o.btwPercentage))}% btw. Een jaarcontract geeft ${esc(String(o.jaarGratisMaanden))} maanden gratis.</p>
+    <div class="grid-9">${o.modules.map(moduleKaartHtml).join("")}</div>
+    <div class="modules-verzoek">
+      <h3>Iets wijzigen?</h3>
+      <p class="footnote">Zelf bij- en afschakelen komt eraan. Tot die tijd: beschrijf hieronder wat je
+      wilt (bv. "Sales erbij" of "Backoffice eraf per volgende maand") — wij regelen het en je krijgt
+      een bevestiging per mail.</p>
+      <textarea id="modules-wens" maxlength="500" rows="3" placeholder="Wat wil je wijzigen?"></textarea>
+      <button type="button" id="modules-verzoek-knop">Verstuur wijzigingsverzoek</button>
+      <p class="footnote" id="modules-verzoek-status" role="status"></p>
+    </div>
+    <p class="footnote">Bedragen en samenstelling komen live van agentic-team.ai — dit dashboard rekent
+    er zelf niet aan. Klopt er iets niet, mail support@agentic-team.ai.</p>`;
+
+  el.querySelector("#modules-verzoek-knop").addEventListener("click", () => {
+    void verstuurModuleVerzoek(el);
+  });
+}
+
+async function verstuurModuleVerzoek(el) {
+  const veld = el.querySelector("#modules-wens");
+  const knop = el.querySelector("#modules-verzoek-knop");
+  const status = el.querySelector("#modules-verzoek-status");
+  const wens = (veld.value || "").trim();
+  if (!wens) {
+    status.textContent = "Beschrijf eerst kort wat je wilt wijzigen.";
+    return;
+  }
+  knop.disabled = true;
+  status.textContent = "Versturen…";
+  try {
+    const res = await fetch(`${MODULES_SITE_ORIGIN}/api/dashboard/modules/verzoek`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${huidigeBron && huidigeBron.token ? huidigeBron.token : ""}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ wens }),
+    });
+    if (res.ok) {
+      veld.value = "";
+      status.textContent = "Verzonden — we nemen het op en je hoort van ons.";
+    } else {
+      const fout = await res.json().catch(() => null);
+      status.textContent = (fout && fout.fout) || "Versturen lukte niet. Probeer het later nog eens.";
+      knop.disabled = false;
+    }
+  } catch (e) {
+    status.textContent = "Versturen lukte niet. Probeer het later nog eens.";
+    knop.disabled = false;
+  }
+}
+
+
 /* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
  * periodeschakelaar en de hash-router tussen de vier tabs (Vandaag · Team ·
  * Data · Prestaties) en de detailpagina's. Schrijft nooit iets terug behalve,
@@ -7240,6 +7392,17 @@ function renderAll() {
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
+  // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
+  // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
+  // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  renderModulesPanel(document.getElementById("panel-modules"));
+  void laadModuleOverzicht(huidigeBron).then((overzicht) => {
+    if (overzicht) {
+      renderModulesPanel(document.getElementById("panel-modules"));
+      route();
+    }
+  });
+
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
@@ -7293,6 +7456,9 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    // f34 fase 0: alleen zodra de site het moduleoverzicht leverde (ingelogde
+    // sessie + allowlist) — zelfde patroon als de interne tegel hieronder.
+    ...(moduleOverzichtBeschikbaar() ? { modules: () => [detailSectionHtml("Jouw modules", "🧩", "Welke modules heb ik nu, en wat kosten ze per maand?", "detail-inner"), () => renderDetailModules(document.getElementById("detail-inner"))] } : {}),
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],

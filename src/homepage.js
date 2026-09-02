@@ -28,6 +28,9 @@ const DETAIL_VOLGORDE = [
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
   { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️", intern: true },
   { key: "leren", titel: "Leren", emoji: "💡" },
+  // f34 fase 0: alleen in de nav zodra de site het overzicht heeft geleverd
+  // (ingelogde sessie + licentie in de allowlist) — zie modules-beheer.js.
+  { key: "modules", titel: "Jouw modules", emoji: "🧩", modulesTegel: true },
 ];
 
 // Onder welke tab hoort een detailpagina? Zo blijft de tabbar staan (en de
@@ -43,6 +46,7 @@ const DETAIL_TAB = {
   gebruik: "prestaties",
   correctievrij: "prestaties",
   leren: "prestaties",
+  modules: "vandaag",
 };
 
 function nlGetal(n, decimals = 0) {
@@ -310,7 +314,9 @@ function detailSectionHtml(titel, emoji, decision, innerId) {
 }
 
 function renderDetailNav(el, activeKey, intern) {
-  el.innerHTML = DETAIL_VOLGORDE.filter(d => !d.intern || intern).map(d =>
+  el.innerHTML = DETAIL_VOLGORDE
+    .filter(d => (!d.intern || intern) && (!d.modulesTegel || (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar())))
+    .map(d =>
     `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
   ).join("");
 }
