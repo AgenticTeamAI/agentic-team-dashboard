@@ -192,6 +192,7 @@ describe("geen telemetrie — het gebouwde artefact", () => {
       '"agentic-team-dashboard:feed-filter"',    // sessionStorage, welke agent je filtert
       '"agentic-team-dashboard:laatst-gebruikt"',
       '"agentic-team-dashboard:minuten-per-actie"',
+      '"agentic-team-dashboard:naam"',           // f33: localStorage, de naam waaronder je werkt (per seat)
       '"agentic-team-dashboard:oauth"',          // sessionStorage, de OAuth-tokens (p10)
       '"agentic-team-dashboard:oauth-pkce"',     // sessionStorage, verifier + state tijdens de redirect
     ]);

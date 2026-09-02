@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.53.0
-//   registry updated: 2026-08-28
-//   bron-commit     : 22f193657a50e0268c11363386aea8158c710348
-//   geextraheerd op : 2026-09-01T20:55:34Z
+//   registryVersion : 1.65.0
+//   registry updated: 2026-09-02
+//   bron-commit     : 94832d6154f1d7ae2332f50615f4a860a90cbd42
+//   geextraheerd op : 2026-09-02T17:48:14Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.53.0",
-  "registryUpdated": "2026-08-28",
-  "sourceCommit": "22f193657a50e0268c11363386aea8158c710348",
-  "extractedAt": "2026-09-01T20:55:34Z",
+  "registryVersion": "1.65.0",
+  "registryUpdated": "2026-09-02",
+  "sourceCommit": "94832d6154f1d7ae2332f50615f4a860a90cbd42",
+  "extractedAt": "2026-09-02T17:48:14Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -787,6 +787,7 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "select",
           "opties": [
             "Idee",
+            "Geselecteerd",
             "In productie",
             "Klaar voor review",
             "Gepland",
@@ -812,6 +813,56 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Segment",
           "type": "select",
           "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Merk",
+          "type": "tekst"
+        },
+        {
+          "naam": "Herkomst",
+          "type": "multi_select",
+          "opties": [
+            "Gebruiker",
+            "Marktmaker",
+            "SEO/GEO Specialist",
+            "De Stem",
+            "Dealmaker",
+            "Customer Success Manager",
+            "Researcher"
+          ]
+        },
+        {
+          "naam": "Koopuitkomst",
+          "type": "multi_select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Kernvraag",
+          "type": "tekst"
+        },
+        {
+          "naam": "Hoofdboodschap",
+          "type": "tekst"
+        },
+        {
+          "naam": "Menselijke input",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bronnen",
+          "type": "tekst"
+        },
+        {
+          "naam": "SEO/GEO briefing",
+          "type": "tekst"
         },
         {
           "naam": "Publicatiedatum",
@@ -843,6 +894,39 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Campagne",
+          "type": "tekst"
+        },
+        {
+          "naam": "CTA",
+          "type": "tekst"
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Menselijk akkoord",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Publicatie URL",
+          "type": "url"
+        },
+        {
+          "naam": "Impressies",
+          "type": "getal"
+        },
+        {
+          "naam": "Engagement",
+          "type": "getal"
+        },
+        {
+          "naam": "Leersignaal",
           "type": "tekst"
         },
         {
@@ -1250,6 +1334,47 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Interactie",
           "type": "relatie",
           "naar": "interacties"
+        },
+        {
+          "naam": "Bovenliggende actie",
+          "type": "relatie",
+          "naar": "acties"
+        }
+      ]
+    },
+    "notities": {
+      "naam": "Notities",
+      "module": "core",
+      "emoji": "📝",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Notitie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Auteur",
+          "type": "tekst"
+        },
+        {
+          "naam": "Soort",
+          "type": "select",
+          "opties": [
+            "Mens",
+            "Agent"
+          ]
+        },
+        {
+          "naam": "Betreft",
+          "type": "relatie",
+          "naar": "*"
         }
       ]
     },
