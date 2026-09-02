@@ -19,6 +19,65 @@ function tokenScopes(token) {
   } catch (e) { return []; }
 }
 
+/* f33: wie ben ik? Het access-token draagt bewust geen naam — `sub` is
+ * `licentie#seathash`, en een naamclaim erbij is een wijziging van het
+ * normatieve claimcontract (§3, byte-voor-byte getest) plus een juridische
+ * delta. Voor "Aan mij" en "Afgerond door" is een naam genoeg die de gebruiker
+ * zelf eenmalig opgeeft; hij staat alleen in deze browser, gekoppeld aan de
+ * seat waarmee je bent ingelogd, en gaat nooit ergens anders heen dan als
+ * gewone veldwaarde in je eigen werkruimte. */
+function tokenSeat(token) {
+  try {
+    const p = JSON.parse(atob(String(token).split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return String(p.sub || "");
+  } catch (e) { return ""; }
+}
+
+/* Zelfde naamruimte als de rest, zodat de opslagcontrole in
+ * test/geen-telemetrie.test.js hem ziet: alles wat blijvend in de browser
+ * staat hoort in de privacytekst genoemd te worden. Per seat, want op een
+ * gedeelde computer is de vorige gebruiker niet jij. */
+const LS_NAAM_KEY = "agentic-team-dashboard:naam";
+function naamSleutel(bron) { return LS_NAAM_KEY + ":" + tokenSeat(bron && bron.token); }
+
+function mijnNaam(bron) {
+  try { return window.localStorage.getItem(naamSleutel(bron)) || ""; } catch (e) { return ""; }
+}
+
+function zetMijnNaam(bron, naam) {
+  try {
+    const schoon = String(naam || "").trim().slice(0, 80);
+    if (schoon) window.localStorage.setItem(naamSleutel(bron), schoon);
+    else window.localStorage.removeItem(naamSleutel(bron));
+    return schoon;
+  } catch (e) { return ""; }
+}
+
+/* f33: één veld wijzigen zonder het formulier — de kanbansleep en de
+ * toewijsknoppen. PATCH mengt bij de instantie over de bestaande rij heen, dus
+ * velden die dit dashboard niet kent blijven staan. Met PUT zouden die stil
+ * verdwijnen; daarom is dit bewust een andere methode en geen "PUT met alles
+ * wat we toevallig hebben". */
+function snelWijzig(ctx, key, entryId, patch) {
+  return schrijfWerkruimte(ctx.bron, "PATCH",
+    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data: patch });
+}
+
+/* De statusconventie van het team, in code. Een mens die een actie op Klaar
+ * zet in het dashboard hoort dezelfde velden achter te laten als een agent
+ * die dat doet — anders meet i25 (correctievrij werk) scheef. "Wacht op
+ * review" vult bewust niets in: dat is per statuscontract een mens, en die
+ * heeft nog niets afgerond. */
+function statusPatch(domein, status, naam) {
+  const velden = (domein.velden || []).map(v => v.naam);
+  const patch = { Status: status };
+  if (status === "Klaar") {
+    if (velden.indexOf("Afgerond door") !== -1) patch["Afgerond door"] = naam || "dashboard";
+    if (velden.indexOf("Afgerond op") !== -1) patch["Afgerond op"] = new Date().toISOString().slice(0, 10);
+  }
+  return patch;
+}
+
 function bronKanSchrijven(bron) {
   return !!(bron && bron.oauth && tokenScopes(bron.token).indexOf("dashboard:schrijf") !== -1);
 }
@@ -216,5 +275,6 @@ if (typeof module !== "undefined") {
   module.exports = {
     bronKanSchrijven, magDomeinBewerken, dataFormulierHtml, leesFormulier,
     veldInvoerHtml, wireDataBewerken, tokenScopes,
+    mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
   };
 }

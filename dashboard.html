@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ee0+tNIcPw/S6IPCqE5AAuD/eg9VIq42V1rxr3B/rMU=' 'sha256-UjgWGpH9AMybYrnSCVfKE0/yLQ42yeNZIaJOSIbDZ9c='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ee0+tNIcPw/S6IPCqE5AAuD/eg9VIq42V1rxr3B/rMU=' 'sha256-2aVYviDlu2DCGYy1r8g8XgFQubhXkS5UL6uq0Uy0SFI='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -612,6 +612,20 @@ tr.rij-open { background: var(--card); }
 .bord-meta { font-size: 0.78em; color: var(--muted); background: var(--navy); border-radius: 999px; padding: 1px 8px; }
 .bord-kaart .footnote { margin: 4px 0 0; }
 @media (max-width: 640px) { .bord-kolom { flex-basis: 78vw; } .detail-veld { flex-basis: 42%; max-width: 42%; } }
+
+/* f33 fase E+F: bedienen en notities */
+.bedien-balk { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 4px 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.bedien-veld { display: flex; flex-direction: column; gap: 2px; font-size: 0.85em; color: var(--muted); }
+.bedien-veld select, .bedien-veld input { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.95em; }
+.bedien-knop { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.85em; }
+.bedien-knop:hover { transform: none; border-color: var(--mint-light); }
+.notitie-lijst { list-style: none; padding: 0; margin: 6px 0 10px; }
+.notitie { border-left: 2px solid var(--border); padding: 2px 0 2px 10px; margin-bottom: 10px; }
+.notitie-kop { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 0.92em; }
+.notitie-tekst { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92em; }
+.notitie-nieuw { display: flex; flex-direction: column; gap: 6px; max-width: 520px; margin-bottom: 6px; }
+.notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+.notitie-nieuw .knop { align-self: flex-start; }
 
 </style>
 </head>
@@ -2295,7 +2309,13 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
   "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
-  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.",
+  /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
+   * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
+   * door"). Die naam geef je zelf op, staat alleen in deze browser en gaat
+   * verder nergens heen dan als gewone veldwaarde in je eigen werkruimte —
+   * maar dat maakt de opsomming niet minder uitputtend. Delta voor het
+   * juridische memo (i47). */
+  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden, je minuten-per-actie-instelling en, als je die invult, de naam waaronder je werkt.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
@@ -6029,17 +6049,118 @@ function dataDetailHtml(ctx, key, rij) {
        <button type="button" class="knop knop-secundair" data-verwijder-rij="${esc(rij.__entryId)}">🗑 Verwijderen</button>`
     : "";
 
-  return `<div class="detail-kaart" data-detail-kaart>
+  return `<div class="detail-kaart" data-detail-kaart data-detail-id="${esc(rij.__entryId || "")}">
     <div class="detail-kop">
       <p><strong>${esc(domein.emoji || "🗂️")} ${esc(detailTitel(domein, rij))}</strong></p>
       <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
     </div>
+    ${bedienHtml(ctx, key, domein, rij)}
     ${regels}
     ${leeg.length ? `<p class="footnote">Niet ingevuld: ${esc(leeg.join(", "))}.</p>` : ""}
+    ${notitiedraadHtml(ctx, key, rij)}
     <p class="detail-kop-terug"><strong>Wat hieraan hangt</strong></p>
     ${terugHtml}
     <div class="bewerk-knoppen">${knoppen}</div>
+    <p class="bewerk-fout" data-snel-fout role="alert"></p>
   </div>`;
+}
+
+/* ── f33 fase F: bedienen zonder formulier ────────────────────────────
+ *
+ * Status wisselen en toewijzen zijn de twee dingen die je op een dag tien keer
+ * doet; daar hoort geen formulier met twintig velden bij. Beide schrijven via
+ * PATCH, zodat velden die dit dashboard niet kent blijven staan.
+ *
+ * Alleen zichtbaar in een schrijfsessie op een werkruimte-domein — op de
+ * daglink en bij een extern CRM blijft alles lezen, net als de rest. */
+function bedienHtml(ctx, key, domein, rij) {
+  const bewerk = magDomeinBewerken(ctx, key);
+  if (!bewerk.ok || !rij.__entryId) return "";
+  const statusVeld = statusVeldVan(domein);
+  const velden = dataVelden(domein);
+  const eigenaarVeld = velden.find(v => v.naam === "Eigenaar");
+  const agentVeld = velden.find(v => v.naam === "Agent" && v.type === "select");
+  if (!statusVeld && !eigenaarVeld && !agentVeld) return "";
+
+  const huidig = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
+  const naam = mijnNaam(ctx.bron);
+  const agenten = (ctx.schema.agents || []).map(a => a.displayName || a.naam || a.slug).filter(Boolean);
+
+  return `<div class="bedien-balk">
+    ${statusVeld ? `<label class="bedien-veld"><span>Status</span>
+      <select data-snel-status>
+        <option value=""></option>
+        ${statusVeld.opties.map(o => `<option value="${esc(o)}"${o === huidig ? " selected" : ""}>${esc(o)}</option>`).join("")}
+      </select></label>` : ""}
+    ${eigenaarVeld ? `<button type="button" class="knop-mini bedien-knop" data-snel-mij title="Aan mijzelf toewijzen">🙋 Aan mij</button>` : ""}
+    ${eigenaarVeld ? `<label class="bedien-veld"><span>Eigenaar</span>
+      <input type="text" data-snel-eigenaar value="${esc(dataCelTekst(getField(rij, "Eigenaar")))}" placeholder="naam"></label>` : ""}
+    ${agentVeld && agenten.length ? `<label class="bedien-veld"><span>Agent</span>
+      <select data-snel-agent><option value=""></option>
+        ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
+      </select></label>` : ""}
+    ${naam ? `<span class="footnote">Je werkt als ${esc(naam)} · <button type="button" class="filter-wis" data-naam-wijzig>wijzig</button></span>` : ""}
+  </div>`;
+}
+
+/* ── f33 fase E: de notitiedraad ──────────────────────────────────────
+ *
+ * Meerdere notities per entiteit, met datum en auteur, nieuwste boven. Een
+ * notitie is een eigen rij in het domein 'notities' met een polymorfe
+ * verwijzing naar de rij die je bekijkt — daarom werkt hetzelfde blok onder
+ * élke entiteit, zonder per domein een veld toe te voegen.
+ *
+ * Draait de werkruimte nog een registry zonder 'notities', dan is dit blok er
+ * simpelweg niet; dat is geen fout, alleen een oudere instantie. */
+function notitieVeldVan(ctx) {
+  const dom = ctx.schema.datadomeinen.notities;
+  if (!dom) return null;
+  const veld = dataVelden(dom).find(v => v.type === "relatie" && v.naar === "*");
+  return veld ? { dom, veld } : null;
+}
+
+function notitiesBij(ctx, key, entryId) {
+  const info = notitieVeldVan(ctx);
+  if (!info || !entryId) return [];
+  return (dataRijenVan(ctx, "notities") || [])
+    .filter(r => verwijstNaar(getField(r, info.veld.naam), info.veld, key, entryId))
+    .sort((a, b) => String(getField(b, "Datum") || "").localeCompare(String(getField(a, "Datum") || "")));
+}
+
+function notitiedraadHtml(ctx, key, rij) {
+  const info = notitieVeldVan(ctx);
+  if (!info || key === "notities") return "";
+  const bewerk = magDomeinBewerken(ctx, "notities");
+  const eigenBewerk = magDomeinBewerken(ctx, key);
+  const lijst = notitiesBij(ctx, key, rij.__entryId);
+  const items = lijst.map(n => {
+    const wie = dataCelTekst(getField(n, "Auteur"));
+    const wanneer = dataCelTekst(getField(n, "Datum"));
+    const soort = dataCelTekst(getField(n, "Soort"));
+    return `<li class="notitie">
+      <p class="notitie-kop"><strong>${esc(dataCelTekst(getField(n, "Onderwerp")) || "Notitie")}</strong>
+        <span class="footnote">${esc([wie, soort, wanneer].filter(Boolean).join(" · "))}</span></p>
+      <p class="notitie-tekst">${esc(dataCelTekst(getField(n, "Notitie")))}</p>
+    </li>`;
+  }).join("");
+
+  // Bij een domein dat elders woont hoort de notitie daar ook te staan; dat
+  // zeggen we, in plaats van stil geen knop te tonen.
+  const uitleg = !eigenBewerk.ok && eigenBewerk.reden
+    ? `<p class="footnote">${esc(eigenBewerk.reden)} Notities horen dan bij die rij, in dat systeem.</p>`
+    : "";
+
+  const formulier = bewerk.ok && rij.__entryId
+    ? `<form class="notitie-nieuw" data-notitie-form>
+        <input type="text" data-notitie-onderwerp placeholder="Onderwerp" maxlength="120">
+        <textarea data-notitie-tekst rows="2" placeholder="Wat is er gebeurd of afgesproken?"></textarea>
+        <button type="submit" class="knop">Notitie toevoegen</button>
+      </form>`
+    : uitleg;
+
+  return `<p class="detail-kop-terug"><strong>Notities</strong> <span class="footnote">${lijst.length}</span></p>
+    ${lijst.length ? `<ul class="notitie-lijst">${items}</ul>` : `<p class="footnote">Nog geen notities bij deze rij.</p>`}
+    ${formulier}`;
 }
 
 /* De lijst die je kunt openen: alle datadomeinen uit de registry, behalve de
@@ -6384,6 +6505,7 @@ function renderDataDomein(el, key, ctx) {
       herteken();
       return;
     }
+    if (bedienKlik(e)) return;
     const link = e.target.closest && e.target.closest("[data-relatie-zoek]");
     if (link) dataZoek = link.getAttribute("data-relatie-zoek") || "";
     const wisEl = e.target.closest && e.target.closest("[data-filter-wis]");
@@ -6393,6 +6515,88 @@ function renderDataDomein(el, key, ctx) {
       if (chip) chip.remove();
       herteken();
     }
+  });
+
+  /* f33 fase F — bedienen. Elke schrijfactie loopt via PATCH (of, voor een
+   * notitie, POST) en daarna een herlaadde bundel: het dashboard verzint nooit
+   * zelf hoe de rij er na afloop uitziet, want de instantie kan er meer mee
+   * gedaan hebben (relatietitels verversen, velden normaliseren). */
+  function foutmelder() { return el.querySelector("[data-snel-fout]"); }
+
+  async function pasToe(actie) {
+    const fout = foutmelder();
+    if (fout) fout.textContent = "";
+    try {
+      await actie();
+      await (ctx.herlaad ? ctx.herlaad() : Promise.resolve());
+    } catch (f) {
+      if (fout) fout.textContent = f.message || "Dat is niet gelukt.";
+      else window.alert(f.message || "Dat is niet gelukt.");
+    }
+  }
+
+  function huidigeRij() {
+    if (!dataDetail || dataDetail.domein !== key) return null;
+    return rows.find(r => r.__entryId === dataDetail.entryId) || null;
+  }
+
+  function vraagNaam() {
+    const nu = mijnNaam(ctx.bron);
+    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", nu);
+    if (ingevuld === null) return nu;
+    return zetMijnNaam(ctx.bron, ingevuld);
+  }
+
+  function bedienKlik(e) {
+    const rij = huidigeRij();
+    const mij = e.target.closest && e.target.closest("[data-snel-mij]");
+    if (mij && rij) {
+      const naam = mijnNaam(ctx.bron) || vraagNaam();
+      if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      return true;
+    }
+    const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
+    if (wijzig) { vraagNaam(); herteken(); return true; }
+    return false;
+  }
+
+  el.addEventListener("change", (e) => {
+    const rij = huidigeRij();
+    if (!rij) return;
+    const status = e.target.closest && e.target.closest("[data-snel-status]");
+    if (status) {
+      const gekozen = status.value;
+      if (!gekozen) return;
+      pasToe(() => snelWijzig(ctx, key, rij.__entryId,
+        statusPatch(domein, gekozen, mijnNaam(ctx.bron))));
+      return;
+    }
+    const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
+    if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
+    const agent = e.target.closest && e.target.closest("[data-snel-agent]");
+    if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+  });
+
+  el.addEventListener("submit", (e) => {
+    const form = e.target.closest && e.target.closest("[data-notitie-form]");
+    if (!form) return;
+    e.preventDefault();
+    const rij = huidigeRij();
+    if (!rij) return;
+    const onderwerp = form.querySelector("[data-notitie-onderwerp]").value.trim();
+    const tekst = form.querySelector("[data-notitie-tekst]").value.trim();
+    if (!onderwerp && !tekst) return;
+    const naam = mijnNaam(ctx.bron) || vraagNaam();
+    const info = notitieVeldVan(ctx);
+    const data = {
+      Onderwerp: onderwerp || tekst.slice(0, 60),
+      Datum: new Date().toISOString().slice(0, 10),
+      Soort: "Mens",
+      [info.veld.naam]: { domein: key, id: rij.__entryId },
+    };
+    if (tekst) data.Notitie = tekst;
+    if (naam) data.Auteur = naam;
+    pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
   });
 
   // Een kaart is klikbaar, dus hij hoort ook met Enter/spatie te openen.
@@ -6435,6 +6639,7 @@ if (typeof module !== "undefined") {
     renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
     resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
+    notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
   };
 }
 
@@ -6458,6 +6663,65 @@ function tokenScopes(token) {
     const p = JSON.parse(atob(stuk.replace(/-/g, "+").replace(/_/g, "/")));
     return String(p.scope || "").split(/\s+/).filter(Boolean);
   } catch (e) { return []; }
+}
+
+/* f33: wie ben ik? Het access-token draagt bewust geen naam — `sub` is
+ * `licentie#seathash`, en een naamclaim erbij is een wijziging van het
+ * normatieve claimcontract (§3, byte-voor-byte getest) plus een juridische
+ * delta. Voor "Aan mij" en "Afgerond door" is een naam genoeg die de gebruiker
+ * zelf eenmalig opgeeft; hij staat alleen in deze browser, gekoppeld aan de
+ * seat waarmee je bent ingelogd, en gaat nooit ergens anders heen dan als
+ * gewone veldwaarde in je eigen werkruimte. */
+function tokenSeat(token) {
+  try {
+    const p = JSON.parse(atob(String(token).split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return String(p.sub || "");
+  } catch (e) { return ""; }
+}
+
+/* Zelfde naamruimte als de rest, zodat de opslagcontrole in
+ * test/geen-telemetrie.test.js hem ziet: alles wat blijvend in de browser
+ * staat hoort in de privacytekst genoemd te worden. Per seat, want op een
+ * gedeelde computer is de vorige gebruiker niet jij. */
+const LS_NAAM_KEY = "agentic-team-dashboard:naam";
+function naamSleutel(bron) { return LS_NAAM_KEY + ":" + tokenSeat(bron && bron.token); }
+
+function mijnNaam(bron) {
+  try { return window.localStorage.getItem(naamSleutel(bron)) || ""; } catch (e) { return ""; }
+}
+
+function zetMijnNaam(bron, naam) {
+  try {
+    const schoon = String(naam || "").trim().slice(0, 80);
+    if (schoon) window.localStorage.setItem(naamSleutel(bron), schoon);
+    else window.localStorage.removeItem(naamSleutel(bron));
+    return schoon;
+  } catch (e) { return ""; }
+}
+
+/* f33: één veld wijzigen zonder het formulier — de kanbansleep en de
+ * toewijsknoppen. PATCH mengt bij de instantie over de bestaande rij heen, dus
+ * velden die dit dashboard niet kent blijven staan. Met PUT zouden die stil
+ * verdwijnen; daarom is dit bewust een andere methode en geen "PUT met alles
+ * wat we toevallig hebben". */
+function snelWijzig(ctx, key, entryId, patch) {
+  return schrijfWerkruimte(ctx.bron, "PATCH",
+    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data: patch });
+}
+
+/* De statusconventie van het team, in code. Een mens die een actie op Klaar
+ * zet in het dashboard hoort dezelfde velden achter te laten als een agent
+ * die dat doet — anders meet i25 (correctievrij werk) scheef. "Wacht op
+ * review" vult bewust niets in: dat is per statuscontract een mens, en die
+ * heeft nog niets afgerond. */
+function statusPatch(domein, status, naam) {
+  const velden = (domein.velden || []).map(v => v.naam);
+  const patch = { Status: status };
+  if (status === "Klaar") {
+    if (velden.indexOf("Afgerond door") !== -1) patch["Afgerond door"] = naam || "dashboard";
+    if (velden.indexOf("Afgerond op") !== -1) patch["Afgerond op"] = new Date().toISOString().slice(0, 10);
+  }
+  return patch;
 }
 
 function bronKanSchrijven(bron) {
@@ -6657,6 +6921,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     bronKanSchrijven, magDomeinBewerken, dataFormulierHtml, leesFormulier,
     veldInvoerHtml, wireDataBewerken, tokenScopes,
+    mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
   };
 }
 
