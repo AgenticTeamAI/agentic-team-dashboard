@@ -9,7 +9,7 @@ second round are listed at the end of the Dutch LICENSE file.
 
 # AGENTIC TEAM — SOURCE-AVAILABLE LICENCE (proprietary)
 
-Version 0.3-draft
+Version 0.4-draft
 
 **This is an English translation, provided for convenience only. The Dutch
 text in `LICENSE` is the authoritative version; in case of any discrepancy
@@ -144,11 +144,12 @@ the Licensor cannot terminate their availability.
 ## 7. Warranty and liability
 
 The Software is provided "as is". For Licensees, the warranty and liability
-provisions of the General Terms and Conditions, the Product Terms and any
-data processing agreement apply; those prevail in the event of a conflict,
-in that order. For others the following applies, to the extent permitted by
-law: no warranty whatsoever and no liability for any damage arising from
-reading or using the Software. This exclusion does not apply in the event of
+provisions of the agreement between the Licensor and the Licensee and the
+terms belonging to it apply, including the order of precedence that those
+terms determine among themselves. In the absence of such an arrangement, the
+Licensor's General Terms and Conditions apply. For others the following
+applies, to the extent permitted by law: no warranty whatsoever and no
+liability for any damage arising from reading or using the Software. This exclusion does not apply in the event of
 intent or wilful recklessness on the part of the Licensor, nor to damage
 resulting from death or personal injury.
 
@@ -162,9 +163,14 @@ mandatory law provides otherwise.
 
 This licence governs only the rights to the files in this repository. The
 Agentic Team service itself (connector, playbooks, workspace) is governed by
-the General Terms and Conditions, the Product Terms, the privacy policy and —
-where applicable — the data processing agreement at www.agentic-team.ai. In
-the event of a conflict between those documents and this licence, those
-documents prevail.
+the agreement between the Licensor and the Licensee and the terms belonging
+to it, including the General Terms and Conditions, the Product Terms, the
+privacy policy and — where applicable — the data processing agreement; the
+documents published on the website can be found at www.agentic-team.ai. This
+enumeration does not express an order of precedence; to the extent that the
+Agentic Team Product Terms determine an order of precedence among these
+documents, that order applies. In the event of a conflict between the
+documents referred to in this article and this licence, those documents
+prevail.
 
 Contact: via www.agentic-team.ai.

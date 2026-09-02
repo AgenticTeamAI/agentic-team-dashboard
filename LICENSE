@@ -9,7 +9,7 @@ staan onderaan dit bestand.
 <<JURIST-REVIEW>>
 
 AGENTIC TEAM — BRON-INZAGE LICENTIE (source-available, proprietary)
-Versie 0.3-concept
+Versie 0.4-concept
 
 This repository is source-available, not open source. Anyone may read and study
 the code; only holders of a valid Agentic Team licence may use it. See LICENSE
@@ -133,13 +133,15 @@ licentie vermeldt (zie NOTICE voor onderdelen van derden).
 
 7. Garantie en aansprakelijkheid
    De Software wordt geleverd "zoals zij is". Voor Licentiehouders gelden de
-   garantie- en aansprakelijkheidsbepalingen van de Algemene Voorwaarden, de
-   Productvoorwaarden en de eventuele verwerkersovereenkomst; die gaan bij
-   strijdigheid voor, in die rangorde. Voor anderen geldt, voor zover de wet
-   dit toelaat: geen enkele garantie en geen aansprakelijkheid voor welke
-   schade dan ook die voortvloeit uit het lezen of gebruiken van de Software.
-   Deze uitsluiting geldt niet bij opzet of bewuste roekeloosheid van
-   Licentiegever, noch bij schade door dood of lichamelijk letsel.
+   garantie- en aansprakelijkheidsbepalingen van de overeenkomst tussen
+   Licentiegever en Licentiehouder en de daarbij behorende voorwaarden, met
+   inbegrip van de rangorde die die voorwaarden onderling bepalen. Bij
+   gebreke van een zodanige regeling gelden de Algemene Voorwaarden van
+   Licentiegever. Voor anderen geldt, voor zover de wet dit toelaat: geen
+   enkele garantie en geen aansprakelijkheid voor welke schade dan ook die
+   voortvloeit uit het lezen of gebruiken van de Software. Deze uitsluiting
+   geldt niet bij opzet of bewuste roekeloosheid van Licentiegever, noch bij
+   schade door dood of lichamelijk letsel.
 
 8. Toepasselijk recht en forum
    Op deze licentie is Nederlands recht van toepassing. Geschillen worden
@@ -149,10 +151,14 @@ licentie vermeldt (zie NOTICE voor onderdelen van derden).
 9. Verhouding tot andere documenten
    Deze licentie regelt uitsluitend de rechten op de bestanden in deze
    repository. De Agentic Team-dienst zelf (connector, playbooks, werkruimte)
-   valt onder de Algemene Voorwaarden, de Productvoorwaarden, het
-   privacybeleid en — waar van toepassing — de verwerkersovereenkomst op
-   www.agentic-team.ai. Bij strijdigheid tussen die documenten en deze
-   licentie gaan die documenten voor.
+   valt onder de overeenkomst tussen Licentiegever en Licentiehouder en de
+   daarbij behorende voorwaarden, waaronder de Algemene Voorwaarden, de
+   Productvoorwaarden, het privacybeleid en — waar van toepassing — de
+   verwerkersovereenkomst; de op de website gepubliceerde documenten daarvan
+   zijn te vinden op www.agentic-team.ai. Deze opsomming drukt geen rangorde
+   uit; voor zover de Productvoorwaarden Agentic Team een onderlinge
+   rangorde bepalen, geldt die. Bij strijdigheid tussen de in dit artikel
+   bedoelde documenten en deze licentie gaan die documenten voor.
 
 Contact: via www.agentic-team.ai.
 
@@ -160,24 +166,30 @@ Contact: via www.agentic-team.ai.
 <<JURIST-REVIEW>> Open punten voor de tweede juridische ronde
 Het juristadvies van 26-08-2026 is verwerkt in versie 0.2 (2b, 2d, 3b, 3d,
 6, 7, 9, TDM-voorbehoud in 2a, Engels blok + LICENSE.en.md, DCO). In versie
-0.3 (02-09-2026) is de tenaamstelling doorgevoerd. Wat nog openstaat:
+0.3 (02-09-2026) is de tenaamstelling doorgevoerd; het juristakkoord van
+2 september 2026 (tweede oplevering) heeft 0.3 goedgekeurd. In versie 0.4
+(02-09-2026) is de rangorde-reparatie van artikel 7 en 9 uit dat akkoord
+doorgevoerd. Wat nog openstaat:
 1. AFGEHANDELD in 0.3 (02-09-2026) — de tenaamstelling. Besluit 28-08-2026:
    Five Forward Group B.V. (KvK 42143676) is de contracterende entiteit; de
    partijnaam is diezelfde dag al doorgevoerd in privacybeleid (2.3), DPA
    (2.2) en productvoorwaarden (2.2) op www.agentic-team.ai, en nu ook in de
    aanhef, artikel 1a, NOTICE en LICENSE.en.md van deze repository, met de
    formulering "mede handelend onder de naam Agentic Team".
-2. Artikel 3b en 3d door een gekwalificeerde IE-jurist laten nalezen vóór
-   versie 1.0 (het advies noemt dit zelf als het punt met de meeste
-   onzekerheid: de nietigheidssanctie van artikel 8 Richtlijn 2009/24/EG en
-   de grens tussen achterhalen en toepassen van ideeën).
-3. Rangorde in artikel 7 en 9 kruislings controleren tegen de Algemene
-   Voorwaarden en de Productvoorwaarden: kennen die onderling al een
-   rangorde die hiermee botst?
+2. VERVALLEN ALS VOORWAARDE (besluit licentiegever 02-09-2026): er wordt
+   geen externe IE-juristbevestiging op artikel 3b en 3d ingewonnen; het
+   restrisico (nietigheidssanctie artikel 8 Richtlijn 2009/24/EG, grens
+   achterhalen/toepassen van ideeën) is aanvaard. De open vraag naar de
+   reikwijdte van hoofdstuk VI Auteurswet over materiaal dat geen
+   computerprogramma is, blijft genoteerd.
+3. AFGEHANDELD in 0.4 (02-09-2026): de rangorde is uit artikel 7 en 9
+   gehaald — de licentie bepaalt niet langer zelf hoe de klantdocumenten
+   zich onderling verhouden (reparatietekst van de jurist, 2 september).
 4. AFGEHANDELD (28-08-2026, s38) — het machineleesbare TDM-voorbehoud
    staat live op www.agentic-team.ai: tdmrep.json plus een
    tdm-reservation-header op elk pad, met een guard-test in de site-CI.
    Artikel 2a wordt daarmee waargemaakt.
-5. De octrooiclausule in 2d iii is ontleend aan de Apache-2.0-systematiek en
-   is niet door een octrooigemachtigde bekeken.
+5. AFGEHANDELD (02-09-2026): akkoord jurist — een octrooigemachtigde is
+   niet nodig. Bewuste keuze licentiegever: licentiehouders krijgen geen
+   octrooilicentie; de octrooistroom blijft eenrichtingsverkeer.
 <<JURIST-REVIEW>>
