@@ -622,3 +622,5 @@ tr.rij-open { background: var(--card); }
 .modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }
 .modules-verzoek h3 { margin: 0 0 6px; }
 .modules-verzoek textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-bottom: 8px; }
+.modules-keuze { display: block; margin: 4px 0; }
+.modules-keuze input { margin-right: 6px; }

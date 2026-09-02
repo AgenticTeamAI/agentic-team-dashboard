@@ -93,28 +93,28 @@ describe("geen telemetrie — het gebouwde artefact", () => {
   /* p10 fase 3: elke aanroep staat hier met naam en bestemming. Lezen en
    * schrijven (f23 fase D) dragen klantdata en gaan allebei uitsluitend naar
    * de eigen werkruimte via de router; de token-uitwisseling draagt
-   * nadrukkelijk géén klantdata. f34 fase 0 voegt twee aanroepen op het eigen
-   * domein toe: het moduleoverzicht (GET, alleen het Bearer-token) en het
-   * wijzigingsverzoek (POST, alleen de door de gebruiker getypte wens) —
-   * geen van beide raakt de bundel of de rijen. Komt er een nieuwe bij, dan
-   * is dat hier een bewuste beslissing. */
-  it("doet precies vijf netwerkaanroepen: lezen, schrijven, token-uitwisseling, moduleoverzicht, wijzigingsverzoek", () => {
+   * nadrukkelijk géén klantdata. f34 voegt één aanroepplek op het eigen
+   * domein toe: modulesFetch — de enige route naar de modules-API (overzicht
+   * lezen, wijzigen, opzeggen, wijzigingsverzoek), altijd tegen de vaste
+   * origin-constante en nooit met bundel- of rij-inhoud in de body. Komt er
+   * een nieuwe bij, dan is dat hier een bewuste beslissing. */
+  it("doet precies vier netwerkaanroepen: lezen, schrijven, token-uitwisseling, modules-API", () => {
     const fetches = HTML.match(/\bfetch\s*\(/g) || [];
-    expect(fetches.length).toBe(5);
+    expect(fetches.length).toBe(4);
     // lezen én schrijven: allebei alleen naar bron.instantieUrl
     expect((HTML.match(/fetch\(bron\.instantieUrl \+ pad/g) || []).length).toBe(2);
     expect(HTML).toMatch(/fetch\(OAUTH_TOKEN_URL/);
-    // f34: de twee eigen-domein-calls, elk tegen de vaste origin-constante.
-    expect(HTML).toMatch(/fetch\(`\$\{MODULES_SITE_ORIGIN\}\/api\/dashboard\/modules`/);
-    expect(HTML).toMatch(/fetch\(`\$\{MODULES_SITE_ORIGIN\}\/api\/dashboard\/modules\/verzoek`/);
+    // f34: de ene eigen-domein-plek, tegen de vaste origin-constante.
+    expect(HTML).toMatch(/fetch\(`\$\{MODULES_SITE_ORIGIN\}\$\{pad\}`/);
   });
 
-  it("stuurt naar agentic-team.ai alleen het token-endpoint en de modules-endpoints aan, en nooit iets uit de bundel", () => {
+  it("stuurt naar agentic-team.ai alleen het token-endpoint en de modules-API aan, en nooit iets uit de bundel", () => {
     // De enige twee URL-constantes op ons eigen domein die gefetcht worden.
     expect(HTML).toContain('const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token"');
     expect(HTML).toContain('const MODULES_SITE_ORIGIN = "https://www.agentic-team.ai"');
     // f34: ook de modules-aanroepen dragen nooit bundel- of rij-inhoud.
     expect(HTML).not.toMatch(/MODULES_SITE_ORIGIN[^;]*bundle/);
+    expect(HTML).not.toMatch(/modulesFetch\([^)]*bundle/);
     // De body van die POST is opgebouwd uit een vaste verzameling velden; geen
     // ervan raakt de bundel, de rijen of de werkruimte-inhoud.
     const velden = [...HTML.matchAll(/grant_type: "(authorization_code|refresh_token)"/g)];
