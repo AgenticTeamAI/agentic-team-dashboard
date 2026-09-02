@@ -6,6 +6,10 @@ Agentic Team Dashboard
 Copyright (c) 2026 Five Forward Group B.V. Alle rechten voorbehouden.
 Licentie: zie LICENSE (bron-inzage, proprietary) en LICENSE.en.md
 (Engelse vertaling; bij verschil gaat de Nederlandse tekst voor).
+TDM-voorbehoud (artikel 15o Auteurswet / artikel 4 lid 3 Richtlijn (EU)
+2019/790): tekst- en datamining ten behoeve van het ontwikkelen of trainen
+van AI-modellen is voorbehouden — zie LICENSE artikel 2a en het
+machineleesbare voorbehoud in .well-known/tdmrep.json.
 
 Runtime: geen onderdelen van derden
 -----------------------------------
