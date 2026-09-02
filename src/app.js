@@ -176,6 +176,17 @@ function renderAll() {
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
+  // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
+  // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
+  // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  renderModulesPanel(document.getElementById("panel-modules"));
+  void laadModuleOverzicht(huidigeBron).then((overzicht) => {
+    if (overzicht) {
+      renderModulesPanel(document.getElementById("panel-modules"));
+      route();
+    }
+  });
+
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
@@ -229,6 +240,9 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    // f34 fase 0: alleen zodra de site het moduleoverzicht leverde (ingelogde
+    // sessie + allowlist) — zelfde patroon als de interne tegel hieronder.
+    ...(moduleOverzichtBeschikbaar() ? { modules: () => [detailSectionHtml("Jouw modules", "🧩", "Welke modules heb ik nu, en wat kosten ze per maand?", "detail-inner"), () => renderDetailModules(document.getElementById("detail-inner"))] } : {}),
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],

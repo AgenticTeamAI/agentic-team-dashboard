@@ -50,6 +50,7 @@ const JS_MODULES = [
   "homepage.js",
   "databrowser.js",
   "data-bewerken.js",
+  "modules-beheer.js",
   "app.js",
 ];
 

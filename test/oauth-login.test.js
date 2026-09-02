@@ -186,8 +186,12 @@ describe("terug van /oauth/authorize", () => {
     expect(naarWerkruimte.length).toBeGreaterThan(0);
     for (const g of naarWerkruimte) expect(g.opties.headers.Authorization).toBe("Bearer " + DASHBOARD_JWT);
 
-    // 4. en er ging precies één verzoek naar agentic-team.ai: de token-call
-    expect(gevraagd.filter((g) => g.url.startsWith("https://www.agentic-team.ai"))).toHaveLength(1);
+    // 4. en naar agentic-team.ai ging precies één token-call; de enige andere
+    //    toegestane site-call is het f34-moduleoverzicht (leesactie met het
+    //    JWT, draagt geen bundeldata en mag falen zonder dat iets breekt)
+    const naarSite = gevraagd.filter((g) => g.url.startsWith("https://www.agentic-team.ai"));
+    expect(naarSite.filter((g) => g.url.includes("/api/oauth/token"))).toHaveLength(1);
+    for (const g of naarSite) expect(g.url).toMatch(/\/api\/(oauth\/token|dashboard\/modules)$/);
     expect(w.__dashboardCtx.bundle.sourceLabel).toBe("werkruimte van Testbedrijf BV");
   });
 

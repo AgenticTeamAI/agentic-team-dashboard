@@ -616,3 +616,9 @@ tr.rij-open { background: var(--card); }
 .notitie-nieuw { display: flex; flex-direction: column; gap: 6px; max-width: 520px; margin-bottom: 6px; }
 .notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .notitie-nieuw .knop { align-self: flex-start; }
+
+/* ── f34 · Jouw modules ────────────────────────────────────────────────── */
+.modules-samenvatting { margin: 0 0 6px; }
+.modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }
+.modules-verzoek h3 { margin: 0 0 6px; }
+.modules-verzoek textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-bottom: 8px; }
