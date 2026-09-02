@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gfJOaNWWizV3Qz62bCuEQ8WcKRp6wCsqz5fEvCsdr5A=' 'sha256-2aVYviDlu2DCGYy1r8g8XgFQubhXkS5UL6uq0Uy0SFI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gfJOaNWWizV3Qz62bCuEQ8WcKRp6wCsqz5fEvCsdr5A=' 'sha256-bbKK2AanVU//U5YAL9W9kysoQJgvz382iVLURsg2QM0='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -2994,6 +2994,13 @@ async function loadWerkruimteBundle(bron) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  // f33: welke domeinen kent de instantie überhaupt? Het overzicht noemt ze
+  // allemaal, ook met aantal 0 — en dat is het enige signaal of een instantie
+  // al een image draait dat een nieuw domein kent. Zonder dit zou het
+  // dashboard een notitieformulier tonen dat bij een oudere instantie een
+  // "Onbekend domein" oplevert, precies in het gat tussen een dashboarddeploy
+  // en de vlootuitrol.
+  bundle.instantieDomeinen = (overzicht.domeinen || []).map(d => d && d.domein).filter(Boolean);
 
   // f22: alleen ophalen als de instantie het domein kent (staat dan in het
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
@@ -6240,6 +6247,10 @@ function bedienHtml(ctx, key, domein, rij) {
 function notitieVeldVan(ctx) {
   const dom = ctx.schema.datadomeinen.notities;
   if (!dom) return null;
+  // De instantie moet het domein ook kennen. Weet het dashboard dat niet
+  // (oudere bundel zonder deze lijst), dan geldt het oude gedrag.
+  const bekend = ctx.bundle && ctx.bundle.instantieDomeinen;
+  if (Array.isArray(bekend) && bekend.indexOf("notities") === -1) return null;
   const veld = dataVelden(dom).find(v => v.type === "relatie" && v.naar === "*");
   return veld ? { dom, veld } : null;
 }
