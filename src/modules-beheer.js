@@ -19,6 +19,13 @@
 
 const MODULES_SITE_ORIGIN = "https://www.agentic-team.ai";
 
+/* Versieaanduiding van de bevestigingsteksten hieronder. Gaat mee met elke
+ * bevestigings-POST en wordt server-side in de mutatieadministratie gelegd —
+ * zo is later te bewijzen wélke schermtekst er bij een klik stond
+ * (juristoordeel 02-09-2026, onderdeel b). Bump bij elke tekstwijziging in
+ * de voorstel-/opzegblokken. */
+const MODULES_SCHERMTEKST_VERSIE = "f34-scherm 2026-09-03.1";
+
 let moduleOverzicht = null; // laatste geslaagde site-antwoord
 let moduleOverzichtVoorToken = null; // token waarvoor (al) geladen is/wordt
 
@@ -142,12 +149,21 @@ async function berekenWijziging(el) {
     }
     status.textContent = "";
     const v = uit.body.voorstel;
+    // 3.9 lid 3: excl. én incl. btw, beide ingangsmomenten. Het na-ijleffect
+    // staat er concreet ("je betaalt nog € X tot en met <datum>"), niet als
+    // regel — en de gratis-terugdraaienzin expliciet (lid 5); dat zijn de twee
+    // mitigaties uit het juristoordeel. Alle bedragen uit het site-antwoord.
+    const afRegels = (v.afgeschakeld || [])
+      .map((m) => `${esc(m.naam)} stopt per direct. Je betaalt er nog € ${nlGetal(m.prijs)} voor tot en met ${esc(v.betaaldTotEnMet)} — dat wordt niet gecrediteerd. Tot die datum zet je ${esc(m.naam)} kosteloos weer aan.`)
+      .join("<br>");
+    const bijRegels = (v.bijgeschakeld || [])
+      .map((m) => `${esc(m.naam)} is per direct beschikbaar; € ${nlGetal(m.prijs)}/mnd erbij vanaf je eerstvolgende factuur (${esc(v.ingangsdatum)}).`)
+      .join("<br>");
     doel.innerHTML = `<div class="grijs-blok">
       <div class="grijs-kop">Je nieuwe samenstelling</div>
       <div class="grijs-tekst">Van € ${nlGetal(v.maandbedragOud)}/mnd naar <strong>€ ${nlGetal(v.maandbedragNieuw)}/mnd</strong>
-      excl. ${esc(String(v.btwPercentage))}% btw. Het nieuwe bedrag geldt vanaf je eerstvolgende
-      ${v.termijn === "jaar" ? "jaarfactuur" : "factuur"} (${esc(v.ingangsdatum)}); je toegang wijzigt per direct
-      en er wordt niets gecrediteerd.</div>
+      excl. btw (€ ${nlGetal(v.maandbedragOudInclBtw, 2)} → € ${nlGetal(v.maandbedragNieuwInclBtw, 2)} incl. ${esc(String(v.btwPercentage))}% btw).
+      Het nieuwe bedrag staat voor het eerst op je factuur van ${esc(v.ingangsdatum)}.${afRegels ? `<br><br>${afRegels}` : ""}${bijRegels ? `<br><br>${bijRegels}` : ""}</div>
       <button type="button" id="modules-bevestig-knop">Bevestig wijziging</button>
     </div>`;
     doel.querySelector("#modules-bevestig-knop").addEventListener("click", () => {
@@ -164,7 +180,7 @@ async function bevestigWijziging(el) {
   if (knop) knop.disabled = true;
   status.textContent = "Doorvoeren…";
   try {
-    const uit = await modulesFetch("/api/dashboard/modules/wijzig", { modules: gekozenModules(el), bevestigd: true });
+    const uit = await modulesFetch("/api/dashboard/modules/wijzig", { modules: gekozenModules(el), bevestigd: true, schermversie: MODULES_SCHERMTEKST_VERSIE });
     if (!uit.ok) {
       const fout = (uit.body && uit.body.fout) || "Doorvoeren lukte niet. Probeer het later nog eens.";
       const link = uit.body && uit.body.machtigingUrl
@@ -217,7 +233,7 @@ async function bevestigOpzeggen(el) {
   if (knop) knop.disabled = true;
   status.textContent = "Opzeggen…";
   try {
-    const uit = await modulesFetch("/api/dashboard/modules/opzeggen", { bevestigd: true });
+    const uit = await modulesFetch("/api/dashboard/modules/opzeggen", { bevestigd: true, schermversie: MODULES_SCHERMTEKST_VERSIE });
     if (!uit.ok) {
       status.textContent = (uit.body && uit.body.fout) || "Opzeggen lukte niet. Probeer het later nog eens.";
       if (knop) knop.disabled = false;
