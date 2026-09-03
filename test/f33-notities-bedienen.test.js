@@ -182,12 +182,13 @@ describe("f33 — bedienen", () => {
     expect(JSON.parse(opties.body).data).toEqual({ Status: "Bezig" });
   });
 
-  it("op Klaar vult het dashboard dezelfde velden als een agent (i25)", () => {
+  it("op Klaar zet alleen de afrondingsdatum, niet de autonomiemarkering (i25)", () => {
     const domein = schemaMetNotities().datadomeinen.acties;
     const patch = g.statusPatch(domein, "Klaar", "Tijmen");
     expect(patch.Status).toBe("Klaar");
-    expect(patch["Afgerond door"]).toBe("Tijmen");
     expect(patch["Afgerond op"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // Hier klikt een mens: "Afgerond door" is de autonomiemarkering en blijft leeg.
+    expect(patch["Afgerond door"]).toBeUndefined();
     // "Wacht op review" is per statuscontract een mens die nog niets afrondde.
     expect(g.statusPatch(domein, "Wacht op review", "Tijmen")).toEqual({ Status: "Wacht op review" });
   });
