@@ -22,7 +22,7 @@ function tokenScopes(token) {
 /* f33: wie ben ik? Het access-token draagt bewust geen naam — `sub` is
  * `licentie#seathash`, en een naamclaim erbij is een wijziging van het
  * normatieve claimcontract (§3, byte-voor-byte getest) plus een juridische
- * delta. Voor "Aan mij" en "Afgerond door" is een naam genoeg die de gebruiker
+ * delta. Voor "Aan mij" is een naam genoeg die de gebruiker
  * zelf eenmalig opgeeft; hij staat alleen in deze browser, gekoppeld aan de
  * seat waarmee je bent ingelogd, en gaat nooit ergens anders heen dan als
  * gewone veldwaarde in je eigen werkruimte. */
@@ -63,17 +63,19 @@ function snelWijzig(ctx, key, entryId, patch) {
     "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data: patch });
 }
 
-/* De statusconventie van het team, in code. Een mens die een actie op Klaar
- * zet in het dashboard hoort dezelfde velden achter te laten als een agent
- * die dat doet — anders meet i25 (correctievrij werk) scheef. "Wacht op
+/* De statusconventie van het team, in code. Wie hier op Klaar klikt is een
+ * mens, en die laat andere sporen achter dan een agent: "Afgerond op" is de
+ * gewone afrondingsdatum en hoort er altijd op, "Afgerond door" is de
+ * i25-autonomiemarkering en blijft dus leeg — anders telt handwerk mee in de
+ * noemer van het correctievrij-percentage (b52 filtert daar wel op agentnaam,
+ * maar een mens die toevallig zo heet zou er alsnog in vallen). "Wacht op
  * review" vult bewust niets in: dat is per statuscontract een mens, en die
  * heeft nog niets afgerond. */
-function statusPatch(domein, status, naam) {
+function statusPatch(domein, status) {
   const velden = (domein.velden || []).map(v => v.naam);
   const patch = { Status: status };
-  if (status === "Klaar") {
-    if (velden.indexOf("Afgerond door") !== -1) patch["Afgerond door"] = naam || "dashboard";
-    if (velden.indexOf("Afgerond op") !== -1) patch["Afgerond op"] = new Date().toISOString().slice(0, 10);
+  if (status === "Klaar" && velden.indexOf("Afgerond op") !== -1) {
+    patch["Afgerond op"] = new Date().toISOString().slice(0, 10);
   }
   return patch;
 }

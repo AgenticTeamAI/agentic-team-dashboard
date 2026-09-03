@@ -677,8 +677,7 @@ function renderDataDomein(el, key, ctx) {
     if (status) {
       const gekozen = status.value;
       if (!gekozen) return;
-      pasToe(() => snelWijzig(ctx, key, rij.__entryId,
-        statusPatch(domein, gekozen, mijnNaam(ctx.bron))));
+      pasToe(() => snelWijzig(ctx, key, rij.__entryId, statusPatch(domein, gekozen)));
       return;
     }
     const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
