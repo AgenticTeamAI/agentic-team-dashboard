@@ -213,3 +213,45 @@ describe("intern-vlag — de correctievrij-tegel is nooit zichtbaar voor klanten
     expect(nav.querySelector('a[href="#detail/correctievrij"]')).not.toBeNull();
   });
 });
+
+// b52 — "Afgerond door" is een gewoon tekstveld: een mens die zijn eigen naam
+// invult mag niet als autonoom werk tellen. Bij de f19-pilot was dat 7 van de
+// 21 acties in het venster, dus een derde van de noemer van de gate.
+describe("computeCorrectievrij — alleen agentnamen tellen als autonoom (b52)", () => {
+  const rijen = [
+    actie({ "Afgerond op": "2026-08-20", "Afgerond door": "Jurist" }),          // agent, week 17-08
+    actie({ "Afgerond op": "2026-08-19", "Afgerond door": "Tom Bakker" }),      // mens
+    actie({ "Afgerond op": "2026-08-18", "Afgerond door": "Technisch beheer" }),// mens
+    actie({ "Afgerond op": "2026-08-17", "Afgerond door": "  coördinator  " }), // agent, andere schrijfwijze
+  ];
+
+  it("telt mensennamen niet mee, in noemer noch weekreeks", () => {
+    const cv = g.computeCorrectievrij(bundelMet(rijen), TODAY);
+    expect(cv.autonoom).toBe(2);
+    expect(cv.gecorrigeerd).toBe(0);
+    expect(cv.pct).toBe(100);
+    const week1708 = cv.weken.find(w => w.label === "17-08");
+    expect(week1708.autonoom).toBe(2);
+  });
+
+  it("herkent een agentnaam ongeacht hoofdletters, spaties en accenten", () => {
+    const namen = g.agentNamen();
+    expect(namen.has(g.normAgentNaam("  COÖRDINATOR "))).toBe(true);
+    expect(namen.has(g.normAgentNaam("Tom Bakker"))).toBe(false);
+  });
+
+  it("zonder agentlijst telt alles mee, maar zegt dat erbij", () => {
+    const cv = g.computeCorrectievrij(bundelMet(rijen), TODAY, undefined, undefined, { agentNamen: null });
+    expect(cv.autonoom).toBe(4);
+    // De constante zelf staat niet op globalThis (top-level `const` in een
+    // vm-context), dus toetsen op de strekking van de melding.
+    expect(cv.opmerking).toMatch(/niet gefilterd op agentnaam/);
+  });
+
+  it("een expliciet meegegeven agentlijst gaat voor op het schema", () => {
+    const alleen = new Set([g.normAgentNaam("Jurist")]);
+    const cv = g.computeCorrectievrij(bundelMet(rijen), TODAY, undefined, undefined, { agentNamen: alleen });
+    expect(cv.autonoom).toBe(1);
+    expect(cv.opmerking).toBeNull();
+  });
+});
