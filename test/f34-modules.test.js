@@ -135,7 +135,7 @@ describe("schakelen en opzeggen (fase 1)", () => {
     const fetchSpy = vi.fn(async () => ({
       ok: true,
       status: 200,
-      json: async () => ({ voorstel: { maandbedragOud: 128, maandbedragNieuw: 177, btwPercentage: 21, termijn: "maand", ingangsdatum: XSS } }),
+      json: async () => ({ voorstel: { maandbedragOud: 128, maandbedragNieuw: 177, maandbedragOudInclBtw: 154.88, maandbedragNieuwInclBtw: 214.17, btwPercentage: 21, termijn: "maand", ingangsdatum: XSS, betaaldTotEnMet: "2026-12-31", afgeschakeld: [{ naam: "Growth", prijs: 49 }], bijgeschakeld: [{ naam: "Sales", prijs: 49 }] } }),
     }));
     vi.stubGlobal("fetch", fetchSpy);
     document.querySelector('[data-module-keuze][value="sales"]').checked = true; // gebruiker vinkt Sales aan
@@ -145,6 +145,11 @@ describe("schakelen en opzeggen (fase 1)", () => {
     expect(JSON.parse(fetchSpy.mock.calls[0][1].body).bevestigd).toBeUndefined();
     const voorstelHtml = document.getElementById("modules-voorstel");
     expect(voorstelHtml.textContent).toContain("177");
+    // Juristoordeel punt 3: excl. én incl. btw, en het cóncrete na-ijleffect
+    // met gratis-terugdraaienzin — niet alleen de regel.
+    expect(voorstelHtml.textContent).toContain("214,17");
+    expect(voorstelHtml.textContent).toContain("Je betaalt er nog € 49 voor tot en met 2026-12-31");
+    expect(voorstelHtml.textContent).toContain("kosteloos weer aan");
     expect(window.__xss).toBeUndefined();
     expect(voorstelHtml.querySelector("img")).toBeNull();
     expect(document.getElementById("modules-bevestig-knop")).toBeTruthy();
@@ -175,7 +180,10 @@ describe("schakelen en opzeggen (fase 1)", () => {
     await lees("startOpzeggen")(el);
     expect(el.querySelector("#modules-opzeg-voorstel").textContent).toContain("2027-01-31");
     await lees("bevestigOpzeggen")(el);
-    expect(JSON.parse(fetchSpy.mock.calls[1][1].body).bevestigd).toBe(true);
+    const body = JSON.parse(fetchSpy.mock.calls[1][1].body);
+    expect(body.bevestigd).toBe(true);
+    // Bewijslaag: de schermtekstversie reist mee naar de mutatieadministratie.
+    expect(body.schermversie).toMatch(/^f34-scherm /);
     expect(el.querySelector("#modules-opzeg-status").textContent).toContain("Opgezegd");
     vi.unstubAllGlobals();
   });
