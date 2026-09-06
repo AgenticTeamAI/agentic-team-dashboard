@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.70.0
+//   registryVersion : 1.74.0
 //   registry updated: 2026-09-06
-//   bron-commit     : a8f81a8c044e3e3b4c85c7ed4c34a2f441924b7f
-//   geextraheerd op : 2026-09-06T18:13:18Z
+//   bron-commit     : dfd8435cde3b3e1612395ed0a01c1d03b19d572c
+//   geextraheerd op : 2026-09-06T21:58:54Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.70.0",
+  "registryVersion": "1.74.0",
   "registryUpdated": "2026-09-06",
-  "sourceCommit": "a8f81a8c044e3e3b4c85c7ed4c34a2f441924b7f",
-  "extractedAt": "2026-09-06T18:13:18Z",
+  "sourceCommit": "dfd8435cde3b3e1612395ed0a01c1d03b19d572c",
+  "extractedAt": "2026-09-06T21:58:54Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -491,7 +491,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -760,7 +761,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "product_catalogus": {
       "naam": "Product Catalogus",
-      "module": "strategy",
+      "module": "core",
       "emoji": "🧩",
       "velden": [
         {
@@ -1346,7 +1347,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -1444,7 +1446,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         },
         {
           "naam": "Contactpersoon",
@@ -1454,7 +1457,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Interactie",
           "type": "relatie",
-          "naar": "interacties"
+          "naar": "interacties",
+          "crossModuleBedoeld": true
         },
         {
           "naam": "Bovenliggende actie",
@@ -2179,6 +2183,148 @@ window.AGENTIC_TEAM_SCHEMA = {
         },
         {
           "naam": "Kernvraag",
+          "type": "tekst"
+        }
+      ]
+    },
+    "autoriteit": {
+      "naam": "Autoriteit",
+      "module": "visibility",
+      "emoji": "📣",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "Podium of medium",
+            "Autoriteitsbewijs"
+          ]
+        },
+        {
+          "naam": "Vorm",
+          "type": "select",
+          "opties": [
+            "Vakmedium",
+            "Podcast",
+            "Congres of event",
+            "Panel",
+            "Nieuwsbrief",
+            "Community",
+            "Vermelding",
+            "Citaat",
+            "Interview",
+            "Gastartikel",
+            "Optreden",
+            "Award",
+            "Eigen publicatie",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Herkomst",
+          "type": "select",
+          "opties": [
+            "Verdiend",
+            "Eigen",
+            "Nog niet van toepassing"
+          ]
+        },
+        {
+          "naam": "Aanleiding",
+          "type": "select",
+          "opties": [
+            "Uitgenodigd",
+            "Zelf gepitcht",
+            "Eigen initiatief",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Kans",
+            "Benaderd",
+            "Toegezegd",
+            "Gepubliceerd",
+            "Afgewezen",
+            "Niet passend"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Persoon",
+          "type": "tekst"
+        },
+        {
+          "naam": "Contact en beat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Laatste contact",
+          "type": "datum"
+        },
+        {
+          "naam": "Link",
+          "type": "url"
+        },
+        {
+          "naam": "Bron en datum vaststelling",
+          "type": "tekst"
+        },
+        {
+          "naam": "Blijft er iets van over",
+          "type": "select",
+          "opties": [
+            "Ja",
+            "Nee",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Hergebruikt in",
+          "type": "multi_select",
+          "opties": [
+            "Offerte",
+            "Gesprek",
+            "Bio",
+            "Post",
+            "Nog niet"
+          ]
+        },
+        {
+          "naam": "Hergebruik aantal",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Laatst hergebruikt",
+          "type": "datum"
+        },
+        {
+          "naam": "Content",
+          "type": "relatie",
+          "naar": "content_kalender"
+        },
+        {
+          "naam": "Podium",
+          "type": "relatie",
+          "naar": "autoriteit"
+        },
+        {
+          "naam": "Notities",
           "type": "tekst"
         }
       ]
