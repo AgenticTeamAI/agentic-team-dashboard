@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.76.0
-//   registry updated: 2026-09-06
-//   bron-commit     : 33f60d5e5e64624f47e316434b89ecb9c8148cba
-//   geextraheerd op : 2026-09-07T12:21:56Z
+//   registryVersion : 1.78.0
+//   registry updated: 2026-09-07
+//   bron-commit     : 388f30b05b6b3cce8ec3c2879009a60a3f692ae3
+//   geextraheerd op : 2026-09-07T13:18:35Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.76.0",
-  "registryUpdated": "2026-09-06",
-  "sourceCommit": "33f60d5e5e64624f47e316434b89ecb9c8148cba",
-  "extractedAt": "2026-09-07T12:21:56Z",
+  "registryVersion": "1.78.0",
+  "registryUpdated": "2026-09-07",
+  "sourceCommit": "388f30b05b6b3cce8ec3c2879009a60a3f692ae3",
+  "extractedAt": "2026-09-07T13:18:35Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -1359,6 +1359,11 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Persoon",
           "type": "mensen"
+        },
+        {
+          "naam": "Organisatie",
+          "type": "relatie",
+          "naar": "organisaties"
         },
         {
           "naam": "Project",
