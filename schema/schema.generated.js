@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.78.0
+//   registryVersion : 1.88.0
 //   registry updated: 2026-09-07
-//   bron-commit     : 388f30b05b6b3cce8ec3c2879009a60a3f692ae3
-//   geextraheerd op : 2026-09-07T13:18:35Z
+//   bron-commit     : 2177639dbd3af101facf208ee41645c2d862f62e
+//   geextraheerd op : 2026-09-07T15:41:14Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.78.0",
+  "registryVersion": "1.88.0",
   "registryUpdated": "2026-09-07",
-  "sourceCommit": "388f30b05b6b3cce8ec3c2879009a60a3f692ae3",
-  "extractedAt": "2026-09-07T13:18:35Z",
+  "sourceCommit": "2177639dbd3af101facf208ee41645c2d862f62e",
+  "extractedAt": "2026-09-07T15:41:14Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -537,6 +537,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "format": "euro"
         },
         {
+          "naam": "Omzet bewust onbekend",
+          "type": "checkbox"
+        },
+        {
           "naam": "Probability",
           "type": "getal",
           "format": "percent"
@@ -649,6 +653,27 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Risiconiveau",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Deliveryrisico's",
+          "type": "tekst"
+        },
+        {
+          "naam": "Evaluatie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Geëvalueerd op",
+          "type": "datum"
         },
         {
           "naam": "Organisatie",
@@ -1305,6 +1330,18 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         },
         {
+          "naam": "Werkt goed bij",
+          "type": "tekst"
+        },
+        {
+          "naam": "Werkt niet bij",
+          "type": "tekst"
+        },
+        {
+          "naam": "Laatst ingezet",
+          "type": "datum"
+        },
+        {
           "naam": "Benodigdheden",
           "type": "tekst"
         },
@@ -1703,6 +1740,69 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Besluit",
           "type": "tekst"
+        }
+      ]
+    },
+    "besluiten": {
+      "naam": "Besluiten",
+      "module": "strategy",
+      "emoji": "🌟",
+      "velden": [
+        {
+          "naam": "Besluit",
+          "type": "titel"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Horizon",
+          "type": "select",
+          "opties": [
+            "3HAG",
+            "1HAG",
+            "Kwartaal",
+            "Ad hoc"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Genomen",
+            "Herzien",
+            "Teruggedraaid",
+            "Vervallen"
+          ]
+        },
+        {
+          "naam": "Aanleiding",
+          "type": "tekst"
+        },
+        {
+          "naam": "Alternatieven",
+          "type": "tekst"
+        },
+        {
+          "naam": "Onderbouwing",
+          "type": "tekst"
+        },
+        {
+          "naam": "Meetpunt",
+          "type": "tekst"
+        },
+        {
+          "naam": "Herzien op",
+          "type": "datum"
+        },
+        {
+          "naam": "Uitkomst",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bron (link)",
+          "type": "url"
         }
       ]
     },
