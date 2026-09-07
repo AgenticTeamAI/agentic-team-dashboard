@@ -78,6 +78,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
@@ -95,6 +96,12 @@ function buildContext() {
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
+    // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
+    // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
+    // bundel zodat de tabel de waarheid van de instantie toont.
+    bron: huidigeBron,
+    kanSchrijven: bronKanSchrijven(huidigeBron),
+    herlaad: () => laadWerkruimte(huidigeBron),
   };
 }
 
@@ -169,6 +176,17 @@ function renderAll() {
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
+  // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
+  // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
+  // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  renderModulesPanel(document.getElementById("panel-modules"));
+  void laadModuleOverzicht(huidigeBron).then((overzicht) => {
+    if (overzicht) {
+      renderModulesPanel(document.getElementById("panel-modules"));
+      route();
+    }
+  });
+
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
@@ -222,6 +240,9 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    // f34 fase 0: alleen zodra de site het moduleoverzicht leverde (ingelogde
+    // sessie + allowlist) — zelfde patroon als de interne tegel hieronder.
+    ...(moduleOverzichtBeschikbaar() ? { modules: () => [detailSectionHtml("Jouw modules", "🧩", "Welke modules heb ik nu, en wat kosten ze per maand?", "detail-inner"), () => renderDetailModules(document.getElementById("detail-inner"))] } : {}),
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
@@ -274,7 +295,7 @@ function route() {
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
-  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
@@ -311,6 +332,19 @@ function wireNavigatie() {
       startExport(exportEl.getAttribute("data-export"), exportEl);
       return;
     }
+    // Klikproef-ronde 2: een alert draagt zijn rijen als voorselectie mee, en
+    // een naam-link elders zet de zoekterm — de href doet daarna de navigatie.
+    const filterEl = e.target.closest("[data-filter-domein]");
+    if (filterEl) {
+      zetDataVoorselectie(
+        filterEl.getAttribute("data-filter-domein"),
+        filterEl.getAttribute("data-filter-label") || "",
+        (filterEl.getAttribute("data-filter-ids") || "").split(","),
+      );
+      return;
+    }
+    const zoekEl = e.target.closest("[data-relatie-zoek]");
+    if (zoekEl) { zetDataZoek(zoekEl.getAttribute("data-relatie-zoek") || ""); return; }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");

@@ -349,11 +349,12 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
   });
 
   it("onbekende versie: niets tekenen, duidelijke melding", async () => {
-    const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true, versie: 2 }) } });
+    // f29: versie 2 is inmiddels een geldig contract — versie 3 is de onbekende.
+    const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true, versie: 3 }) } });
     await d.geladen();
     expect(d.zichtbaar("version-error")).toBe(true);
     expect(d.zichtbaar("tab-vandaag")).toBe(false);
-    expect(d.tekst("version-error")).toMatch(/Onbekende versie|versie 2/);
+    expect(d.tekst("version-error")).toMatch(/Onbekende versie|versie 3/);
     expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(0);
     // ook ná de hash-opschoning van de daglink blijft de homepage weg
     d.w.dispatchEvent(new d.w.Event("hashchange"));

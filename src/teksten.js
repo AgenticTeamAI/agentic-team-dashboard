@@ -45,7 +45,13 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
   "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
-  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.",
+  /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
+   * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
+   * door"). Die naam geef je zelf op, staat alleen in deze browser en gaat
+   * verder nergens heen dan als gewone veldwaarde in je eigen werkruimte —
+   * maar dat maakt de opsomming niet minder uitputtend. Delta voor het
+   * juridische memo (i47). */
+  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden, je minuten-per-actie-instelling en, als je die invult, de naam waaronder je werkt.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");

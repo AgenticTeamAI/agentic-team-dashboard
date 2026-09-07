@@ -1,6 +1,6 @@
 {
   "_": "Testfixture bij oauth-p10-contract.md §12. NOOIT in productie: dit keypair is publiek.",
-  "contract_versie": "1.5",
+  "contract_versie": "1.6",
   "kid": "test-2026-08",
   "clock": 1756300000,
   "fixture_ttl_s": 3600,

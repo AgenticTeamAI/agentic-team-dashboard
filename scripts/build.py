@@ -36,6 +36,8 @@ JS_MODULES_IN_ORDER = [
     "feed.js",
     "homepage.js",
     "databrowser.js",
+    "data-bewerken.js",
+    "modules-beheer.js",
     "app.js",
 ]
 

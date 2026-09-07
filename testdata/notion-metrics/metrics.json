@@ -1,6 +1,6 @@
 {
   "type": "agentic-team-metrics",
-  "versie": 1,
+  "versie": 2,
   "bron_label": "Notion-export — GroenBuro workspace (metricsbestand)",
   "gegenereerd_op": "2026-08-10T09:15:00+02:00",
   "door": "Coördinator",
@@ -274,5 +274,43 @@
       "link": null
     }
   ],
-  "waarschuwingen": []
+  "waarschuwingen": [],
+  "relaties": [
+    {
+      "van": "interacties",
+      "veld": "Organisatie",
+      "naar": "organisaties",
+      "gekoppeld": 34,
+      "totaal": 40,
+      "doelen": 12,
+      "top": [
+        {
+          "titel": "Acme B.V.",
+          "aantal": 9
+        },
+        {
+          "titel": "Beta Corp",
+          "aantal": 6
+        },
+        {
+          "titel": "Gamma",
+          "aantal": 4
+        }
+      ]
+    },
+    {
+      "van": "organisaties",
+      "veld": "Contactpersonen",
+      "naar": "contactpersonen",
+      "gekoppeld": 10,
+      "totaal": 14,
+      "doelen": 18,
+      "top": [
+        {
+          "titel": "J. de Vries",
+          "aantal": 3
+        }
+      ]
+    }
+  ]
 }

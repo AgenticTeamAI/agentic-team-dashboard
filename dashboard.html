@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-jtbXZbepjyT/BqaT01hYtKERj1Dd9ThIMHixpTf9WAs=' 'sha256-1D23USznAgZvqrS3thd5/vUAD/+tvDU/V8e4AuwlyxM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-YnYlrD7fHstel2lbOvQtHYLuR3wiljVoBTOSbw9KVDo=' 'sha256-UdIGhFioqreBw+6Zgxlgt5Q6+kIyu1aR0l1r6kj6Zig='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -543,6 +543,98 @@ section.panel {
   .agent-row .naam { flex-basis: 120px; }
 }
 
+/* f23/f29 fase A — klikbare verwijzing in de Data-tab */
+.relatie-link { color: var(--mint-light); text-decoration: none; cursor: pointer; }
+.relatie-link:hover { text-decoration: underline; }
+/* f29: relatiekaarten in de Data-tab bij een metricsbundel */
+.relatie-blok { margin-top: 16px; }
+.relatie-kaart { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.relatie-kop { font-weight: 600; margin-bottom: 4px; }
+.relatie-pijl { color: var(--muted); font-weight: 400; }
+.relatie-tekst { color: var(--text); font-size: 0.92em; }
+.relatie-top { color: var(--muted); font-size: 0.88em; margin-top: 4px; }
+/* f23: voorselectie-chip in de Data-tab (doorklik vanuit een alert) */
+.filter-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--mint-light); border-radius: 999px; padding: 3px 10px; font-size: 0.85em; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.filter-wis { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 2px; font: inherit; }
+.filter-wis:hover { color: var(--text); }
+/* f23: doorklikbare aandacht-items */
+.aandacht-link { color: inherit; text-decoration: none; display: block; }
+.aandacht-link:hover strong, .aandacht-link:hover div { text-decoration: underline; }
+/* f23 fase D: bewerken in de Data-tab */
+.knop-mini { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 0.95em; }
+.knop-mini:hover { transform: scale(1.15); }
+.knop-mini:disabled { opacity: 0.4; cursor: default; }
+.bewerk-kolom { white-space: nowrap; width: 1%; }
+.knop-secundair { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.bewerk-formulier { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 12px 0; max-width: 560px; }
+.bewerk-veld { display: block; margin-bottom: 10px; }
+.bewerk-label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
+.bewerk-veld input[type="text"], .bewerk-veld input[type="url"], .bewerk-veld input[type="email"],
+.bewerk-veld input[type="date"], .bewerk-veld input[type="number"], .bewerk-veld select, .bewerk-veld textarea {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font: inherit;
+}
+.bewerk-checkbox { display: inline-flex; align-items: center; gap: 6px; }
+.bewerk-fout { color: #e5484d; font-size: 0.9em; min-height: 1em; }
+.bewerk-knoppen { display: flex; gap: 8px; margin-top: 6px; }
+
+/* f33 fase A: één rij openklappen — detailkaart met terugverwijzingen */
+.rij-open-knop { background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.rij-open-knop:hover { color: var(--mint-light); }
+tr.rij-open { background: var(--card); }
+.detail-kaart { background: var(--card); border: 1px solid var(--mint-light); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
+.detail-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.detail-kop p { margin: 0 0 8px; }
+.detail-regel { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 0.92em; }
+.detail-regel:last-of-type { border-bottom: none; }
+.detail-veld { color: var(--muted); flex: 0 0 34%; max-width: 34%; }
+.detail-waarde { flex: 1 1 auto; overflow-wrap: anywhere; }
+.detail-kop-terug { margin: 14px 0 4px; }
+.detail-terug ul { margin: 2px 0 10px; padding-left: 18px; }
+.detail-terug p { margin: 0; }
+
+/* f33 fase B: het bord */
+.weergave-schakelaar { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.weergave-schakelaar .knop-mini { padding: 3px 10px; font-size: 0.85em; color: var(--muted); }
+.weergave-schakelaar .knop-mini:hover { transform: none; color: var(--text); }
+.weergave-schakelaar .knop-mini.actief { background: var(--mint); color: var(--navy); font-weight: 600; }
+.bord-scroll { overflow-x: auto; padding-bottom: 6px; }
+.bord { display: flex; gap: 12px; align-items: flex-start; min-width: min-content; }
+.bord-kolom { flex: 0 0 240px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.bord-kolom h3 { margin: 0 0 8px; font-size: 0.9em; display: flex; justify-content: space-between; gap: 8px; }
+.bord-kolom-aandacht { border-color: var(--oranje); }
+.bord-kolom-rest { border-style: dashed; }
+.bord-telling { color: var(--muted); font-weight: 400; }
+.bord-kaart { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+.bord-kaart:hover, .bord-kaart:focus { border-color: var(--mint-light); outline: none; }
+.bord-titel { margin: 0 0 4px; font-size: 0.9em; font-weight: 600; }
+.bord-regels { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.bord-meta { font-size: 0.78em; color: var(--muted); background: var(--navy); border-radius: 999px; padding: 1px 8px; }
+.bord-kaart .footnote { margin: 4px 0 0; }
+@media (max-width: 640px) { .bord-kolom { flex-basis: 78vw; } .detail-veld { flex-basis: 42%; max-width: 42%; } }
+
+/* f33 fase E+F: bedienen en notities */
+.bedien-balk { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 4px 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.bedien-veld { display: flex; flex-direction: column; gap: 2px; font-size: 0.85em; color: var(--muted); }
+.bedien-veld select, .bedien-veld input { padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; font-size: 0.95em; }
+.bedien-knop { border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 0.85em; }
+.bedien-knop:hover { transform: none; border-color: var(--mint-light); }
+.notitie-lijst { list-style: none; padding: 0; margin: 6px 0 10px; }
+.notitie { border-left: 2px solid var(--border); padding: 2px 0 2px 10px; margin-bottom: 10px; }
+.notitie-kop { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; font-size: 0.92em; }
+.notitie-tekst { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.92em; }
+.notitie-nieuw { display: flex; flex-direction: column; gap: 6px; max-width: 520px; margin-bottom: 6px; }
+.notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+.notitie-nieuw .knop { align-self: flex-start; }
+
+/* ── f34 · Jouw modules ────────────────────────────────────────────────── */
+.modules-samenvatting { margin: 0 0 6px; }
+.modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }
+.modules-verzoek h3 { margin: 0 0 6px; }
+.modules-verzoek textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-bottom: 8px; }
+.modules-keuze { display: block; margin: 4px 0; }
+.modules-keuze input { margin-right: 6px; }
+
 </style>
 </head>
 <body>
@@ -599,6 +691,16 @@ section.panel {
         <span class="decision">Wat levert het me op?</span>
       </div>
       <div class="kpi-grid" id="opbrengst-grid"></div>
+    </section>
+
+    <!-- f34 fase 0: alleen zichtbaar met een ingelogde sessie én een licentie
+         in de fase-0-allowlist van de site — anders blijft dit paneel weg. -->
+    <section class="panel" id="panel-modules" style="display:none;">
+      <div class="panel-header">
+        <h2>🧩 Jouw modules</h2>
+        <span class="decision">Wat heb ik, en wat kost het per maand?</span>
+      </div>
+      <div id="panel-modules-body"></div>
     </section>
   </div>
 
@@ -681,7 +783,7 @@ section.panel {
   <footer class="app-footer">
     Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
     gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
-    op de Vandaag-tab. Gegenereerd uit registryVersion 1.50.0 van
+    op de Vandaag-tab. Gegenereerd uit registryVersion 1.74.0 van
     AgenticTeamAI/agent-architecture.
   </footer>
 </div>
@@ -691,20 +793,20 @@ section.panel {
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.50.0
-//   registry updated: 2026-08-28
-//   bron-commit     : 622f3aac6ba5c0b58b9333d7e4bc43875382d055
-//   geextraheerd op : 2026-08-30T19:04:22Z
+//   registryVersion : 1.74.0
+//   registry updated: 2026-09-06
+//   bron-commit     : dfd8435cde3b3e1612395ed0a01c1d03b19d572c
+//   geextraheerd op : 2026-09-06T21:58:54Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.50.0",
-  "registryUpdated": "2026-08-28",
-  "sourceCommit": "622f3aac6ba5c0b58b9333d7e4bc43875382d055",
-  "extractedAt": "2026-08-30T19:04:22Z",
+  "registryVersion": "1.74.0",
+  "registryUpdated": "2026-09-06",
+  "sourceCommit": "dfd8435cde3b3e1612395ed0a01c1d03b19d572c",
+  "extractedAt": "2026-09-06T21:58:54Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -967,6 +1069,18 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Signaalbron",
+          "type": "url"
+        },
+        {
+          "naam": "Signaal publicatiedatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Signaal geverifieerd op",
+          "type": "datum"
         }
       ]
     },
@@ -1034,6 +1148,50 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Organisatie",
           "type": "relatie",
           "naar": "organisaties"
+        },
+        {
+          "naam": "Buying-grouprol",
+          "type": "select",
+          "opties": [
+            "Sponsor",
+            "Probleemeigenaar",
+            "Gebruiker",
+            "Product-/proceseigenaar",
+            "Finance",
+            "Procurement",
+            "IT/architectuur",
+            "Data",
+            "Security",
+            "Privacy/legal",
+            "Operations/support",
+            "Blocker"
+          ]
+        },
+        {
+          "naam": "Grondslag benadering",
+          "type": "select",
+          "opties": [
+            "Toestemming",
+            "Klantrelatie",
+            "Gerechtvaardigd belang",
+            "Opengesteld adres"
+          ]
+        },
+        {
+          "naam": "Bron persoonsgegevens",
+          "type": "tekst"
+        },
+        {
+          "naam": "Art. 14 geïnformeerd op",
+          "type": "datum"
+        },
+        {
+          "naam": "Bezwaar/afmelding",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bezwaar/afmelding op",
+          "type": "datum"
         }
       ]
     },
@@ -1124,7 +1282,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -1225,6 +1384,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "relatie",
           "naar": "product_catalogus",
           "meervoud": true
+        },
+        {
+          "naam": "Fase sinds",
+          "type": "datum"
         }
       ]
     },
@@ -1379,12 +1542,17 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "relatie",
           "naar": "product_catalogus",
           "meervoud": true
+        },
+        {
+          "naam": "Versie",
+          "type": "getal",
+          "format": "number"
         }
       ]
     },
     "product_catalogus": {
       "naam": "Product Catalogus",
-      "module": "strategy",
+      "module": "core",
       "emoji": "🧩",
       "velden": [
         {
@@ -1459,6 +1627,37 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Probleem",
+          "type": "tekst"
+        },
+        {
+          "naam": "Doelgroep",
+          "type": "tekst"
+        },
+        {
+          "naam": "Oplossing",
+          "type": "tekst"
+        },
+        {
+          "naam": "Marge",
+          "type": "getal",
+          "format": "percent"
+        },
+        {
+          "naam": "Validatiestatus",
+          "type": "select",
+          "opties": [
+            "Idee",
+            "In validatie",
+            "Gevalideerd",
+            "Afgewezen"
+          ]
+        },
+        {
+          "naam": "Go/No-Go-criteria",
+          "type": "tekst"
         }
       ]
     },
@@ -1476,6 +1675,7 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "select",
           "opties": [
             "Idee",
+            "Geselecteerd",
             "In productie",
             "Klaar voor review",
             "Gepland",
@@ -1501,6 +1701,56 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Segment",
           "type": "select",
           "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Merk",
+          "type": "tekst"
+        },
+        {
+          "naam": "Herkomst",
+          "type": "multi_select",
+          "opties": [
+            "Gebruiker",
+            "Marktmaker",
+            "SEO/GEO Specialist",
+            "De Stem",
+            "Dealmaker",
+            "Customer Success Manager",
+            "Researcher"
+          ]
+        },
+        {
+          "naam": "Koopuitkomst",
+          "type": "multi_select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Kernvraag",
+          "type": "tekst"
+        },
+        {
+          "naam": "Hoofdboodschap",
+          "type": "tekst"
+        },
+        {
+          "naam": "Menselijke input",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bronnen",
+          "type": "tekst"
+        },
+        {
+          "naam": "SEO/GEO briefing",
+          "type": "tekst"
         },
         {
           "naam": "Publicatiedatum",
@@ -1535,13 +1785,69 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         },
         {
+          "naam": "CTA",
+          "type": "tekst"
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Menselijk akkoord",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Publicatie URL",
+          "type": "url"
+        },
+        {
+          "naam": "Impressies",
+          "type": "getal"
+        },
+        {
+          "naam": "Engagement",
+          "type": "getal"
+        },
+        {
+          "naam": "Leersignaal",
+          "type": "tekst"
+        },
+        {
           "naam": "Eigenaar",
           "type": "mensen"
+        },
+        {
+          "naam": "Primaire koopuitkomst",
+          "type": "select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Moeite",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
         }
       ]
     },
     "lessen_inzichten": {
       "naam": "Lessen & Inzichten",
+      "systeem": true,
       "module": "core",
       "emoji": "💡",
       "velden": [
@@ -1615,6 +1921,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "bedrijfscontext": {
       "naam": "Bedrijfscontext",
+      "systeem": true,
       "module": "core",
       "emoji": "📋",
       "velden": [
@@ -1648,6 +1955,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "logboek": {
       "naam": "Logboek",
+      "systeem": true,
       "module": "core",
       "emoji": "📔",
       "velden": [
@@ -1830,7 +2138,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -1928,7 +2237,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         },
         {
           "naam": "Contactpersoon",
@@ -1938,7 +2248,50 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Interactie",
           "type": "relatie",
-          "naar": "interacties"
+          "naar": "interacties",
+          "crossModuleBedoeld": true
+        },
+        {
+          "naam": "Bovenliggende actie",
+          "type": "relatie",
+          "naar": "acties"
+        }
+      ]
+    },
+    "notities": {
+      "naam": "Notities",
+      "systeem": true,
+      "module": "core",
+      "emoji": "📝",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Notitie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Auteur",
+          "type": "tekst"
+        },
+        {
+          "naam": "Soort",
+          "type": "select",
+          "opties": [
+            "Mens",
+            "Agent"
+          ]
+        },
+        {
+          "naam": "Betreft",
+          "type": "relatie",
+          "naar": "*"
         }
       ]
     },
@@ -2042,6 +2395,38 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Klant",
           "type": "relatie",
           "naar": "organisaties"
+        },
+        {
+          "naam": "Volgende actie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Actie deadline",
+          "type": "datum"
+        },
+        {
+          "naam": "Adoptie",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Gemiddeld",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Project",
+          "type": "relatie",
+          "naar": "projecten"
+        },
+        {
+          "naam": "Contactpersoon",
+          "type": "relatie",
+          "naar": "contactpersonen"
         }
       ]
     },
@@ -2167,6 +2552,573 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         }
       ]
+    },
+    "financieel_overzicht": {
+      "naam": "Financieel Overzicht",
+      "module": "backoffice",
+      "emoji": "💶",
+      "velden": [
+        {
+          "naam": "Periode",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Maandcijfers",
+            "Forecast",
+            "Budget",
+            "Capaciteit"
+          ]
+        },
+        {
+          "naam": "Peildatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Omzet",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Kosten",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Resultaat",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Cash einde periode",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Toelichting",
+          "type": "tekst"
+        }
+      ]
+    },
+    "contracten": {
+      "naam": "Contracten",
+      "module": "backoffice",
+      "emoji": "📜",
+      "velden": [
+        {
+          "naam": "Contractnaam",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Klantcontract",
+            "Leverancierscontract",
+            "NDA",
+            "Verwerkersovereenkomst",
+            "Arbeids-/opdrachtovereenkomst",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Concept",
+            "Actief",
+            "Opgezegd",
+            "Beëindigd"
+          ]
+        },
+        {
+          "naam": "Wederpartij",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Startdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Einddatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Verlengdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Opzegtermijn",
+          "type": "tekst"
+        },
+        {
+          "naam": "DPA-status",
+          "type": "select",
+          "opties": [
+            "N.v.t.",
+            "Nodig",
+            "Aanwezig"
+          ]
+        },
+        {
+          "naam": "Risico",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Locatie",
+          "type": "url"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "seo_vraagonderzoek": {
+      "naam": "SEO Vraagonderzoek",
+      "module": "visibility",
+      "emoji": "🔍",
+      "velden": [
+        {
+          "naam": "Vraag",
+          "type": "titel"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Koopintentie",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Koopuitkomst",
+          "type": "select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Bron",
+          "type": "select",
+          "opties": [
+            "Klantkennis",
+            "Google",
+            "AI-assistent",
+            "Sitedata"
+          ]
+        },
+        {
+          "naam": "Al gedekt",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        }
+      ]
+    },
+    "vindbaarheid_audit": {
+      "naam": "Vindbaarheid Audit",
+      "module": "visibility",
+      "emoji": "📶",
+      "velden": [
+        {
+          "naam": "Pagina",
+          "type": "titel"
+        },
+        {
+          "naam": "Pagina URL",
+          "type": "url"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Zoekintentie match",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Titel en meta",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Koppenstructuur",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Direct antwoordblok",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Interne links",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Citeerbaarheid",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Totaalscore",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Rood",
+            "Oranje",
+            "Groen"
+          ]
+        },
+        {
+          "naam": "Entiteit-consistentie",
+          "type": "select",
+          "opties": [
+            "Ja",
+            "Nee",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Datum audit",
+          "type": "datum"
+        }
+      ]
+    },
+    "geo_metingen": {
+      "naam": "GEO Metingen",
+      "module": "visibility",
+      "emoji": "🤖",
+      "velden": [
+        {
+          "naam": "Vraag",
+          "type": "titel"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Assistent",
+          "type": "select",
+          "opties": [
+            "Google AI Overviews",
+            "ChatGPT",
+            "Perplexity",
+            "Claude",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Bedrijf genoemd",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bronnen wel genoemd",
+          "type": "tekst"
+        },
+        {
+          "naam": "Gat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Vervolgactie",
+          "type": "tekst"
+        }
+      ]
+    },
+    "pipeline_weekreview": {
+      "naam": "Pipeline Weekreview",
+      "module": "growth",
+      "emoji": "📈",
+      "velden": [
+        {
+          "naam": "Week",
+          "type": "titel"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Aantal deals",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Pipelinewaarde",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Gewogen waarde",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Per fase",
+          "type": "tekst"
+        },
+        {
+          "naam": "Mutaties",
+          "type": "tekst"
+        },
+        {
+          "naam": "Aandachtspunten",
+          "type": "tekst"
+        }
+      ]
+    },
+    "klantbewijs": {
+      "naam": "Klantbewijs",
+      "module": "core",
+      "emoji": "🏅",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Soort bewijs",
+          "type": "select",
+          "opties": [
+            "Resultaatmeting",
+            "Quote",
+            "Case",
+            "Referentie",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Klant",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Bewering",
+          "type": "tekst"
+        },
+        {
+          "naam": "Meetcontext",
+          "type": "tekst"
+        },
+        {
+          "naam": "Beperkingen",
+          "type": "tekst"
+        },
+        {
+          "naam": "Toestemming",
+          "type": "select",
+          "opties": [
+            "Onbekend",
+            "Niet toegestaan",
+            "Toegestaan"
+          ]
+        },
+        {
+          "naam": "Toestemming via",
+          "type": "relatie",
+          "naar": "contactpersonen"
+        },
+        {
+          "naam": "Toestemmingsdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Kanaal en scope",
+          "type": "tekst"
+        },
+        {
+          "naam": "Niet publiceren",
+          "type": "tekst"
+        },
+        {
+          "naam": "Kernvraag",
+          "type": "tekst"
+        }
+      ]
+    },
+    "autoriteit": {
+      "naam": "Autoriteit",
+      "module": "visibility",
+      "emoji": "📣",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "Podium of medium",
+            "Autoriteitsbewijs"
+          ]
+        },
+        {
+          "naam": "Vorm",
+          "type": "select",
+          "opties": [
+            "Vakmedium",
+            "Podcast",
+            "Congres of event",
+            "Panel",
+            "Nieuwsbrief",
+            "Community",
+            "Vermelding",
+            "Citaat",
+            "Interview",
+            "Gastartikel",
+            "Optreden",
+            "Award",
+            "Eigen publicatie",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Herkomst",
+          "type": "select",
+          "opties": [
+            "Verdiend",
+            "Eigen",
+            "Nog niet van toepassing"
+          ]
+        },
+        {
+          "naam": "Aanleiding",
+          "type": "select",
+          "opties": [
+            "Uitgenodigd",
+            "Zelf gepitcht",
+            "Eigen initiatief",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Kans",
+            "Benaderd",
+            "Toegezegd",
+            "Gepubliceerd",
+            "Afgewezen",
+            "Niet passend"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Persoon",
+          "type": "tekst"
+        },
+        {
+          "naam": "Contact en beat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Laatste contact",
+          "type": "datum"
+        },
+        {
+          "naam": "Link",
+          "type": "url"
+        },
+        {
+          "naam": "Bron en datum vaststelling",
+          "type": "tekst"
+        },
+        {
+          "naam": "Blijft er iets van over",
+          "type": "select",
+          "opties": [
+            "Ja",
+            "Nee",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Hergebruikt in",
+          "type": "multi_select",
+          "opties": [
+            "Offerte",
+            "Gesprek",
+            "Bio",
+            "Post",
+            "Nog niet"
+          ]
+        },
+        {
+          "naam": "Hergebruik aantal",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Laatst hergebruikt",
+          "type": "datum"
+        },
+        {
+          "naam": "Content",
+          "type": "relatie",
+          "naar": "content_kalender"
+        },
+        {
+          "naam": "Podium",
+          "type": "relatie",
+          "naar": "autoriteit"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
     }
   },
   "werkruimteDomeinen": [
@@ -2225,7 +3177,13 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
   "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
-  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden en je minuten-per-actie-instelling.",
+  /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
+   * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
+   * door"). Die naam geef je zelf op, staat alleen in deze browser en gaat
+   * verder nergens heen dan als gewone veldwaarde in je eigen werkruimte —
+   * maar dat maakt de opsomming niet minder uitputtend. Delta voor het
+   * juridische memo (i47). */
+  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden, je minuten-per-actie-instelling en, als je die invult, de naam waaronder je werkt.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
@@ -2550,6 +3508,50 @@ async function fetchWerkruimte(bron, pad) {
   return body;
 }
 
+/* f23: een schrijfverzoek (POST/PUT/DELETE) naar de instantie, met dezelfde
+ * 401-vernieuwing als fetchWerkruimte. Een 403/409/422 komt als leesbare
+ * Error terug (de instantie stuurt een `fout`-tekst mee), met `status` erop
+ * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
+async function schrijfWerkruimte(bron, methode, pad, payload) {
+  const doe = async () => {
+    try {
+      return await fetch(bron.instantieUrl + pad, {
+        method: methode,
+        headers: Object.assign(
+          { Authorization: "Bearer " + bron.token },
+          payload === undefined ? {} : { "Content-Type": "application/json" },
+        ),
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      });
+    } catch (e) {
+      throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    }
+  };
+  let res = await doe();
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doe();
+    }
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* geen JSON — valt in de foutpaden */ }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 /**
  * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
  *
@@ -2657,7 +3659,11 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
  * vangrail. Werkgeheugen-domeinen tellen niet als werkdata voor de
  * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
 const METRICS_DOMEIN = "dashboard_metrics";
-const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+// Domeinen die wél rijen hebben maar géén "werkdata" zijn in de arbitrage
+// hieronder: werkgeheugen (logboek, bedrijfscontext) en sinds f33 notities.
+// Zonder notities hier zou één losse notitie bij een klant met een extern
+// CRM de metricsroute verdringen voor een bijna leeg rijendashboard.
+const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext", "notities"];
 const TEAMFEED_DOMEIN = "teamfeed";
 const TEAMFEED_DAGEN = 30;
 const TEAMFEED_LIMIET = 500;
@@ -2731,6 +3737,13 @@ async function loadWerkruimteBundle(bron) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  // f33: welke domeinen kent de instantie überhaupt? Het overzicht noemt ze
+  // allemaal, ook met aantal 0 — en dat is het enige signaal of een instantie
+  // al een image draait dat een nieuw domein kent. Zonder dit zou het
+  // dashboard een notitieformulier tonen dat bij een oudere instantie een
+  // "Onbekend domein" oplevert, precies in het gat tussen een dashboarddeploy
+  // en de vlootuitrol.
+  bundle.instantieDomeinen = (overzicht.domeinen || []).map(d => d && d.domein).filter(Boolean);
 
   // f22: alleen ophalen als de instantie het domein kent (staat dan in het
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
@@ -2777,12 +3790,30 @@ async function loadWerkruimteBundle(bron) {
         }
         bundle.kind = "metrics";
         bundle.metricsRaw = metrics.payload;
+        // f33: de cijfers komen uit het metricsbestand, maar de Data-tab moet
+        // nog steeds je rijen kunnen tonen. Tot nu toe returnde deze tak
+        // meteen, waardoor detail, kanban en notities onzichtbaar waren op
+        // precies de omgevingen waar 's ochtends een dagstart draait.
+        await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+        bundle.systeemPerDomein = systeemPerDomein;
         return bundle;
       }
       bundle.waarschuwingen.push(`Verouderde metrics-entry (van ${datumLabel}) genegeerd — het dashboard rekent live uit de werkdata-rijen in je werkruimte.`);
     }
   }
 
+  await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
+  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
+  bundle.systeemPerDomein = systeemPerDomein;
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+/* De rijen van elk gevuld domein in de bundel zetten. Sinds f33 gebeurt dit in
+ * beide takken van loadWerkruimteBundle: ook naast een vers metricsbestand,
+ * want de Data-tab leest hieruit. */
+async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
   const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
   // s26/016: dit was één Promise.all over álle gevulde domeinen — bij een vol
   // team zijn dat er zeventien, elk met een verzoek om 5.000 records, allemaal
@@ -2808,13 +3839,13 @@ async function loadWerkruimteBundle(bron) {
     }
     bundle.domains[domein] = {
       aanwezig: true,
-      rows: entries.map(e => e.data),
+      // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
+      // schemaveld en komt dus nooit als kolom in beeld.
+      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
   }
-  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
-  return bundle;
 }
 
 /* p10: welke bron gebruikt deze pagina? Een verse daglink in het fragment is
@@ -2833,7 +3864,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
-    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };
 }
@@ -2878,12 +3909,16 @@ const OAUTH_AUTORISATIE_URL = "https://www.agentic-team.ai/oauth/authorize";
 const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token";
 const OAUTH_CLIENT_ID = "https://www.agentic-team.ai/oauth/clients/dashboard";
 const OAUTH_REDIRECT_URI = "https://dashboard.agentic-team.ai/";
-const OAUTH_SCOPE = "dashboard:lees";
+// f23: de login vraagt lezen én schrijven; de site bepaalt wat hij echt
+// uitgeeft (contract 1.6 — beide, voor elke p10-login van de licentie).
+const OAUTH_SCOPE = "dashboard:lees dashboard:schrijf";
 const OAUTH_RESOURCE = "https://connector.agentic-team.ai/dashboard";
 const OAUTH_ISSUER = "https://www.agentic-team.ai";
 
-// Beide sleutels zijn sessionStorage (zie 2 hierboven). De naamgeving volgt de
-// bestaande sleutels; test/geen-telemetrie.test.js pint de volledige lijst.
+// Sessie in sessionStorage (zie 2 hierboven); de PKCE-verifier in
+// localStorage met een kwartier-TTL (zie de uitleg bij bewaarPkce). De
+// naamgeving volgt de bestaande sleutels; test/geen-telemetrie.test.js pint
+// de volledige lijst.
 const OAUTH_SS_KEY = "agentic-team-dashboard:oauth";
 const OAUTH_PKCE_SS_KEY = "agentic-team-dashboard:oauth-pkce";
 
@@ -2964,22 +3999,35 @@ function bouwAutorisatieUrl({ challenge, state }) {
 
 /* ── Opslag ────────────────────────────────────────────────────────────── */
 
+/* De PKCE-verifier is de éne, bewuste uitzondering op regel 2 hierboven
+ * (tokens in sessionStorage): de magic-link uit de mail opent vrijwel altijd
+ * een níeuw tabblad, en sessionStorage is per tabblad — daarmee kon een
+ * maillogin nooit afronden ("hoort niet bij dit tabblad", f23-klikproef
+ * 1 sep). localStorage is gedeeld binnen dezelfde browser, zodat het nieuwe
+ * tabblad de poging wél herkent. Het risico is klein en kort: een verifier is
+ * waardeloos zonder de bijbehorende eenmalige code, en hij leeft hooguit zo
+ * lang als de inloglink zelf (een kwartier) — daarna leest leesPkce hem niet
+ * meer en ruimt hij zichzelf op. De tokens blijven gewoon in sessionStorage. */
+const OAUTH_PKCE_TTL_MS = 15 * 60 * 1000;
+
 function bewaarPkce(waarde) {
-  try { sessionStorage.setItem(OAUTH_PKCE_SS_KEY, JSON.stringify(waarde)); } catch (e) { /* privémodus */ }
+  try { localStorage.setItem(OAUTH_PKCE_SS_KEY, JSON.stringify(Object.assign({}, waarde, { t: Date.now() }))); } catch (e) { /* privémodus */ }
 }
 
 function leesPkce() {
   try {
-    const raw = sessionStorage.getItem(OAUTH_PKCE_SS_KEY);
+    const raw = localStorage.getItem(OAUTH_PKCE_SS_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw);
-    if (v && typeof v.verifier === "string" && typeof v.state === "string") return v;
+    if (v && typeof v.verifier === "string" && typeof v.state === "string"
+      && typeof v.t === "number" && Date.now() - v.t <= OAUTH_PKCE_TTL_MS) return v;
+    localStorage.removeItem(OAUTH_PKCE_SS_KEY);
   } catch (e) { /* privémodus of kapotte waarde */ }
   return null;
 }
 
 function vergeetPkce() {
-  try { sessionStorage.removeItem(OAUTH_PKCE_SS_KEY); } catch (e) { /* zie boven */ }
+  try { localStorage.removeItem(OAUTH_PKCE_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
 function bewaarOauthSessie(sessie) {
@@ -3781,6 +4829,35 @@ const CORRECTIEVRIJ_WEKEN = 5;         // 4 afgesloten + de lopende
 const CORRECTIEVRIJ_WEKEN_VEREIST = 4; // gate: 4 aaneengesloten afgesloten weken
 const CORRECTIEVRIJ_GEEN_VENSTER = "niet te berekenen — nog geen autonoom afgeronde acties in het venster";
 
+// b52: "Afgerond door" is een gewoon tekstveld — een mens kan er net zo goed
+// zijn eigen naam in zetten, en dat gebeurt in de praktijk. Autonoom afgerond
+// betekent per definitie dat de wérkronde de actie op Klaar zette, dus telt
+// alleen een naam die van een agent is. De canonieke namen komen uit de
+// registry (schema.agents, dezelfde lijst die het Agent-select voedt).
+function normAgentNaam(v) {
+  return String(v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Set met agentnamen (displayName én slug, genormaliseerd), of null als het
+ * schema niet geladen is — dan kan er niet gefilterd worden en zegt het
+ * resultaat dat erbij. */
+function agentNamen(schema) {
+  const bron = schema
+    ?? (typeof window !== "undefined" ? window.AGENTIC_TEAM_SCHEMA : null)
+    ?? (typeof globalThis !== "undefined" ? globalThis.AGENTIC_TEAM_SCHEMA : null);
+  const lijst = bron && Array.isArray(bron.agents) ? bron.agents : null;
+  if (!lijst) return null;
+  const namen = new Set();
+  for (const a of lijst) {
+    if (a && a.displayName) namen.add(normAgentNaam(a.displayName));
+    if (a && a.slug) namen.add(normAgentNaam(a.slug));
+  }
+  return namen.size ? namen : null;
+}
+
+const CORRECTIEVRIJ_GEEN_AGENTLIJST =
+  "Agentlijst niet beschikbaar — er is niet gefilterd op agentnaam, dus dit percentage kan werk bevatten dat een mens afrondde.";
+
 // Checkbox-waarden zoals ze uit Excel/Notion/werkruimte binnenkomen.
 function checkboxWaar(v) {
   if (v === true || v === 1) return true;
@@ -3869,16 +4946,18 @@ function berekenCorrectievrij(ruw, today) {
 
 // Rij-route: telt uit Acties (velden Afgerond door / Afgerond op /
 // Gecorrigeerd / Status, registry 1.34.0).
-//   autonoom  = Afgerond door gevuld én Afgerond op binnen het venster t/m vandaag
+//   autonoom  = Afgerond door bevat een AGENTNAAM (b52) én Afgerond op binnen
+//               het venster t/m vandaag
 //   heropend  = daarvan Status ≠ "Klaar"
 //   gecorrigeerd = daarvan Gecorrigeerd aangevinkt óf Status ≠ "Klaar"
 // De weekreeks (laatste 5 kalenderweken, maandag = start) telt álle autonoom
 // afgeronde acties op Afgerond op, ook net buiten het 28-dagenvenster.
-function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT) {
+function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT, opties = {}) {
   const acties = rows(bundle, "acties");
   if (!acties) {
     return { aanwezig: false, reden: "Geen Acties-domein aanwezig in deze bundel — het correctievrij-percentage is niet af te leiden." };
   }
+  const namen = opties.agentNamen !== undefined ? opties.agentNamen : agentNamen(opties.schema);
   const vandaagIdx = dagIndex(today);
   const huidigeWeekIdx = weekStartIndex(vandaagIdx);
   const wekenMap = new Map();
@@ -3891,6 +4970,9 @@ function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTE
   for (const r of acties) {
     const door = getField(r, "Afgerond door");
     if (door === undefined || door === null || String(door).trim() === "") continue;
+    // b52: staat er een mensennaam in, dan is dit geen autonoom afgeronde
+    // actie — niet in de noemer en niet in de weekreeks.
+    if (namen && !namen.has(normAgentNaam(door))) continue;
     const op = parseDateField(getField(r, "Afgerond op"));
     if (!op) continue;
     const opIdx = dagIndex(op);
@@ -3911,7 +4993,7 @@ function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTE
   return berekenCorrectievrij({
     vensterDagen, drempel, autonoom, gecorrigeerd, heropend,
     weken: [...wekenMap.values()],
-    opmerking: null,
+    opmerking: namen ? null : CORRECTIEVRIJ_GEEN_AGENTLIJST,
   }, today);
 }
 
@@ -3926,6 +5008,7 @@ if (typeof module !== "undefined") {
     computeTijdwinst, computeAgentGebruikRanking,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
+    agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
   };
 }
 
@@ -4098,6 +5181,32 @@ function saneerMetricsPayload(raw, schema) {
     if (onbekend.length) waarschuw(ctx, `domeinen (${onbekend.length} onbekende sleutel(s))`, onbekend[0]);
   }
 
+  // f29 (contract v2): relatie-aggregaten — alleen tellingen en top-titels,
+  // nooit rijen. Spiegel van agentic-team-werkruimte src/domeinen/metrics.ts;
+  // een item zonder geldig van/naar-domein valt volledig weg.
+  if (Array.isArray(raw.relaties)) {
+    uit.relaties = raw.relaties.filter(isObject).slice(0, METRICS_MAX.lijst).flatMap((r, i) => {
+      const pad = `relaties[${i}]`;
+      const van = typeof r.van === "string" && domeinSlugs.includes(r.van) ? r.van : null;
+      const naar = typeof r.naar === "string" && domeinSlugs.includes(r.naar) ? r.naar : null;
+      if (!van || !naar) { waarschuw(ctx, pad, r.van || r.naar); return []; }
+      const top = Array.isArray(r.top) ? r.top.filter(isObject).slice(0, 3).flatMap((t, j) => {
+        const titel = saneerTekstOfNull(t.titel, METRICS_MAX.tekstKort);
+        if (!titel) { waarschuw(ctx, `${pad}.top[${j}].titel`, t.titel); return []; }
+        return [{ titel, aantal: saneerGetal(t.aantal, ctx, `${pad}.top[${j}].aantal`) }];
+      }) : [];
+      return [{
+        van,
+        veld: saneerTekst(r.veld, METRICS_MAX.sleutel),
+        naar,
+        gekoppeld: saneerGetal(r.gekoppeld, ctx, `${pad}.gekoppeld`),
+        totaal: saneerGetal(r.totaal, ctx, `${pad}.totaal`),
+        doelen: saneerGetal(r.doelen, ctx, `${pad}.doelen`),
+        top,
+      }];
+    });
+  }
+
   if (isObject(raw.acties)) {
     uit.acties = {
       totaal: saneerGetal(raw.acties.totaal, ctx, "acties.totaal"),
@@ -4257,7 +5366,9 @@ if (typeof module !== "undefined") {
  * verkeerde grafiek tekenen is erger dan niets tekenen.
  */
 
-const METRICS_VERSION = 1;
+const METRICS_VERSION = 2; // hoogste versie die dit dashboard kent
+// f29: versie 2 = versie 1 + de `relaties`-sectie; beide blijven geldig.
+const METRICS_VERSIES = [1, 2];
 
 // ── Route 1 & 2: rijen → metrics (bestaande berekening, nu met een naam) ──
 function buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWeeks, minutenPerActie) {
@@ -4312,7 +5423,7 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   if (!heeftKenmerk) {
     return { ok: false, kind: "leeg-of-onherkenbaar", tekst: "Dit bestand heeft geen \"versie\"- of \"type\"-veld en wordt daarom niet als metricsbestand herkend. Is dit een leeg bestand, of een export in het oude rijenformaat?" };
   }
-  if (raw.versie !== METRICS_VERSION) {
+  if (!METRICS_VERSIES.includes(raw.versie)) {
     return {
       ok: false,
       kind: "onbekende-versie",
@@ -4321,8 +5432,8 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
       tekst: raw.versie == null
         ? `Dit metricsbestand heeft geen herkenbaar versienummer. Dit dashboard herkent versie ${METRICS_VERSION}.`
         : raw.versie > METRICS_VERSION
-          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
-          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
+          ? `Dit metricsbestand is versie ${raw.versie} — nieuwer dan wat dit dashboard herkent (t/m versie ${METRICS_VERSION}). Werk het dashboard bij naar de laatste release, of vraag om een export in het oudere formaat.`
+          : `Dit metricsbestand is versie ${raw.versie} — ouder dan wat dit dashboard verwacht (t/m versie ${METRICS_VERSION}). Vraag de Coördinator om een nieuwe export, of gebruik een oudere release van dit dashboard.`,
     };
   }
 
@@ -4351,8 +5462,10 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
   return {
     ok: true,
     metrics: {
-      versie: METRICS_VERSION,
+      versie: raw.versie,
       bron: "notion",
+      // f29: relatie-aggregaten (v2) — al gesaneerd; de Data-tab tekent ze.
+      relaties: Array.isArray(raw.relaties) ? raw.relaties : null,
       z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,
@@ -4649,6 +5762,37 @@ function stempelHtml(staleAt, today) {
   return `<div class="stempel${stale ? " timestamp stale" : " timestamp"}">Stand van ${fmtDate(staleAt)} (${relAge(staleAt, today)})${stale ? " — verouderd" : ""}</div>`;
 }
 
+/* f23-klikproef (1 sep): een alert hoort dóór te klikken naar de rijen waar
+ * hij over gaat. Elk itemtype wijst naar zijn domein in de Data-tab; items
+ * zonder rijenweergave (bedrijfscontext, ritme) blijven tekst, en een
+ * metrics-item met een eigen https-link volgt die link. */
+const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel" };
+
+function aandachtDoelHref(it) {
+  if (it.link) return it.link;
+  if (AANDACHT_DOEL[it.type]) return "#/data/" + AANDACHT_DOEL[it.type];
+  if (it.type === "verouderd") return "#/data";
+  return null;
+}
+
+/* Klikproef-ronde 2 (1 sep): de doorklik hoort de gefilterde set te tonen,
+ * niet de hele lijst. De rijen van het item reizen als entry-ids mee op de
+ * link; app.js zet daarmee de voorselectie in de Data-tab. */
+function aandachtFilterAttrs(it) {
+  const doel = AANDACHT_DOEL[it.type];
+  if (!doel || !it.rows || !it.rows.length) return "";
+  const ids = it.rows.map(r => r && r.__entryId).filter(Boolean);
+  if (!ids.length) return "";
+  return ` data-filter-domein="${esc(doel)}" data-filter-label="${esc(it.label)}" data-filter-ids="${esc(ids.join(","))}"`;
+}
+
+function aandachtWrap(it, binnen) {
+  const href = aandachtDoelHref(it);
+  if (!href) return binnen;
+  const extern = /^https:/.test(href);
+  return `<a class="aandacht-link" href="${esc(href)}"${extern ? ` target="_blank" rel="noopener"` : ""}${aandachtFilterAttrs(it)}>${binnen}</a>`;
+}
+
 // ── Zone 1 ────────────────────────────────────────────────────────────
 function renderZone1(el, items) {
   if (!items.length) {
@@ -4657,15 +5801,24 @@ function renderZone1(el, items) {
     return;
   }
   const lis = items.map(it => {
+    // De namen zijn zelf links naar hun rij (zoekterm = naam, zelfde
+    // mechanisme als de relatiecellen in de Data-tab, fase A) — daarom is
+    // niet het hele item één link maar alleen het label.
+    const doel = AANDACHT_DOEL[it.type];
     let detail = "";
     if (it.rows && it.rows.length) {
-      const names = it.rows.slice(0, 4).map(r => esc(getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || getField(r, "Actie") || "")).filter(Boolean);
+      const names = it.rows.slice(0, 4)
+        .map(r => getField(r, "Actie") || getField(r, "Deal Naam") || getField(r, "Klantnaam") || "")
+        .filter(Boolean)
+        .map(n => doel
+          ? `<a class="relatie-link" href="#/data/${esc(doel)}" data-relatie-zoek="${esc(n)}">${esc(n)}</a>`
+          : esc(n));
       if (names.length) detail = `<div class="detail" style="margin-top:0.25rem;">${names.join(" · ")}${it.rows.length > 4 ? " …" : ""}</div>`;
     }
     if (it.domeinen) {
       detail = `<div class="detail" style="margin-top:0.25rem;">${esc(it.domeinen.join(", "))}</div>`;
     }
-    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div><strong>${esc(it.label)}</strong>${detail}</div></li>`;
+    return `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${aandachtWrap(it, `<strong>${esc(it.label)}</strong>`)}${detail}</div></li>`;
   }).join("");
   el.innerHTML = `<ul class="attention-list">${lis}</ul>
     <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron. Volgorde: rood, dan grijs, dan oranje.</p>`;
@@ -5161,6 +6314,9 @@ const DETAIL_VOLGORDE = [
   { key: "tijdwinst", titel: "Geschatte tijdwinst — aanname", emoji: "⏱️" },
   { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️", intern: true },
   { key: "leren", titel: "Leren", emoji: "💡" },
+  // f34 fase 0: alleen in de nav zodra de site het overzicht heeft geleverd
+  // (ingelogde sessie + licentie in de allowlist) — zie modules-beheer.js.
+  { key: "modules", titel: "Jouw modules", emoji: "🧩", modulesTegel: true },
 ];
 
 // Onder welke tab hoort een detailpagina? Zo blijft de tabbar staan (en de
@@ -5176,6 +6332,7 @@ const DETAIL_TAB = {
   gebruik: "prestaties",
   correctievrij: "prestaties",
   leren: "prestaties",
+  modules: "vandaag",
 };
 
 function nlGetal(n, decimals = 0) {
@@ -5410,7 +6567,7 @@ function renderAandachtTop5(el, items) {
     return;
   }
   const top5 = items.slice(0, 5);
-  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span><div>${esc(it.label)}</div></li>`).join("");
+  const lis = top5.map(it => `<li class="${signaalKlasse(it.ernst)}"><span class="signaal-icoon">${SIGNAAL_ICOON[signaalKlasse(it.ernst)]}</span>${aandachtWrap(it, `<div>${esc(it.label)}</div>`)}</li>`).join("");
   const meer = items.length > 5 ? `<a class="detail-link" data-goto="aandacht">+${items.length - 5} meer — bekijk alles →</a>` : `<a class="detail-link" data-goto="aandacht">Bekijk in detail →</a>`;
   el.innerHTML = `<ul class="attention-list">${lis}</ul>${meer}`;
 }
@@ -5443,7 +6600,9 @@ function detailSectionHtml(titel, emoji, decision, innerId) {
 }
 
 function renderDetailNav(el, activeKey, intern) {
-  el.innerHTML = DETAIL_VOLGORDE.filter(d => !d.intern || intern).map(d =>
+  el.innerHTML = DETAIL_VOLGORDE
+    .filter(d => (!d.intern || intern) && (!d.modulesTegel || (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar())))
+    .map(d =>
     `<a href="#detail/${d.key}" class="${d.key === activeKey ? "actief" : ""}">${d.emoji} ${esc(d.titel)}</a>`
   ).join("");
 }
@@ -5659,6 +6818,10 @@ function bepaalActieveView() {
  * en dat is precies de eigenschap die hem veilig maakt om in een chat te
  * delen. Hier wordt niets geschreven.
  *
+ * f23/f29 fase A: verwijzingen (veldtype "relatie", f28) zijn klikbaar —
+ * de link springt naar het doeldomein met de titel als zoekterm, zodat de
+ * gekoppelde rij direct in beeld staat. Nog steeds alleen-lezen.
+ *
  * Alle waarden komen uit de werkruimte van de klant en zijn dus vreemde
  * invoer: elke cel, elke kolomkop en elke domeinnaam gaat door esc(). */
 
@@ -5677,6 +6840,7 @@ const DATA_NIET_IN_BUNDEL = {
 };
 
 let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
+let dataWeergave = "tabel";  // f33: 'tabel' of 'bord' — alleen voor domeinen met een Status
 
 function dataVelden(domein) {
   return Array.isArray(domein && domein.velden) ? domein.velden : [];
@@ -5702,6 +6866,221 @@ function dataCelTekst(waarde) {
     return "";
   }
   return String(waarde);
+}
+
+/* f23/f29 fase A — een relatiecel wordt een sprong naar het doeldomein.
+ * De opgeslagen vorm is {id, titel} (of een lijst daarvan, bij meervoud);
+ * de titel is server-side gezet en dus betrouwbaar genoeg als zoekterm.
+ * Zonder titel (of naar een domein dat niet in de bundel zit) blijft het
+ * gewoon tekst — een dode link is erger dan geen link. */
+function dataCelHtml(waarde, veld) {
+  if (veld && veld.type === "relatie" && veld.naar) {
+    const lijst = Array.isArray(waarde) ? waarde : (waarde === null || waarde === undefined || waarde === "" ? [] : [waarde]);
+    const stukken = lijst.map(w => {
+      const titel = w && typeof w === "object" && typeof w.titel === "string" ? w.titel : "";
+      // f33: bij een polymorfe verwijzing (naar "*") staat het doeldomein in de
+      // waarde. Zonder deze tak werd de link "#/data/*" — dood, en dood is
+      // erger dan geen link.
+      const doel = veld.naar === "*" ? (w && typeof w === "object" ? w.domein : "") : veld.naar;
+      if (!titel || !doel || (doel in DATA_NIET_IN_BUNDEL)) return esc(dataCelTekst(w));
+      const id = w && typeof w === "object" && typeof w.id === "string" ? w.id : "";
+      return `<a href="#/data/${esc(doel)}" class="relatie-link" data-relatie-zoek="${esc(titel)}"` +
+        (id ? ` data-open-rij="${esc(doel)}|${esc(id)}"` : "") + `>${esc(titel)}</a>`;
+    }).filter(Boolean);
+    if (stukken.length) return stukken.join(", ");
+  }
+  return esc(dataCelTekst(waarde));
+}
+
+/* ── f33 fase A: één rij openklappen ─────────────────────────────────
+ *
+ * De tabel toont zes kolommen; een rij heeft er vaak twintig. Wat er dan
+ * werkelijk over een organisatie, deal of actie bekend is, was nergens te
+ * zien — en de verbanden al helemaal niet: verwijzingen wijzen één kant op,
+ * terwijl je bij een organisatie juist wil weten wélke acties eraan hangen.
+ *
+ * Alles hier komt uit de al geladen bundel. Geen fetch, geen scope, geen
+ * nieuw endpoint — en dus werkt het ook op de daglink, alleen-lezen. */
+let dataDetail = null;  // { domein, entryId }
+function zetDataDetail(domein, entryId) { dataDetail = domein && entryId ? { domein, entryId } : null; }
+function wisDataDetail() { dataDetail = null; }
+
+/* Wijst deze celwaarde naar (domein, id)? Dekt de enkelvoudige en meervoudige
+ * vorm, en de polymorfe vorm die het doeldomein zelf meedraagt. */
+function verwijstNaar(waarde, veld, domein, entryId) {
+  const lijst = Array.isArray(waarde) ? waarde : [waarde];
+  return lijst.some(w => {
+    if (!w || typeof w !== "object" || w.id !== entryId) return false;
+    return veld.naar === "*" ? w.domein === domein : veld.naar === domein;
+  });
+}
+
+/* Welke rijen in de hele bundel wijzen naar deze rij? Gegroepeerd per
+ * domein+veld, zodat "Acties · Organisatie (3)" leesbaar blijft. */
+function terugverwijzingen(ctx, domein, entryId) {
+  const uit = [];
+  for (const [slug, dom] of Object.entries(ctx.schema.datadomeinen || {})) {
+    const rijen = dataRijenVan(ctx, slug);
+    if (!rijen || !rijen.length) continue;
+    for (const veld of dataVelden(dom)) {
+      if (veld.type !== "relatie") continue;
+      const treffers = rijen.filter(r => verwijstNaar(getField(r, veld.naam), veld, domein, entryId));
+      if (treffers.length) uit.push({ slug, dom, veld, treffers });
+    }
+  }
+  return uit;
+}
+
+function detailTitel(domein, rij) {
+  const titelVeld = dataVelden(domein).find(v => v.type === "titel");
+  return (titelVeld && dataCelTekst(getField(rij, titelVeld.naam))) || "(zonder titel)";
+}
+
+function dataDetailHtml(ctx, key, rij) {
+  const domein = ctx.schema.datadomeinen[key];
+  const velden = dataVelden(domein);
+  const gevuld = velden.filter(v => dataCelTekst(getField(rij, v.naam)) !== "");
+  const leeg = velden.filter(v => dataCelTekst(getField(rij, v.naam)) === "").map(v => v.naam);
+  const regels = gevuld.map(v =>
+    `<div class="detail-regel"><span class="detail-veld">${esc(v.naam)}</span>
+      <span class="detail-waarde">${dataCelHtml(getField(rij, v.naam), v)}</span></div>`).join("");
+
+  const terug = terugverwijzingen(ctx, key, rij.__entryId);
+  const terugHtml = terug.length
+    ? terug.map(t => {
+        const items = t.treffers.slice(0, 25).map(r => {
+          const titel = detailTitel(t.dom, r);
+          return `<li><a href="#/data/${esc(t.slug)}" class="relatie-link" data-relatie-zoek="${esc(titel)}"` +
+            (r.__entryId ? ` data-open-rij="${esc(t.slug)}|${esc(r.__entryId)}"` : "") + `>${esc(titel)}</a></li>`;
+        }).join("");
+        const rest = t.treffers.length > 25 ? `<li class="footnote">… en nog ${t.treffers.length - 25}</li>` : "";
+        return `<div class="detail-terug"><p><strong>${esc(t.dom.emoji || "🗂️")} ${esc(t.dom.naam || t.slug)}</strong>
+          <span class="footnote">via ${esc(t.veld.naam)} · ${t.treffers.length}</span></p><ul>${items}${rest}</ul></div>`;
+      }).join("")
+    : `<p class="footnote">Niets in je werkruimte verwijst naar deze rij.</p>`;
+
+  const bewerk = magDomeinBewerken(ctx, key);
+  const knoppen = bewerk.ok && rij.__entryId
+    ? `<button type="button" class="knop" data-bewerk-rij="${esc(rij.__entryId)}">✏️ Bewerken</button>
+       <button type="button" class="knop knop-secundair" data-verwijder-rij="${esc(rij.__entryId)}">🗑 Verwijderen</button>`
+    : "";
+
+  return `<div class="detail-kaart" data-detail-kaart data-detail-id="${esc(rij.__entryId || "")}">
+    <div class="detail-kop">
+      <p><strong>${esc(domein.emoji || "🗂️")} ${esc(detailTitel(domein, rij))}</strong></p>
+      <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
+    </div>
+    ${bedienHtml(ctx, key, domein, rij)}
+    ${regels}
+    ${leeg.length ? `<p class="footnote">Niet ingevuld: ${esc(leeg.join(", "))}.</p>` : ""}
+    ${notitiedraadHtml(ctx, key, rij)}
+    <p class="detail-kop-terug"><strong>Wat hieraan hangt</strong></p>
+    ${terugHtml}
+    <div class="bewerk-knoppen">${knoppen}</div>
+    <p class="bewerk-fout" data-snel-fout role="alert"></p>
+  </div>`;
+}
+
+/* ── f33 fase F: bedienen zonder formulier ────────────────────────────
+ *
+ * Status wisselen en toewijzen zijn de twee dingen die je op een dag tien keer
+ * doet; daar hoort geen formulier met twintig velden bij. Beide schrijven via
+ * PATCH, zodat velden die dit dashboard niet kent blijven staan.
+ *
+ * Alleen zichtbaar in een schrijfsessie op een werkruimte-domein — op de
+ * daglink en bij een extern CRM blijft alles lezen, net als de rest. */
+function bedienHtml(ctx, key, domein, rij) {
+  const bewerk = magDomeinBewerken(ctx, key);
+  if (!bewerk.ok || !rij.__entryId) return "";
+  const statusVeld = statusVeldVan(domein);
+  const velden = dataVelden(domein);
+  const eigenaarVeld = velden.find(v => v.naam === "Eigenaar");
+  const agentVeld = velden.find(v => v.naam === "Agent" && v.type === "select");
+  if (!statusVeld && !eigenaarVeld && !agentVeld) return "";
+
+  const huidig = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
+  const naam = mijnNaam(ctx.bron);
+  const agenten = (ctx.schema.agents || []).map(a => a.displayName || a.naam || a.slug).filter(Boolean);
+
+  return `<div class="bedien-balk">
+    ${statusVeld ? `<label class="bedien-veld"><span>Status</span>
+      <select data-snel-status>
+        <option value=""></option>
+        ${statusVeld.opties.map(o => `<option value="${esc(o)}"${o === huidig ? " selected" : ""}>${esc(o)}</option>`).join("")}
+      </select></label>` : ""}
+    ${eigenaarVeld ? `<button type="button" class="knop-mini bedien-knop" data-snel-mij title="Aan mijzelf toewijzen">🙋 Aan mij</button>` : ""}
+    ${eigenaarVeld ? `<label class="bedien-veld"><span>Eigenaar</span>
+      <input type="text" data-snel-eigenaar value="${esc(dataCelTekst(getField(rij, "Eigenaar")))}" placeholder="naam"></label>` : ""}
+    ${agentVeld && agenten.length ? `<label class="bedien-veld"><span>Agent</span>
+      <select data-snel-agent><option value=""></option>
+        ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
+      </select></label>` : ""}
+    ${naam ? `<span class="footnote">Je werkt als ${esc(naam)} · <button type="button" class="filter-wis" data-naam-wijzig>wijzig</button></span>` : ""}
+  </div>`;
+}
+
+/* ── f33 fase E: de notitiedraad ──────────────────────────────────────
+ *
+ * Meerdere notities per entiteit, met datum en auteur, nieuwste boven. Een
+ * notitie is een eigen rij in het domein 'notities' met een polymorfe
+ * verwijzing naar de rij die je bekijkt — daarom werkt hetzelfde blok onder
+ * élke entiteit, zonder per domein een veld toe te voegen.
+ *
+ * Draait de werkruimte nog een registry zonder 'notities', dan is dit blok er
+ * simpelweg niet; dat is geen fout, alleen een oudere instantie. */
+function notitieVeldVan(ctx) {
+  const dom = ctx.schema.datadomeinen.notities;
+  if (!dom) return null;
+  // De instantie moet het domein ook kennen. Weet het dashboard dat niet
+  // (oudere bundel zonder deze lijst), dan geldt het oude gedrag.
+  const bekend = ctx.bundle && ctx.bundle.instantieDomeinen;
+  if (Array.isArray(bekend) && bekend.indexOf("notities") === -1) return null;
+  const veld = dataVelden(dom).find(v => v.type === "relatie" && v.naar === "*");
+  return veld ? { dom, veld } : null;
+}
+
+function notitiesBij(ctx, key, entryId) {
+  const info = notitieVeldVan(ctx);
+  if (!info || !entryId) return [];
+  return (dataRijenVan(ctx, "notities") || [])
+    .filter(r => verwijstNaar(getField(r, info.veld.naam), info.veld, key, entryId))
+    .sort((a, b) => String(getField(b, "Datum") || "").localeCompare(String(getField(a, "Datum") || "")));
+}
+
+function notitiedraadHtml(ctx, key, rij) {
+  const info = notitieVeldVan(ctx);
+  if (!info || key === "notities") return "";
+  const bewerk = magDomeinBewerken(ctx, "notities");
+  const eigenBewerk = magDomeinBewerken(ctx, key);
+  const lijst = notitiesBij(ctx, key, rij.__entryId);
+  const items = lijst.map(n => {
+    const wie = dataCelTekst(getField(n, "Auteur"));
+    const wanneer = dataCelTekst(getField(n, "Datum"));
+    const soort = dataCelTekst(getField(n, "Soort"));
+    return `<li class="notitie">
+      <p class="notitie-kop"><strong>${esc(dataCelTekst(getField(n, "Onderwerp")) || "Notitie")}</strong>
+        <span class="footnote">${esc([wie, soort, wanneer].filter(Boolean).join(" · "))}</span></p>
+      <p class="notitie-tekst">${esc(dataCelTekst(getField(n, "Notitie")))}</p>
+    </li>`;
+  }).join("");
+
+  // Bij een domein dat elders woont hoort de notitie daar ook te staan; dat
+  // zeggen we, in plaats van stil geen knop te tonen.
+  const uitleg = !eigenBewerk.ok && eigenBewerk.reden
+    ? `<p class="footnote">${esc(eigenBewerk.reden)} Notities horen dan bij die rij, in dat systeem.</p>`
+    : "";
+
+  const formulier = bewerk.ok && rij.__entryId
+    ? `<form class="notitie-nieuw" data-notitie-form>
+        <input type="text" data-notitie-onderwerp placeholder="Onderwerp" maxlength="120">
+        <textarea data-notitie-tekst rows="2" placeholder="Wat is er gebeurd of afgesproken?"></textarea>
+        <button type="submit" class="knop">Notitie toevoegen</button>
+      </form>`
+    : uitleg;
+
+  return `<p class="detail-kop-terug"><strong>Notities</strong> <span class="footnote">${lijst.length}</span></p>
+    ${lijst.length ? `<ul class="notitie-lijst">${items}</ul>` : `<p class="footnote">Nog geen notities bij deze rij.</p>`}
+    ${formulier}`;
 }
 
 /* De lijst die je kunt openen: alle datadomeinen uit de registry, behalve de
@@ -5730,9 +7109,40 @@ function dataMetricsUitleg() {
   </div>`;
 }
 
+/* f29 (metricscontract v2): ook zonder rijen zijn de verbánden te tonen —
+ * de Coördinator telt ze bij de bron en levert ze als aggregaten aan.
+ * `key` = alleen de kaarten waar dit domein aan meedoet; null = allemaal. */
+function dataRelatieKaarten(ctx, key) {
+  const rels = Array.isArray(ctx.relaties) ? ctx.relaties : [];
+  const items = key ? rels.filter(r => r.van === key || r.naar === key) : rels;
+  if (!items.length) return "";
+  const naam = slug => {
+    const d = ctx.schema.datadomeinen[slug];
+    return d ? `${d.emoji ? d.emoji + " " : ""}${d.naam || slug}` : slug;
+  };
+  const kaarten = items.map(r => {
+    const totaal = Number(r.totaal) || 0;
+    const gekoppeld = Number(r.gekoppeld) || 0;
+    const doelen = Number(r.doelen) || 0;
+    const top = Array.isArray(r.top) && r.top.length
+      ? `<div class="relatie-top">Meest gekoppeld: ${r.top.map(t => `${esc(t.titel)} (${Number(t.aantal) || 0})`).join(" · ")}</div>`
+      : "";
+    return `<div class="relatie-kaart">
+      <div class="relatie-kop">${esc(naam(r.van))} <span class="relatie-pijl">→</span> ${esc(naam(r.naar))}</div>
+      <div class="relatie-tekst">${gekoppeld} van de ${totaal} ${esc(String(r.veld || "").toLowerCase() || "rijen")}-verwijzingen gevuld${doelen ? `, naar ${doelen} verschillende` : ""}.</div>
+      ${top}
+    </div>`;
+  }).join("");
+  return `<div class="relatie-blok">
+    <p><strong>🔗 Verbanden</strong></p>
+    <p class="footnote">Geteld bij de bron door je Coördinator — de onderliggende rijen wonen in je eigen werkdata-systeem.</p>
+    ${kaarten}
+  </div>`;
+}
+
 // ── Overzicht (#/data) ────────────────────────────────────────────────
 function renderDataOverzicht(el, ctx) {
-  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg(); return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
   const rijen = domeinen.map(d => {
@@ -5755,10 +7165,14 @@ function renderDataOverzicht(el, ctx) {
     .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
     .join(" · ");
 
-  el.innerHTML = `${rijen}
-    <p class="footnote">Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
+  const leesregel = ctx.kanSchrijven
+    ? `Dit is wat er nú in je werkruimte staat. Je bent ingelogd: open een domein om rijen toe te voegen,
+    te bewerken of te verwijderen. Domeinen die in een ander systeem wonen blijven daar — en bewerk je daar.`
+    : `Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
     dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
-    het domein woont.</p>
+    het domein woont.`;
+  el.innerHTML = `${rijen}
+    <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
 }
@@ -5785,32 +7199,116 @@ function exportBlok() {
   </div>`;
 }
 
+/* ── f33 fase B: het bord ─────────────────────────────────────────────
+ *
+ * Acties met een status zijn werk, en werk kijk je liever in kolommen aan dan
+ * in een tabel: je ziet in één blik waar het stilstaat. "Wacht op review" is
+ * daarbij de belangrijkste kolom — dat is de stapel waar een mens aan zet is,
+ * en precies de lus die dit dashboard hoort te sluiten.
+ *
+ * Generiek op het eerste select-veld dat 'Status' heet, dus hetzelfde scherm
+ * werkt later voor content_kalender en productbacklog. Kolommen komen uit het
+ * registryschema — nooit hardcoden, anders loopt het bord stil uit de pas met
+ * de statussen die de agents schrijven. */
+function statusVeldVan(domein) {
+  return dataVelden(domein).find(v => v.type === "select" && v.naam === "Status"
+    && Array.isArray(v.opties) && v.opties.length) || null;
+}
+
+const BORD_AANDACHT = "Wacht op review";
+
+function bordKaartHtml(ctx, key, domein, rij) {
+  const titel = detailTitel(domein, rij);
+  const velden = dataVelden(domein);
+  const toon = ["Eigenaar", "Agent", "Deadline", "Prioriteit"]
+    .map(naam => ({ naam, veld: velden.find(v => v.naam === naam) }))
+    .filter(x => x.veld && dataCelTekst(getField(rij, x.naam)) !== "")
+    .map(x => `<span class="bord-meta">${dataCelHtml(getField(rij, x.naam), x.veld)}</span>`)
+    .join("");
+  const kinderen = subacties(ctx, key, rij.__entryId);
+  return `<article class="bord-kaart"${rij.__entryId ? ` data-open-rij="${esc(key)}|${esc(rij.__entryId)}"` : ""} tabindex="0">
+    <p class="bord-titel">${esc(titel)}</p>
+    ${toon ? `<p class="bord-regels">${toon}</p>` : ""}
+    ${kinderen.length ? `<p class="footnote">↳ ${kinderen.length} ${kinderen.length === 1 ? "subactie" : "subacties"}</p>` : ""}
+  </article>`;
+}
+
+/* f33: kinderen van een rij via een self-relatie ('Bovenliggende actie').
+ * Alleen tellen — de lijst zelf staat in de detailkaart bij de
+ * terugverwijzingen, en twee plekken met dezelfde lijst is ruis. */
+function subacties(ctx, key, entryId) {
+  if (!entryId) return [];
+  const domein = ctx.schema.datadomeinen[key];
+  const zelf = dataVelden(domein).filter(v => v.type === "relatie" && v.naar === key);
+  if (!zelf.length) return [];
+  return (dataRijenVan(ctx, key) || []).filter(r =>
+    zelf.some(v => verwijstNaar(getField(r, v.naam), v, key, entryId)));
+}
+
+function bordHtml(ctx, key, domein, rijen) {
+  const statusVeld = statusVeldVan(domein);
+  if (!statusVeld) return "";
+  const kolommen = statusVeld.opties.slice();
+  const zonder = rijen.filter(r => kolommen.indexOf(dataCelTekst(getField(r, statusVeld.naam))) === -1);
+  const kolomHtml = kolommen.map(status => {
+    const inKolom = rijen.filter(r => dataCelTekst(getField(r, statusVeld.naam)) === status);
+    const kaarten = inKolom.map(r => bordKaartHtml(ctx, key, domein, r)).join("")
+      || `<p class="footnote">Leeg.</p>`;
+    return `<section class="bord-kolom${status === BORD_AANDACHT ? " bord-kolom-aandacht" : ""}" data-bord-kolom="${esc(status)}">
+      <h3>${esc(status)} <span class="bord-telling">${inKolom.length}</span></h3>
+      ${kaarten}
+    </section>`;
+  }).join("");
+  // Een rij met een lege of onbekende status hoort niet stil te verdwijnen:
+  // dat is precies het werk dat niemand meer ziet.
+  const restHtml = zonder.length
+    ? `<section class="bord-kolom bord-kolom-rest"><h3>Zonder status <span class="bord-telling">${zonder.length}</span></h3>
+       ${zonder.map(r => bordKaartHtml(ctx, key, domein, r)).join("")}</section>`
+    : "";
+  return `<div class="bord-scroll"><div class="bord">${kolomHtml}${restHtml}</div></div>`;
+}
+
 // ── Eén domein (#/data/<domein>) ──────────────────────────────────────
 function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
   if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
   if (ctx.bundle && ctx.bundle.kind === "metrics") {
-    el.innerHTML = dataMetricsUitleg() + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, key) + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
     return;
   }
 
   const rows = dataRijenVan(ctx, key);
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
+  // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
+  const bewerk = magDomeinBewerken(ctx, key);
+  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
+  const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
       betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+      ${bewerkUitleg}${nieuwKnop}<div data-bewerk-paneel></div>
       <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+    if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
     return;
   }
 
-  const velden = dataVelden(domein).slice(0, DATA_MAX_KOLOMMEN);
+  // Fase A: verwijzingsvelden horen altijd in beeld — dat is waar de
+  // verbanden zitten — ook als ze buiten de eerste kolommen vallen. De
+  // tabel scrolt horizontaal, dus extra kolommen kosten geen leesbaarheid.
+  const basisVelden = dataVelden(domein).slice(0, DATA_MAX_KOLOMMEN);
+  const relatieVelden = dataVelden(domein)
+    .slice(DATA_MAX_KOLOMMEN)
+    .filter(v => v.type === "relatie");
+  const velden = basisVelden.concat(relatieVelden);
   const datumVeld = dataDatumVeld(domein);
 
   function zichtbareRijen() {
     const q = dataZoek.trim().toLowerCase();
-    let uit = rows;
+    const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
+    let uit = vs ? rows.filter(r => vs.ids.indexOf(r.__entryId) !== -1) : rows;
     if (q) {
-      uit = rows.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+      // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
+      uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
     }
     if (datumVeld) {
       uit = uit.slice().sort((a, b) => {
@@ -5825,11 +7323,25 @@ function renderDataDomein(el, key, ctx) {
   function tabelHtml() {
     const zicht = zichtbareRijen();
     if (!zicht.length) {
-      return `<p class="footnote">Geen rij in dit domein bevat "${esc(dataZoek)}".</p>`;
+      return `<p class="footnote">${dataZoek.trim() ? `Geen rij in dit domein bevat "${esc(dataZoek)}".` : "Geen rijen in deze selectie."}</p>`;
     }
-    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("");
-    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r =>
-      `<tr>${velden.map(v => `<td>${esc(dataCelTekst(getField(r, v.naam)))}</td>`).join("")}</tr>`).join("");
+    const koppen = velden.map(v => `<th>${esc(v.naam)}</th>`).join("")
+      + (bewerk.ok ? `<th class="bewerk-kolom" aria-label="acties"></th>` : "");
+    const body = zicht.slice(0, DATA_MAX_RIJEN).map(r => {
+      // f33: de eerste cel (het titelveld) is de knop om de rij open te klappen.
+      // Bewust geen extra kolom: dat verschuift de hele tabel voor iets wat de
+      // titel zelf al aankondigt. Openklappen mag altijd — ook op de daglink,
+      // want het is lezen.
+      const cellen = velden.map((v, i) => {
+        const cel = dataCelHtml(getField(r, v.naam), v);
+        if (i !== 0 || !r.__entryId) return `<td>${cel}</td>`;
+        return `<td><button type="button" class="rij-open-knop" data-open-rij="${esc(key)}|${esc(r.__entryId)}" title="Rij openen">${cel || "(zonder titel)"}</button></td>`;
+      }).join("");
+      const acties = bewerk.ok && r.__entryId
+        ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
+        : (bewerk.ok ? `<td class="bewerk-kolom"></td>` : "");
+      return `<tr${dataDetail && dataDetail.domein === key && dataDetail.entryId === r.__entryId ? ' class="rij-open"' : ""}>${cellen}${acties}</tr>`;
+    }).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
       : "";
@@ -5844,33 +7356,814 @@ function renderDataDomein(el, key, ctx) {
       : `${zicht} van ${rows.length} rijen`;
   }
 
+  const vs = dataVoorselectie && dataVoorselectie.domein === key ? dataVoorselectie : null;
+  const statusVeld = statusVeldVan(domein);
+
+  /* De detailkaart hoort bóven de lijst: je klikt een rij open en leest verder
+   * op de plek waar je al keek. Staat de geopende rij niet (meer) in dit
+   * domein, dan is er gewoon geen kaart — geen foutmelding voor iets wat de
+   * gebruiker niet gedaan heeft. */
+  function detailHtml() {
+    if (!dataDetail || dataDetail.domein !== key) return "";
+    const rij = rows.find(r => r.__entryId === dataDetail.entryId);
+    return rij ? dataDetailHtml(ctx, key, rij) : "";
+  }
+
+  function inhoudHtml() {
+    if (dataWeergave === "bord" && statusVeld) return bordHtml(ctx, key, domein, zichtbareRijen());
+    return tabelHtml();
+  }
+
   el.innerHTML = `${kop}
     <div class="data-toolbar">
       <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
+      ${vs ? `<span class="filter-chip">🔎 ${esc(vs.label)} <button type="button" class="filter-wis" data-filter-wis aria-label="Filter wissen">✕</button></span>` : ""}
+      ${statusVeld ? `<span class="weergave-schakelaar" role="group" aria-label="Weergave">
+        <button type="button" class="knop-mini${dataWeergave === "tabel" ? " actief" : ""}" data-weergave="tabel">Tabel</button>
+        <button type="button" class="knop-mini${dataWeergave === "bord" ? " actief" : ""}" data-weergave="bord">Bord</button>
+      </span>` : ""}
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
-    <div data-data-tabel>${tabelHtml()}</div>
-    <p class="footnote">Eerste ${velden.length} velden uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
-    Alleen lezen — dit dashboard schrijft nooit terug. Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    <div data-data-detail>${detailHtml()}</div>
+    <div data-data-tabel>${inhoudHtml()}</div>
+    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
+    ${bewerk.ok ? "Bewerken schrijft rechtstreeks naar je eigen werkruimte." : "Alleen lezen — dit dashboard schrijft nooit terug."} Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
+    ${bewerkUitleg}${nieuwKnop ? `<div class="data-toolbar">${nieuwKnop}</div>` : ""}<div data-bewerk-paneel></div>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
+
+  // Fase A: klik op een verwijzing → de zoekterm wordt de titel, en de
+  // href (#/data/<doeldomein>) doet de navigatie. renderDataDomein van het
+  // doeldomein leest dataZoek en toont zo direct de gekoppelde rij.
+  function herteken() {
+    el.querySelector("[data-data-detail]").innerHTML = detailHtml();
+    el.querySelector("[data-data-tabel]").innerHTML = inhoudHtml();
+    el.querySelector("[data-data-telling]").textContent = tellingHtml();
+  }
+
+  el.addEventListener("click", (e) => {
+    // f33: een rij openen. Wijst het naar een ánder domein, dan doet de href
+    // de navigatie en onthoudt de detailstand welke rij daar open moet.
+    const openEl = e.target.closest && e.target.closest("[data-open-rij]");
+    if (openEl) {
+      const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
+      if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
+      else zetDataDetail(dom, id);
+      if (dom === key) { e.preventDefault(); herteken(); return; }
+    }
+    const sluit = e.target.closest && e.target.closest("[data-detail-sluit]");
+    if (sluit) { wisDataDetail(); herteken(); return; }
+    const weergave = e.target.closest && e.target.closest("[data-weergave]");
+    if (weergave) {
+      // Bewust géén renderDataDomein(el, ...) hier: dat hangt een tweede
+      // kliklistener aan hetzelfde element, en dan verwerken twee handlers
+      // dezelfde klik — het bord opende een rij die daarna meteen weer
+      // dichtklapte. Alleen de inhoud verversen is genoeg.
+      dataWeergave = weergave.getAttribute("data-weergave") === "bord" ? "bord" : "tabel";
+      for (const knop of el.querySelectorAll("[data-weergave]")) {
+        knop.classList.toggle("actief", knop.getAttribute("data-weergave") === dataWeergave);
+      }
+      herteken();
+      return;
+    }
+    if (bedienKlik(e)) return;
+    const link = e.target.closest && e.target.closest("[data-relatie-zoek]");
+    if (link) dataZoek = link.getAttribute("data-relatie-zoek") || "";
+    const wisEl = e.target.closest && e.target.closest("[data-filter-wis]");
+    if (wisEl) {
+      wisDataVoorselectie();
+      const chip = el.querySelector(".filter-chip");
+      if (chip) chip.remove();
+      herteken();
+    }
+  });
+
+  /* f33 fase F — bedienen. Elke schrijfactie loopt via PATCH (of, voor een
+   * notitie, POST) en daarna een herlaadde bundel: het dashboard verzint nooit
+   * zelf hoe de rij er na afloop uitziet, want de instantie kan er meer mee
+   * gedaan hebben (relatietitels verversen, velden normaliseren). */
+  function foutmelder() { return el.querySelector("[data-snel-fout]"); }
+
+  async function pasToe(actie) {
+    const fout = foutmelder();
+    if (fout) fout.textContent = "";
+    try {
+      await actie();
+      await (ctx.herlaad ? ctx.herlaad() : Promise.resolve());
+    } catch (f) {
+      if (fout) fout.textContent = f.message || "Dat is niet gelukt.";
+      else window.alert(f.message || "Dat is niet gelukt.");
+    }
+  }
+
+  function huidigeRij() {
+    if (!dataDetail || dataDetail.domein !== key) return null;
+    return rows.find(r => r.__entryId === dataDetail.entryId) || null;
+  }
+
+  function vraagNaam() {
+    const nu = mijnNaam(ctx.bron);
+    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", nu);
+    if (ingevuld === null) return nu;
+    return zetMijnNaam(ctx.bron, ingevuld);
+  }
+
+  function bedienKlik(e) {
+    const rij = huidigeRij();
+    const mij = e.target.closest && e.target.closest("[data-snel-mij]");
+    if (mij && rij) {
+      const naam = mijnNaam(ctx.bron) || vraagNaam();
+      if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      return true;
+    }
+    const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
+    if (wijzig) { vraagNaam(); herteken(); return true; }
+    return false;
+  }
+
+  el.addEventListener("change", (e) => {
+    const rij = huidigeRij();
+    if (!rij) return;
+    const status = e.target.closest && e.target.closest("[data-snel-status]");
+    if (status) {
+      const gekozen = status.value;
+      if (!gekozen) return;
+      pasToe(() => snelWijzig(ctx, key, rij.__entryId, statusPatch(domein, gekozen)));
+      return;
+    }
+    const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
+    if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
+    const agent = e.target.closest && e.target.closest("[data-snel-agent]");
+    if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+  });
+
+  el.addEventListener("submit", (e) => {
+    const form = e.target.closest && e.target.closest("[data-notitie-form]");
+    if (!form) return;
+    e.preventDefault();
+    const rij = huidigeRij();
+    if (!rij) return;
+    const onderwerp = form.querySelector("[data-notitie-onderwerp]").value.trim();
+    const tekst = form.querySelector("[data-notitie-tekst]").value.trim();
+    if (!onderwerp && !tekst) return;
+    const naam = mijnNaam(ctx.bron) || vraagNaam();
+    const info = notitieVeldVan(ctx);
+    const data = {
+      Onderwerp: onderwerp || tekst.slice(0, 60),
+      Datum: new Date().toISOString().slice(0, 10),
+      Soort: "Mens",
+      [info.veld.naam]: { domein: key, id: rij.__entryId },
+    };
+    if (tekst) data.Notitie = tekst;
+    if (naam) data.Auteur = naam;
+    pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
+  });
+
+  // Een kaart is klikbaar, dus hij hoort ook met Enter/spatie te openen.
+  el.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const kaart = e.target.closest && e.target.closest(".bord-kaart[data-open-rij]");
+    if (!kaart) return;
+    e.preventDefault();
+    kaart.click();
+  });
 
   const invoer = el.querySelector("#data-zoek");
   if (invoer) {
     invoer.addEventListener("input", () => {
       dataZoek = invoer.value;
-      el.querySelector("[data-data-tabel]").innerHTML = tabelHtml();
-      el.querySelector("[data-data-telling]").textContent = tellingHtml();
+      herteken();
     });
   }
+
+  // f23 fase D: nieuwe rij / bewerken / verwijderen — alleen in een schrijfsessie.
+  if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
-function resetDataZoek() { dataZoek = ""; }
+function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); }
+function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
+
+/* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
+ * De voorselectie is een set entry-ids met een label; hij geldt alleen voor
+ * het domein waar hij bij hoort en verdwijnt via het ✕ of terug op het
+ * overzicht. Zoeken werkt gewoon bínnen de voorselectie. */
+let dataVoorselectie = null;
+function zetDataVoorselectie(domein, label, ids) {
+  const schoon = (Array.isArray(ids) ? ids : []).filter(i => typeof i === "string" && i);
+  dataVoorselectie = schoon.length ? { domein, label: String(label || ""), ids: schoon } : null;
+}
+function wisDataVoorselectie() { dataVoorselectie = null; }
 
 if (typeof module !== "undefined") {
   module.exports = {
-    renderDataOverzicht, renderDataDomein, dataCelTekst, dataBrowsbareDomeinen, exportBlok,
-    resetDataZoek, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+    renderDataOverzicht, renderDataDomein, dataCelTekst, dataCelHtml, dataRelatieKaarten, dataBrowsbareDomeinen, exportBlok,
+    resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
+    zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
+    notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
   };
+}
+
+
+/* f23 fase D — bewerken in de Data-tab.
+ *
+ * Registry-gedreven: het formulier wordt volledig uit het schema opgebouwd
+ * (veldtypen, selectopties, verwijzingen), en de instantie valideert met
+ * exact dezelfde regels via werkruimte.schrijf — dit formulier is gemak,
+ * geen grens. Knoppen bestaan alleen bij een ingelogde sessie waarvan het
+ * token `dashboard:schrijf` draagt; op de daglink en bij een domein dat
+ * volgens de bronkoppeling extern woont blijft alles lezen, met uitleg.
+ * Verwijderen vraagt altijd een expliciete bevestiging (i38-lijn).
+ */
+
+/* Scope uit het access-token, client-side alleen om knoppen te tonen — de
+ * instantie handhaaft de scope zelf (403 bij een te oud token). */
+function tokenScopes(token) {
+  try {
+    const stuk = String(token).split(".")[1];
+    const p = JSON.parse(atob(stuk.replace(/-/g, "+").replace(/_/g, "/")));
+    return String(p.scope || "").split(/\s+/).filter(Boolean);
+  } catch (e) { return []; }
+}
+
+/* f33: wie ben ik? Het access-token draagt bewust geen naam — `sub` is
+ * `licentie#seathash`, en een naamclaim erbij is een wijziging van het
+ * normatieve claimcontract (§3, byte-voor-byte getest) plus een juridische
+ * delta. Voor "Aan mij" is een naam genoeg die de gebruiker
+ * zelf eenmalig opgeeft; hij staat alleen in deze browser, gekoppeld aan de
+ * seat waarmee je bent ingelogd, en gaat nooit ergens anders heen dan als
+ * gewone veldwaarde in je eigen werkruimte. */
+function tokenSeat(token) {
+  try {
+    const p = JSON.parse(atob(String(token).split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return String(p.sub || "");
+  } catch (e) { return ""; }
+}
+
+/* Zelfde naamruimte als de rest, zodat de opslagcontrole in
+ * test/geen-telemetrie.test.js hem ziet: alles wat blijvend in de browser
+ * staat hoort in de privacytekst genoemd te worden. Per seat, want op een
+ * gedeelde computer is de vorige gebruiker niet jij. */
+const LS_NAAM_KEY = "agentic-team-dashboard:naam";
+function naamSleutel(bron) { return LS_NAAM_KEY + ":" + tokenSeat(bron && bron.token); }
+
+function mijnNaam(bron) {
+  try { return window.localStorage.getItem(naamSleutel(bron)) || ""; } catch (e) { return ""; }
+}
+
+function zetMijnNaam(bron, naam) {
+  try {
+    const schoon = String(naam || "").trim().slice(0, 80);
+    if (schoon) window.localStorage.setItem(naamSleutel(bron), schoon);
+    else window.localStorage.removeItem(naamSleutel(bron));
+    return schoon;
+  } catch (e) { return ""; }
+}
+
+/* f33: één veld wijzigen zonder het formulier — de kanbansleep en de
+ * toewijsknoppen. PATCH mengt bij de instantie over de bestaande rij heen, dus
+ * velden die dit dashboard niet kent blijven staan. Met PUT zouden die stil
+ * verdwijnen; daarom is dit bewust een andere methode en geen "PUT met alles
+ * wat we toevallig hebben". */
+function snelWijzig(ctx, key, entryId, patch) {
+  return schrijfWerkruimte(ctx.bron, "PATCH",
+    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data: patch });
+}
+
+/* De statusconventie van het team, in code. Wie hier op Klaar klikt is een
+ * mens, en die laat andere sporen achter dan een agent: "Afgerond op" is de
+ * gewone afrondingsdatum en hoort er altijd op, "Afgerond door" is de
+ * i25-autonomiemarkering en blijft dus leeg — anders telt handwerk mee in de
+ * noemer van het correctievrij-percentage (b52 filtert daar wel op agentnaam,
+ * maar een mens die toevallig zo heet zou er alsnog in vallen). "Wacht op
+ * review" vult bewust niets in: dat is per statuscontract een mens, en die
+ * heeft nog niets afgerond. */
+function statusPatch(domein, status) {
+  const velden = (domein.velden || []).map(v => v.naam);
+  const patch = { Status: status };
+  if (status === "Klaar" && velden.indexOf("Afgerond op") !== -1) {
+    patch["Afgerond op"] = new Date().toISOString().slice(0, 10);
+  }
+  return patch;
+}
+
+function bronKanSchrijven(bron) {
+  return !!(bron && bron.oauth && tokenScopes(bron.token).indexOf("dashboard:schrijf") !== -1);
+}
+
+/* Mag dít domein hier bewerkt worden? Nee is altijd mét reden, zodat de UI
+ * kan uitleggen in plaats van stil een knop weg te laten. */
+function magDomeinBewerken(ctx, key) {
+  if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
+  if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
+  if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
+  const systeem = ctx.bundle.systeemPerDomein ? ctx.bundle.systeemPerDomein[key] : null;
+  if (systeem && systeem !== "werkruimte" && systeem !== "geen") {
+    return { ok: false, reden: `Dit domein woont volgens je bronkoppeling in ${systeem} — bewerken doe je daar.` };
+  }
+  return { ok: true, reden: null };
+}
+
+/* Grote-tekst-heuristiek: het schema kent geen "lang tekstveld", maar deze
+ * canonieke velden zijn in de praktijk alinea's. */
+const TEXTAREA_VELDEN = ["Resultaat", "Inhoud", "Notitie", "Vervolg", "Omschrijving", "Samenvatting"];
+
+function veldInvoerHtml(veld, waarde, ctx) {
+  const naam = esc(veld.naam);
+  const w = waarde === undefined || waarde === null ? "" : waarde;
+  switch (veld.type) {
+    case "select": {
+      const opties = (veld.opties || []).map(o =>
+        `<option value="${esc(o)}"${o === w ? " selected" : ""}>${esc(o)}</option>`).join("");
+      return `<select name="${naam}" data-veldtype="select"><option value=""></option>${opties}</select>`;
+    }
+    case "multi_select": {
+      const gekozen = Array.isArray(w) ? w : [];
+      const opties = (veld.opties || []).map(o =>
+        `<option value="${esc(o)}"${gekozen.indexOf(o) !== -1 ? " selected" : ""}>${esc(o)}</option>`).join("");
+      return `<select name="${naam}" data-veldtype="multi_select" multiple size="${Math.min((veld.opties || []).length || 3, 5)}">${opties}</select>`;
+    }
+    case "datum":
+      return `<input type="date" name="${naam}" data-veldtype="datum" value="${esc(String(w).slice(0, 10))}">`;
+    case "getal":
+      return `<input type="number" step="any" name="${naam}" data-veldtype="getal" value="${esc(String(w))}">`;
+    case "checkbox":
+      return `<label class="bewerk-checkbox"><input type="checkbox" name="${naam}" data-veldtype="checkbox"${w === true ? " checked" : ""}> ja</label>`;
+    case "url":
+      return `<input type="url" name="${naam}" data-veldtype="url" value="${esc(String(w))}" placeholder="https://…">`;
+    case "email":
+      return `<input type="email" name="${naam}" data-veldtype="email" value="${esc(String(w))}">`;
+    case "mensen": {
+      const tekst = Array.isArray(w) ? w.join(", ") : String(w);
+      return `<input type="text" name="${naam}" data-veldtype="mensen" value="${esc(tekst)}" placeholder="namen, gescheiden door komma's">`;
+    }
+    case "relatie": {
+      // Kiezen uit de al geladen rijen van het doeldomein; de waarde is het
+      // entryId (de instantie schrijft {id, titel} zelf, f28). Zonder geladen
+      // doelrijen valt het veld terug op een titel-invoer — de instantie
+      // zoekt dan op titel.
+      const doel = ctx.bundle.domains[veld.naar];
+      const doelDomein = ctx.schema.datadomeinen[veld.naar];
+      const rijen = doel && Array.isArray(doel.rows) ? doel.rows : [];
+      const titelVeld = doelDomein && doelDomein.velden && doelDomein.velden.length ? doelDomein.velden[0].naam : null;
+      const gekozenIds = (Array.isArray(w) ? w : (w ? [w] : []))
+        .map(v => (v && typeof v === "object" ? v.id : v)).filter(Boolean);
+      if (!rijen.length || !titelVeld) {
+        const tekst = (Array.isArray(w) ? w : (w ? [w] : []))
+          .map(v => (v && typeof v === "object" ? v.titel : v)).filter(Boolean).join(", ");
+        return `<input type="text" name="${naam}" data-veldtype="relatie-titel" data-meervoud="${veld.meervoud ? "1" : ""}" value="${esc(tekst)}" placeholder="titel van de ${esc(veld.naar)}-rij">`;
+      }
+      const opties = rijen.filter(r => r.__entryId).map(r => {
+        const titel = dataCelTekst(getField(r, titelVeld)) || r.__entryId;
+        return `<option value="${esc(r.__entryId)}"${gekozenIds.indexOf(r.__entryId) !== -1 ? " selected" : ""}>${esc(titel)}</option>`;
+      }).join("");
+      return veld.meervoud
+        ? `<select name="${naam}" data-veldtype="relatie" data-meervoud="1" multiple size="${Math.min(rijen.length, 5)}">${opties}</select>`
+        : `<select name="${naam}" data-veldtype="relatie"><option value=""></option>${opties}</select>`;
+    }
+    default: { // titel, tekst
+      if (veld.type === "tekst" && TEXTAREA_VELDEN.indexOf(veld.naam) !== -1) {
+        return `<textarea name="${naam}" data-veldtype="tekst" rows="3">${esc(String(w))}</textarea>`;
+      }
+      return `<input type="text" name="${naam}" data-veldtype="${esc(veld.type)}" value="${esc(String(w))}">`;
+    }
+  }
+}
+
+function dataFormulierHtml(domein, ctx, bestaande, entryId) {
+  const rijen = (domein.velden || []).map(v =>
+    `<label class="bewerk-veld"><span class="bewerk-label">${esc(v.naam)}</span>${veldInvoerHtml(v, bestaande ? getField(bestaande, v.naam) : undefined, ctx)}</label>`).join("");
+  return `<form class="bewerk-formulier" data-bewerk-formulier data-entry-id="${esc(entryId || "")}">
+    <p><strong>${entryId ? "Rij bewerken" : "Nieuwe rij"}</strong></p>
+    ${rijen}
+    <p class="bewerk-fout" data-bewerk-fout role="alert"></p>
+    <div class="bewerk-knoppen">
+      <button type="submit" class="knop">${entryId ? "Opslaan" : "Toevoegen"}</button>
+      <button type="button" class="knop knop-secundair" data-bewerk-annuleer>Annuleren</button>
+    </div>
+  </form>`;
+}
+
+/* Formulier → het data-object dat werkruimte.schrijf verwacht. Lege waarden
+ * blijven weg (een leeg veld is "niet ingevuld", geen lege string opslaan). */
+function leesFormulier(formEl) {
+  const data = {};
+  for (const el of formEl.querySelectorAll("[data-veldtype]")) {
+    const naam = el.getAttribute("name");
+    const type = el.getAttribute("data-veldtype");
+    if (type === "checkbox") { data[naam] = el.checked; continue; }
+    if (type === "multi_select" || (type === "relatie" && el.getAttribute("data-meervoud"))) {
+      const gekozen = Array.from(el.selectedOptions || []).map(o => o.value).filter(Boolean);
+      if (gekozen.length) data[naam] = gekozen;
+      continue;
+    }
+    const waarde = String(el.value || "").trim();
+    if (!waarde) continue;
+    if (type === "getal") { data[naam] = Number(waarde.replace(",", ".")); continue; }
+    if (type === "mensen") { data[naam] = waarde.split(",").map(s => s.trim()).filter(Boolean); continue; }
+    if (type === "relatie-titel" && el.getAttribute("data-meervoud")) {
+      data[naam] = waarde.split(",").map(s => s.trim()).filter(Boolean);
+      continue;
+    }
+    data[naam] = waarde;
+  }
+  return data;
+}
+
+async function verstuurEntry(ctx, key, entryId, data) {
+  if (entryId) {
+    return schrijfWerkruimte(ctx.bron, "PUT",
+      "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data });
+  }
+  return schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data });
+}
+
+function verwijderEntry(ctx, key, entryId) {
+  return schrijfWerkruimte(ctx.bron, "DELETE",
+    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId));
+}
+
+/* Hangt de bewerk-interactie aan een gerenderd domein. `herteken` is de
+ * verversing na een geslaagde write (app.js herlaadt de bundel). */
+function wireDataBewerken(el, key, ctx, herteken) {
+  const domein = ctx.schema.datadomeinen[key];
+  const paneel = el.querySelector("[data-bewerk-paneel]");
+  if (!paneel || !domein) return;
+
+  function toonFormulier(bestaande, entryId) {
+    paneel.innerHTML = dataFormulierHtml(domein, ctx, bestaande, entryId);
+    const form = paneel.querySelector("[data-bewerk-formulier]");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const foutEl = form.querySelector("[data-bewerk-fout]");
+      const knop = form.querySelector('button[type="submit"]');
+      knop.disabled = true;
+      foutEl.textContent = "";
+      try {
+        await verstuurEntry(ctx, key, entryId, leesFormulier(form));
+        paneel.innerHTML = "";
+        await herteken();
+      } catch (fout) {
+        foutEl.textContent = fout.message || "Het opslaan is niet gelukt.";
+        knop.disabled = false;
+      }
+    });
+    form.querySelector("[data-bewerk-annuleer]").addEventListener("click", () => { paneel.innerHTML = ""; });
+    const eerste = form.querySelector("input, select, textarea");
+    if (eerste) eerste.focus();
+  }
+
+  el.addEventListener("click", async (e) => {
+    const nieuw = e.target.closest && e.target.closest("[data-bewerk-nieuw]");
+    if (nieuw) { toonFormulier(null, null); return; }
+    const bewerk = e.target.closest && e.target.closest("[data-bewerk-rij]");
+    if (bewerk) {
+      const id = bewerk.getAttribute("data-bewerk-rij");
+      const rij = (dataRijenVan(ctx, key) || []).find(r => r.__entryId === id);
+      toonFormulier(rij || null, id);
+      return;
+    }
+    const weg = e.target.closest && e.target.closest("[data-verwijder-rij]");
+    if (weg) {
+      const id = weg.getAttribute("data-verwijder-rij");
+      // i38-lijn: een destructieve actie bevestigt een mens expliciet.
+      if (!window.confirm("Deze rij definitief verwijderen? Dit is niet ongedaan te maken.")) return;
+      weg.disabled = true;
+      try {
+        await verwijderEntry(ctx, key, id);
+        await herteken();
+      } catch (fout) {
+        weg.disabled = false;
+        window.alert(fout.message || "Het verwijderen is niet gelukt.");
+      }
+    }
+  });
+}
+
+if (typeof module !== "undefined") {
+  module.exports = {
+    bronKanSchrijven, magDomeinBewerken, dataFormulierHtml, leesFormulier,
+    veldInvoerHtml, wireDataBewerken, tokenScopes,
+    mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
+  };
+}
+
+
+/* f34 — "Jouw modules": overzicht (fase 0) + schakelen en opzeggen (fase 1).
+ *
+ * De site rekent, dit dashboard toont: overzicht, voorstellen (nieuw
+ * maandbedrag, ingangsmoment, btw) en uitkomsten komen allemaal kant-en-klaar
+ * van de site-API en worden hier nooit nagerekend — bedragen op twee plekken
+ * drijven uit elkaar. Alleen bereikbaar met een ingelogde p10-sessie (de
+ * daglink kan dit niet) en een licentie in de allowlist van de site; in alle
+ * andere gevallen antwoordt de site niet-200 en blijven tegel én detailpagina
+ * gewoon weg — afwezig is geen fout.
+ *
+ * Schakelen/opzeggen verschijnt alleen als de site `magSchakelen: true`
+ * meegeeft (schakel-vlag aan én dit is de seat van het aankoopadres); de
+ * server handhaaft dat zelf opnieuw per request. Zonder die vlag valt de
+ * pagina terug op fase 0: een wijzigingsverzoek dat bij support landt.
+ *
+ * Alle site-verkeer loopt door één fetch-plek (modulesFetch) — de
+ * telemetrie-guard telt aanroepen met naam, en dit houdt de inventaris op
+ * precies vier: lezen, schrijven, token-uitwisseling, modules-API. */
+
+const MODULES_SITE_ORIGIN = "https://www.agentic-team.ai";
+
+/* Versieaanduiding van de bevestigingsteksten hieronder. Gaat mee met elke
+ * bevestigings-POST en wordt server-side in de mutatieadministratie gelegd —
+ * zo is later te bewijzen wélke schermtekst er bij een klik stond
+ * (juristoordeel 02-09-2026, onderdeel b). Bump bij elke tekstwijziging in
+ * de voorstel-/opzegblokken. */
+const MODULES_SCHERMTEKST_VERSIE = "f34-scherm 2026-09-03.1";
+
+let moduleOverzicht = null; // laatste geslaagde site-antwoord
+let moduleOverzichtVoorToken = null; // token waarvoor (al) geladen is/wordt
+
+function moduleOverzichtBeschikbaar() {
+  return moduleOverzicht !== null;
+}
+
+/* De enige plek die de site aanroept: GET zonder body, POST mét. Geeft
+ * {status, body} terug en gooit alleen op netwerkfouten. */
+async function modulesFetch(pad, body, tokenOverride) {
+  const token = tokenOverride !== undefined
+    ? tokenOverride
+    : (huidigeBron && huidigeBron.token ? huidigeBron.token : "");
+  const res = await fetch(`${MODULES_SITE_ORIGIN}${pad}`, {
+    method: body === undefined ? "GET" : "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  let json = null;
+  try { json = await res.json(); } catch (e) { /* leeg of geen JSON — status zegt genoeg */ }
+  return { status: res.status, ok: res.ok, body: json };
+}
+
+/* Eén poging per token: een 404 (geen allowlist) of 401 (verlopen) hoeft
+ * niet elke render opnieuw geprobeerd — na een login/refresh wijzigt het
+ * token en laden we vanzelf opnieuw. */
+async function laadModuleOverzicht(bron) {
+  if (!bron || !bron.oauth || !bron.token) {
+    moduleOverzicht = null;
+    return null;
+  }
+  if (moduleOverzichtVoorToken === bron.token) return moduleOverzicht;
+  moduleOverzichtVoorToken = bron.token;
+  moduleOverzicht = null;
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules", undefined, bron.token);
+    if (uit.ok) moduleOverzicht = uit.body;
+  } catch (e) { /* site onbereikbaar — dan geen tegel, geen foutbanner */ }
+  return moduleOverzicht;
+}
+
+/* Na een geslaagde wijziging/opzegging: overzicht opnieuw ophalen en de
+ * openstaande views bijtekenen. */
+async function verversModuleOverzicht() {
+  moduleOverzichtVoorToken = null;
+  await laadModuleOverzicht(huidigeBron);
+  const paneel = document.getElementById("panel-modules");
+  if (paneel) renderModulesPanel(paneel);
+  route();
+}
+
+/* Compact paneel op de Vandaag-tab; doorklik naar de detailpagina. */
+function renderModulesPanel(sectieEl) {
+  if (!sectieEl) return;
+  if (!moduleOverzichtBeschikbaar()) {
+    sectieEl.style.display = "none";
+    return;
+  }
+  const o = moduleOverzicht;
+  const actief = o.modules.filter((m) => m.actief);
+  sectieEl.style.display = "";
+  sectieEl.querySelector("#panel-modules-body").innerHTML = `
+    <p class="modules-samenvatting">${esc(o.pakket)} — <strong>€ ${nlGetal(o.maandbedragExclBtw)}/mnd</strong> excl. btw</p>
+    <p class="footnote">${actief.map((m) => esc(m.naam)).join(" · ")}</p>
+    <a class="detail-link" data-goto="modules">Bekijk je modules →</a>`;
+}
+
+function moduleKaartHtml(m) {
+  return `<div class="card${m.actief ? "" : " signaal-grijs"}">
+    <div class="kop">${esc(m.naam)} ${m.actief ? "✓ actief" : "— niet actief"}</div>
+    <div class="getal">€ ${nlGetal(m.prijs)}/mnd</div>
+    <div class="detail">${esc(m.belofte)}${m.altijdInbegrepen ? " (altijd inbegrepen)" : ""}<br>
+      <strong>Agents:</strong> ${m.agents.map((a) => esc(a.naam)).join(", ") || "—"}<br>
+      <strong>Datadomeinen:</strong> ${m.datadomeinen.map(esc).join(", ") || "—"}</div>
+  </div>`;
+}
+
+/* ── Fase 1 · schakelen ────────────────────────────────────────────── */
+
+function schakelBlokHtml(o) {
+  const keuzes = o.modules
+    .filter((m) => !m.altijdInbegrepen)
+    .map((m) => `<label class="modules-keuze"><input type="checkbox" data-module-keuze value="${esc(m.key)}"${m.actief ? " checked" : ""}> ${esc(m.naam)} (€ ${nlGetal(m.prijs)}/mnd)</label>`)
+    .join("");
+  return `<div class="modules-verzoek" id="modules-schakelblok">
+    <h3>Samenstelling wijzigen</h3>
+    <p class="footnote">Core is altijd inbegrepen. Bijschakelen werkt per direct; afschakelen sluit de module per
+    direct af zonder creditering — het nieuwe bedrag geldt vanaf je eerstvolgende factuur.</p>
+    ${keuzes}
+    <button type="button" id="modules-bereken-knop">Bereken nieuw maandbedrag</button>
+    <div id="modules-voorstel"></div>
+    <p class="footnote" id="modules-schakel-status" role="status"></p>
+  </div>
+  <div class="modules-verzoek" id="modules-opzegblok">
+    <h3>Opzeggen</h3>
+    <p class="footnote">Helemaal stoppen? Je team blijft werken tot het einde van je betaalde termijn; er wordt
+    niets gecrediteerd.</p>
+    <button type="button" id="modules-opzeg-knop">Abonnement opzeggen</button>
+    <div id="modules-opzeg-voorstel"></div>
+    <p class="footnote" id="modules-opzeg-status" role="status"></p>
+  </div>`;
+}
+
+function gekozenModules(el) {
+  return Array.from(el.querySelectorAll("[data-module-keuze]:checked")).map((c) => c.value);
+}
+
+async function berekenWijziging(el) {
+  const status = el.querySelector("#modules-schakel-status");
+  const doel = el.querySelector("#modules-voorstel");
+  doel.innerHTML = "";
+  status.textContent = "Berekenen…";
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules/wijzig", { modules: gekozenModules(el) });
+    if (!uit.ok) {
+      status.textContent = (uit.body && uit.body.fout) || "Berekenen lukte niet. Probeer het later nog eens.";
+      return;
+    }
+    status.textContent = "";
+    const v = uit.body.voorstel;
+    // 3.9 lid 3: excl. én incl. btw, beide ingangsmomenten. Het na-ijleffect
+    // staat er concreet ("je betaalt nog € X tot en met <datum>"), niet als
+    // regel — en de gratis-terugdraaienzin expliciet (lid 5); dat zijn de twee
+    // mitigaties uit het juristoordeel. Alle bedragen uit het site-antwoord.
+    const afRegels = (v.afgeschakeld || [])
+      .map((m) => `${esc(m.naam)} stopt per direct. Je betaalt er nog € ${nlGetal(m.prijs)} voor tot en met ${esc(v.betaaldTotEnMet)} — dat wordt niet gecrediteerd. Tot die datum zet je ${esc(m.naam)} kosteloos weer aan.`)
+      .join("<br>");
+    const bijRegels = (v.bijgeschakeld || [])
+      .map((m) => `${esc(m.naam)} is per direct beschikbaar; € ${nlGetal(m.prijs)}/mnd erbij vanaf je eerstvolgende factuur (${esc(v.ingangsdatum)}).`)
+      .join("<br>");
+    doel.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">Je nieuwe samenstelling</div>
+      <div class="grijs-tekst">Van € ${nlGetal(v.maandbedragOud)}/mnd naar <strong>€ ${nlGetal(v.maandbedragNieuw)}/mnd</strong>
+      excl. btw (€ ${nlGetal(v.maandbedragOudInclBtw, 2)} → € ${nlGetal(v.maandbedragNieuwInclBtw, 2)} incl. ${esc(String(v.btwPercentage))}% btw).
+      Het nieuwe bedrag staat voor het eerst op je factuur van ${esc(v.ingangsdatum)}.${afRegels ? `<br><br>${afRegels}` : ""}${bijRegels ? `<br><br>${bijRegels}` : ""}</div>
+      <button type="button" id="modules-bevestig-knop">Bevestig wijziging</button>
+    </div>`;
+    doel.querySelector("#modules-bevestig-knop").addEventListener("click", () => {
+      void bevestigWijziging(el);
+    });
+  } catch (e) {
+    status.textContent = "Berekenen lukte niet. Probeer het later nog eens.";
+  }
+}
+
+async function bevestigWijziging(el) {
+  const status = el.querySelector("#modules-schakel-status");
+  const knop = el.querySelector("#modules-bevestig-knop");
+  if (knop) knop.disabled = true;
+  status.textContent = "Doorvoeren…";
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules/wijzig", { modules: gekozenModules(el), bevestigd: true, schermversie: MODULES_SCHERMTEKST_VERSIE });
+    if (!uit.ok) {
+      const fout = (uit.body && uit.body.fout) || "Doorvoeren lukte niet. Probeer het later nog eens.";
+      const link = uit.body && uit.body.machtigingUrl
+        ? ` <a href="${esc(uit.body.machtigingUrl)}" target="_blank" rel="noopener">Geef je machtiging af →</a>`
+        : "";
+      status.innerHTML = `${esc(fout)}${link}`;
+      if (knop) knop.disabled = false;
+      return;
+    }
+    status.textContent = "Gelukt — je samenstelling is aangepast. Je krijgt een bevestiging per mail.";
+    await verversModuleOverzicht();
+  } catch (e) {
+    status.textContent = "Doorvoeren lukte niet. Probeer het later nog eens.";
+    if (knop) knop.disabled = false;
+  }
+}
+
+async function startOpzeggen(el) {
+  const status = el.querySelector("#modules-opzeg-status");
+  const doel = el.querySelector("#modules-opzeg-voorstel");
+  doel.innerHTML = "";
+  status.textContent = "Ophalen…";
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules/opzeggen", {});
+    if (!uit.ok) {
+      status.textContent = (uit.body && uit.body.fout) || "Ophalen lukte niet. Probeer het later nog eens.";
+      return;
+    }
+    status.textContent = "";
+    const proef = uit.body.proef === true;
+    doel.innerHTML = `<div class="grijs-blok">
+      <div class="grijs-kop">${proef ? "Kosteloos opzeggen (proefperiode)" : "Opzeggen per einde termijn"}</div>
+      <div class="grijs-tekst">${proef
+        ? "Je zit nog in de proefperiode: er wordt niets gefactureerd en er volgt geen incasso."
+        : "Er volgt geen nieuwe factuur; wat al gefactureerd is wordt niet gecrediteerd."}
+      Je team blijft werken tot ${esc(uit.body.eindeToegang)}.</div>
+      <button type="button" id="modules-opzeg-bevestig">Bevestig opzegging</button>
+    </div>`;
+    doel.querySelector("#modules-opzeg-bevestig").addEventListener("click", () => {
+      void bevestigOpzeggen(el);
+    });
+  } catch (e) {
+    status.textContent = "Ophalen lukte niet. Probeer het later nog eens.";
+  }
+}
+
+async function bevestigOpzeggen(el) {
+  const status = el.querySelector("#modules-opzeg-status");
+  const knop = el.querySelector("#modules-opzeg-bevestig");
+  if (knop) knop.disabled = true;
+  status.textContent = "Opzeggen…";
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules/opzeggen", { bevestigd: true, schermversie: MODULES_SCHERMTEKST_VERSIE });
+    if (!uit.ok) {
+      status.textContent = (uit.body && uit.body.fout) || "Opzeggen lukte niet. Probeer het later nog eens.";
+      if (knop) knop.disabled = false;
+      return;
+    }
+    status.textContent = `Opgezegd. Je team blijft werken tot ${uit.body.eindeToegang}. Je krijgt een bevestiging per mail.`;
+    const doel = el.querySelector("#modules-opzeg-voorstel");
+    if (doel) doel.innerHTML = "";
+  } catch (e) {
+    status.textContent = "Opzeggen lukte niet. Probeer het later nog eens.";
+    if (knop) knop.disabled = false;
+  }
+}
+
+/* ── Fase 0 · wijzigingsverzoek (fallback zonder magSchakelen) ─────── */
+
+function verzoekBlokHtml() {
+  return `<div class="modules-verzoek">
+    <h3>Iets wijzigen?</h3>
+    <p class="footnote">Zelf bij- en afschakelen komt eraan. Tot die tijd: beschrijf hieronder wat je
+    wilt (bv. "Sales erbij" of "Backoffice eraf per volgende maand") — wij regelen het en je krijgt
+    een bevestiging per mail.</p>
+    <textarea id="modules-wens" maxlength="500" rows="3" placeholder="Wat wil je wijzigen?"></textarea>
+    <button type="button" id="modules-verzoek-knop">Verstuur wijzigingsverzoek</button>
+    <p class="footnote" id="modules-verzoek-status" role="status"></p>
+  </div>`;
+}
+
+async function verstuurModuleVerzoek(el) {
+  const veld = el.querySelector("#modules-wens");
+  const knop = el.querySelector("#modules-verzoek-knop");
+  const status = el.querySelector("#modules-verzoek-status");
+  const wens = (veld.value || "").trim();
+  if (!wens) {
+    status.textContent = "Beschrijf eerst kort wat je wilt wijzigen.";
+    return;
+  }
+  knop.disabled = true;
+  status.textContent = "Versturen…";
+  try {
+    const uit = await modulesFetch("/api/dashboard/modules/verzoek", { wens });
+    if (uit.ok) {
+      veld.value = "";
+      status.textContent = "Verzonden — we nemen het op en je hoort van ons.";
+    } else {
+      status.textContent = (uit.body && uit.body.fout) || "Versturen lukte niet. Probeer het later nog eens.";
+      knop.disabled = false;
+    }
+  } catch (e) {
+    status.textContent = "Versturen lukte niet. Probeer het later nog eens.";
+    knop.disabled = false;
+  }
+}
+
+/* ── Detailpagina ──────────────────────────────────────────────────── */
+
+function renderDetailModules(el) {
+  if (!moduleOverzichtBeschikbaar()) {
+    el.innerHTML = `<p>Je moduleoverzicht is niet beschikbaar. Log opnieuw in en probeer het nog eens.</p>`;
+    return;
+  }
+  const o = moduleOverzicht;
+  el.innerHTML = `
+    <p>Je pakket: <strong>${esc(o.pakket)}</strong> — <strong>€ ${nlGetal(o.maandbedragExclBtw)}/mnd</strong> excl. ${esc(String(o.btwPercentage))}% btw. Een jaarcontract geeft ${esc(String(o.jaarGratisMaanden))} maanden gratis.</p>
+    <div class="grid-9">${o.modules.map(moduleKaartHtml).join("")}</div>
+    ${o.magSchakelen === true ? schakelBlokHtml(o) : verzoekBlokHtml()}
+    <p class="footnote">Bedragen en samenstelling komen live van agentic-team.ai — dit dashboard rekent
+    er zelf niet aan. Klopt er iets niet, mail support@agentic-team.ai.</p>`;
+
+  if (o.magSchakelen === true) {
+    el.querySelector("#modules-bereken-knop").addEventListener("click", () => {
+      void berekenWijziging(el);
+    });
+    el.querySelector("#modules-opzeg-knop").addEventListener("click", () => {
+      void startOpzeggen(el);
+    });
+  } else {
+    el.querySelector("#modules-verzoek-knop").addEventListener("click", () => {
+      void verstuurModuleVerzoek(el);
+    });
+  }
 }
 
 
@@ -5954,6 +8247,7 @@ function buildContext() {
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+      relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
@@ -5971,6 +8265,12 @@ function buildContext() {
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
+    // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
+    // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
+    // bundel zodat de tabel de waarheid van de instantie toont.
+    bron: huidigeBron,
+    kanSchrijven: bronKanSchrijven(huidigeBron),
+    herlaad: () => laadWerkruimte(huidigeBron),
   };
 }
 
@@ -6045,6 +8345,17 @@ function renderAll() {
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
+  // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
+  // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
+  // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  renderModulesPanel(document.getElementById("panel-modules"));
+  void laadModuleOverzicht(huidigeBron).then((overzicht) => {
+    if (overzicht) {
+      renderModulesPanel(document.getElementById("panel-modules"));
+      route();
+    }
+  });
+
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
@@ -6098,6 +8409,9 @@ function renderDetail(key) {
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
+    // f34 fase 0: alleen zodra de site het moduleoverzicht leverde (ingelogde
+    // sessie + allowlist) — zelfde patroon als de interne tegel hieronder.
+    ...(moduleOverzichtBeschikbaar() ? { modules: () => [detailSectionHtml("Jouw modules", "🧩", "Welke modules heb ik nu, en wat kosten ze per maand?", "detail-inner"), () => renderDetailModules(document.getElementById("detail-inner"))] } : {}),
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),
     activiteit: () => [detailSectionHtml("Activiteit per week", "📈", "Is er ritme, of zijn er gaten?", "detail-inner"), () => renderDetailActiviteit(document.getElementById("detail-inner"), ctx.activiteit, ctx.periodWeeks)],
@@ -6150,7 +8464,7 @@ function route() {
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
-  if (view.tab === "data") { resetDataZoek(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
@@ -6187,6 +8501,19 @@ function wireNavigatie() {
       startExport(exportEl.getAttribute("data-export"), exportEl);
       return;
     }
+    // Klikproef-ronde 2: een alert draagt zijn rijen als voorselectie mee, en
+    // een naam-link elders zet de zoekterm — de href doet daarna de navigatie.
+    const filterEl = e.target.closest("[data-filter-domein]");
+    if (filterEl) {
+      zetDataVoorselectie(
+        filterEl.getAttribute("data-filter-domein"),
+        filterEl.getAttribute("data-filter-label") || "",
+        (filterEl.getAttribute("data-filter-ids") || "").split(","),
+      );
+      return;
+    }
+    const zoekEl = e.target.closest("[data-relatie-zoek]");
+    if (zoekEl) { zetDataZoek(zoekEl.getAttribute("data-relatie-zoek") || ""); return; }
     const domeinEl = e.target.closest("[data-data-domein]");
     if (domeinEl) { window.location.hash = `#/data/${domeinEl.getAttribute("data-data-domein")}`; return; }
     const gotoEl = e.target.closest("[data-goto]");

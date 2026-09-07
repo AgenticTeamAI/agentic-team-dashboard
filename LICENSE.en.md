@@ -2,13 +2,14 @@
 This licence text is a working version (s33, 26-08-2026; the legal advice of
 26-08-2026 was incorporated on 27-08-2026) and still needs a second review
 before it becomes final. Until that review is complete: all rights reserved.
-The legal entity of the Licensor has not yet been settled. The open points
-for the second round are listed at the end of the Dutch LICENSE file.
+The legal entity of the Licensor has been settled: Five Forward Group B.V.
+(decision 28-08-2026, incorporated in version 0.3). The open points for the
+second round are listed at the end of the Dutch LICENSE file.
 <<JURIST-REVIEW>>
 
 # AGENTIC TEAM — SOURCE-AVAILABLE LICENCE (proprietary)
 
-Version 0.2-draft
+Version 0.4-draft
 
 **This is an English translation, provided for convenience only. The Dutch
 text in `LICENSE` is the authoritative version; in case of any discrepancy
@@ -17,7 +18,7 @@ between this translation and the Dutch text, the Dutch text prevails.**
 This repository is source-available, not open source. Anyone may read and
 study the code; only holders of a valid Agentic Team licence may use it.
 
-Copyright (c) 2026 Obeya Insights B.V. All rights reserved.
+Copyright (c) 2026 Five Forward Group B.V. All rights reserved.
 
 This licence applies to the contents of the repository
 "AgenticTeamAI/agentic-team-dashboard" (the "Software"), including all source code,
@@ -26,7 +27,9 @@ expressly states a different licence (see NOTICE for third-party components).
 
 ## 1. Definitions
 
-a. **"Licensor"**: Obeya Insights B.V., trading under the name Agentic Team
+a. **"Licensor"**: Five Forward Group B.V., registered with the Dutch
+   Chamber of Commerce under number 42143676, with offices at IJsselburcht 3,
+   6825 BS Arnhem, the Netherlands, also trading under the name Agentic Team
    (www.agentic-team.ai).
 b. **"Licensee"**: a natural or legal person holding a valid, unterminated
    Agentic Team licence (subscription or trial licence) under the Licensor's
@@ -141,11 +144,12 @@ the Licensor cannot terminate their availability.
 ## 7. Warranty and liability
 
 The Software is provided "as is". For Licensees, the warranty and liability
-provisions of the General Terms and Conditions, the Product Terms and any
-data processing agreement apply; those prevail in the event of a conflict,
-in that order. For others the following applies, to the extent permitted by
-law: no warranty whatsoever and no liability for any damage arising from
-reading or using the Software. This exclusion does not apply in the event of
+provisions of the agreement between the Licensor and the Licensee and the
+terms belonging to it apply, including the order of precedence that those
+terms determine among themselves. In the absence of such an arrangement, the
+Licensor's General Terms and Conditions apply. For others the following
+applies, to the extent permitted by law: no warranty whatsoever and no
+liability for any damage arising from reading or using the Software. This exclusion does not apply in the event of
 intent or wilful recklessness on the part of the Licensor, nor to damage
 resulting from death or personal injury.
 
@@ -159,9 +163,14 @@ mandatory law provides otherwise.
 
 This licence governs only the rights to the files in this repository. The
 Agentic Team service itself (connector, playbooks, workspace) is governed by
-the General Terms and Conditions, the Product Terms, the privacy policy and —
-where applicable — the data processing agreement at www.agentic-team.ai. In
-the event of a conflict between those documents and this licence, those
-documents prevail.
+the agreement between the Licensor and the Licensee and the terms belonging
+to it, including the General Terms and Conditions, the Product Terms, the
+privacy policy and — where applicable — the data processing agreement; the
+documents published on the website can be found at www.agentic-team.ai. This
+enumeration does not express an order of precedence; to the extent that the
+Agentic Team Product Terms determine an order of precedence among these
+documents, that order applies. In the event of a conflict between the
+documents referred to in this article and this licence, those documents
+prevail.
 
 Contact: via www.agentic-team.ai.

@@ -340,7 +340,8 @@ het aandeel acties dat een agent **autonoom** heeft afgerond (werkronde +
 QC, daarna zelf op "Klaar" gezet) en dat daarna **niet door een mens is
 gecorrigeerd**. Het domein Acties draagt hiervoor vanaf registry 1.34.0 de
 velden `Afgerond door` (agentnaam, alleen gevuld bij autonome afronding),
-`Afgerond op` (datum), `Gecorrigeerd` (checkbox, door een mens) en
+`Afgerond op` (datum waarop de actie op Klaar ging — altijd gevuld, ook bij
+een menselijke afronding), `Gecorrigeerd` (checkbox, door een mens) en
 `Correctie` (reden). Definitie, in beide routes identiek:
 
 - `autonoom_afgerond` = acties met `Afgerond door` gevuld én `Afgerond op`

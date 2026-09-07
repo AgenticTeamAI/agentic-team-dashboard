@@ -612,6 +612,35 @@ const CORRECTIEVRIJ_WEKEN = 5;         // 4 afgesloten + de lopende
 const CORRECTIEVRIJ_WEKEN_VEREIST = 4; // gate: 4 aaneengesloten afgesloten weken
 const CORRECTIEVRIJ_GEEN_VENSTER = "niet te berekenen — nog geen autonoom afgeronde acties in het venster";
 
+// b52: "Afgerond door" is een gewoon tekstveld — een mens kan er net zo goed
+// zijn eigen naam in zetten, en dat gebeurt in de praktijk. Autonoom afgerond
+// betekent per definitie dat de wérkronde de actie op Klaar zette, dus telt
+// alleen een naam die van een agent is. De canonieke namen komen uit de
+// registry (schema.agents, dezelfde lijst die het Agent-select voedt).
+function normAgentNaam(v) {
+  return String(v ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Set met agentnamen (displayName én slug, genormaliseerd), of null als het
+ * schema niet geladen is — dan kan er niet gefilterd worden en zegt het
+ * resultaat dat erbij. */
+function agentNamen(schema) {
+  const bron = schema
+    ?? (typeof window !== "undefined" ? window.AGENTIC_TEAM_SCHEMA : null)
+    ?? (typeof globalThis !== "undefined" ? globalThis.AGENTIC_TEAM_SCHEMA : null);
+  const lijst = bron && Array.isArray(bron.agents) ? bron.agents : null;
+  if (!lijst) return null;
+  const namen = new Set();
+  for (const a of lijst) {
+    if (a && a.displayName) namen.add(normAgentNaam(a.displayName));
+    if (a && a.slug) namen.add(normAgentNaam(a.slug));
+  }
+  return namen.size ? namen : null;
+}
+
+const CORRECTIEVRIJ_GEEN_AGENTLIJST =
+  "Agentlijst niet beschikbaar — er is niet gefilterd op agentnaam, dus dit percentage kan werk bevatten dat een mens afrondde.";
+
 // Checkbox-waarden zoals ze uit Excel/Notion/werkruimte binnenkomen.
 function checkboxWaar(v) {
   if (v === true || v === 1) return true;
@@ -700,16 +729,18 @@ function berekenCorrectievrij(ruw, today) {
 
 // Rij-route: telt uit Acties (velden Afgerond door / Afgerond op /
 // Gecorrigeerd / Status, registry 1.34.0).
-//   autonoom  = Afgerond door gevuld én Afgerond op binnen het venster t/m vandaag
+//   autonoom  = Afgerond door bevat een AGENTNAAM (b52) én Afgerond op binnen
+//               het venster t/m vandaag
 //   heropend  = daarvan Status ≠ "Klaar"
 //   gecorrigeerd = daarvan Gecorrigeerd aangevinkt óf Status ≠ "Klaar"
 // De weekreeks (laatste 5 kalenderweken, maandag = start) telt álle autonoom
 // afgeronde acties op Afgerond op, ook net buiten het 28-dagenvenster.
-function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT) {
+function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTER_DAGEN, drempel = CORRECTIEVRIJ_DREMPEL_PCT, opties = {}) {
   const acties = rows(bundle, "acties");
   if (!acties) {
     return { aanwezig: false, reden: "Geen Acties-domein aanwezig in deze bundel — het correctievrij-percentage is niet af te leiden." };
   }
+  const namen = opties.agentNamen !== undefined ? opties.agentNamen : agentNamen(opties.schema);
   const vandaagIdx = dagIndex(today);
   const huidigeWeekIdx = weekStartIndex(vandaagIdx);
   const wekenMap = new Map();
@@ -722,6 +753,9 @@ function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTE
   for (const r of acties) {
     const door = getField(r, "Afgerond door");
     if (door === undefined || door === null || String(door).trim() === "") continue;
+    // b52: staat er een mensennaam in, dan is dit geen autonoom afgeronde
+    // actie — niet in de noemer en niet in de weekreeks.
+    if (namen && !namen.has(normAgentNaam(door))) continue;
     const op = parseDateField(getField(r, "Afgerond op"));
     if (!op) continue;
     const opIdx = dagIndex(op);
@@ -742,7 +776,7 @@ function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTE
   return berekenCorrectievrij({
     vensterDagen, drempel, autonoom, gecorrigeerd, heropend,
     weken: [...wekenMap.values()],
-    opmerking: null,
+    opmerking: namen ? null : CORRECTIEVRIJ_GEEN_AGENTLIJST,
   }, today);
 }
 
@@ -757,5 +791,6 @@ if (typeof module !== "undefined") {
     computeTijdwinst, computeAgentGebruikRanking,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
+    agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
   };
 }

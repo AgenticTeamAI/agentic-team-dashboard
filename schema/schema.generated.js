@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.50.0
-//   registry updated: 2026-08-28
-//   bron-commit     : 622f3aac6ba5c0b58b9333d7e4bc43875382d055
-//   geextraheerd op : 2026-08-30T19:04:22Z
+//   registryVersion : 1.74.0
+//   registry updated: 2026-09-06
+//   bron-commit     : dfd8435cde3b3e1612395ed0a01c1d03b19d572c
+//   geextraheerd op : 2026-09-06T21:58:54Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.50.0",
-  "registryUpdated": "2026-08-28",
-  "sourceCommit": "622f3aac6ba5c0b58b9333d7e4bc43875382d055",
-  "extractedAt": "2026-08-30T19:04:22Z",
+  "registryVersion": "1.74.0",
+  "registryUpdated": "2026-09-06",
+  "sourceCommit": "dfd8435cde3b3e1612395ed0a01c1d03b19d572c",
+  "extractedAt": "2026-09-06T21:58:54Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -278,6 +278,18 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Signaalbron",
+          "type": "url"
+        },
+        {
+          "naam": "Signaal publicatiedatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Signaal geverifieerd op",
+          "type": "datum"
         }
       ]
     },
@@ -345,6 +357,50 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Organisatie",
           "type": "relatie",
           "naar": "organisaties"
+        },
+        {
+          "naam": "Buying-grouprol",
+          "type": "select",
+          "opties": [
+            "Sponsor",
+            "Probleemeigenaar",
+            "Gebruiker",
+            "Product-/proceseigenaar",
+            "Finance",
+            "Procurement",
+            "IT/architectuur",
+            "Data",
+            "Security",
+            "Privacy/legal",
+            "Operations/support",
+            "Blocker"
+          ]
+        },
+        {
+          "naam": "Grondslag benadering",
+          "type": "select",
+          "opties": [
+            "Toestemming",
+            "Klantrelatie",
+            "Gerechtvaardigd belang",
+            "Opengesteld adres"
+          ]
+        },
+        {
+          "naam": "Bron persoonsgegevens",
+          "type": "tekst"
+        },
+        {
+          "naam": "Art. 14 geïnformeerd op",
+          "type": "datum"
+        },
+        {
+          "naam": "Bezwaar/afmelding",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bezwaar/afmelding op",
+          "type": "datum"
         }
       ]
     },
@@ -435,7 +491,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -536,6 +593,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "relatie",
           "naar": "product_catalogus",
           "meervoud": true
+        },
+        {
+          "naam": "Fase sinds",
+          "type": "datum"
         }
       ]
     },
@@ -690,12 +751,17 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "relatie",
           "naar": "product_catalogus",
           "meervoud": true
+        },
+        {
+          "naam": "Versie",
+          "type": "getal",
+          "format": "number"
         }
       ]
     },
     "product_catalogus": {
       "naam": "Product Catalogus",
-      "module": "strategy",
+      "module": "core",
       "emoji": "🧩",
       "velden": [
         {
@@ -770,6 +836,37 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Notities",
           "type": "tekst"
+        },
+        {
+          "naam": "Probleem",
+          "type": "tekst"
+        },
+        {
+          "naam": "Doelgroep",
+          "type": "tekst"
+        },
+        {
+          "naam": "Oplossing",
+          "type": "tekst"
+        },
+        {
+          "naam": "Marge",
+          "type": "getal",
+          "format": "percent"
+        },
+        {
+          "naam": "Validatiestatus",
+          "type": "select",
+          "opties": [
+            "Idee",
+            "In validatie",
+            "Gevalideerd",
+            "Afgewezen"
+          ]
+        },
+        {
+          "naam": "Go/No-Go-criteria",
+          "type": "tekst"
         }
       ]
     },
@@ -787,6 +884,7 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "select",
           "opties": [
             "Idee",
+            "Geselecteerd",
             "In productie",
             "Klaar voor review",
             "Gepland",
@@ -812,6 +910,56 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Segment",
           "type": "select",
           "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Merk",
+          "type": "tekst"
+        },
+        {
+          "naam": "Herkomst",
+          "type": "multi_select",
+          "opties": [
+            "Gebruiker",
+            "Marktmaker",
+            "SEO/GEO Specialist",
+            "De Stem",
+            "Dealmaker",
+            "Customer Success Manager",
+            "Researcher"
+          ]
+        },
+        {
+          "naam": "Koopuitkomst",
+          "type": "multi_select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Kernvraag",
+          "type": "tekst"
+        },
+        {
+          "naam": "Hoofdboodschap",
+          "type": "tekst"
+        },
+        {
+          "naam": "Menselijke input",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bronnen",
+          "type": "tekst"
+        },
+        {
+          "naam": "SEO/GEO briefing",
+          "type": "tekst"
         },
         {
           "naam": "Publicatiedatum",
@@ -846,13 +994,69 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         },
         {
+          "naam": "CTA",
+          "type": "tekst"
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Menselijk akkoord",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Publicatie URL",
+          "type": "url"
+        },
+        {
+          "naam": "Impressies",
+          "type": "getal"
+        },
+        {
+          "naam": "Engagement",
+          "type": "getal"
+        },
+        {
+          "naam": "Leersignaal",
+          "type": "tekst"
+        },
+        {
           "naam": "Eigenaar",
           "type": "mensen"
+        },
+        {
+          "naam": "Primaire koopuitkomst",
+          "type": "select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Moeite",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
         }
       ]
     },
     "lessen_inzichten": {
       "naam": "Lessen & Inzichten",
+      "systeem": true,
       "module": "core",
       "emoji": "💡",
       "velden": [
@@ -926,6 +1130,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "bedrijfscontext": {
       "naam": "Bedrijfscontext",
+      "systeem": true,
       "module": "core",
       "emoji": "📋",
       "velden": [
@@ -959,6 +1164,7 @@ window.AGENTIC_TEAM_SCHEMA = {
     },
     "logboek": {
       "naam": "Logboek",
+      "systeem": true,
       "module": "core",
       "emoji": "📔",
       "velden": [
@@ -1141,7 +1347,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         }
       ]
     },
@@ -1239,7 +1446,8 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Project",
           "type": "relatie",
-          "naar": "projecten"
+          "naar": "projecten",
+          "crossModuleBedoeld": true
         },
         {
           "naam": "Contactpersoon",
@@ -1249,7 +1457,50 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Interactie",
           "type": "relatie",
-          "naar": "interacties"
+          "naar": "interacties",
+          "crossModuleBedoeld": true
+        },
+        {
+          "naam": "Bovenliggende actie",
+          "type": "relatie",
+          "naar": "acties"
+        }
+      ]
+    },
+    "notities": {
+      "naam": "Notities",
+      "systeem": true,
+      "module": "core",
+      "emoji": "📝",
+      "velden": [
+        {
+          "naam": "Onderwerp",
+          "type": "titel"
+        },
+        {
+          "naam": "Notitie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Auteur",
+          "type": "tekst"
+        },
+        {
+          "naam": "Soort",
+          "type": "select",
+          "opties": [
+            "Mens",
+            "Agent"
+          ]
+        },
+        {
+          "naam": "Betreft",
+          "type": "relatie",
+          "naar": "*"
         }
       ]
     },
@@ -1353,6 +1604,38 @@ window.AGENTIC_TEAM_SCHEMA = {
           "naam": "Klant",
           "type": "relatie",
           "naar": "organisaties"
+        },
+        {
+          "naam": "Volgende actie",
+          "type": "tekst"
+        },
+        {
+          "naam": "Actie deadline",
+          "type": "datum"
+        },
+        {
+          "naam": "Adoptie",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Gemiddeld",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Deal",
+          "type": "relatie",
+          "naar": "sales_funnel"
+        },
+        {
+          "naam": "Project",
+          "type": "relatie",
+          "naar": "projecten"
+        },
+        {
+          "naam": "Contactpersoon",
+          "type": "relatie",
+          "naar": "contactpersonen"
         }
       ]
     },
@@ -1472,6 +1755,573 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Toegang",
           "type": "tekst"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "financieel_overzicht": {
+      "naam": "Financieel Overzicht",
+      "module": "backoffice",
+      "emoji": "💶",
+      "velden": [
+        {
+          "naam": "Periode",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Maandcijfers",
+            "Forecast",
+            "Budget",
+            "Capaciteit"
+          ]
+        },
+        {
+          "naam": "Peildatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Omzet",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Kosten",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Resultaat",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Cash einde periode",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Toelichting",
+          "type": "tekst"
+        }
+      ]
+    },
+    "contracten": {
+      "naam": "Contracten",
+      "module": "backoffice",
+      "emoji": "📜",
+      "velden": [
+        {
+          "naam": "Contractnaam",
+          "type": "titel"
+        },
+        {
+          "naam": "Type",
+          "type": "select",
+          "opties": [
+            "Klantcontract",
+            "Leverancierscontract",
+            "NDA",
+            "Verwerkersovereenkomst",
+            "Arbeids-/opdrachtovereenkomst",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Concept",
+            "Actief",
+            "Opgezegd",
+            "Beëindigd"
+          ]
+        },
+        {
+          "naam": "Wederpartij",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Startdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Einddatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Verlengdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Opzegtermijn",
+          "type": "tekst"
+        },
+        {
+          "naam": "DPA-status",
+          "type": "select",
+          "opties": [
+            "N.v.t.",
+            "Nodig",
+            "Aanwezig"
+          ]
+        },
+        {
+          "naam": "Risico",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Locatie",
+          "type": "url"
+        },
+        {
+          "naam": "Notities",
+          "type": "tekst"
+        }
+      ]
+    },
+    "seo_vraagonderzoek": {
+      "naam": "SEO Vraagonderzoek",
+      "module": "visibility",
+      "emoji": "🔍",
+      "velden": [
+        {
+          "naam": "Vraag",
+          "type": "titel"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Koopintentie",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        },
+        {
+          "naam": "Koopuitkomst",
+          "type": "select",
+          "opties": [
+            "Markt en situatie herkennen",
+            "Probleem begrijpen",
+            "Waarde en opties afwegen",
+            "Bewijs en risico toetsen",
+            "Besluit mogelijk maken",
+            "Implementatie voorbereiden",
+            "Waarde aantonen en verdiepen"
+          ]
+        },
+        {
+          "naam": "Bron",
+          "type": "select",
+          "opties": [
+            "Klantkennis",
+            "Google",
+            "AI-assistent",
+            "Sitedata"
+          ]
+        },
+        {
+          "naam": "Al gedekt",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Prioriteit",
+          "type": "select",
+          "opties": [
+            "Hoog",
+            "Midden",
+            "Laag"
+          ]
+        }
+      ]
+    },
+    "vindbaarheid_audit": {
+      "naam": "Vindbaarheid Audit",
+      "module": "visibility",
+      "emoji": "📶",
+      "velden": [
+        {
+          "naam": "Pagina",
+          "type": "titel"
+        },
+        {
+          "naam": "Pagina URL",
+          "type": "url"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Zoekintentie match",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Titel en meta",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Koppenstructuur",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Direct antwoordblok",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Interne links",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Citeerbaarheid",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Totaalscore",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Rood",
+            "Oranje",
+            "Groen"
+          ]
+        },
+        {
+          "naam": "Entiteit-consistentie",
+          "type": "select",
+          "opties": [
+            "Ja",
+            "Nee",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Datum audit",
+          "type": "datum"
+        }
+      ]
+    },
+    "geo_metingen": {
+      "naam": "GEO Metingen",
+      "module": "visibility",
+      "emoji": "🤖",
+      "velden": [
+        {
+          "naam": "Vraag",
+          "type": "titel"
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Assistent",
+          "type": "select",
+          "opties": [
+            "Google AI Overviews",
+            "ChatGPT",
+            "Perplexity",
+            "Claude",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Bedrijf genoemd",
+          "type": "checkbox"
+        },
+        {
+          "naam": "Bronnen wel genoemd",
+          "type": "tekst"
+        },
+        {
+          "naam": "Gat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Vervolgactie",
+          "type": "tekst"
+        }
+      ]
+    },
+    "pipeline_weekreview": {
+      "naam": "Pipeline Weekreview",
+      "module": "growth",
+      "emoji": "📈",
+      "velden": [
+        {
+          "naam": "Week",
+          "type": "titel"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Aantal deals",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Pipelinewaarde",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Gewogen waarde",
+          "type": "getal",
+          "format": "euro"
+        },
+        {
+          "naam": "Per fase",
+          "type": "tekst"
+        },
+        {
+          "naam": "Mutaties",
+          "type": "tekst"
+        },
+        {
+          "naam": "Aandachtspunten",
+          "type": "tekst"
+        }
+      ]
+    },
+    "klantbewijs": {
+      "naam": "Klantbewijs",
+      "module": "core",
+      "emoji": "🏅",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Soort bewijs",
+          "type": "select",
+          "opties": [
+            "Resultaatmeting",
+            "Quote",
+            "Case",
+            "Referentie",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Klant",
+          "type": "relatie",
+          "naar": "organisaties"
+        },
+        {
+          "naam": "Bewering",
+          "type": "tekst"
+        },
+        {
+          "naam": "Meetcontext",
+          "type": "tekst"
+        },
+        {
+          "naam": "Beperkingen",
+          "type": "tekst"
+        },
+        {
+          "naam": "Toestemming",
+          "type": "select",
+          "opties": [
+            "Onbekend",
+            "Niet toegestaan",
+            "Toegestaan"
+          ]
+        },
+        {
+          "naam": "Toestemming via",
+          "type": "relatie",
+          "naar": "contactpersonen"
+        },
+        {
+          "naam": "Toestemmingsdatum",
+          "type": "datum"
+        },
+        {
+          "naam": "Kanaal en scope",
+          "type": "tekst"
+        },
+        {
+          "naam": "Niet publiceren",
+          "type": "tekst"
+        },
+        {
+          "naam": "Kernvraag",
+          "type": "tekst"
+        }
+      ]
+    },
+    "autoriteit": {
+      "naam": "Autoriteit",
+      "module": "visibility",
+      "emoji": "📣",
+      "velden": [
+        {
+          "naam": "Titel",
+          "type": "titel"
+        },
+        {
+          "naam": "Categorie",
+          "type": "select",
+          "opties": [
+            "Podium of medium",
+            "Autoriteitsbewijs"
+          ]
+        },
+        {
+          "naam": "Vorm",
+          "type": "select",
+          "opties": [
+            "Vakmedium",
+            "Podcast",
+            "Congres of event",
+            "Panel",
+            "Nieuwsbrief",
+            "Community",
+            "Vermelding",
+            "Citaat",
+            "Interview",
+            "Gastartikel",
+            "Optreden",
+            "Award",
+            "Eigen publicatie",
+            "Overig"
+          ]
+        },
+        {
+          "naam": "Herkomst",
+          "type": "select",
+          "opties": [
+            "Verdiend",
+            "Eigen",
+            "Nog niet van toepassing"
+          ]
+        },
+        {
+          "naam": "Aanleiding",
+          "type": "select",
+          "opties": [
+            "Uitgenodigd",
+            "Zelf gepitcht",
+            "Eigen initiatief",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Status",
+          "type": "select",
+          "opties": [
+            "Kans",
+            "Benaderd",
+            "Toegezegd",
+            "Gepubliceerd",
+            "Afgewezen",
+            "Niet passend"
+          ]
+        },
+        {
+          "naam": "Segment",
+          "type": "select",
+          "opties_dynamisch": "segment_options"
+        },
+        {
+          "naam": "Persoon",
+          "type": "tekst"
+        },
+        {
+          "naam": "Contact en beat",
+          "type": "tekst"
+        },
+        {
+          "naam": "Datum",
+          "type": "datum"
+        },
+        {
+          "naam": "Laatste contact",
+          "type": "datum"
+        },
+        {
+          "naam": "Link",
+          "type": "url"
+        },
+        {
+          "naam": "Bron en datum vaststelling",
+          "type": "tekst"
+        },
+        {
+          "naam": "Blijft er iets van over",
+          "type": "select",
+          "opties": [
+            "Ja",
+            "Nee",
+            "Onbekend"
+          ]
+        },
+        {
+          "naam": "Hergebruikt in",
+          "type": "multi_select",
+          "opties": [
+            "Offerte",
+            "Gesprek",
+            "Bio",
+            "Post",
+            "Nog niet"
+          ]
+        },
+        {
+          "naam": "Hergebruik aantal",
+          "type": "getal",
+          "format": "number"
+        },
+        {
+          "naam": "Laatst hergebruikt",
+          "type": "datum"
+        },
+        {
+          "naam": "Content",
+          "type": "relatie",
+          "naar": "content_kalender"
+        },
+        {
+          "naam": "Podium",
+          "type": "relatie",
+          "naar": "autoriteit"
         },
         {
           "naam": "Notities",

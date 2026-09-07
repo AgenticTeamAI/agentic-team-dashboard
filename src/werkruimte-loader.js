@@ -179,6 +179,50 @@ async function fetchWerkruimte(bron, pad) {
   return body;
 }
 
+/* f23: een schrijfverzoek (POST/PUT/DELETE) naar de instantie, met dezelfde
+ * 401-vernieuwing als fetchWerkruimte. Een 403/409/422 komt als leesbare
+ * Error terug (de instantie stuurt een `fout`-tekst mee), met `status` erop
+ * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
+async function schrijfWerkruimte(bron, methode, pad, payload) {
+  const doe = async () => {
+    try {
+      return await fetch(bron.instantieUrl + pad, {
+        method: methode,
+        headers: Object.assign(
+          { Authorization: "Bearer " + bron.token },
+          payload === undefined ? {} : { "Content-Type": "application/json" },
+        ),
+        ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
+      });
+    } catch (e) {
+      throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    }
+  };
+  let res = await doe();
+  if (res.status === 401 && bron.oauth) {
+    const nieuw = await eenmaligVernieuwen();
+    if (nieuw && nieuw.access_token) {
+      bron.token = nieuw.access_token;
+      res = await doe();
+    }
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) { /* geen JSON — valt in de foutpaden */ }
+  if (res.status === 401) {
+    const err = new Error(bron.oauth
+      ? "Je sessie is verlopen. Log opnieuw in met je licentie."
+      : "Deze dashboardlink is verlopen. Vraag je Coördinator om een nieuwe.");
+    if (bron.oauth) err.oauthVerlopen = true; else err.daglinkVerlopen = true;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
 /**
  * f30 — de statische export ophalen en als bestand aan de gebruiker geven.
  *
@@ -286,7 +330,11 @@ function bedrijfscontextUitEntries(entries, fallbackStaleAt) {
  * vangrail. Werkgeheugen-domeinen tellen niet als werkdata voor de
  * voorrangsbeslissing: die zijn bij élke werkruimte-klant gevuld. */
 const METRICS_DOMEIN = "dashboard_metrics";
-const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext"];
+// Domeinen die wél rijen hebben maar géén "werkdata" zijn in de arbitrage
+// hieronder: werkgeheugen (logboek, bedrijfscontext) en sinds f33 notities.
+// Zonder notities hier zou één losse notitie bij een klant met een extern
+// CRM de metricsroute verdringen voor een bijna leeg rijendashboard.
+const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext", "notities"];
 const TEAMFEED_DOMEIN = "teamfeed";
 const TEAMFEED_DAGEN = 30;
 const TEAMFEED_LIMIET = 500;
@@ -360,6 +408,13 @@ async function loadWerkruimteBundle(bron) {
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
+  // f33: welke domeinen kent de instantie überhaupt? Het overzicht noemt ze
+  // allemaal, ook met aantal 0 — en dat is het enige signaal of een instantie
+  // al een image draait dat een nieuw domein kent. Zonder dit zou het
+  // dashboard een notitieformulier tonen dat bij een oudere instantie een
+  // "Onbekend domein" oplevert, precies in het gat tussen een dashboarddeploy
+  // en de vlootuitrol.
+  bundle.instantieDomeinen = (overzicht.domeinen || []).map(d => d && d.domein).filter(Boolean);
 
   // f22: alleen ophalen als de instantie het domein kent (staat dan in het
   // overzicht, ook met aantal 0); anders blijft teamfeed null = "nog niet
@@ -406,12 +461,30 @@ async function loadWerkruimteBundle(bron) {
         }
         bundle.kind = "metrics";
         bundle.metricsRaw = metrics.payload;
+        // f33: de cijfers komen uit het metricsbestand, maar de Data-tab moet
+        // nog steeds je rijen kunnen tonen. Tot nu toe returnde deze tak
+        // meteen, waardoor detail, kanban en notities onzichtbaar waren op
+        // precies de omgevingen waar 's ochtends een dagstart draait.
+        await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+        bundle.systeemPerDomein = systeemPerDomein;
         return bundle;
       }
       bundle.waarschuwingen.push(`Verouderde metrics-entry (van ${datumLabel}) genegeerd — het dashboard rekent live uit de werkdata-rijen in je werkruimte.`);
     }
   }
 
+  await laadRijen(bron, bundle, gevuld, opslagDomeinen, schema);
+  // f23: de UI moet weten welke domeinen volgens de bronkoppeling extern
+  // wonen — die blijven lezen-met-uitleg, ook in een schrijfsessie.
+  bundle.systeemPerDomein = systeemPerDomein;
+  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
+  return bundle;
+}
+
+/* De rijen van elk gevuld domein in de bundel zetten. Sinds f33 gebeurt dit in
+ * beide takken van loadWerkruimteBundle: ook naast een vers metricsbestand,
+ * want de Data-tab leest hieruit. */
+async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
   const metInhoud = gevuld.filter(d => opslagDomeinen.indexOf(d.domein) === -1);
   // s26/016: dit was één Promise.all over álle gevulde domeinen — bij een vol
   // team zijn dat er zeventien, elk met een verzoek om 5.000 records, allemaal
@@ -437,13 +510,13 @@ async function loadWerkruimteBundle(bron) {
     }
     bundle.domains[domein] = {
       aanwezig: true,
-      rows: entries.map(e => e.data),
+      // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
+      // schemaveld en komt dus nooit als kolom in beeld.
+      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
   }
-  if (bundle.bedrijfscontext === null) bundle.bedrijfscontext = "niet-ondersteund-door-bundel";
-  return bundle;
 }
 
 /* p10: welke bron gebruikt deze pagina? Een verse daglink in het fragment is
@@ -462,7 +535,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
-    fetchWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };
 }

@@ -56,6 +56,9 @@ function zetOmgeving({ protocol = "https:", hash = "", oauthVlag = true } = {}) 
   genavigeerdNaar = [];
   fetches = [];
   globalThis.sessionStorage = nieuweSessionStorage();
+  // f23-magic-linkfix: de PKCE-verifier leeft in localStorage (nieuw tabblad
+  // uit de mail moet de poging herkennen); zelfde mock-vorm.
+  globalThis.localStorage = nieuweSessionStorage();
   globalThis.document = {
     querySelector: (sel) => (oauthVlag && sel === 'meta[name="at-oauth"][content="1"]' ? {} : null),
   };
@@ -93,7 +96,7 @@ const TOKENANTWOORD = {
   token_type: "Bearer",
   expires_in: 3600,
   refresh_token: "atr_eerste",
-  scope: "dashboard:lees",
+  scope: "dashboard:lees dashboard:schrijf",
 };
 
 beforeEach(() => zetOmgeving());
@@ -136,7 +139,7 @@ describe("autorisatie-URL", () => {
     expect(p.get("response_type")).toBe("code");
     expect(p.get("client_id")).toBe("https://www.agentic-team.ai/oauth/clients/dashboard");
     expect(p.get("redirect_uri")).toBe("https://dashboard.agentic-team.ai/");
-    expect(p.get("scope")).toBe("dashboard:lees");
+    expect(p.get("scope")).toBe("dashboard:lees dashboard:schrijf");
     expect(p.get("resource")).toBe("https://connector.agentic-team.ai/dashboard");
     expect(p.get("code_challenge")).toBe("CH");
     expect(p.get("code_challenge_method")).toBe("S256");
@@ -161,7 +164,7 @@ describe("autorisatie-URL", () => {
 
   it("startOauthLogin bewaart verifier + state en navigeert met de bijbehorende challenge", async () => {
     await g.startOauthLogin();
-    const bewaard = JSON.parse(sessionStorage.getItem("agentic-team-dashboard:oauth-pkce"));
+    const bewaard = JSON.parse(localStorage.getItem("agentic-team-dashboard:oauth-pkce"));
     expect(bewaard.verifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(genavigeerdNaar).toHaveLength(1);
     const p = new URL(genavigeerdNaar[0]).searchParams;
@@ -200,7 +203,7 @@ describe("parseOauthRedirect", () => {
 
 describe("voltooiOauthLogin", () => {
   function metPkce(state = "ST", verifier = "V".repeat(43)) {
-    sessionStorage.setItem("agentic-team-dashboard:oauth-pkce", JSON.stringify({ verifier, state }));
+    localStorage.setItem("agentic-team-dashboard:oauth-pkce", JSON.stringify({ verifier, state, t: Date.now() }));
   }
 
   it("wisselt de code in, bewaart de sessie en maakt de adresbalk leeg", async () => {
@@ -214,7 +217,7 @@ describe("voltooiOauthLogin", () => {
     // De code mag niet in de history of in een gedeelde URL achterblijven.
     expect(vervangenUrl).toEqual(["/"]);
     // De PKCE-verifier is eenmalig en meteen opgeruimd.
-    expect(sessionStorage.getItem("agentic-team-dashboard:oauth-pkce")).toBeNull();
+    expect(localStorage.getItem("agentic-team-dashboard:oauth-pkce")).toBeNull();
 
     const [aanroep] = fetches;
     expect(aanroep.url).toBe("https://www.agentic-team.ai/api/oauth/token");
