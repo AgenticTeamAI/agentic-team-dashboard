@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.74.0
+//   registryVersion : 1.75.0
 //   registry updated: 2026-09-06
-//   bron-commit     : 4a6426affb2b92b96b84d50202b58a063438a3ca
-//   geextraheerd op : 2026-09-07T08:43:42Z
+//   bron-commit     : 896762937594a292337d4c6c502a2a081dde81d8
+//   geextraheerd op : 2026-09-07T10:59:29Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.74.0",
+  "registryVersion": "1.75.0",
   "registryUpdated": "2026-09-06",
-  "sourceCommit": "4a6426affb2b92b96b84d50202b58a063438a3ca",
-  "extractedAt": "2026-09-07T08:43:42Z",
+  "sourceCommit": "896762937594a292337d4c6c502a2a081dde81d8",
+  "extractedAt": "2026-09-07T10:59:29Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -962,6 +962,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         },
         {
+          "naam": "Hoekkaart",
+          "type": "tekst"
+        },
+        {
           "naam": "Publicatiedatum",
           "type": "datum"
         },
@@ -990,6 +994,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "tekst"
         },
         {
+          "naam": "Versie",
+          "type": "getal"
+        },
+        {
           "naam": "Campagne",
           "type": "tekst"
         },
@@ -1007,8 +1015,16 @@ window.AGENTIC_TEAM_SCHEMA = {
           ]
         },
         {
+          "naam": "Akkoord hoek",
+          "type": "checkbox"
+        },
+        {
           "naam": "Menselijk akkoord",
           "type": "checkbox"
+        },
+        {
+          "naam": "Akkoord versie",
+          "type": "getal"
         },
         {
           "naam": "Publicatie URL",
