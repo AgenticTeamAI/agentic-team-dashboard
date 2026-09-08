@@ -93,6 +93,22 @@ jobs:
         with:
           python-version: '3.12'
 
+      # ob63: de metrics-fixture is het contract met de werkruimte. Twee
+      # implementaties in twee talen die niet samengevoegd kunnen worden; wijkt
+      # de gevendorde kopie af, dan toetst dit dashboard tegen andere gevallen
+      # dan de werkruimte en is het contract stil weg.
+      - name: metrics-fixture hoort bij de pin
+        env:
+          PIN: ${{ steps.pin.outputs.commit }}
+        run: |
+          set -euo pipefail
+          if ! cmp -s agent-architecture/architectuur/metrics-fixture.json test/fixtures/metrics-fixture.json; then
+            echo "::error::test/fixtures/metrics-fixture.json wijkt af van architectuur/metrics-fixture.json op de gepinde arch-commit $PIN. Kopieer hem opnieuw; de werkruimte vendort dezelfde fixture en de twee moeten byte-gelijk zijn."
+            diff agent-architecture/architectuur/metrics-fixture.json test/fixtures/metrics-fixture.json | head -20 || true
+            exit 1
+          fi
+          echo "✅ metrics-fixture is in sync"
+
       - name: schema.generated.js hoort bij de pin
         env:
           PIN: ${{ steps.pin.outputs.commit }}

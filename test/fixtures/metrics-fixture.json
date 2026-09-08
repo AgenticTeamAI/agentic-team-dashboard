@@ -1,0 +1,715 @@
+{
+  "_doc": "Gedeelde testgevallen voor de metrics-sanering (ob63). Twee implementaties, twee talen, twee runtimes: src/domeinen/metrics.ts in de werkruimte (Node, bepaalt wat er wordt OPGESLAGEN) en src/metrics-sanitize.js in het dashboard (browser, bepaalt wat er wordt GETOOND uit een geupload bestand). Ze kunnen niet samengevoegd worden — het dashboard is een statische bundel met CSP-hashes en kan niets uit de werkruimte importeren. Deze fixture is daarom het contract.",
+  "_doc_gebruik": "Beide repo's vendoren dit bestand byte-gelijk uit agent-architecture/architectuur/ en draaien hun eigen implementatie ertegen. `gedeeld` moet in beide exact uitkomen. `verschilt` legt een BEKEND verschil vast met beide uitkomsten: zo vangt de poort niet alleen nieuwe drift, maar ook een stille wijziging aan een van de twee kanten van het bekende verschil.",
+  "_doc_verschil": "Het enige bekende verschil gaat over correctievrij.venster_dagen en .drempel_pct. De werkruimte vult de canonieke i25-waarden in (28 dagen, 80%); het dashboard laat ze null. Allebei verdedigbaar: bij opslag is een ontbrekende drempel een gat, bij weergave zou invullen een drempel tonen die niet in het bestand stond. Vastgelegd in plaats van gelijkgetrokken, want de keuze is aan de eigenaar en niet aan wie het als eerste opmerkt.",
+  "domeinSlugs": [
+    "logboek",
+    "acties",
+    "organisaties",
+    "sales_funnel",
+    "klantsucces"
+  ],
+  "agentSlugs": [
+    "orchestrator",
+    "jurist",
+    "controller"
+  ],
+  "gedeeld": [
+    {
+      "naam": "vorm: leeg object",
+      "invoer": {},
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "vorm: null",
+      "invoer": null,
+      "verwacht": null
+    },
+    {
+      "naam": "vorm: array",
+      "invoer": [
+        1,
+        2
+      ],
+      "verwacht": null
+    },
+    {
+      "naam": "vorm: string",
+      "invoer": "nee",
+      "verwacht": null
+    },
+    {
+      "naam": "vorm: getal",
+      "invoer": 42,
+      "verwacht": null
+    },
+    {
+      "naam": "volledige payload",
+      "invoer": {
+        "versie": 2,
+        "type": "dagstart",
+        "gegenereerd_op": "2026-09-08",
+        "bron_label": "Notion",
+        "door": "orchestrator",
+        "minuten_per_actie": 5,
+        "periode": "2026-W37"
+      },
+      "verwacht": {
+        "versie": 2,
+        "type": "dagstart",
+        "gegenereerd_op": "2026-09-08",
+        "bron_label": "Notion",
+        "door": "orchestrator",
+        "minuten_per_actie": 5,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "versie als tekst",
+      "invoer": {
+        "versie": "2"
+      },
+      "verwacht": {
+        "versie": 2,
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "versie als object",
+      "invoer": {
+        "versie": {}
+      },
+      "verwacht": {
+        "versie": null,
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": [
+          "Metricsbestand: veld \"versie\" had een onbruikbare waarde (object) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "versie negatief",
+      "invoer": {
+        "versie": -1
+      },
+      "verwacht": {
+        "versie": -1,
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "datum: onzin",
+      "invoer": {
+        "gegenereerd_op": "gisteren"
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": [
+          "Metricsbestand: veld \"gegenereerd_op\" had een onbruikbare waarde (string) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "datum: getal",
+      "invoer": {
+        "gegenereerd_op": 20260908
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": [
+          "Metricsbestand: veld \"gegenereerd_op\" had een onbruikbare waarde (number) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "datum: met tijd",
+      "invoer": {
+        "gegenereerd_op": "2026-09-08T10:00:00Z"
+      },
+      "verwacht": {
+        "gegenereerd_op": "2026-09-08T10:00:00Z",
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "tekst: te lang",
+      "invoer": {
+        "bron_label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "tekst: object",
+      "invoer": {
+        "door": {
+          "a": 1
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "getal: negatief",
+      "invoer": {
+        "minuten_per_actie": -5
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": -5,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "getal: Infinity",
+      "invoer": {
+        "minuten_per_actie": null
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "getal: NaN",
+      "invoer": {
+        "minuten_per_actie": null
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "getal: tekst",
+      "invoer": {
+        "minuten_per_actie": "5"
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": 5,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "onbekend veld",
+      "invoer": {
+        "versie": 1,
+        "sluipveld": "hallo"
+      },
+      "verwacht": {
+        "versie": 1,
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "domeinen: bekend",
+      "invoer": {
+        "domeinen": {
+          "logboek": {
+            "aantal": 3
+          },
+          "acties": {
+            "aantal": 7
+          }
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "domeinen": {
+          "logboek": {
+            "laatst_bijgewerkt": null,
+            "rijen": 0
+          },
+          "acties": {
+            "laatst_bijgewerkt": null,
+            "rijen": 0
+          }
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "domeinen: onbekende slug",
+      "invoer": {
+        "domeinen": {
+          "logboek": {
+            "aantal": 3
+          },
+          "verzonnen": {
+            "aantal": 9
+          }
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "domeinen": {
+          "logboek": {
+            "laatst_bijgewerkt": null,
+            "rijen": 0
+          }
+        },
+        "waarschuwingen": [
+          "Metricsbestand: veld \"domeinen (1 onbekende sleutel(s))\" had een onbruikbare waarde (string) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "domeinen: geen object",
+      "invoer": {
+        "domeinen": "nee"
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "agents: bekend",
+      "invoer": {
+        "agents": {
+          "orchestrator": {
+            "aantal": 2
+          }
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "agents": {
+          "veld_aanwezig": true,
+          "per_agent": {}
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "agents: onbekende slug",
+      "invoer": {
+        "agents": {
+          "hacker": {
+            "aantal": 99
+          }
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "agents": {
+          "veld_aanwezig": true,
+          "per_agent": {}
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "relaties: geldig",
+      "invoer": {
+        "relaties": [
+          {
+            "van": "logboek",
+            "naar": "acties",
+            "aantal": 4
+          }
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "relaties": [
+          {
+            "van": "logboek",
+            "veld": "",
+            "naar": "acties",
+            "gekoppeld": 0,
+            "totaal": 0,
+            "doelen": 0,
+            "top": []
+          }
+        ],
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "relaties: onbekend domein",
+      "invoer": {
+        "relaties": [
+          {
+            "van": "verzonnen",
+            "naar": "acties",
+            "aantal": 4
+          }
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "relaties": [],
+        "waarschuwingen": [
+          "Metricsbestand: veld \"relaties[0]\" had een onbruikbare waarde (string) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "relaties: geen array",
+      "invoer": {
+        "relaties": {
+          "van": "logboek"
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "waarschuwingen: lijst",
+      "invoer": {
+        "waarschuwingen": [
+          "een",
+          "twee"
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": [
+          "een",
+          "twee"
+        ]
+      }
+    },
+    {
+      "naam": "waarschuwingen: onzin",
+      "invoer": {
+        "waarschuwingen": "een"
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "content: object",
+      "invoer": {
+        "content": {
+          "titel": "x"
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "content": {
+          "gepubliceerd": 0,
+          "gepland_in_periode": 0,
+          "totaal": 0
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "aandacht: lijst",
+      "invoer": {
+        "aandacht": [
+          {
+            "titel": "iets",
+            "ernst": "hoog"
+          }
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "aandacht": [
+          {
+            "type": "overig",
+            "ernst": "grijs",
+            "label": "",
+            "link": null
+          }
+        ],
+        "waarschuwingen": [
+          "Metricsbestand: veld \"aandacht[0].ernst\" had een onbruikbare waarde (string) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "aandacht: onbekende ernst",
+      "invoer": {
+        "aandacht": [
+          {
+            "titel": "iets",
+            "ernst": "ramp"
+          }
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "aandacht": [
+          {
+            "type": "overig",
+            "ernst": "grijs",
+            "label": "",
+            "link": null
+          }
+        ],
+        "waarschuwingen": [
+          "Metricsbestand: veld \"aandacht[0].ernst\" had een onbruikbare waarde (string) en is genegeerd."
+        ]
+      }
+    },
+    {
+      "naam": "weekreeks",
+      "invoer": {
+        "weekreeks": [
+          {
+            "week": "2026-W36",
+            "aantal": 3
+          }
+        ]
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "backlog",
+      "invoer": {
+        "backlog": {
+          "open": 4,
+          "klaar": 9
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "backlog": {
+          "besloten": 0,
+          "done": 0,
+          "totaal": 0
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "bedrijfscontext",
+      "invoer": {
+        "bedrijfscontext": {
+          "naam": "FFG"
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "bedrijfscontext": {
+          "bron": null,
+          "placeholders_open": [],
+          "projectkennis_kopie_laatst_bijgewerkt": null,
+          "laatst_bijgewerkt": null
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "lessen",
+      "invoer": {
+        "lessen": {
+          "aantal": 12
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "lessen": {
+          "totaal": 0,
+          "open": 0,
+          "in_periode": 0,
+          "per_categorie": {}
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "diep genest",
+      "invoer": {
+        "domeinen": {
+          "logboek": {
+            "aantal": {
+              "a": {
+                "b": {
+                  "c": 1
+                }
+              }
+            }
+          }
+        }
+      },
+      "verwacht": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "domeinen": {
+          "logboek": {
+            "laatst_bijgewerkt": null,
+            "rijen": 0
+          }
+        },
+        "waarschuwingen": []
+      }
+    },
+    {
+      "naam": "null-waarden overal",
+      "invoer": {
+        "versie": null,
+        "type": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null
+      },
+      "verwacht": {
+        "versie": null,
+        "type": "",
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "waarschuwingen": []
+      }
+    }
+  ],
+  "verschilt": [
+    {
+      "naam": "correctievrij",
+      "invoer": {
+        "correctievrij": {
+          "percentage": 82
+        }
+      },
+      "werkruimte": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "correctievrij": {
+          "venster_dagen": 28,
+          "drempel_pct": 80,
+          "autonoom_afgerond": 0,
+          "gecorrigeerd": 0,
+          "heropend": 0,
+          "weken": [],
+          "opmerking": null
+        },
+        "waarschuwingen": []
+      },
+      "dashboard": {
+        "gegenereerd_op": null,
+        "bron_label": null,
+        "door": null,
+        "minuten_per_actie": null,
+        "correctievrij": {
+          "venster_dagen": null,
+          "drempel_pct": null,
+          "autonoom_afgerond": 0,
+          "gecorrigeerd": 0,
+          "heropend": 0,
+          "weken": [],
+          "opmerking": null
+        },
+        "waarschuwingen": []
+      }
+    }
+  ]
+}
