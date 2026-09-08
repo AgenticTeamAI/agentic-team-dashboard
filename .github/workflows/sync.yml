@@ -95,10 +95,8 @@ jobs:
             echo "::notice::Er staat al een sync-PR open; deze tak is gepusht maar er is geen tweede PR geopend."
             exit 0
           fi
-          gh pr create --title "chore(sync): registry $VERSIE" --body "$(cat <<'TEKST'
-De pin liep achter. Deze PR is automatisch gemaakt door `.github/workflows/sync.yml`.
-
-**Lees de diff.** Wat hier binnenkomt is inhoud die bij de klant terechtkomt.
-Daarom wordt deze PR wel automatisch aangemaakt maar nooit automatisch gemerged.
-TEKST
-)"
+          gh pr create --title "chore(sync): registry $VERSIE" --body "$(printf '%s\n' \
+            'De pin liep achter. Deze PR is automatisch gemaakt door `.github/workflows/sync.yml`.' \
+            '' \
+            '**Lees de diff.** Wat hier binnenkomt is inhoud die bij de klant terechtkomt.' \
+            'Daarom wordt deze PR wel automatisch aangemaakt maar nooit automatisch gemerged.')"
