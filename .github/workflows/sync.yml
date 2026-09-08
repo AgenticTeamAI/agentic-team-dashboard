@@ -1,0 +1,104 @@
+# ob63: de pins bijhouden is werk dat niemand op zijn lijstje heeft staan.
+#
+# Gemeten op 8 september 2026: de arch-pin van de site liep 14 registryversies
+# achter en de Obeya-pin 14 commits, inclusief een complete inhoudsronde. De
+# driftpoorten deden hun werk, maar een poort die alleen rood wordt, verplaatst
+# het werk; hij doet het niet.
+#
+# Deze workflow draait de sync en opent er een PR van. Bewust GEEN automatische
+# merge: wat er binnenkomt is inhoud die bij de klant terechtkomt, en dat hoort
+# iemand te zien. Wel automatisch aangemaakt, want dat is het deel dat blijft
+# liggen.
+#
+# Geen cross-repo token nodig: elke repo werkt zichzelf bij met de ingebouwde
+# GITHUB_TOKEN. Arch hoeft dus niets te weten van zijn consumenten.
+name: sync
+
+on:
+  schedule:
+    # Ná de eigen driftpoort, zodat een rode poort en de bijbehorende PR niet
+    # door elkaar heen lopen.
+    - cron: '58 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # Allebei in een eigen submap: actions/checkout kan niet buiten de
+      # workspace schrijven, en een zusterrepo binnen de repo zou door
+      # `git add -A` meegecommit worden.
+      - name: Check out het dashboard
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: eigen
+
+      - name: Secret aanwezig? (anders harde failure)
+        env:
+          TOKEN: ${{ secrets.AGENT_ARCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Sync kan niet draaien — repo-secret AGENT_ARCH_TOKEN ontbreekt (leesrechten op AgenticTeamAI/agent-architecture)."
+            exit 1
+          fi
+
+      - name: Check out agent-architecture
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AgenticTeamAI/agent-architecture
+          token: ${{ secrets.AGENT_ARCH_TOKEN }}
+          path: arch
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+
+      - name: Pin bijwerken
+        working-directory: eigen
+        env:
+          ARCH_PATH: ${{ github.workspace }}/arch
+        run: |
+          set -euo pipefail
+          python3 scripts/sync-schema.py
+          python3 scripts/build.py
+
+      # Alleen een PR als er iets veranderd is. Een lege PR is ruis, en ruis
+      # zorgt ervoor dat de volgende niet meer gelezen wordt.
+      - name: PR openen als er iets veranderd is
+        working-directory: eigen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "✅ de pin is actueel — niets te doen"
+            exit 0
+          fi
+
+          VERSIE=$(jq -er .registryVersion agent-architecture.lock.json)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "sync/registry-$VERSIE"
+          git add -A
+          git commit -m "chore(sync): registry $VERSIE" \
+                     -m "Automatisch bijgewerkt door .github/workflows/sync.yml. De diff is inhoud die bij de klant terechtkomt — lees hem."
+          git push -u origin "sync/registry-$VERSIE" --force-with-lease
+
+          BESTAAND=$(gh pr list --state open --search "chore(sync) in:title" --json number --jq 'length')
+          if [ "$BESTAAND" != "0" ]; then
+            echo "::notice::Er staat al een sync-PR open; deze tak is gepusht maar er is geen tweede PR geopend."
+            exit 0
+          fi
+          gh pr create --title "chore(sync): registry $VERSIE" --body "$(cat <<'TEKST'
+De pin liep achter. Deze PR is automatisch gemaakt door `.github/workflows/sync.yml`.
+
+**Lees de diff.** Wat hier binnenkomt is inhoud die bij de klant terechtkomt.
+Daarom wordt deze PR wel automatisch aangemaakt maar nooit automatisch gemerged.
+TEKST
+)"
