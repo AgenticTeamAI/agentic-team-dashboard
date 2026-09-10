@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-TI8I9g2NsWRvY9AvDEqX0nwdnMZn5qocErVDXUoNQl0=' 'sha256-GzcE9NTkA85TVfHSY3Bar8V/hYn0QsKnHM/CXTYnUuM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-IrVZB5T1AOOlxddDWf9aMgTXC/VgStHdKuzvjVE/geo='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -23,6 +23,23 @@
   --paars: #A78BFA;
   --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Deze vijf werden 43 keer gebruikt en waren nergens gedefinieerd — het
+     hele Data-tab-blok (detailkaart, bordkolommen, relatiekaarten,
+     invoervelden, gedempte tekst) rendeerde daardoor zonder vlak en zonder
+     rand. Het pijnlijkste geval: `tr.rij-open { background: var(--card) }`,
+     de énige terugkoppeling op de plek waar je een rij aanklikt, kwam uit op
+     transparant. Je klikte, er opende iets buiten beeld, en op je klikplek
+     veranderde geen pixel.
+     Drie zijn een alias van een bestaande kleur, zodat er geen tweede
+     waarheid over dezelfde tint ontstaat; --card en --border zijn nieuw.
+     test/css-tokens.test.js bewaakt de hele klasse: elk gebruikt token moet
+     gedefinieerd zijn. */
+  --bg: var(--navy);
+  --text: var(--white);
+  --muted: var(--grey);
+  --card: #252540;
+  --border: rgba(255,255,255,0.12);
 }
 
 * { box-sizing: border-box; }
@@ -57,7 +74,19 @@ header.top {
   padding: 1.75rem 0 1.25rem;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   margin-bottom: 1.5rem;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
 }
+/* i71: verversen zonder de pagina te herladen. Rustig vormgegeven — het is
+   een gemak, geen hoofdhandeling. */
+.kop-acties { margin: 0; display: flex; align-items: center; gap: 0.6rem; }
+.kop-acties button {
+  background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  padding: 0.3rem 0.7rem; font-size: 0.78rem; font-family: var(--font); cursor: pointer;
+  min-height: 32px;
+}
+.kop-acties button:hover { border-color: var(--mint); }
+.kop-tijd { color: var(--grey); font-size: 0.74rem; }
 header.top h1 {
   font-size: 1.5rem;
   font-weight: 700;
@@ -457,6 +486,69 @@ section.panel {
 .kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
 .kpi-instelling { margin-top: 0.45rem; }
 
+/* ── i71: een rij is in zijn geheel klikbaar ──────────────────────────
+   Eerder was alleen de titelcel een knop; een klik ergens anders in de rij
+   deed niets. De cursor en de hover maken nu zichtbaar dat de hele rij een
+   doel is — dat is precies het signaal dat ontbrak. */
+tr.rij-klikbaar { cursor: pointer; }
+tr.rij-klikbaar:hover > td { background: rgba(255,255,255,0.04); }
+/* De knoppenkolom houdt zijn eigen aanwijzer: daar gebeurt iets anders. */
+tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
+
+/* Alleen voor schermlezers: het label bij de statuskiezer op een bordkaart.
+   De kolomkop zegt visueel al waar de kaart staat. */
+.visueel-verborgen {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* ── i71: "nog niet ingezet" — een uitnodiging, geen tekortkoming ─────
+   Bewust niet in een waarschuwingskleur en niet als lijst met nullen: dit is
+   het antwoord op "welke agent laat ik links liggen?", en dat is een aanbod. */
+.suggesties { margin-top: 0.9rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.7rem; }
+.suggesties-kop {
+  font-size: 0.72rem; color: var(--grey); text-transform: uppercase;
+  letter-spacing: 0.03em; margin: 0 0 0.4rem;
+}
+.suggesties-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.suggesties-lijst a {
+  display: block; padding: 0.45rem 0.6rem; border-radius: 8px;
+  background: rgba(255,255,255,0.04); text-decoration: none; color: var(--white);
+}
+.suggesties-lijst a:hover { background: rgba(74,222,128,0.10); }
+.suggestie-naam { display: block; font-size: 0.8rem; font-weight: 600; }
+.suggestie-waarvoor { display: block; font-size: 0.74rem; color: var(--grey); line-height: 1.4; margin-top: 0.1rem; }
+
+/* ── i71: kaarten verplaatsen op het bord ─────────────────────────────
+   De kiezer op de kaart is de route die overal werkt; slepen ligt eroverheen
+   voor wie een muis heeft. Beide schrijven hetzelfde weg. */
+.bord-verplaats { display: block; margin-top: 0.5rem; }
+.bord-verplaats select {
+  width: 100%; background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  padding: 0.25rem 0.4rem; font-size: 0.72rem; font-family: var(--font);
+}
+.bord-kaart[draggable="true"] { cursor: grab; }
+.bord-kaart.sleept { opacity: 0.45; cursor: grabbing; }
+.bord-kolom.sleep-over { outline: 2px dashed var(--mint); outline-offset: 2px; }
+
+/* ── i71: statuschips ─────────────────────────────────────────────────
+   Aan = zichtbaar, uit = weggefilterd. De waarden komen uit het
+   registryschema, nooit hardgecodeerd. De stand leeft alleen in het
+   geheugen van de pagina (zie dataStatusUit in databrowser.js). */
+.status-chips { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.status-chip {
+  background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 999px;
+  padding: 0.25rem 0.7rem; font-size: 0.72rem; cursor: pointer; font-family: var(--font);
+  min-height: 28px;
+}
+.status-chip:hover { border-color: var(--mint); }
+.status-chip.uit {
+  color: var(--grijs-status); border-style: dashed; background: transparent;
+  text-decoration: line-through;
+}
+
 /* ── Herkomst-uitklap: alle dataherkomst op één plek, uit de tegels weg ── */
 .herkomst {
   background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px;
@@ -657,6 +749,14 @@ tr.rij-open { background: var(--card); }
 <div class="wrap">
   <header class="top" id="kop">
     <h1>🔮 <span class="kop-vol">Agentic Team Dashboard</span><span class="kop-kort">Agentic Team · vandaag</span></h1>
+    <!-- i71: de pagina ververst niet uit zichzelf. Wie hem de hele dag open
+         laat staan (de eerste vraag van de eerste klant die dat deed) heeft
+         een knop nodig, geen instructie om F5 te drukken. Bewust géén
+         automatische poll: dat is netwerkverkeer dat niemand vroeg. -->
+    <p class="kop-acties" id="kop-acties" style="display:none;">
+      <button type="button" id="btn-ververs" title="Opnieuw ophalen uit je werkruimte">↻ Ververs</button>
+      <span class="kop-tijd" id="kop-tijd"></span>
+    </p>
   </header>
 
   <!-- ══ Vier tabs, dezelfde volgorde op desktop en mobiel (f25) ══ -->
@@ -799,8 +899,9 @@ tr.rij-open { background: var(--card); }
   <footer class="app-footer">
     Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
     gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
-    op de Vandaag-tab. Gegenereerd uit registryVersion 1.90.0 van
-    AgenticTeamAI/agent-architecture.
+    op de Vandaag-tab. Teamdefinitie: schemaversie 1.90.0 uit
+    AgenticTeamAI/agent-architecture, vastgelegd op 2026-09-10. Je connector kan een
+    nieuwere versie draaien — dit is de versie waarop deze pagina is gebouwd.
   </footer>
 </div>
 
@@ -812,7 +913,7 @@ tr.rij-open { background: var(--card); }
 //   registryVersion : 1.90.0
 //   registry updated: 2026-09-07
 //   bron-commit     : d38eccf38bee81ea4f5e3895875b84c1af7156e9
-//   geextraheerd op : 2026-09-10T17:26:38Z
+//   geextraheerd op : 2026-09-10T17:29:32Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
@@ -822,7 +923,7 @@ window.AGENTIC_TEAM_SCHEMA = {
   "registryVersion": "1.90.0",
   "registryUpdated": "2026-09-07",
   "sourceCommit": "d38eccf38bee81ea4f5e3895875b84c1af7156e9",
-  "extractedAt": "2026-09-10T17:26:38Z",
+  "extractedAt": "2026-09-10T17:29:32Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -860,147 +961,189 @@ window.AGENTIC_TEAM_SCHEMA = {
       "displayName": "Coördinator",
       "emoji": "🔮",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Regisseert je AI-team en maakt elke werkdag een concreet dagplan met prioriteiten en naderende deadlines. Gebruik om je werkdag te starten.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "management-assistent",
       "displayName": "Management Assistent",
       "emoji": "📌",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Je persoonlijke rechterhand die overzicht bewaakt en prioriteiten stelt zodat niets tussen wal en schip valt. Gebruik voor je ochtendbrief en dagafsluiting.",
+      "rol": null
     },
     {
       "slug": "quality-control",
       "displayName": "Quality Control",
       "emoji": "🛡️",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Controleert agentwerk op feiten, logica, toon, bewijs en procesintegriteit en markeert wat een menselijke blik nodig heeft. Gebruik vóór belangrijke besluiten of publicatie.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "gids",
       "displayName": "Gids",
       "emoji": "🧭",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Maakt je startklaar met je team en leert je stap voor stap hoe je het effectief inzet. Gebruik bij je eerste sessie of als je even niet verder komt.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "ceo-agent",
       "displayName": "CEO Agent",
       "emoji": "🌟",
       "module": "strategy",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Strategische sparringpartner voor je commerciële koers: bewaakt richting, prioriteiten en samenhang tussen marketing, sales en product. Gebruik bij koersvragen.",
+      "rol": null
     },
     {
       "slug": "coo-agent",
       "displayName": "COO Agent",
       "emoji": "🏛️",
       "module": "backoffice",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Operationeel leider die financiële gezondheid, compliance, administratie en capaciteit bewaakt. Gebruik voor operationele en organisatorische vraagstukken.",
+      "rol": null
     },
     {
       "slug": "marktmaker",
       "displayName": "Marktmaker",
       "emoji": "🎯",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Strategische marketingdenker die bepaalt waar en voor wie je zichtbaar bent en hoe je structureel leads wint. Gebruik voor positionering en campagnestrategie.",
+      "rol": null
     },
     {
       "slug": "researcher",
       "displayName": "Researcher",
       "emoji": "🔍",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Vindt en kwalificeert potentiële klantorganisaties in jouw doelsegmenten. Gebruik om nieuwe prospects op te sporen op basis van concrete koopsignalen.",
+      "rol": null
     },
     {
       "slug": "pipeline-manager",
       "displayName": "Pipeline Manager",
       "emoji": "📊",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Bewaakt je salespipeline zodat elke deal een status, volgende actie en eigenaar heeft. Gebruik om stagnerende deals te spotten en je week te reviewen.",
+      "rol": null
     },
     {
       "slug": "product-designer",
       "displayName": "Product Designer",
       "emoji": "🧪",
       "module": "strategy",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwerpt en optimaliseert je aanbod vanuit wat de markt nodig heeft. Gebruik voor nieuwe producten, prijsstelling en het aanscherpen van je portfolio.",
+      "rol": null
     },
     {
       "slug": "outreach-specialist",
       "displayName": "Outreach Specialist",
       "emoji": "📨",
       "module": "sales",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Schrijft gepersonaliseerde outreach die laat zien dat je de persoon en organisatie echt kent. Gebruik voor eerste benadering en follow-ups naar prospects.",
+      "rol": null
     },
     {
       "slug": "dealmaker",
       "displayName": "Dealmaker",
       "emoji": "🤝",
       "module": "sales",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Onderzoekt koopcontext en helpt gesprekken, businesscases, offertes en besluitvorming voorbereiden—evidence-first en zonder klanten te benaderen of namens jou te onderhandelen.",
+      "rol": null
     },
     {
       "slug": "content-strateeg",
       "displayName": "Content Strateeg",
       "emoji": "✍️",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwikkelt samen met jou inhoudelijke, onderbouwde content: van gekozen idee en onderzoek tot concept, review, planning en leren na publicatie.",
+      "rol": null
     },
     {
       "slug": "de-stem",
       "displayName": "De Stem",
       "emoji": "🎙️",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Scherpt het onderscheidende verhaal, de geloofwaardige hoek en het passende podium. Gebruik voor thought leadership, PR, media-pitches en personal branding.",
+      "rol": null
     },
     {
       "slug": "delivery-architect",
       "displayName": "Delivery Architect",
       "emoji": "🎒",
       "module": "delivery",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwerpt stap voor stap hoe je een opdracht uitvoert bij de klant. Gebruik als er nog geen duidelijke aanpak is voor een deal, product of maatwerktraject.",
+      "rol": null
     },
     {
       "slug": "controller",
       "displayName": "Controller",
       "emoji": "📊",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Je financiële geweten dat terug- én vooruitkijkt: rapportages, cashflow, forecasting en fiscale planning. Gebruik voor cijfers, marges en financiële scenario's.",
+      "rol": null
     },
     {
       "slug": "jurist",
       "displayName": "Jurist",
       "emoji": "⚖️",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Juridisch adviseur die je bedrijf beschermt: kloppende contracten, afgedekte risico's en compliance op orde. Gebruik voor contractchecks en juridische vragen.",
+      "rol": null
     },
     {
       "slug": "administratie",
       "displayName": "Administratie",
       "emoji": "📋",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bereidt je facturatie voor en volgt openstaande posten op: uren verantwoord, factuurregels klaargezet in je boekhoudpakket. Gebruik voor facturatie, debiteuren en uren.",
+      "rol": null
     },
     {
       "slug": "seo-geo-specialist",
       "displayName": "SEO/GEO Specialist",
       "emoji": "🧲",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Bepaalt welke onderwerpen vindbaarheid opleveren vóórdat er geschreven wordt, en toetst achteraf of pagina's gevonden worden — in Google én in AI-assistenten zoals ChatGPT en Perplexity.",
+      "rol": null
     },
     {
       "slug": "customer-success-manager",
       "displayName": "Customer Success Manager",
       "emoji": "💚",
       "module": "delivery",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bewaakt de klantrelatie na de deal: begeleidt onboarding, signaleert retentierisico's, herkent groeikansen en verwerkt klantfeedback. Gebruik voor health-checks en verlengingen.",
+      "rol": null
     },
     {
       "slug": "informatiemanager",
       "displayName": "Informatiemanager",
       "emoji": "🖥️",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bewaakt je digitale werkomgeving: de juiste tools, betrouwbare data en actuele kennis. Gebruik voor toolkeuzes, toolstack- en security-audits, datakwaliteit en het opschonen van je kennisbank.",
+      "rol": null
     }
   ],
   "datadomeinen": {
@@ -6547,11 +6690,15 @@ if (typeof module !== "undefined") {
  * iets over de gebruiker, niet over ons. Zakt hij onder de drempel, dan
  * komt hij vanzelf omhoog als aandachtspunt (zones.js). */
 
+/* i71: de `uitleg` beantwoordt "wat vind ik waar?" vóór je klikt. Dat was een
+ * letterlijke vraag van de eerste klant die er live mee werkte ("in een team
+ * of in data?"). De panelen op de tabs zelf zeggen het al; wat ontbrak was
+ * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
-  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/" },
-  { key: "team", titel: "Team", emoji: "📣", route: "#/team" },
-  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data" },
-  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties" },
+  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/", uitleg: "Wat vraagt nu je aandacht" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
+  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
+  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
 ];
 
 const DETAIL_VOLGORDE = [
@@ -6614,7 +6761,7 @@ function renderTabbar(el, activeTab, ctx) {
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
   el.innerHTML = zichtbareTabs(ctx).map(t =>
-    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
+    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
       <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
     </a>`).join("");
 }
@@ -6905,12 +7052,13 @@ function renderAandachtTop5(el, items) {
 }
 
 // ── Gebruik per agent ─────────────────────────────────────────────────
-function renderGebruikPanel(el, agentUsage) {
+function renderGebruikPanel(el, agentUsage, ctx) {
   if (agentUsage.status !== "ok") {
     el.innerHTML = `<div class="grijs-blok">
       <div class="grijs-kop">❔ Niet af te leiden</div>
       <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
     </div>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Meer over gebruik per agent →</a>`;
     return;
   }
@@ -6926,7 +7074,70 @@ function renderGebruikPanel(el, agentUsage) {
     : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
     <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
+}
+
+/* i71 — een uitnodiging in plaats van een tekortkoming.
+ *
+ * De breedte-subscore rekent "domeinen met inhoud ÷ 25": wie vijf agents
+ * gebruikt en daar prima mee draait, krijgt daar een laag cijfer voor. De
+ * formule blijft zoals hij is — hij is narekenbaar en vergelijkbaar met
+ * eerdere weken, en dat is meer waard dan een prettiger getal. Wat erbij komt
+ * is het antwoord op de vraag die de tegel al stelde: welke agent laat ik
+ * links liggen? Drie namen zeggen daar meer over dan een percentage.
+ *
+ * Alleen agents uit modules die de klant écht heeft — een suggestie voor iets
+ * dat je niet hebt is een verkooppraatje op de verkeerde plek. Weten we het
+ * niet (een daglink, of een licentie buiten de f34-allowlist), dan leiden we
+ * het af uit de data zelf: core heeft iedereen, en een module waarin al
+ * gewerkt is, heb je aantoonbaar. */
+function agentSuggesties(ctx, max = 3) {
+  const gezien = new Set();
+  const modulesMetSpoor = new Set(["core"]);
+  const usage = ctx && ctx.agentUsage;
+  const perSlug = {};
+  for (const a of ((ctx && ctx.schema && ctx.schema.agents) || [])) perSlug[a.slug] = a;
+  if (usage && usage.status === "ok" && Array.isArray(usage.ranking)) {
+    for (const r of usage.ranking) {
+      if (!((r.totaal || 0) > 0 || (r.value || 0) > 0)) continue;
+      gezien.add(r.slug);
+      const agent = perSlug[r.slug];
+      if (agent && agent.module) modulesMetSpoor.add(agent.module);
+    }
+  }
+  const bekend = typeof actieveModuleKeys === "function" ? actieveModuleKeys() : null;
+  const modules = bekend || [...modulesMetSpoor];
+  return ((ctx && ctx.schema && ctx.schema.agents) || [])
+    // Cross-cutting rollen (Coördinator, Quality Control, Gids) doen altijd
+    // mee zonder dat ze zelf een rij wegschrijven. Ze hier voorstellen als
+    // "nog niet ingezet" is bijna altijd onwaar — en het is precies de
+    // blinde vlek die i68 structureel oplost.
+    .filter(a => a.rol !== "cross-cutting")
+    .filter(a => !gezien.has(a.slug))
+    .filter(a => modules.indexOf(a.module) !== -1)
+    .filter(a => a.description)
+    .slice(0, max);
+}
+
+// Eerste zin van de menukaart-tekst: genoeg om te kiezen, kort genoeg om te
+// lezen. De volledige tekst staat op de agentpagina achter de doorklik.
+function eersteZin(tekst) {
+  const t = String(tekst || "").trim();
+  const punt = t.indexOf(". ");
+  return punt === -1 ? t : t.slice(0, punt + 1);
+}
+
+function agentSuggestiesHtml(ctx) {
+  const suggesties = agentSuggesties(ctx);
+  if (!suggesties.length) return "";
+  return `<div class="suggesties">
+    <p class="suggesties-kop">Nog niet ingezet</p>
+    <ul class="suggesties-lijst">${suggesties.map(a =>
+      `<li><a href="#/detail/agent/${esc(a.slug)}"><span class="suggestie-naam">${esc(a.emoji)} ${esc(a.displayName)}</span>
+        <span class="suggestie-waarvoor">${esc(eersteZin(a.description))}</span></a></li>`
+    ).join("")}</ul>
+  </div>`;
 }
 
 // ── Detail-view: dispatcher + secties (verhuisde zone-inhoud) ──────────
@@ -7055,15 +7266,19 @@ function renderDetailActiviteit(el, activiteit, periodWeeks) {
     <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
 }
 
-function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
+function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage, ctx) {
   if (agentUsage.status !== "ok") {
     el.innerHTML = `<div class="grijs-blok">
       <div class="grijs-kop">❔ Gebruik per agent niet af te leiden</div>
       <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
-    </div>`;
+    </div>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}`;
     return;
   }
   renderZone3(el, z3, schema, today, periodDays);
+  // De sectiekop vraagt "welke agent laat ik links liggen, en waarom?" — dit
+  // is het antwoord, niet de ranglijst erboven.
+  if (ctx) el.insertAdjacentHTML("beforeend", agentSuggestiesHtml(ctx));
 }
 
 // ── Detail per agent (f4: doorklik per agent) ─────────────────────────
@@ -7179,6 +7394,29 @@ const DATA_NIET_IN_BUNDEL = {
 
 let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
 let dataWeergave = "tabel";  // f33: 'tabel' of 'bord' — alleen voor domeinen met een Status
+
+/* i71 — statusfilter. "Als het klaar is, wil ik het niet meer zien" was de
+ * eerste vraag van de eerste klant die er echt mee werkte.
+ *
+ * Bewust NIET in localStorage, hoe handig onthouden ook zou zijn: de
+ * juridisch getoetste privacytekst (src/teksten.js) somt uitputtend op wat
+ * dit dashboard blijvend in je browser bewaart. Een vierde ding erbij maakt
+ * die tekst onwaar, en dat is een nieuwe toets waard — niet een filterknop.
+ * Dus: alleen in het geheugen van de pagina, weg bij herladen. */
+let dataStatusUit = { domein: null, uit: [] };
+
+function statusVerborgen(domein) {
+  return dataStatusUit.domein === domein ? dataStatusUit.uit : [];
+}
+
+function wisselStatusFilter(domein, status) {
+  const huidig = statusVerborgen(domein).slice();
+  const i = huidig.indexOf(status);
+  if (i === -1) huidig.push(status); else huidig.splice(i, 1);
+  dataStatusUit = { domein, uit: huidig };
+}
+
+function wisStatusFilter() { dataStatusUit = { domein: null, uit: [] }; }
 
 function dataVelden(domein) {
   return Array.isArray(domein && domein.velden) ? domein.velden : [];
@@ -7560,6 +7798,15 @@ function statusVeldVan(domein) {
 
 const BORD_AANDACHT = "Wacht op review";
 
+/* i71 — een kaart is te verplaatsen. De eerste klant probeerde meteen te
+ * slepen ("Oh, kan ik slepen? Nee, ik kan niet slepen"), en dat was ook de
+ * enige manier waarop ze het verwachtte.
+ *
+ * Slepen is hier de tweede route, niet de eerste: de statuskiezer op de kaart
+ * doet exact hetzelfde en werkt met een toetsenbord, op een telefoon en met
+ * een schermlezer. Allebei lopen ze door dezelfde schrijfactie, dus er is één
+ * plek waar een statuswissel gebeurt. Zonder schrijfrechten (een daglink is
+ * alleen-lezen) is het bord precies wat het was. */
 function bordKaartHtml(ctx, key, domein, rij) {
   const titel = detailTitel(domein, rij);
   const velden = dataVelden(domein);
@@ -7569,10 +7816,20 @@ function bordKaartHtml(ctx, key, domein, rij) {
     .map(x => `<span class="bord-meta">${dataCelHtml(getField(rij, x.naam), x.veld)}</span>`)
     .join("");
   const kinderen = subacties(ctx, key, rij.__entryId);
-  return `<article class="bord-kaart"${rij.__entryId ? ` data-open-rij="${esc(key)}|${esc(rij.__entryId)}"` : ""} tabindex="0">
+  const statusVeld = statusVeldVan(domein);
+  const magBedienen = magDomeinBewerken(ctx, key).ok && !!rij.__entryId && !!statusVeld;
+  const nu = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
+  const kiezer = magBedienen
+    ? `<label class="bord-verplaats"><span class="visueel-verborgen">Verplaats naar</span>
+        <select data-bord-status="${esc(rij.__entryId)}">
+          ${statusVeld.opties.map(o => `<option value="${esc(o)}"${o === nu ? " selected" : ""}>${esc(o)}</option>`).join("")}
+        </select></label>`
+    : "";
+  return `<article class="bord-kaart"${rij.__entryId ? ` data-open-rij="${esc(key)}|${esc(rij.__entryId)}"` : ""} tabindex="0"${magBedienen ? ` draggable="true" data-sleep-id="${esc(rij.__entryId)}"` : ""}>
     <p class="bord-titel">${esc(titel)}</p>
     ${toon ? `<p class="bord-regels">${toon}</p>` : ""}
     ${kinderen.length ? `<p class="footnote">↳ ${kinderen.length} ${kinderen.length === 1 ? "subactie" : "subacties"}</p>` : ""}
+    ${kiezer}
   </article>`;
 }
 
@@ -7597,7 +7854,7 @@ function bordHtml(ctx, key, domein, rijen) {
     const inKolom = rijen.filter(r => dataCelTekst(getField(r, statusVeld.naam)) === status);
     const kaarten = inKolom.map(r => bordKaartHtml(ctx, key, domein, r)).join("")
       || `<p class="footnote">Leeg.</p>`;
-    return `<section class="bord-kolom${status === BORD_AANDACHT ? " bord-kolom-aandacht" : ""}" data-bord-kolom="${esc(status)}">
+    return `<section class="bord-kolom${status === BORD_AANDACHT ? " bord-kolom-aandacht" : ""}" data-bord-kolom="${esc(status)}" data-bord-dropzone>
       <h3>${esc(status)} <span class="bord-telling">${inKolom.length}</span></h3>
       ${kaarten}
     </section>`;
@@ -7653,6 +7910,12 @@ function renderDataDomein(el, key, ctx) {
       // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
       uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
     }
+    // i71: het statusfilter zit vóór het zoeken in de keten, zodat zoeken
+    // binnen de zichtbare selectie blijft werken zoals het al deed.
+    const verborgen = statusVeld ? statusVerborgen(key) : [];
+    if (verborgen.length) {
+      uit = uit.filter(r => verborgen.indexOf(dataCelTekst(getField(r, statusVeld.naam))) === -1);
+    }
     if (datumVeld) {
       uit = uit.slice().sort((a, b) => {
         const da = parseDateField(getField(a, datumVeld));
@@ -7683,7 +7946,14 @@ function renderDataDomein(el, key, ctx) {
       const acties = bewerk.ok && r.__entryId
         ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
         : (bewerk.ok ? `<td class="bewerk-kolom"></td>` : "");
-      return `<tr${dataDetail && dataDetail.domein === key && dataDetail.entryId === r.__entryId ? ' class="rij-open"' : ""}>${cellen}${acties}</tr>`;
+      // i71: de hele rij opent, niet alleen de titelcel. De knop in kolom 1
+      // blijft staan — die draagt de toetsenbordroute en het toegankelijke
+      // label. Een rij zonder entryId krijgt géén klikbaarheid: liever geen
+      // affordance dan een klik die niets doet, want precies dat was de
+      // klacht ("ik kan er heel leuk op klikken, maar hij doet niks").
+      const open = dataDetail && dataDetail.domein === key && dataDetail.entryId === r.__entryId;
+      const klik = r.__entryId ? ` class="rij-klikbaar${open ? " rij-open" : ""}" data-open-rij="${esc(key)}|${esc(r.__entryId)}"` : (open ? ' class="rij-open"' : "");
+      return `<tr${klik}>${cellen}${acties}</tr>`;
     }).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
@@ -7725,6 +7995,9 @@ function renderDataDomein(el, key, ctx) {
         <button type="button" class="knop-mini${dataWeergave === "tabel" ? " actief" : ""}" data-weergave="tabel">Tabel</button>
         <button type="button" class="knop-mini${dataWeergave === "bord" ? " actief" : ""}" data-weergave="bord">Bord</button>
       </span>` : ""}
+      ${statusVeld ? `<span class="status-chips" role="group" aria-label="Tonen op status">${statusVeld.opties.map(o =>
+        `<button type="button" class="status-chip${statusVerborgen(key).indexOf(o) !== -1 ? " uit" : ""}" data-status-chip="${esc(o)}" aria-pressed="${statusVerborgen(key).indexOf(o) === -1}">${esc(o)}</button>`
+      ).join("")}</span>` : ""}
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
     <div data-data-detail>${detailHtml()}</div>
@@ -7747,11 +8020,44 @@ function renderDataDomein(el, key, ctx) {
     // f33: een rij openen. Wijst het naar een ánder domein, dan doet de href
     // de navigatie en onthoudt de detailstand welke rij daar open moet.
     const openEl = e.target.closest && e.target.closest("[data-open-rij]");
-    if (openEl) {
+    // i71: nu de hele rij klikbaar is, moeten de knoppen en links ín die rij
+    // hun eigen werk houden. Alleen het element dat de klik zelf draagt (de
+    // relatielink) en de expliciete open-knop mogen hierdoorheen.
+    const inZicht = openEl && e.target.closest && e.target.closest("button, a, input, select, textarea, label");
+    const doorKnopBinnenRij = inZicht && inZicht !== openEl
+      && !(inZicht.classList && inZicht.classList.contains("rij-open-knop"))
+      && openEl.contains(inZicht);
+    if (openEl && !doorKnopBinnenRij) {
       const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
-      if (dom === key) { e.preventDefault(); herteken(); return; }
+      if (dom === key) {
+        e.preventDefault();
+        herteken();
+        // De detailkaart staat bóven de lijst. Klik je een rij aan die verder
+        // naar beneden staat, dan opent hij dus buiten je scherm — en omdat
+        // de browser de ingevoegde hoogte zelf compenseert (scroll-anchoring)
+        // beweegt er niet eens iets. Dat is precies wat de eerste klant zag:
+        // "ik kan er heel leuk op klikken, maar hij doet niks."
+        // block: "nearest" scrollt het kortste stukje en doet niets als de
+        // kaart al in beeld staat. De guard is niet optioneel: jsdom kent
+        // scrollIntoView niet, en zonder guard gaan de tests eraan.
+        const kaart = el.querySelector(".detail-kaart");
+        if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
+    }
+    // i71: statuschips — één per statuswaarde uit het registryschema, nooit
+    // hardgecodeerd. Aanklikken verbergt of toont die status.
+    const chip = e.target.closest && e.target.closest("[data-status-chip]");
+    if (chip) {
+      wisselStatusFilter(key, chip.getAttribute("data-status-chip"));
+      for (const c of el.querySelectorAll("[data-status-chip]")) {
+        c.classList.toggle("uit", statusVerborgen(key).indexOf(c.getAttribute("data-status-chip")) !== -1);
+        c.setAttribute("aria-pressed", String(statusVerborgen(key).indexOf(c.getAttribute("data-status-chip")) === -1));
+      }
+      herteken();
+      return;
     }
     const sluit = e.target.closest && e.target.closest("[data-detail-sluit]");
     if (sluit) { wisDataDetail(); herteken(); return; }
@@ -7823,7 +8129,18 @@ function renderDataDomein(el, key, ctx) {
     return false;
   }
 
+  /* i71: één plek waar een statuswissel gebeurt, of hij nu uit de kiezer op
+   * de kaart komt of uit een sleepbeweging. */
+  function verplaatsNaar(entryId, status) {
+    if (!entryId || !status) return;
+    pasToe(() => snelWijzig(ctx, key, entryId, statusPatch(domein, status))).then(herteken);
+  }
+
   el.addEventListener("change", (e) => {
+    // Op het bord staat er geen rij open: de kaart draagt zijn eigen id.
+    const bord = e.target.closest && e.target.closest("[data-bord-status]");
+    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value); return; }
+
     const rij = huidigeRij();
     if (!rij) return;
     const status = e.target.closest && e.target.closest("[data-snel-status]");
@@ -7837,6 +8154,50 @@ function renderDataDomein(el, key, ctx) {
     if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
     const agent = e.target.closest && e.target.closest("[data-snel-agent]");
     if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+  });
+
+  /* Slepen tussen kolommen. Bewust bovenop de kiezer op de kaart en niet
+   * ervoor in de plaats: zonder muis (toetsenbord, telefoon, schermlezer) is
+   * slepen geen route, en een bord dat alleen met de muis te bedienen is, is
+   * voor een deel van de gebruikers geen bord. Beide eindigen in
+   * verplaatsNaar(). */
+  let sleepId = null;
+  el.addEventListener("dragstart", (e) => {
+    const kaart = e.target.closest && e.target.closest("[data-sleep-id]");
+    if (!kaart) return;
+    sleepId = kaart.getAttribute("data-sleep-id");
+    kaart.classList.add("sleept");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      // Sommige browsers starten geen sleep zonder payload; de waarde zelf
+      // gebruiken we niet, sleepId is de bron van waarheid.
+      try { e.dataTransfer.setData("text/plain", sleepId); } catch (f) { /* niet erg */ }
+    }
+  });
+  el.addEventListener("dragend", () => {
+    sleepId = null;
+    for (const k of el.querySelectorAll(".sleept")) k.classList.remove("sleept");
+    for (const z of el.querySelectorAll(".sleep-over")) z.classList.remove("sleep-over");
+  });
+  el.addEventListener("dragover", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (!zone || !sleepId) return;
+    e.preventDefault(); // pas hierdoor accepteert de browser een drop
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    zone.classList.add("sleep-over");
+  });
+  el.addEventListener("dragleave", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("sleep-over");
+  });
+  el.addEventListener("drop", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (!zone) return;
+    e.preventDefault();
+    const id = sleepId || (e.dataTransfer ? e.dataTransfer.getData("text/plain") : "");
+    zone.classList.remove("sleep-over");
+    sleepId = null;
+    verplaatsNaar(id, zone.getAttribute("data-bord-kolom"));
   });
 
   el.addEventListener("submit", (e) => {
@@ -7882,7 +8243,7 @@ function renderDataDomein(el, key, ctx) {
   if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
-function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); }
+function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); }
 function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
 
 /* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
@@ -7902,6 +8263,7 @@ if (typeof module !== "undefined") {
     resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
+    statusVerborgen, wisselStatusFilter, wisStatusFilter,
   };
 }
 
@@ -8223,6 +8585,16 @@ let moduleOverzichtVoorToken = null; // token waarvoor (al) geladen is/wordt
 
 function moduleOverzichtBeschikbaar() {
   return moduleOverzicht !== null;
+}
+
+/* i71: welke modules heeft deze klant écht? Geeft null als we het niet weten
+ * (geen ingelogde sessie, of een licentie buiten de allowlist) — en dat is
+ * wat anders dan "geen enkele". De aanroeper hoort dat verschil te maken:
+ * een suggestie voor een module die iemand niet heeft, is een verkooppraatje
+ * op de verkeerde plek. */
+function actieveModuleKeys() {
+  if (!moduleOverzicht || !Array.isArray(moduleOverzicht.modules)) return null;
+  return moduleOverzicht.modules.filter((m) => m && m.actief).map((m) => m.key);
 }
 
 /* De enige plek die de site aanroept: GET zonder body, POST mét. Geeft
@@ -8558,10 +8930,16 @@ function leesLaatstGebruikt() {
   } catch (e) { return null; }
 }
 
-async function handleBundle(bundle, route, label) {
+async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) {
   currentBundle = bundle;
   rememberChoice(route, label);
-  window.location.hash = ""; // terug naar de Vandaag-tab bij een nieuw geladen bundel
+  // Bij een nieuw geladen bundel begin je op de Vandaag-tab. Maar een bundel
+  // die opnieuw is opgehaald ná een schrijfactie is geen nieuw begin: dan sta
+  // je middenin het bedienen van een rij, en terugspringen naar Vandaag kost
+  // je in één klap je domein, je zoekterm, je bord- of tabelweergave en je
+  // plek in de lijst. Dat overkwam alleen wie kon schrijven — en dus precies
+  // de klant die de bediening voor het eerst gebruikte.
+  if (!behoudRoute) window.location.hash = "";
   renderAll();
 }
 
@@ -8635,7 +9013,8 @@ function buildContext() {
     // bundel zodat de tabel de waarheid van de instantie toont.
     bron: huidigeBron,
     kanSchrijven: bronKanSchrijven(huidigeBron),
-    herlaad: () => laadWerkruimte(huidigeBron),
+    // Na een schrijfactie blijf je waar je was — zie handleBundle().
+    herlaad: () => laadWerkruimte(huidigeBron, { behoudRoute: true }),
   };
 }
 
@@ -8669,6 +9048,7 @@ function renderAll() {
     tabbarEl.style.display = "none";
     verbergAlles();
     versionErrorEl.style.display = "none";
+    document.getElementById("kop-acties").style.display = "none";
     return;
   }
   emptyStateEl.style.display = "none";
@@ -8725,10 +9105,16 @@ function renderAll() {
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
   renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
-  renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
+  renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage, ctx);
   renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
   renderWaarschuwingen(document.getElementById("warnings-box"), ctx);
+
+  // i71: pas zichtbaar zodra er iets te verversen valt.
+  document.getElementById("kop-acties").style.display = "";
+  const nu = new Date();
+  document.getElementById("kop-tijd").textContent =
+    `geladen om ${String(nu.getHours()).padStart(2, "0")}:${String(nu.getMinutes()).padStart(2, "0")}`;
 
   route();
 }
@@ -8762,7 +9148,7 @@ function renderDetail(key) {
     feed: () => [detailSectionHtml("Teamfeed", "📣", "Wat doet mijn team, zonder dat ik erom hoef te vragen?", "detail-inner"), () => renderDetailFeed(document.getElementById("detail-inner"), ctx)],
     aandacht: () => [detailSectionHtml("Aandacht", "🎯", "Waar besteed ik vandaag mijn halfuur aan?", "detail-inner"), () => renderZone1(document.getElementById("detail-inner"), ctx.z1)],
     context: () => [detailSectionHtml("Contextgezondheid", "🧭", "Moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?", "detail-inner"), () => renderZone2(document.getElementById("detail-inner"), ctx.z2, ctx.today)],
-    gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
+    gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage, ctx)],
     opbrengst: () => [detailSectionHtml("Opbrengst", "💰", "Levert dit team genoeg op om het te blijven betalen?", "detail-inner"), () => renderZone4(document.getElementById("detail-inner"), ctx.z4, ctx.periodDays)],
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
@@ -8930,6 +9316,10 @@ function wireInputs() {
     if (currentBundle) renderAll();
   });
 
+  document.getElementById("btn-ververs").addEventListener("click", () => {
+    if (huidigeBron) laadWerkruimte(huidigeBron);
+  });
+
   document.body.addEventListener("change", (e) => {
     if (e.target.id === "input-minuten") {
       const v = parseInt(e.target.value, 10);
@@ -8966,12 +9356,12 @@ function toonLoginknop(aan) {
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron) {
+async function laadWerkruimte(bron, { behoudRoute = false } = {}) {
   huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
-    await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute });
   } catch (err) {
     console.error(err);
     if (err.oauthVerlopen) {

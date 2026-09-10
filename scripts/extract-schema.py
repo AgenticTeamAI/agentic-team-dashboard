@@ -63,6 +63,11 @@ def main():
         print("FOUT: core/agents.json bevat geen 'datadomeinen' - verkeerde versie van de registry?")
         sys.exit(1)
 
+    # i71: `description` komt erbij zodat het dashboard bij een suggestie kan
+    # zeggen waarvoor een agent is. Dat veld is publiek — het is de tekst van
+    # de menukaart, dezelfde die in de marketplace-plugin staat. Playbook-
+    # inhoud, dispatch-details en fase-namen blijven hier bewust buiten: dit
+    # artefact wordt publiek geserveerd.
     agents = [
         {
             "slug": a["slug"],
@@ -70,6 +75,12 @@ def main():
             "emoji": a.get("emoji", ""),
             "module": a.get("module"),
             "team": a.get("team"),
+            "description": a.get("description", ""),
+            # `rol` onderscheidt de cross-cutting agents (Coördinator, Quality
+            # Control, Gids) van de vakspecialisten. Zij draaien per definitie
+            # mee zonder dat ze een eigen rij wegschrijven, dus "nog niet
+            # ingezet" is over hen bijna altijd onwaar.
+            "rol": a.get("rol"),
         }
         for a in registry.get("agents", [])
     ]

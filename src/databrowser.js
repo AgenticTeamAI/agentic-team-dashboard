@@ -32,6 +32,29 @@ const DATA_NIET_IN_BUNDEL = {
 let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
 let dataWeergave = "tabel";  // f33: 'tabel' of 'bord' — alleen voor domeinen met een Status
 
+/* i71 — statusfilter. "Als het klaar is, wil ik het niet meer zien" was de
+ * eerste vraag van de eerste klant die er echt mee werkte.
+ *
+ * Bewust NIET in localStorage, hoe handig onthouden ook zou zijn: de
+ * juridisch getoetste privacytekst (src/teksten.js) somt uitputtend op wat
+ * dit dashboard blijvend in je browser bewaart. Een vierde ding erbij maakt
+ * die tekst onwaar, en dat is een nieuwe toets waard — niet een filterknop.
+ * Dus: alleen in het geheugen van de pagina, weg bij herladen. */
+let dataStatusUit = { domein: null, uit: [] };
+
+function statusVerborgen(domein) {
+  return dataStatusUit.domein === domein ? dataStatusUit.uit : [];
+}
+
+function wisselStatusFilter(domein, status) {
+  const huidig = statusVerborgen(domein).slice();
+  const i = huidig.indexOf(status);
+  if (i === -1) huidig.push(status); else huidig.splice(i, 1);
+  dataStatusUit = { domein, uit: huidig };
+}
+
+function wisStatusFilter() { dataStatusUit = { domein: null, uit: [] }; }
+
 function dataVelden(domein) {
   return Array.isArray(domein && domein.velden) ? domein.velden : [];
 }
@@ -412,6 +435,15 @@ function statusVeldVan(domein) {
 
 const BORD_AANDACHT = "Wacht op review";
 
+/* i71 — een kaart is te verplaatsen. De eerste klant probeerde meteen te
+ * slepen ("Oh, kan ik slepen? Nee, ik kan niet slepen"), en dat was ook de
+ * enige manier waarop ze het verwachtte.
+ *
+ * Slepen is hier de tweede route, niet de eerste: de statuskiezer op de kaart
+ * doet exact hetzelfde en werkt met een toetsenbord, op een telefoon en met
+ * een schermlezer. Allebei lopen ze door dezelfde schrijfactie, dus er is één
+ * plek waar een statuswissel gebeurt. Zonder schrijfrechten (een daglink is
+ * alleen-lezen) is het bord precies wat het was. */
 function bordKaartHtml(ctx, key, domein, rij) {
   const titel = detailTitel(domein, rij);
   const velden = dataVelden(domein);
@@ -421,10 +453,20 @@ function bordKaartHtml(ctx, key, domein, rij) {
     .map(x => `<span class="bord-meta">${dataCelHtml(getField(rij, x.naam), x.veld)}</span>`)
     .join("");
   const kinderen = subacties(ctx, key, rij.__entryId);
-  return `<article class="bord-kaart"${rij.__entryId ? ` data-open-rij="${esc(key)}|${esc(rij.__entryId)}"` : ""} tabindex="0">
+  const statusVeld = statusVeldVan(domein);
+  const magBedienen = magDomeinBewerken(ctx, key).ok && !!rij.__entryId && !!statusVeld;
+  const nu = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
+  const kiezer = magBedienen
+    ? `<label class="bord-verplaats"><span class="visueel-verborgen">Verplaats naar</span>
+        <select data-bord-status="${esc(rij.__entryId)}">
+          ${statusVeld.opties.map(o => `<option value="${esc(o)}"${o === nu ? " selected" : ""}>${esc(o)}</option>`).join("")}
+        </select></label>`
+    : "";
+  return `<article class="bord-kaart"${rij.__entryId ? ` data-open-rij="${esc(key)}|${esc(rij.__entryId)}"` : ""} tabindex="0"${magBedienen ? ` draggable="true" data-sleep-id="${esc(rij.__entryId)}"` : ""}>
     <p class="bord-titel">${esc(titel)}</p>
     ${toon ? `<p class="bord-regels">${toon}</p>` : ""}
     ${kinderen.length ? `<p class="footnote">↳ ${kinderen.length} ${kinderen.length === 1 ? "subactie" : "subacties"}</p>` : ""}
+    ${kiezer}
   </article>`;
 }
 
@@ -449,7 +491,7 @@ function bordHtml(ctx, key, domein, rijen) {
     const inKolom = rijen.filter(r => dataCelTekst(getField(r, statusVeld.naam)) === status);
     const kaarten = inKolom.map(r => bordKaartHtml(ctx, key, domein, r)).join("")
       || `<p class="footnote">Leeg.</p>`;
-    return `<section class="bord-kolom${status === BORD_AANDACHT ? " bord-kolom-aandacht" : ""}" data-bord-kolom="${esc(status)}">
+    return `<section class="bord-kolom${status === BORD_AANDACHT ? " bord-kolom-aandacht" : ""}" data-bord-kolom="${esc(status)}" data-bord-dropzone>
       <h3>${esc(status)} <span class="bord-telling">${inKolom.length}</span></h3>
       ${kaarten}
     </section>`;
@@ -505,6 +547,12 @@ function renderDataDomein(el, key, ctx) {
       // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
       uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
     }
+    // i71: het statusfilter zit vóór het zoeken in de keten, zodat zoeken
+    // binnen de zichtbare selectie blijft werken zoals het al deed.
+    const verborgen = statusVeld ? statusVerborgen(key) : [];
+    if (verborgen.length) {
+      uit = uit.filter(r => verborgen.indexOf(dataCelTekst(getField(r, statusVeld.naam))) === -1);
+    }
     if (datumVeld) {
       uit = uit.slice().sort((a, b) => {
         const da = parseDateField(getField(a, datumVeld));
@@ -535,7 +583,14 @@ function renderDataDomein(el, key, ctx) {
       const acties = bewerk.ok && r.__entryId
         ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
         : (bewerk.ok ? `<td class="bewerk-kolom"></td>` : "");
-      return `<tr${dataDetail && dataDetail.domein === key && dataDetail.entryId === r.__entryId ? ' class="rij-open"' : ""}>${cellen}${acties}</tr>`;
+      // i71: de hele rij opent, niet alleen de titelcel. De knop in kolom 1
+      // blijft staan — die draagt de toetsenbordroute en het toegankelijke
+      // label. Een rij zonder entryId krijgt géén klikbaarheid: liever geen
+      // affordance dan een klik die niets doet, want precies dat was de
+      // klacht ("ik kan er heel leuk op klikken, maar hij doet niks").
+      const open = dataDetail && dataDetail.domein === key && dataDetail.entryId === r.__entryId;
+      const klik = r.__entryId ? ` class="rij-klikbaar${open ? " rij-open" : ""}" data-open-rij="${esc(key)}|${esc(r.__entryId)}"` : (open ? ' class="rij-open"' : "");
+      return `<tr${klik}>${cellen}${acties}</tr>`;
     }).join("");
     const rest = zicht.length > DATA_MAX_RIJEN
       ? `<p class="footnote">… en nog ${zicht.length - DATA_MAX_RIJEN} — zoek hierboven of open de bron zelf.</p>`
@@ -577,6 +632,9 @@ function renderDataDomein(el, key, ctx) {
         <button type="button" class="knop-mini${dataWeergave === "tabel" ? " actief" : ""}" data-weergave="tabel">Tabel</button>
         <button type="button" class="knop-mini${dataWeergave === "bord" ? " actief" : ""}" data-weergave="bord">Bord</button>
       </span>` : ""}
+      ${statusVeld ? `<span class="status-chips" role="group" aria-label="Tonen op status">${statusVeld.opties.map(o =>
+        `<button type="button" class="status-chip${statusVerborgen(key).indexOf(o) !== -1 ? " uit" : ""}" data-status-chip="${esc(o)}" aria-pressed="${statusVerborgen(key).indexOf(o) === -1}">${esc(o)}</button>`
+      ).join("")}</span>` : ""}
       <span class="data-telling" data-data-telling>${tellingHtml()}</span>
     </div>
     <div data-data-detail>${detailHtml()}</div>
@@ -599,11 +657,44 @@ function renderDataDomein(el, key, ctx) {
     // f33: een rij openen. Wijst het naar een ánder domein, dan doet de href
     // de navigatie en onthoudt de detailstand welke rij daar open moet.
     const openEl = e.target.closest && e.target.closest("[data-open-rij]");
-    if (openEl) {
+    // i71: nu de hele rij klikbaar is, moeten de knoppen en links ín die rij
+    // hun eigen werk houden. Alleen het element dat de klik zelf draagt (de
+    // relatielink) en de expliciete open-knop mogen hierdoorheen.
+    const inZicht = openEl && e.target.closest && e.target.closest("button, a, input, select, textarea, label");
+    const doorKnopBinnenRij = inZicht && inZicht !== openEl
+      && !(inZicht.classList && inZicht.classList.contains("rij-open-knop"))
+      && openEl.contains(inZicht);
+    if (openEl && !doorKnopBinnenRij) {
       const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
-      if (dom === key) { e.preventDefault(); herteken(); return; }
+      if (dom === key) {
+        e.preventDefault();
+        herteken();
+        // De detailkaart staat bóven de lijst. Klik je een rij aan die verder
+        // naar beneden staat, dan opent hij dus buiten je scherm — en omdat
+        // de browser de ingevoegde hoogte zelf compenseert (scroll-anchoring)
+        // beweegt er niet eens iets. Dat is precies wat de eerste klant zag:
+        // "ik kan er heel leuk op klikken, maar hij doet niks."
+        // block: "nearest" scrollt het kortste stukje en doet niets als de
+        // kaart al in beeld staat. De guard is niet optioneel: jsdom kent
+        // scrollIntoView niet, en zonder guard gaan de tests eraan.
+        const kaart = el.querySelector(".detail-kaart");
+        if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
+    }
+    // i71: statuschips — één per statuswaarde uit het registryschema, nooit
+    // hardgecodeerd. Aanklikken verbergt of toont die status.
+    const chip = e.target.closest && e.target.closest("[data-status-chip]");
+    if (chip) {
+      wisselStatusFilter(key, chip.getAttribute("data-status-chip"));
+      for (const c of el.querySelectorAll("[data-status-chip]")) {
+        c.classList.toggle("uit", statusVerborgen(key).indexOf(c.getAttribute("data-status-chip")) !== -1);
+        c.setAttribute("aria-pressed", String(statusVerborgen(key).indexOf(c.getAttribute("data-status-chip")) === -1));
+      }
+      herteken();
+      return;
     }
     const sluit = e.target.closest && e.target.closest("[data-detail-sluit]");
     if (sluit) { wisDataDetail(); herteken(); return; }
@@ -675,7 +766,18 @@ function renderDataDomein(el, key, ctx) {
     return false;
   }
 
+  /* i71: één plek waar een statuswissel gebeurt, of hij nu uit de kiezer op
+   * de kaart komt of uit een sleepbeweging. */
+  function verplaatsNaar(entryId, status) {
+    if (!entryId || !status) return;
+    pasToe(() => snelWijzig(ctx, key, entryId, statusPatch(domein, status))).then(herteken);
+  }
+
   el.addEventListener("change", (e) => {
+    // Op het bord staat er geen rij open: de kaart draagt zijn eigen id.
+    const bord = e.target.closest && e.target.closest("[data-bord-status]");
+    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value); return; }
+
     const rij = huidigeRij();
     if (!rij) return;
     const status = e.target.closest && e.target.closest("[data-snel-status]");
@@ -689,6 +791,50 @@ function renderDataDomein(el, key, ctx) {
     if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
     const agent = e.target.closest && e.target.closest("[data-snel-agent]");
     if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+  });
+
+  /* Slepen tussen kolommen. Bewust bovenop de kiezer op de kaart en niet
+   * ervoor in de plaats: zonder muis (toetsenbord, telefoon, schermlezer) is
+   * slepen geen route, en een bord dat alleen met de muis te bedienen is, is
+   * voor een deel van de gebruikers geen bord. Beide eindigen in
+   * verplaatsNaar(). */
+  let sleepId = null;
+  el.addEventListener("dragstart", (e) => {
+    const kaart = e.target.closest && e.target.closest("[data-sleep-id]");
+    if (!kaart) return;
+    sleepId = kaart.getAttribute("data-sleep-id");
+    kaart.classList.add("sleept");
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      // Sommige browsers starten geen sleep zonder payload; de waarde zelf
+      // gebruiken we niet, sleepId is de bron van waarheid.
+      try { e.dataTransfer.setData("text/plain", sleepId); } catch (f) { /* niet erg */ }
+    }
+  });
+  el.addEventListener("dragend", () => {
+    sleepId = null;
+    for (const k of el.querySelectorAll(".sleept")) k.classList.remove("sleept");
+    for (const z of el.querySelectorAll(".sleep-over")) z.classList.remove("sleep-over");
+  });
+  el.addEventListener("dragover", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (!zone || !sleepId) return;
+    e.preventDefault(); // pas hierdoor accepteert de browser een drop
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    zone.classList.add("sleep-over");
+  });
+  el.addEventListener("dragleave", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("sleep-over");
+  });
+  el.addEventListener("drop", (e) => {
+    const zone = e.target.closest && e.target.closest("[data-bord-dropzone]");
+    if (!zone) return;
+    e.preventDefault();
+    const id = sleepId || (e.dataTransfer ? e.dataTransfer.getData("text/plain") : "");
+    zone.classList.remove("sleep-over");
+    sleepId = null;
+    verplaatsNaar(id, zone.getAttribute("data-bord-kolom"));
   });
 
   el.addEventListener("submit", (e) => {
@@ -734,7 +880,7 @@ function renderDataDomein(el, key, ctx) {
   if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
-function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); }
+function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); }
 function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
 
 /* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
@@ -754,5 +900,6 @@ if (typeof module !== "undefined") {
     resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
+    statusVerborgen, wisselStatusFilter, wisStatusFilter,
   };
 }

@@ -471,6 +471,36 @@ describe("f25 — waardezones in dashboard.html", () => {
     expect(d.fouten).toEqual([]);
   });
 
+  /* i71 — na een schrijfactie blijf je waar je was.
+     handleBundle() zette bij élke geladen bundel de hash leeg, ook bij de
+     herlaadde bundel die op een schrijfactie volgt (pasToe -> ctx.herlaad).
+     Gevolg: statuswissel, notitie of verwijderen wierp je terug naar Vandaag
+     en je verloor domein, zoekterm, weergave én je plek in de lijst. Alleen
+     zichtbaar mét schrijfrechten — dus precies bij de klant die de bediening
+     voor het eerst gebruikte. ctx.herlaad is hier de echte code die een
+     schrijfactie aanroept. */
+  it("een herlaadde bundel houdt je waar je was", async () => {
+    const d = await open();
+    await d.geladen();
+    await d.naar("#/data/acties");
+    expect(d.zichtbaar("tab-data")).toBe(true);
+
+    await d.w.__dashboardCtx.herlaad();
+    await d.tot(() => d.zichtbaar("tab-data"), "nog steeds op de Data-tab");
+    expect(d.w.location.hash).toBe("#/data/acties");
+    expect(d.$("tab-data-body").querySelector("table")).not.toBeNull();
+    expect(d.fouten).toEqual([]);
+  });
+
+  /* De keerzijde: een nieuw geladen bundel hoort je wél op Vandaag te zetten.
+     Zonder deze test zou "hash nooit meer leegmaken" ook groen zijn. */
+  it("maar een vers geladen bundel begint gewoon op Vandaag", async () => {
+    const d = await open();
+    await d.geladen();
+    expect(d.w.location.hash === "" || d.w.location.hash === "#").toBe(true);
+    expect(d.zichtbaar("tab-vandaag")).toBe(true);
+  });
+
   /* b58 — de bevinding die dit item startte: de Team-tab telde 466 berichten
      terwijl Prestaties "0 van 21 agents" meldde. Twee bronnen, één product.
      Deze test bewaakt dat de twee tabs hetzelfde verhaal vertellen zodra de

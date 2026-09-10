@@ -13,6 +13,23 @@
   --paars: #A78BFA;
   --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Deze vijf werden 43 keer gebruikt en waren nergens gedefinieerd — het
+     hele Data-tab-blok (detailkaart, bordkolommen, relatiekaarten,
+     invoervelden, gedempte tekst) rendeerde daardoor zonder vlak en zonder
+     rand. Het pijnlijkste geval: `tr.rij-open { background: var(--card) }`,
+     de énige terugkoppeling op de plek waar je een rij aanklikt, kwam uit op
+     transparant. Je klikte, er opende iets buiten beeld, en op je klikplek
+     veranderde geen pixel.
+     Drie zijn een alias van een bestaande kleur, zodat er geen tweede
+     waarheid over dezelfde tint ontstaat; --card en --border zijn nieuw.
+     test/css-tokens.test.js bewaakt de hele klasse: elk gebruikt token moet
+     gedefinieerd zijn. */
+  --bg: var(--navy);
+  --text: var(--white);
+  --muted: var(--grey);
+  --card: #252540;
+  --border: rgba(255,255,255,0.12);
 }
 
 * { box-sizing: border-box; }
@@ -47,7 +64,19 @@ header.top {
   padding: 1.75rem 0 1.25rem;
   border-bottom: 1px solid rgba(255,255,255,0.08);
   margin-bottom: 1.5rem;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
 }
+/* i71: verversen zonder de pagina te herladen. Rustig vormgegeven — het is
+   een gemak, geen hoofdhandeling. */
+.kop-acties { margin: 0; display: flex; align-items: center; gap: 0.6rem; }
+.kop-acties button {
+  background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  padding: 0.3rem 0.7rem; font-size: 0.78rem; font-family: var(--font); cursor: pointer;
+  min-height: 32px;
+}
+.kop-acties button:hover { border-color: var(--mint); }
+.kop-tijd { color: var(--grey); font-size: 0.74rem; }
 header.top h1 {
   font-size: 1.5rem;
   font-weight: 700;
@@ -446,6 +475,69 @@ section.panel {
 .kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; font-size: 1.5rem; }
 .kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
 .kpi-instelling { margin-top: 0.45rem; }
+
+/* ── i71: een rij is in zijn geheel klikbaar ──────────────────────────
+   Eerder was alleen de titelcel een knop; een klik ergens anders in de rij
+   deed niets. De cursor en de hover maken nu zichtbaar dat de hele rij een
+   doel is — dat is precies het signaal dat ontbrak. */
+tr.rij-klikbaar { cursor: pointer; }
+tr.rij-klikbaar:hover > td { background: rgba(255,255,255,0.04); }
+/* De knoppenkolom houdt zijn eigen aanwijzer: daar gebeurt iets anders. */
+tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
+
+/* Alleen voor schermlezers: het label bij de statuskiezer op een bordkaart.
+   De kolomkop zegt visueel al waar de kaart staat. */
+.visueel-verborgen {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* ── i71: "nog niet ingezet" — een uitnodiging, geen tekortkoming ─────
+   Bewust niet in een waarschuwingskleur en niet als lijst met nullen: dit is
+   het antwoord op "welke agent laat ik links liggen?", en dat is een aanbod. */
+.suggesties { margin-top: 0.9rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.7rem; }
+.suggesties-kop {
+  font-size: 0.72rem; color: var(--grey); text-transform: uppercase;
+  letter-spacing: 0.03em; margin: 0 0 0.4rem;
+}
+.suggesties-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.suggesties-lijst a {
+  display: block; padding: 0.45rem 0.6rem; border-radius: 8px;
+  background: rgba(255,255,255,0.04); text-decoration: none; color: var(--white);
+}
+.suggesties-lijst a:hover { background: rgba(74,222,128,0.10); }
+.suggestie-naam { display: block; font-size: 0.8rem; font-weight: 600; }
+.suggestie-waarvoor { display: block; font-size: 0.74rem; color: var(--grey); line-height: 1.4; margin-top: 0.1rem; }
+
+/* ── i71: kaarten verplaatsen op het bord ─────────────────────────────
+   De kiezer op de kaart is de route die overal werkt; slepen ligt eroverheen
+   voor wie een muis heeft. Beide schrijven hetzelfde weg. */
+.bord-verplaats { display: block; margin-top: 0.5rem; }
+.bord-verplaats select {
+  width: 100%; background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
+  padding: 0.25rem 0.4rem; font-size: 0.72rem; font-family: var(--font);
+}
+.bord-kaart[draggable="true"] { cursor: grab; }
+.bord-kaart.sleept { opacity: 0.45; cursor: grabbing; }
+.bord-kolom.sleep-over { outline: 2px dashed var(--mint); outline-offset: 2px; }
+
+/* ── i71: statuschips ─────────────────────────────────────────────────
+   Aan = zichtbaar, uit = weggefilterd. De waarden komen uit het
+   registryschema, nooit hardgecodeerd. De stand leeft alleen in het
+   geheugen van de pagina (zie dataStatusUit in databrowser.js). */
+.status-chips { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.status-chip {
+  background: rgba(255,255,255,0.06); color: var(--white);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 999px;
+  padding: 0.25rem 0.7rem; font-size: 0.72rem; cursor: pointer; font-family: var(--font);
+  min-height: 28px;
+}
+.status-chip:hover { border-color: var(--mint); }
+.status-chip.uit {
+  color: var(--grijs-status); border-style: dashed; background: transparent;
+  text-decoration: line-through;
+}
 
 /* ── Herkomst-uitklap: alle dataherkomst op één plek, uit de tegels weg ── */
 .herkomst {

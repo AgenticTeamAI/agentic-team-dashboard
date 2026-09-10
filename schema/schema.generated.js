@@ -5,7 +5,7 @@
 //   registryVersion : 1.90.0
 //   registry updated: 2026-09-07
 //   bron-commit     : d38eccf38bee81ea4f5e3895875b84c1af7156e9
-//   geextraheerd op : 2026-09-10T17:26:38Z
+//   geextraheerd op : 2026-09-10T17:29:32Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
@@ -15,7 +15,7 @@ window.AGENTIC_TEAM_SCHEMA = {
   "registryVersion": "1.90.0",
   "registryUpdated": "2026-09-07",
   "sourceCommit": "d38eccf38bee81ea4f5e3895875b84c1af7156e9",
-  "extractedAt": "2026-09-10T17:26:38Z",
+  "extractedAt": "2026-09-10T17:29:32Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -53,147 +53,189 @@ window.AGENTIC_TEAM_SCHEMA = {
       "displayName": "Coördinator",
       "emoji": "🔮",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Regisseert je AI-team en maakt elke werkdag een concreet dagplan met prioriteiten en naderende deadlines. Gebruik om je werkdag te starten.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "management-assistent",
       "displayName": "Management Assistent",
       "emoji": "📌",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Je persoonlijke rechterhand die overzicht bewaakt en prioriteiten stelt zodat niets tussen wal en schip valt. Gebruik voor je ochtendbrief en dagafsluiting.",
+      "rol": null
     },
     {
       "slug": "quality-control",
       "displayName": "Quality Control",
       "emoji": "🛡️",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Controleert agentwerk op feiten, logica, toon, bewijs en procesintegriteit en markeert wat een menselijke blik nodig heeft. Gebruik vóór belangrijke besluiten of publicatie.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "gids",
       "displayName": "Gids",
       "emoji": "🧭",
       "module": "core",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Maakt je startklaar met je team en leert je stap voor stap hoe je het effectief inzet. Gebruik bij je eerste sessie of als je even niet verder komt.",
+      "rol": "cross-cutting"
     },
     {
       "slug": "ceo-agent",
       "displayName": "CEO Agent",
       "emoji": "🌟",
       "module": "strategy",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Strategische sparringpartner voor je commerciële koers: bewaakt richting, prioriteiten en samenhang tussen marketing, sales en product. Gebruik bij koersvragen.",
+      "rol": null
     },
     {
       "slug": "coo-agent",
       "displayName": "COO Agent",
       "emoji": "🏛️",
       "module": "backoffice",
-      "team": "gedeeld"
+      "team": "gedeeld",
+      "description": "Operationeel leider die financiële gezondheid, compliance, administratie en capaciteit bewaakt. Gebruik voor operationele en organisatorische vraagstukken.",
+      "rol": null
     },
     {
       "slug": "marktmaker",
       "displayName": "Marktmaker",
       "emoji": "🎯",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Strategische marketingdenker die bepaalt waar en voor wie je zichtbaar bent en hoe je structureel leads wint. Gebruik voor positionering en campagnestrategie.",
+      "rol": null
     },
     {
       "slug": "researcher",
       "displayName": "Researcher",
       "emoji": "🔍",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Vindt en kwalificeert potentiële klantorganisaties in jouw doelsegmenten. Gebruik om nieuwe prospects op te sporen op basis van concrete koopsignalen.",
+      "rol": null
     },
     {
       "slug": "pipeline-manager",
       "displayName": "Pipeline Manager",
       "emoji": "📊",
       "module": "growth",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Bewaakt je salespipeline zodat elke deal een status, volgende actie en eigenaar heeft. Gebruik om stagnerende deals te spotten en je week te reviewen.",
+      "rol": null
     },
     {
       "slug": "product-designer",
       "displayName": "Product Designer",
       "emoji": "🧪",
       "module": "strategy",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwerpt en optimaliseert je aanbod vanuit wat de markt nodig heeft. Gebruik voor nieuwe producten, prijsstelling en het aanscherpen van je portfolio.",
+      "rol": null
     },
     {
       "slug": "outreach-specialist",
       "displayName": "Outreach Specialist",
       "emoji": "📨",
       "module": "sales",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Schrijft gepersonaliseerde outreach die laat zien dat je de persoon en organisatie echt kent. Gebruik voor eerste benadering en follow-ups naar prospects.",
+      "rol": null
     },
     {
       "slug": "dealmaker",
       "displayName": "Dealmaker",
       "emoji": "🤝",
       "module": "sales",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Onderzoekt koopcontext en helpt gesprekken, businesscases, offertes en besluitvorming voorbereiden—evidence-first en zonder klanten te benaderen of namens jou te onderhandelen.",
+      "rol": null
     },
     {
       "slug": "content-strateeg",
       "displayName": "Content Strateeg",
       "emoji": "✍️",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwikkelt samen met jou inhoudelijke, onderbouwde content: van gekozen idee en onderzoek tot concept, review, planning en leren na publicatie.",
+      "rol": null
     },
     {
       "slug": "de-stem",
       "displayName": "De Stem",
       "emoji": "🎙️",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Scherpt het onderscheidende verhaal, de geloofwaardige hoek en het passende podium. Gebruik voor thought leadership, PR, media-pitches en personal branding.",
+      "rol": null
     },
     {
       "slug": "delivery-architect",
       "displayName": "Delivery Architect",
       "emoji": "🎒",
       "module": "delivery",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Ontwerpt stap voor stap hoe je een opdracht uitvoert bij de klant. Gebruik als er nog geen duidelijke aanpak is voor een deal, product of maatwerktraject.",
+      "rol": null
     },
     {
       "slug": "controller",
       "displayName": "Controller",
       "emoji": "📊",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Je financiële geweten dat terug- én vooruitkijkt: rapportages, cashflow, forecasting en fiscale planning. Gebruik voor cijfers, marges en financiële scenario's.",
+      "rol": null
     },
     {
       "slug": "jurist",
       "displayName": "Jurist",
       "emoji": "⚖️",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Juridisch adviseur die je bedrijf beschermt: kloppende contracten, afgedekte risico's en compliance op orde. Gebruik voor contractchecks en juridische vragen.",
+      "rol": null
     },
     {
       "slug": "administratie",
       "displayName": "Administratie",
       "emoji": "📋",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bereidt je facturatie voor en volgt openstaande posten op: uren verantwoord, factuurregels klaargezet in je boekhoudpakket. Gebruik voor facturatie, debiteuren en uren.",
+      "rol": null
     },
     {
       "slug": "seo-geo-specialist",
       "displayName": "SEO/GEO Specialist",
       "emoji": "🧲",
       "module": "visibility",
-      "team": "ceo"
+      "team": "ceo",
+      "description": "Bepaalt welke onderwerpen vindbaarheid opleveren vóórdat er geschreven wordt, en toetst achteraf of pagina's gevonden worden — in Google én in AI-assistenten zoals ChatGPT en Perplexity.",
+      "rol": null
     },
     {
       "slug": "customer-success-manager",
       "displayName": "Customer Success Manager",
       "emoji": "💚",
       "module": "delivery",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bewaakt de klantrelatie na de deal: begeleidt onboarding, signaleert retentierisico's, herkent groeikansen en verwerkt klantfeedback. Gebruik voor health-checks en verlengingen.",
+      "rol": null
     },
     {
       "slug": "informatiemanager",
       "displayName": "Informatiemanager",
       "emoji": "🖥️",
       "module": "backoffice",
-      "team": "coo"
+      "team": "coo",
+      "description": "Bewaakt je digitale werkomgeving: de juiste tools, betrouwbare data en actuele kennis. Gebruik voor toolkeuzes, toolstack- en security-audits, datakwaliteit en het opschonen van je kennisbank.",
+      "rol": null
     }
   ],
   "datadomeinen": {

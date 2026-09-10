@@ -33,6 +33,16 @@ function moduleOverzichtBeschikbaar() {
   return moduleOverzicht !== null;
 }
 
+/* i71: welke modules heeft deze klant écht? Geeft null als we het niet weten
+ * (geen ingelogde sessie, of een licentie buiten de allowlist) — en dat is
+ * wat anders dan "geen enkele". De aanroeper hoort dat verschil te maken:
+ * een suggestie voor een module die iemand niet heeft, is een verkooppraatje
+ * op de verkeerde plek. */
+function actieveModuleKeys() {
+  if (!moduleOverzicht || !Array.isArray(moduleOverzicht.modules)) return null;
+  return moduleOverzicht.modules.filter((m) => m && m.actief).map((m) => m.key);
+}
+
 /* De enige plek die de site aanroept: GET zonder body, POST mét. Geeft
  * {status, body} terug en gooit alleen op netwerkfouten. */
 async function modulesFetch(pad, body, tokenOverride) {

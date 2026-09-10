@@ -10,11 +10,15 @@
  * iets over de gebruiker, niet over ons. Zakt hij onder de drempel, dan
  * komt hij vanzelf omhoog als aandachtspunt (zones.js). */
 
+/* i71: de `uitleg` beantwoordt "wat vind ik waar?" vóór je klikt. Dat was een
+ * letterlijke vraag van de eerste klant die er live mee werkte ("in een team
+ * of in data?"). De panelen op de tabs zelf zeggen het al; wat ontbrak was
+ * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
-  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/" },
-  { key: "team", titel: "Team", emoji: "📣", route: "#/team" },
-  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data" },
-  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties" },
+  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/", uitleg: "Wat vraagt nu je aandacht" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
+  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
+  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
 ];
 
 const DETAIL_VOLGORDE = [
@@ -77,7 +81,7 @@ function renderTabbar(el, activeTab, ctx) {
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
   el.innerHTML = zichtbareTabs(ctx).map(t =>
-    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
+    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
       <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
     </a>`).join("");
 }
@@ -368,12 +372,13 @@ function renderAandachtTop5(el, items) {
 }
 
 // ── Gebruik per agent ─────────────────────────────────────────────────
-function renderGebruikPanel(el, agentUsage) {
+function renderGebruikPanel(el, agentUsage, ctx) {
   if (agentUsage.status !== "ok") {
     el.innerHTML = `<div class="grijs-blok">
       <div class="grijs-kop">❔ Niet af te leiden</div>
       <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
     </div>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Meer over gebruik per agent →</a>`;
     return;
   }
@@ -389,7 +394,70 @@ function renderGebruikPanel(el, agentUsage) {
     : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
     <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
+}
+
+/* i71 — een uitnodiging in plaats van een tekortkoming.
+ *
+ * De breedte-subscore rekent "domeinen met inhoud ÷ 25": wie vijf agents
+ * gebruikt en daar prima mee draait, krijgt daar een laag cijfer voor. De
+ * formule blijft zoals hij is — hij is narekenbaar en vergelijkbaar met
+ * eerdere weken, en dat is meer waard dan een prettiger getal. Wat erbij komt
+ * is het antwoord op de vraag die de tegel al stelde: welke agent laat ik
+ * links liggen? Drie namen zeggen daar meer over dan een percentage.
+ *
+ * Alleen agents uit modules die de klant écht heeft — een suggestie voor iets
+ * dat je niet hebt is een verkooppraatje op de verkeerde plek. Weten we het
+ * niet (een daglink, of een licentie buiten de f34-allowlist), dan leiden we
+ * het af uit de data zelf: core heeft iedereen, en een module waarin al
+ * gewerkt is, heb je aantoonbaar. */
+function agentSuggesties(ctx, max = 3) {
+  const gezien = new Set();
+  const modulesMetSpoor = new Set(["core"]);
+  const usage = ctx && ctx.agentUsage;
+  const perSlug = {};
+  for (const a of ((ctx && ctx.schema && ctx.schema.agents) || [])) perSlug[a.slug] = a;
+  if (usage && usage.status === "ok" && Array.isArray(usage.ranking)) {
+    for (const r of usage.ranking) {
+      if (!((r.totaal || 0) > 0 || (r.value || 0) > 0)) continue;
+      gezien.add(r.slug);
+      const agent = perSlug[r.slug];
+      if (agent && agent.module) modulesMetSpoor.add(agent.module);
+    }
+  }
+  const bekend = typeof actieveModuleKeys === "function" ? actieveModuleKeys() : null;
+  const modules = bekend || [...modulesMetSpoor];
+  return ((ctx && ctx.schema && ctx.schema.agents) || [])
+    // Cross-cutting rollen (Coördinator, Quality Control, Gids) doen altijd
+    // mee zonder dat ze zelf een rij wegschrijven. Ze hier voorstellen als
+    // "nog niet ingezet" is bijna altijd onwaar — en het is precies de
+    // blinde vlek die i68 structureel oplost.
+    .filter(a => a.rol !== "cross-cutting")
+    .filter(a => !gezien.has(a.slug))
+    .filter(a => modules.indexOf(a.module) !== -1)
+    .filter(a => a.description)
+    .slice(0, max);
+}
+
+// Eerste zin van de menukaart-tekst: genoeg om te kiezen, kort genoeg om te
+// lezen. De volledige tekst staat op de agentpagina achter de doorklik.
+function eersteZin(tekst) {
+  const t = String(tekst || "").trim();
+  const punt = t.indexOf(". ");
+  return punt === -1 ? t : t.slice(0, punt + 1);
+}
+
+function agentSuggestiesHtml(ctx) {
+  const suggesties = agentSuggesties(ctx);
+  if (!suggesties.length) return "";
+  return `<div class="suggesties">
+    <p class="suggesties-kop">Nog niet ingezet</p>
+    <ul class="suggesties-lijst">${suggesties.map(a =>
+      `<li><a href="#/detail/agent/${esc(a.slug)}"><span class="suggestie-naam">${esc(a.emoji)} ${esc(a.displayName)}</span>
+        <span class="suggestie-waarvoor">${esc(eersteZin(a.description))}</span></a></li>`
+    ).join("")}</ul>
+  </div>`;
 }
 
 // ── Detail-view: dispatcher + secties (verhuisde zone-inhoud) ──────────
@@ -518,15 +586,19 @@ function renderDetailActiviteit(el, activiteit, periodWeeks) {
     <p class="footnote">Periode: laatste ${periodWeeks} weken tot en met vandaag. Bronnen in deze bundel: ${activiteit.aanwezigeBronnen.map(esc).join(", ") || "geen"}.</p>`;
 }
 
-function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage) {
+function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage, ctx) {
   if (agentUsage.status !== "ok") {
     el.innerHTML = `<div class="grijs-blok">
       <div class="grijs-kop">❔ Gebruik per agent niet af te leiden</div>
       <div class="grijs-tekst">${esc(agentUsage.reden)}</div>
-    </div>`;
+    </div>
+    ${ctx ? agentSuggestiesHtml(ctx) : ""}`;
     return;
   }
   renderZone3(el, z3, schema, today, periodDays);
+  // De sectiekop vraagt "welke agent laat ik links liggen, en waarom?" — dit
+  // is het antwoord, niet de ranglijst erboven.
+  if (ctx) el.insertAdjacentHTML("beforeend", agentSuggestiesHtml(ctx));
 }
 
 // ── Detail per agent (f4: doorklik per agent) ─────────────────────────

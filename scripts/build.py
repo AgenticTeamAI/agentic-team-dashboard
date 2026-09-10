@@ -70,6 +70,16 @@ def main():
             registry_version = line.split(":", 1)[1].strip().strip(',').strip('"')
             break
 
+    # i71: de voettekst noemde alleen een versienummer, en dat las als de
+    # versie van de connector — terwijl het de gepinde schemaversie is waarop
+    # dit artefact gebouwd is. Die twee lopen per definitie soms uiteen (de
+    # pin wordt per PR bijgewerkt, de connector draait op arch-main). De datum
+    # erbij maakt het verschil zichtbaar in plaats van verwarrend.
+    schema_datum = "onbekend"
+    lock_path = ROOT / "agent-architecture.lock.json"
+    if lock_path.exists():
+        schema_datum = json.loads(lock_path.read_text(encoding="utf-8")).get("bijgewerkt") or "onbekend"
+
     # b32 fase 2: CSP-hashes voor de twee inline scriptblokken. De pagina
     # draagt zo zijn eigen script-src (meta), die samen met de header-CSP uit
     # vercel.json geldt: 'unsafe-inline' in de header wordt daardoor genegeerd
@@ -94,6 +104,7 @@ def main():
         .replace("__SCHEMA__", schema_js)
         .replace("__APP__", app_js)
         .replace("__REGISTRY_VERSION__", registry_version)
+        .replace("__SCHEMA_DATUM__", schema_datum)
     )
 
     out_path = ROOT / "dashboard.html"
