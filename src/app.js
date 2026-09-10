@@ -560,6 +560,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   // keren; bij een gewone daglink staat de route al in de adresbalk.
   const naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  // f44: je kunt hier ook binnenkomen via een gewone deeplink uit een bericht
+  // van je team — een URL zonder token, die je met je eigen licentie opent.
+  // "Geen daglink gevonden" leest dan als een storing, terwijl de knop om in te
+  // loggen er gewoon naast staat. Zeg dus wat er moet gebeuren, niet wat er
+  // ontbreekt. Kan er niet ingelogd worden, dan blijft de daglink-uitleg staan:
+  // dan is dat wél het enige juiste antwoord.
+  if (bedoeldeRoute(window.location.hash) && oauthMogelijk()) {
+    toonLegeStaat("Log in om deze pagina te openen",
+      "Deze link wijst naar een pagina in je eigen dashboard. Log in met je licentie — je komt daarna precies op die pagina uit.",
+      { login: true });
+    return;
+  }
   // Er stond wél iets achter het #-teken, maar er kwam geen bruikbare bron uit.
   // "Geen daglink gevonden" is dan het verkeerde antwoord: er wás een link.
   if (hashLijktOpDaglink(window.location.hash)) {
