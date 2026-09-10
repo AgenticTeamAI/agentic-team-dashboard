@@ -288,14 +288,19 @@ function dataRijenVan(ctx, key) {
 
 /* Metricsbestand: de Coördinator levert dan alleen totalen aan, geen rijen.
  * Zelfde eerlijke uitleg als op de agentdetailpagina — nooit een lege tabel
- * die suggereert dat de werkruimte leeg is. */
+ * die suggereert dat de werkruimte leeg is.
+ *
+ * De tekst stond hier eerder in onze eigen woorden ("deze bundel draagt geen
+ * rijen", "vraag waar je werkdata woont — dat staat in de bronkoppeling") en
+ * gaf de lezer daarmee een opdracht in termen die hij nergens anders
+ * tegenkomt. Zelfde feit, nu in zijn taal, en zonder huiswerk. */
 function dataMetricsUitleg() {
   return `<div class="grijs-blok">
-    <div class="grijs-kop">❔ Deze bundel draagt geen rijen</div>
-    <div class="grijs-tekst">Je dashboard leest vandaag een kant-en-klaar metricsbestand: dat bevat de tellingen,
-    niet de onderliggende regels. Wil je hier je acties, deals en lessen doorbladeren, dan moeten de werkdata-rijen
-    in je werkruimte staan in plaats van alleen een dagelijks metricsbestand. Vraag je Coördinator waar je werkdata
-    woont — dat staat in de bronkoppeling.</div>
+    <div class="grijs-kop">❔ Je gegevens staan in een ander systeem</div>
+    <div class="grijs-tekst">Dit dashboard krijgt vandaag alleen de dagtellingen uit je werkruimte door, niet de
+    regels erachter. Je acties, deals en lessen zelf staan in het systeem waarin je ze bijhoudt — je Coördinator
+    weet welk. Wil je ze hier kunnen doorbladeren, vraag hem dan om je werkgegevens naar je werkruimte te
+    verplaatsen.</div>
   </div>`;
 }
 

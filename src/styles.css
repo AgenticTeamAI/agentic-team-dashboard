@@ -213,11 +213,25 @@ footer.app-footer {
   line-height: 1.6;
 }
 
+/* Kanttekeningen bij de cijfers — bewust GEEN alarmkader meer. Dit blok
+   stond als geel vlak boven alle vier de tabs en was het eerste wat een
+   klant zag; nu is het één dichtgeklapte regel in de rustige paneelkleur.
+   Alleen als er iets over de bundel zelf mis is (data-let-op) krijgt de
+   samenvatting de oranje accentkleur — dan is er ook echt iets te doen. */
 .warnings-box {
-  background: rgba(251,191,36,0.08); border: 1px solid var(--oranje);
-  border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem;
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.82rem;
 }
-.warnings-box .kop { color: var(--oranje); font-weight: 700; margin-bottom: 0.35rem; }
+.kanttekeningen > summary {
+  cursor: pointer; padding: 0.55rem 1rem; color: var(--grey);
+  list-style-position: inside;
+}
+.kanttekeningen > summary:hover { color: var(--white); }
+.kanttekeningen[data-let-op] > summary { color: var(--oranje); }
+.kanttekeningen > ul {
+  margin: 0; padding: 0 1rem 0.8rem 2.2rem; color: var(--grey); line-height: 1.55;
+}
+.kanttekeningen > ul > li + li { margin-top: 0.3rem; }
 
 .bar-mini {
   display: flex; align-items: flex-end; gap: 3px; height: 34px; margin-top: 0.4rem;
@@ -427,7 +441,9 @@ section.panel {
 /* ── Opbrengst: de harde telling en de schatting mogen niet hetzelfde
       lezen. De schatting is lichter, met de aanname erbij. ── */
 .kpi-tile.kpi-zacht { border-style: dashed; border-color: rgba(255,255,255,0.14); }
-.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; }
+/* De rekenhulp mag niet met de gemeten tegels ernaast concurreren: lichter
+   van kleur, lichter van gewicht en kleiner van corps. */
+.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; font-size: 1.5rem; }
 .kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
 .kpi-instelling { margin-top: 0.45rem; }
 

@@ -601,6 +601,72 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
   return { status: "ok", ranking };
 }
 
+// -- Terugval: gebruik per agent uit de teamfeed --------------------------
+// computeAgentGebruikRanking hierboven telt sporen in Acties en Lessen &
+// Inzichten. Een team dat wel draait maar in die twee domeinen niets
+// wegschrijft, komt daar als "elke agent 0" uit - terwijl de Team-tab op
+// hetzelfde moment honderden feedberichten toont. Twee tellingen van
+// hetzelfde ding die elkaar tegenspreken kost meer vertrouwen dan een
+// telling met een voetnoot, dus valt de ranglijst terug op de feed en zegt
+// erbij waar het getal vandaan komt.
+//
+// Dit is de leeskant. De structurele meting - een eigen activatieteller in
+// dashboard_metrics, geschreven vanuit de werkruimte - staat als i68 op de
+// backlog en vervangt deze terugval zodra hij er is.
+//
+// `items` zijn de genormaliseerde feeditems uit normaliseerFeed() (feed.js):
+// elk met agentSlug (of leeg bij een onbekende agent) en tijd (Date).
+function agentGebruikUitTeamfeed(items, schema, today, periodDays) {
+  const lijst = Array.isArray(items) ? items : [];
+  const traces = {};
+  for (const agent of schema.agents) traces[agent.slug] = { aantalPeriode: 0, aantalTotaal: 0 };
+
+  let raak = 0;
+  for (const it of lijst) {
+    const t = it && it.agentSlug ? traces[it.agentSlug] : null;
+    if (!t) continue; // bericht zonder herkenbare agent telt nergens mee
+    raak++;
+    t.aantalTotaal++;
+    const dt = it.tijd instanceof Date ? it.tijd : parseDateField(it.tijd);
+    if (dt && !isNaN(dt.getTime())) {
+      const diff = daysBetween(today, dt);
+      if (diff >= 0 && diff <= periodDays) t.aantalPeriode++;
+    }
+  }
+  // Geen enkel bericht met een herkenbare agent: dan is de feed geen betere
+  // bron dan wat de aanroeper al had. Niets teruggeven, niets verzinnen.
+  if (!raak) return null;
+
+  const ranking = schema.agents
+    .map(a => ({ slug: a.slug, label: a.displayName, emoji: a.emoji, module: a.module, value: traces[a.slug].aantalPeriode, totaal: traces[a.slug].aantalTotaal }))
+    .sort((a, b) => b.value - a.value || b.totaal - a.totaal);
+
+  return { status: "ok", bron: "teamfeed", ranking };
+}
+
+// Draagt een ranglijst uberhaupt signaal? Alle agents op nul is geen
+// ranglijst maar een ontbrekende meting, en hoort dus hetzelfde behandeld te
+// worden als een ontbrekende bron: zeggen waarom, geen twintig balkjes op nul.
+function agentGebruikHeeftSignaal(usage) {
+  if (!usage || usage.status !== "ok" || !Array.isArray(usage.ranking)) return false;
+  return usage.ranking.some(a => (a.totaal || 0) > 0 || (a.value || 0) > 0);
+}
+
+const AGENTGEBRUIK_GEEN_SPOOR = "Geen van je agents heeft in deze bundel een spoor achtergelaten: er staat geen agentnaam op je acties of lessen, en er zijn geen teamfeed-berichten om op terug te vallen. Een ranglijst van nullen zou suggereren dat je team stilstond - dat is hier niet gemeten, alleen niet vastgelegd.";
+
+// De ene plek die bepaalt welke ranglijst het dashboard toont. Beide routes
+// (rijen en metricsbestand) lopen hierlangs, zodat de Team-tab en de
+// Prestaties-tab nooit een ander verhaal vertellen.
+function kiesAgentGebruik(basis, feedItems, schema, today, periodDays) {
+  if (agentGebruikHeeftSignaal(basis)) return basis;
+  const uitFeed = agentGebruikUitTeamfeed(feedItems, schema, today, periodDays);
+  if (uitFeed) return uitFeed;
+  // "geen-bron" en "geen-veld" zijn preciezere redenen dan "geen spoor" -
+  // die laten staan.
+  if (basis && basis.status !== "ok") return basis;
+  return { status: "geen-spoor", reden: AGENTGEBRUIK_GEEN_SPOOR };
+}
+
 // -- Correctievrij-percentage (i25) - de f19-gate ------------------------
 // Aandeel acties dat een agent autonoom op Klaar zette (werkronde + QC) en
 // dat daarna NIET door een mens is gecorrigeerd. Beide routes (rijen én
@@ -789,6 +855,7 @@ if (typeof module !== "undefined") {
     voegContextToeAanAandacht, voegRitmeToeAanAandacht, RITME_DREMPEL_PCT, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
+    agentGebruikUitTeamfeed, agentGebruikHeeftSignaal, kiesAgentGebruik, AGENTGEBRUIK_GEEN_SPOOR,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
