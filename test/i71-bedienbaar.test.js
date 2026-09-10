@@ -108,6 +108,25 @@ describe("een rij openen", () => {
     expect(zonder.classList.contains("rij-klikbaar")).toBe(false);
   });
 
+  /* De koppeling domein|id werd met split("|") uit elkaar gehaald, dus een
+     entry-id met een pipe erin viel stil in stukken en die rij werd onklikbaar
+     — in tabel én bord, zonder enige melding. De instantie valideert de tekens
+     van een entry_id niet, dus een agent kan er zelf een meegeven. */
+  it("opent ook een rij waarvan het id een pipe bevat", () => {
+    const c = el();
+    g.wisDataDetail();
+    g.resetDataZoek();
+    g.renderDataDomein(c, "acties", ctxMet({
+      acties: { rows: [{ Actie: "Rare sleutel", Status: "Open", __entryId: "raar|id|met|pipes" }] },
+    }));
+    const knop = c.querySelector(".rij-open-knop");
+    expect(knop.getAttribute("data-open-rij")).toBe("acties|raar|id|met|pipes");
+    knop.click();
+    const kaart = c.querySelector("[data-detail-kaart]");
+    expect(kaart, "een id met een pipe mag de rij niet onklikbaar maken").not.toBeNull();
+    expect(kaart.getAttribute("data-detail-id")).toBe("raar|id|met|pipes");
+  });
+
   it("laat de knoppen in de rij hun eigen werk doen", () => {
     const c = verseTabel({ schrijven: true });
     g.wisDataDetail();

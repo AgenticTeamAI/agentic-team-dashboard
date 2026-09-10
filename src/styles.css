@@ -492,6 +492,41 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
+/* ── i72: de Data-tab op orde ─────────────────────────────────────────
+   Groepskoppen, een telling per blok, de uitklap voor wat je nog niet
+   gebruikt, en het merkteken op domeinen die elders wonen. Het merkteken
+   staat bewust alléén op de afwijking: een chip op alle 27 rijen markeert
+   niets. */
+.data-telregel { margin: 0 0 0.9rem; }
+.data-groepkop {
+  font-size: 0.74rem; color: var(--grey); text-transform: uppercase;
+  letter-spacing: 0.04em; font-weight: 600;
+  margin: 1.1rem 0 0.4rem; display: flex; align-items: center; gap: 0.45rem;
+}
+.data-groepkop:first-of-type { margin-top: 0; }
+.data-groeptelling {
+  background: rgba(255,255,255,0.08); border-radius: 999px;
+  padding: 0.05rem 0.45rem; font-size: 0.7rem; letter-spacing: 0;
+}
+.data-leeg { margin-top: 1.1rem; }
+.data-leeg > summary {
+  cursor: pointer; color: var(--grey); font-size: 0.74rem;
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+  padding: 0.4rem 0; list-style-position: inside;
+}
+.data-leeg > summary:hover { color: var(--white); }
+.spoor.elders { color: var(--blauw); }
+
+/* De herkomststrook staat bovenaan de domeinpagina — waar de vraag opkomt,
+   niet als voetnoot onder de tabel waar niemand meer kijkt. */
+.herkomst-strook {
+  background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--blauw);
+  border-radius: 10px; padding: 0.7rem 0.9rem; margin: 0.6rem 0 1rem; font-size: 0.82rem;
+}
+.herkomst-strook.zacht { border-left-color: var(--grijs-status); }
+.herkomst-strook p { margin: 0 0 0.35rem; line-height: 1.5; }
+.herkomst-strook p:last-child { margin-bottom: 0; }
+
 /* ── i71: "nog niet ingezet" — een uitnodiging, geen tekortkoming ─────
    Bewust niet in een waarschuwingskleur en niet als lijst met nullen: dit is
    het antwoord op "welke agent laat ik links liggen?", en dat is een aanbod. */

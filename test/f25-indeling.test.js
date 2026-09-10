@@ -102,10 +102,12 @@ describe("Data-tab — alleen-lezen browser over de bundel", () => {
     const acties = c.querySelector('[data-data-domein="acties"]');
     expect(acties).not.toBeNull();
     expect(acties.textContent).toContain("2 rijen");
-    // organisaties zit niet in de bundel -> geen doorklik, wel zichtbaar
+    // organisaties zit niet in de bundel -> geen doorklik (alleen-lezen bundel,
+    // geen bronkoppeling: er valt daar niets te halen), wel zichtbaar
     expect(c.querySelector('[data-data-domein="organisaties"]')).toBeNull();
     expect(c.textContent).toContain("Organisaties");
-    expect(c.textContent).toMatch(/geen rijen in deze bundel/);
+    // i72: "de bundel" is ons woord; een leeg domein zegt nu "nog niets"
+    expect(c.textContent).toMatch(/nog niets/);
   });
 
   it("overzicht: domeinen die per opzet niet worden opgehaald staan benoemd, niet stil weggelaten", () => {
@@ -145,7 +147,11 @@ describe("Data-tab — alleen-lezen browser over de bundel", () => {
     const c = el();
     g.renderDataDomein(c, "acties", ctxMet({}));
     expect(c.querySelector("table")).toBeNull();
-    expect(c.textContent).toMatch(/Geen rijen in deze bundel/);
+    // i72: de oude tekst hedgede ("leeg, óf het woont elders") terwijl we het
+    // antwoord soms wél hebben. Weten we niets, dan blijft alleen de eerlijke
+    // helft over.
+    expect(c.textContent).toMatch(/Hier staat nog niets/);
+    expect(c.textContent).not.toMatch(/in deze bundel/);
   });
 
   it("metricsroute: eerlijke uitleg in plaats van een lege tabel", () => {

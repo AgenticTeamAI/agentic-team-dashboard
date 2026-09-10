@@ -100,7 +100,31 @@ describe("wie mag bewerken", () => {
     const c = el();
     g.renderDataDomein(c, "interacties", ctxMet({ systeemPerDomein: { interacties: "notion" } }));
     expect(c.querySelector("[data-bewerk-nieuw]")).toBeNull();
-    expect(c.textContent).toContain("woont volgens je bronkoppeling in notion");
+    // i72: het systeem krijgt zijn eigen naam en het woord "bronkoppeling"
+    // verdwijnt uit klanttekst — dat is ons woord, geen klantwoord.
+    expect(c.textContent).toContain("woont in Notion");
+    expect(c.textContent).not.toContain("bronkoppeling");
+  });
+
+  /* i72 — de instantie beoordeelt de schrijfactie uiteindelijk; het dashboard
+     hoort dezelfde grens te trekken. Deze twee liepen uit de pas. */
+  it("normaliseert de bronwaarde net als de instantie", () => {
+    const hoofdletter = el();
+    g.renderDataDomein(hoofdletter, "interacties", ctxMet({ systeemPerDomein: { interacties: "  Werkruimte " } }));
+    expect(hoofdletter.querySelector("[data-bewerk-nieuw]")).not.toBeNull();
+
+    const spaties = el();
+    g.renderDataDomein(spaties, "interacties", ctxMet({ systeemPerDomein: { interacties: " NOTION " } }));
+    expect(spaties.querySelector("[data-bewerk-nieuw]")).toBeNull();
+    expect(spaties.textContent).toContain("Notion");
+  });
+
+  it("laat domeinen die per definitie hier wonen altijd bewerkbaar", () => {
+    // werkruimte.ts:51 — notities wonen altijd in de werkruimte, wat er ook in
+    // de bronkoppeling staat. Anders zet één verdwaalde rij het notitieveld dicht.
+    const c = el();
+    g.renderDataDomein(c, "notities", ctxMet({ systeemPerDomein: { notities: "notion" } }));
+    expect(c.querySelector("[data-bewerk-nieuw]")).not.toBeNull();
   });
 });
 

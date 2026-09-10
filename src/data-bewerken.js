@@ -90,9 +90,18 @@ function magDomeinBewerken(ctx, key) {
   if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
   if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
   if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
-  const systeem = ctx.bundle.systeemPerDomein ? ctx.bundle.systeemPerDomein[key] : null;
-  if (systeem && systeem !== "werkruimte" && systeem !== "geen") {
-    return { ok: false, reden: `Dit domein woont volgens je bronkoppeling in ${systeem} — bewerken doe je daar.` };
+  // i72: één afleiding voor "waar woont dit" — bronVan() in databrowser.js.
+  // Daarvóór stond hier een eigen vergelijking op de ruwe klantwaarde, en die
+  // liep op twee punten uit de pas met de instantie die de schrijfactie
+  // uiteindelijk beoordeelt (werkruimte.ts:213-217): geen trim/lowercase, dus
+  // "Werkruimte" met een hoofdletter blokkeerde ten onrechte; en geen
+  // uitzondering voor de domeinen die per definitie hier wonen, dus een
+  // bronkoppeling-rij voor `notities` zou het notitieformulier hebben
+  // dichtgezet. Dat de gebruiker iets anders te zien krijgt dan de server doet,
+  // is erger dan allebei de fouten apart.
+  const bron = bronVan(ctx, key);
+  if (bron.toestand === "elders") {
+    return { ok: false, reden: `Dit soort gegevens woont in ${bron.naam} — bijwerken doe je daar.` };
   }
   return { ok: true, reden: null };
 }

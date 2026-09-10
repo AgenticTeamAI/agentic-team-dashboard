@@ -460,14 +460,31 @@ describe("f25 — waardezones in dashboard.html", () => {
     expect(d.fouten).toEqual([]);
   });
 
-  it("Data-tab bij een metricsbestand: uitleg in plaats van een lege tabel", async () => {
+  it("Data-tab bij een metricsbestand zónder rijen: uitleg in plaats van een lege tabel", async () => {
+    // De uitleg hoort bij "er zijn geen rijen", niet bij "de cijfers komen uit
+    // een metricsbestand" — dat waren tot nu toe hetzelfde geval.
+    const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true }) } });
+    await d.geladen();
+    await d.naar("#/data/acties");
+    expect(d.$("tab-data-body").querySelector("table")).toBeNull();
+    expect(d.tekst("tab-data-body")).toMatch(/staan in een ander systeem/);
+    expect(d.fouten).toEqual([]);
+  });
+
+  /* f33 liet de loader ook naast een vers metricsbestand de rijen ophalen,
+     juist zodat de Data-tab ze kan tonen — maar de renderers keerden meteen om
+     bij kind === "metrics". Dat ophalen was dus werk voor niets, op precies de
+     omgevingen waar 's ochtends een dagstart draait. */
+  it("Data-tab bij een metricsbestand mét rijen: gewoon je gegevens", async () => {
     const inhoud = domeinenUitTestdata();
     inhoud.dashboard_metrics = metricsEntry({ vers: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
     await d.naarTab("data");
-    expect(d.$("tab-data-body").querySelector("table")).toBeNull();
-    expect(d.tekst("tab-data-body")).toMatch(/staan in een ander systeem/);
+    expect(d.tekst("tab-data-body")).toMatch(/In gebruik: \d+ van de \d+/);
+    expect(d.tekst("tab-data-body")).not.toMatch(/staan in een ander systeem/);
+    await d.naar("#/data/acties");
+    expect(d.$("tab-data-body").querySelector("table")).not.toBeNull();
     expect(d.fouten).toEqual([]);
   });
 

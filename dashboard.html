@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-IrVZB5T1AOOlxddDWf9aMgTXC/VgStHdKuzvjVE/geo='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-spm0Mk+aYc6UAFTtW/KxDFOq5dUsuSd7FYLL0Oigrfc='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -501,6 +501,41 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
 }
+
+/* ── i72: de Data-tab op orde ─────────────────────────────────────────
+   Groepskoppen, een telling per blok, de uitklap voor wat je nog niet
+   gebruikt, en het merkteken op domeinen die elders wonen. Het merkteken
+   staat bewust alléén op de afwijking: een chip op alle 27 rijen markeert
+   niets. */
+.data-telregel { margin: 0 0 0.9rem; }
+.data-groepkop {
+  font-size: 0.74rem; color: var(--grey); text-transform: uppercase;
+  letter-spacing: 0.04em; font-weight: 600;
+  margin: 1.1rem 0 0.4rem; display: flex; align-items: center; gap: 0.45rem;
+}
+.data-groepkop:first-of-type { margin-top: 0; }
+.data-groeptelling {
+  background: rgba(255,255,255,0.08); border-radius: 999px;
+  padding: 0.05rem 0.45rem; font-size: 0.7rem; letter-spacing: 0;
+}
+.data-leeg { margin-top: 1.1rem; }
+.data-leeg > summary {
+  cursor: pointer; color: var(--grey); font-size: 0.74rem;
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+  padding: 0.4rem 0; list-style-position: inside;
+}
+.data-leeg > summary:hover { color: var(--white); }
+.spoor.elders { color: var(--blauw); }
+
+/* De herkomststrook staat bovenaan de domeinpagina — waar de vraag opkomt,
+   niet als voetnoot onder de tabel waar niemand meer kijkt. */
+.herkomst-strook {
+  background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--blauw);
+  border-radius: 10px; padding: 0.7rem 0.9rem; margin: 0.6rem 0 1rem; font-size: 0.82rem;
+}
+.herkomst-strook.zacht { border-left-color: var(--grijs-status); }
+.herkomst-strook p { margin: 0 0 0.35rem; line-height: 1.5; }
+.herkomst-strook p:last-child { margin-bottom: 0; }
 
 /* ── i71: "nog niet ingezet" — een uitnodiging, geen tekortkoming ─────
    Bewust niet in een waarschuwingskleur en niet als lijst met nullen: dit is
@@ -6746,7 +6781,9 @@ function nlGetal(n, decimals = 0) {
  * afgeleid — draagt het die, dan is er inhoud en blijft de tab staan. */
 function dataTabBeschikbaar(ctx) {
   if (!ctx || !ctx.bundle) return false;
-  if (ctx.bundle.kind !== "metrics") return Object.keys(ctx.bundle.domains || {}).length > 0;
+  // Zijn er domeinen opgehaald, dan valt er iets te tonen — ook op de
+  // metricsroute, want sinds f33 haalt de loader daar óók de rijen op.
+  if (Object.keys(ctx.bundle.domains || {}).length > 0) return true;
   return Array.isArray(ctx.relaties) && ctx.relaties.length > 0;
 }
 
@@ -7392,6 +7429,89 @@ const DATA_NIET_IN_BUNDEL = {
   bronkoppeling: "instelling: welk domein in welk systeem woont",
 };
 
+/* i72 — waar woont een domein? Eén afleiding, vier antwoorden.
+ *
+ * `bundle.systeemPerDomein` komt uit het domein `bronkoppeling` en werd tot nu
+ * toe alleen gebruikt om bewerken te blokkeren. De gebruiker kreeg het dus pas
+ * te zien als straf, nádat hij iets probeerde — terwijl hij het nodig heeft
+ * vóórdat hij zoekt.
+ *
+ * "Onbekend" is een eigen antwoord, geen synoniem voor "werkruimte". De kaart
+ * is leeg in drie verschillende situaties: er is geen bronkoppeling, hij was
+ * onleesbaar (de loader slikt die fout), of dit domein staat er niet in.
+ * Zolang de UI niets beweerde was dat onschuldig; zodra we per domein gaan
+ * zéggen waar het woont, wordt samenvouwen een onwaarheid.
+ *
+ * De regels spiegelen die van de instantie, want die beslist uiteindelijk of
+ * een schrijfactie doorgaat: agentic-team-werkruimte/src/werkruimte.ts:51-54
+ * (ALTIJD_WERKRUIMTE, EXTERNE_SYSTEMEN) en :213-217 (trim().toLowerCase()).
+ * Liepen die uit de pas, dan verbiedt of belooft het dashboard iets anders dan
+ * de server doet. */
+const ALTIJD_WERKRUIMTE = ["logboek", "bedrijfscontext", "bronkoppeling", "notities"];
+
+/* Klanttaal per systeem. Een onbekende waarde wordt getoond zoals hij er staat
+ * (geëscaped) — verzinnen is erger dan citeren. Bewust niet in src/teksten.js:
+ * dat bestand is woordelijk juridisch getoetst en elke toevoeging daar vraagt
+ * een nieuwe toets. */
+const BRONSYSTEEM_NAMEN = {
+  notion: "Notion",
+  crm: "je CRM",
+  hubspot: "HubSpot",
+  werkboek: "een werkboek buiten je werkruimte",
+  lokaal: "bestanden op een eigen computer",
+  werkruimte: "je werkruimte",
+};
+
+function bronVan(ctx, key) {
+  if (ALTIJD_WERKRUIMTE.indexOf(key) !== -1) {
+    return { toestand: "hier", systeem: "werkruimte", naam: BRONSYSTEEM_NAMEN.werkruimte };
+  }
+  const kaart = (ctx && ctx.bundle && ctx.bundle.systeemPerDomein) || null;
+  // Is er helemáál geen koppeling, dan weten we van geen enkel domein iets —
+  // dan is er ook niets zinnigs per domein te zeggen. Is er wél een koppeling
+  // maar staat dit domein er niet in, dan is dát een gat dat de gebruiker mag
+  // zien. Twee verschillende soorten "onbekend", twee verschillende antwoorden.
+  const geenKoppeling = !kaart || Object.keys(kaart).length === 0;
+  if (geenKoppeling || !(key in kaart)) return { toestand: "onbekend", systeem: null, naam: null, geenKoppeling };
+  const systeem = String(kaart[key] || "").trim().toLowerCase();
+  if (!systeem) return { toestand: "onbekend", systeem: null, naam: null, geenKoppeling: false };
+  if (systeem === "werkruimte") return { toestand: "hier", systeem, naam: BRONSYSTEEM_NAMEN.werkruimte };
+  if (systeem === "geen") return { toestand: "nergens", systeem, naam: null };
+  return { toestand: "elders", systeem, naam: BRONSYSTEEM_NAMEN[systeem] || systeem };
+}
+
+/* i72 — de Data-tab was 27 gelijkwaardige regels in registryvolgorde. Zelfs de
+ * rijkste testfixture vult er veertien; bij een eenmanszaak eerder zeven. De
+ * rest was een grijze hoop, en dáár zaten ook de domeinen die helemaal niet
+ * leeg zijn maar elders wonen.
+ *
+ * Deze indeling volgt hoe iemand over zijn bedrijf praat, niet hoe wij het
+ * opslaan. Bewust NIET sorteren op aantal rijen of op laatst gewijzigd: dan
+ * schuift de lijst bij elk bezoek en is spiergeheugen weg. Een domein verhuist
+ * precies één keer — als jij er zelf je eerste rij in zet.
+ *
+ * Groeperen op registry-module lag voor de hand maar werkt niet: `core` bevat
+ * elf van de 27 domeinen, dus dat wordt één reuzenblok met zes minigroepjes.
+ * En `module` betekent "in welk pakket zit dit", niet "hoort dit bij elkaar".
+ *
+ * "Overig" is het vangnet: een domein dat na een schema-sync nieuw is en hier
+ * nog niet staat, valt daarin en blijft dus zichtbaar. Een test telt dat élk
+ * browsbaar domein precies één keer op de pagina staat. */
+const DATA_GROEPEN = [
+  { naam: "Werk & ritme", emoji: "🎯", domeinen: ["acties", "ritmetaken", "dagverslagen", "productbacklog"] },
+  { naam: "Klanten & relaties", emoji: "🤝", domeinen: ["organisaties", "contactpersonen", "interacties", "klantsucces", "klantbewijs"] },
+  { naam: "Verkoop", emoji: "💶", domeinen: ["sales_funnel", "offertes", "product_catalogus", "pipeline_weekreview"] },
+  { naam: "Levering", emoji: "📦", domeinen: ["projecten", "tijdregistratie", "delivery_rugzak"] },
+  { naam: "Zichtbaarheid", emoji: "📣", domeinen: ["content_kalender", "autoriteit", "seo_vraagonderzoek", "vindbaarheid_audit", "geo_metingen"] },
+  { naam: "Bedrijfsvoering", emoji: "🏛️", domeinen: ["financieel_overzicht", "contracten", "toolstack", "besluiten"] },
+  { naam: "Wat het team onthoudt", emoji: "💡", domeinen: ["lessen_inzichten", "notities"] },
+];
+const DATA_GROEP_OVERIG = { naam: "Overig", emoji: "🗂️", domeinen: [] };
+
+function groepVan(key) {
+  return DATA_GROEPEN.find(g => g.domeinen.indexOf(key) !== -1) || DATA_GROEP_OVERIG;
+}
+
 let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
 let dataWeergave = "tabel";  // f33: 'tabel' of 'bord' — alleen voor domeinen met een Status
 
@@ -7722,24 +7842,97 @@ function dataRelatieKaarten(ctx, key) {
 }
 
 // ── Overzicht (#/data) ────────────────────────────────────────────────
+/* Draagt deze bundel überhaupt rijen? Sinds f33 haalt de loader ze ook op naast
+ * een vers metricsbestand — juist omdat de Data-tab ze moet kunnen tonen. Deze
+ * twee renderers keerden alleen nog steeds meteen om bij kind === "metrics",
+ * dus dat ophalen was werk voor niets: detail, bord en notities bleven
+ * onzichtbaar op precies de omgevingen waar 's ochtends een dagstart draait.
+ * De uitleg hoort bij "geen rijen", niet bij "metricsroute". */
+function bundelHeeftRijen(ctx) {
+  const domains = (ctx && ctx.bundle && ctx.bundle.domains) || {};
+  return Object.keys(domains).some(k => domains[k] && Array.isArray(domains[k].rows) && domains[k].rows.length > 0);
+}
+
 function renderDataOverzicht(el, ctx) {
-  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics" && !bundelHeeftRijen(ctx)) {
+    el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null);
+    return;
+  }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
-  const rijen = domeinen.map(d => {
+
+  // Drie emmers, in deze volgorde van beslissen: heb je er rijen in, dan
+  // gebruik je het (ook als het elders woont — die losse rijen bestaan echt).
+  // Anders: weten we waar het wél woont, dan is dat het antwoord. Pas als we
+  // niets weten, is het "nog niet in gebruik".
+  const inGebruik = [], elders = [], nogNiet = [];
+  for (const d of domeinen) {
     const rows = dataRijenVan(ctx, d.key);
-    const aantal = rows ? rows.length : 0;
-    const leeg = aantal === 0;
-    const spoor = leeg
-      ? `<span class="spoor geen">geen rijen in deze bundel</span>`
-      : `<span class="spoor actief">${aantal} ${aantal === 1 ? "rij" : "rijen"}</span>`;
-    const attrs = leeg ? "" : ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"`;
-    return `<div class="agent-row${leeg ? "" : " klikbaar"}"${attrs}>
+    const item = { d, aantal: rows ? rows.length : 0, bron: bronVan(ctx, d.key) };
+    if (item.aantal > 0) inGebruik.push(item);
+    else if (item.bron.toestand === "elders" || item.bron.toestand === "nergens") elders.push(item);
+    else nogNiet.push(item);
+  }
+
+  function spoorHtml({ aantal, bron }) {
+    const telling = aantal > 0 ? `${aantal} ${aantal === 1 ? "rij" : "rijen"}` : null;
+    if (bron.toestand === "elders") {
+      // Een kale telling is bij een extern domein een onwaarheid in
+      // cijfervorm: "1 rij" leest als "mijn team heeft één actie", terwijl
+      // het er één is die hier is blijven liggen.
+      return telling
+        ? `<span class="spoor elders">🔗 woont in ${esc(bron.naam)} · ${aantal} ${aantal === 1 ? "losse rij" : "losse rijen"} hier</span>`
+        : `<span class="spoor elders">🔗 woont in ${esc(bron.naam)}</span>`;
+    }
+    if (bron.toestand === "nergens") {
+      return telling
+        ? `<span class="spoor elders">${telling} · aangemerkt als: wordt niet bijgehouden</span>`
+        : `<span class="spoor geen">wordt niet bijgehouden</span>`;
+    }
+    return telling
+      ? `<span class="spoor actief">${telling}</span>`
+      : `<span class="spoor geen">nog niets</span>`;
+  }
+
+  function rijHtml(item) {
+    const { d, aantal, bron } = item;
+    // Klikbaar zodra er iets te halen valt: rijen om te lezen, een "nieuwe
+    // rij"-knop als je mag schrijven, of het antwoord op "waar dan wel?".
+    // Alleen leeg-én-onbekend blijft dood — daar is echt niets te zeggen.
+    const klikbaar = aantal > 0 || magDomeinBewerken(ctx, d.key).ok
+      || bron.toestand === "elders" || bron.toestand === "nergens";
+    const attrs = klikbaar ? ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"` : "";
+    return `<div class="agent-row${klikbaar ? " klikbaar" : ""}"${attrs}>
       <span class="emoji">${esc(d.emoji || "🗂️")}</span>
       <span class="naam">${esc(d.naam || d.key)}</span>
-      ${spoor}${leeg ? "" : `<span class="pijl">→</span>`}
+      ${spoorHtml(item)}${klikbaar ? `<span class="pijl">→</span>` : ""}
     </div>`;
+  }
+
+  // Binnen een groep ligt de volgorde vast in DATA_GROEPEN — nooit op aantal,
+  // anders schuift de lijst tussen twee bezoeken.
+  const groepenHtml = [...DATA_GROEPEN, DATA_GROEP_OVERIG].map(g => {
+    const leden = inGebruik.filter(i => groepVan(i.d.key) === g);
+    if (!leden.length) return "";
+    leden.sort((a, b) => g.domeinen.indexOf(a.d.key) - g.domeinen.indexOf(b.d.key));
+    return `<h3 class="data-groepkop">${g.emoji} ${esc(g.naam)}</h3>${leden.map(rijHtml).join("")}`;
   }).join("");
+
+  const eldersHtml = elders.length
+    ? `<h3 class="data-groepkop">🔗 Woont niet in je werkruimte <span class="data-groeptelling">${elders.length}</span></h3>
+       ${elders.map(rijHtml).join("")}`
+    : "";
+
+  // Dichtgeklapt, mét telling in de samenvatting. Niet verborgen: dit is de
+  // lijst van wat je team nog voor je kán bijhouden, en dit dashboard laat
+  // nooit stil iets weg. Een schakelaar "toon lege domeinen" zou hetzelfde
+  // doen als verbergen — die zet niemand aan.
+  const nogNietHtml = nogNiet.length
+    ? `<details class="data-leeg">
+        <summary>Nog niet in gebruik <span class="data-groeptelling">${nogNiet.length}</span></summary>
+        ${nogNiet.map(rijHtml).join("")}
+      </details>`
+    : "";
 
   const nietOpgehaald = Object.entries(DATA_NIET_IN_BUNDEL)
     .filter(([k]) => ctx.schema.datadomeinen[k])
@@ -7747,12 +7940,12 @@ function renderDataOverzicht(el, ctx) {
     .join(" · ");
 
   const leesregel = ctx.kanSchrijven
-    ? `Dit is wat er nú in je werkruimte staat. Je bent ingelogd: open een domein om rijen toe te voegen,
-    te bewerken of te verwijderen. Domeinen die in een ander systeem wonen blijven daar — en bewerk je daar.`
-    : `Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
-    dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
-    het domein woont.`;
-  el.innerHTML = `${rijen}
+    ? `Je bent ingelogd: open een domein om rijen toe te voegen, te bewerken of te verwijderen.`
+    : `Opgehaald met je daglink. Alleen lezen: dit dashboard kan niets aanmaken, wijzigen of verwijderen.`;
+
+  el.innerHTML = `<p class="footnote data-telregel">In gebruik: ${inGebruik.length} van de ${domeinen.length} soorten gegevens die je team kan bijhouden.</p>
+    ${groepenHtml}${eldersHtml}${nogNietHtml}
+    ${dataRelatieKaarten(ctx, null)}
     <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
@@ -7868,11 +8061,53 @@ function bordHtml(ctx, key, domein, rijen) {
   return `<div class="bord-scroll"><div class="bord">${kolomHtml}${restHtml}</div></div>`;
 }
 
+/* i72 — de herkomststrook: waar woont dit, en wat betekent dat hier?
+ *
+ * Stond dit eerder ergens? Alleen als voetnoot onder de tabel, en alleen voor
+ * wie kon schrijven — via de foutmelding van magDomeinBewerken(). Dat is de
+ * verkeerde volgorde en de verkeerde plek: de vraag "waar bewerk ik dit dan?"
+ * komt op vóórdat je zoekt, en hij komt op bij iedereen.
+ *
+ * Bewust géén sync-belofte. Dit dashboard leest niet mee in Notion, en dat
+ * hoort er te staan — anders leest een oud aantal als een actueel aantal. */
+function herkomstStrookHtml(ctx, key, domein, aantal) {
+  const bron = bronVan(ctx, key);
+  const naam = esc(domein.naam || key);
+  if (bron.toestand === "elders") {
+    const waar = esc(bron.naam);
+    return `<div class="herkomst-strook">
+      <p><strong>Je team houdt ${naam} bij in ${waar}.</strong></p>
+      <p>Hier kun je meekijken, niet wijzigen — dat doe je in ${waar}.</p>
+      <p>${aantal > 0
+        ? `De ${aantal} ${aantal === 1 ? "rij" : "rijen"} hieronder ${aantal === 1 ? "staat" : "staan"} in je werkruimte en ${aantal === 1 ? "is" : "zijn"} geen kopie van ${waar}. Het volledige beeld staat daar.`
+        : `Er staat hier niets van dit soort gegevens — dat hoort ook zo.`}</p>
+      <p class="footnote">Dit dashboard leest niet mee in ${waar}; het toont wat er in je eigen werkruimte staat.</p>
+    </div>`;
+  }
+  if (bron.toestand === "nergens") {
+    return `<div class="herkomst-strook">
+      <p><strong>${naam} wordt bewust niet bijgehouden.</strong></p>
+      <p>Je team heeft vastgelegd dat dit soort gegevens nergens wordt bijgehouden.${aantal > 0 ? ` Toch staan er hier ${aantal} ${aantal === 1 ? "rij" : "rijen"} — die ${aantal === 1 ? "is" : "zijn"} waarschijnlijk blijven liggen.` : ""}</p>
+    </div>`;
+  }
+  // "Onbekend" met een bestaande koppeling is een gat dat je mag zien. Zonder
+  // koppeling weten we van niets iets, en dan zeggen we ook niets — anders
+  // staat dezelfde hedge zevenentwintig keer op zevenentwintig pagina's.
+  if (bron.toestand === "onbekend" && bron.geenKoppeling === false) {
+    return `<div class="herkomst-strook zacht">
+      <p>Waar ${naam} thuishoort is niet vastgelegd. Wat je hier ziet staat in je werkruimte — of dat alles is, weten we niet.</p>
+    </div>`;
+  }
+  return "";
+}
+
 // ── Eén domein (#/data/<domein>) ──────────────────────────────────────
 function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
   if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
-  if (ctx.bundle && ctx.bundle.kind === "metrics") {
+  // Zie bundelHeeftRijen(): alleen als er écht geen rijen zijn is de
+  // metricsuitleg het juiste antwoord.
+  if (ctx.bundle && ctx.bundle.kind === "metrics" && !(dataRijenVan(ctx, key) || []).length) {
     el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, key) + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
     return;
   }
@@ -7884,8 +8119,12 @@ function renderDataDomein(el, key, ctx) {
   const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
   const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
-    el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
-      betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+    // De oude tekst hedgede ("leeg, óf het woont ergens anders") terwijl het
+    // antwoord in de bundel zat. Weet de strook het, dan zegt hij het; weet
+    // hij het niet, dan blijft alleen de eerlijke helft over.
+    const strook = herkomstStrookHtml(ctx, key, domein, 0);
+    el.innerHTML = `${kop}${strook}
+      ${strook ? "" : `<div class="grijs-blok"><div class="grijs-tekst">Hier staat nog niets van dit soort gegevens.</div></div>`}
       ${bewerkUitleg}${nieuwKnop}<div data-bewerk-paneel></div>
       <a class="detail-link" href="#/data">← Alle gegevens</a>`;
     if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
@@ -7988,6 +8227,7 @@ function renderDataDomein(el, key, ctx) {
   }
 
   el.innerHTML = `${kop}
+    ${herkomstStrookHtml(ctx, key, domein, rows.length)}
     <div class="data-toolbar">
       <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
       ${vs ? `<span class="filter-chip">🔎 ${esc(vs.label)} <button type="button" class="filter-wis" data-filter-wis aria-label="Filter wissen">✕</button></span>` : ""}
@@ -8028,7 +8268,15 @@ function renderDataDomein(el, key, ctx) {
       && !(inZicht.classList && inZicht.classList.contains("rij-open-knop"))
       && openEl.contains(inZicht);
     if (openEl && !doorKnopBinnenRij) {
-      const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
+      // Splitsen op de EERSTE pipe, niet op elke. Een domeinslug bestaat uit
+      // [a-z0-9_] en kan er nooit een bevatten; een entry-id wél — de
+      // instantie valideert de tekens daarvan niet. Met split("|") viel zo'n
+      // rij stil uit elkaar en werd hij onklikbaar in tabel én bord, zonder
+      // enige melding.
+      const ruw = openEl.getAttribute("data-open-rij") || "";
+      const scheiding = ruw.indexOf("|");
+      const dom = scheiding === -1 ? ruw : ruw.slice(0, scheiding);
+      const id = scheiding === -1 ? "" : ruw.slice(scheiding + 1);
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
       if (dom === key) {
@@ -8264,6 +8512,7 @@ if (typeof module !== "undefined") {
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
     statusVerborgen, wisselStatusFilter, wisStatusFilter,
+    bronVan, herkomstStrookHtml, bundelHeeftRijen, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
   };
 }
 
@@ -8360,9 +8609,18 @@ function magDomeinBewerken(ctx, key) {
   if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
   if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
   if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
-  const systeem = ctx.bundle.systeemPerDomein ? ctx.bundle.systeemPerDomein[key] : null;
-  if (systeem && systeem !== "werkruimte" && systeem !== "geen") {
-    return { ok: false, reden: `Dit domein woont volgens je bronkoppeling in ${systeem} — bewerken doe je daar.` };
+  // i72: één afleiding voor "waar woont dit" — bronVan() in databrowser.js.
+  // Daarvóór stond hier een eigen vergelijking op de ruwe klantwaarde, en die
+  // liep op twee punten uit de pas met de instantie die de schrijfactie
+  // uiteindelijk beoordeelt (werkruimte.ts:213-217): geen trim/lowercase, dus
+  // "Werkruimte" met een hoofdletter blokkeerde ten onrechte; en geen
+  // uitzondering voor de domeinen die per definitie hier wonen, dus een
+  // bronkoppeling-rij voor `notities` zou het notitieformulier hebben
+  // dichtgezet. Dat de gebruiker iets anders te zien krijgt dan de server doet,
+  // is erger dan allebei de fouten apart.
+  const bron = bronVan(ctx, key);
+  if (bron.toestand === "elders") {
+    return { ok: false, reden: `Dit soort gegevens woont in ${bron.naam} — bijwerken doe je daar.` };
   }
   return { ok: true, reden: null };
 }
