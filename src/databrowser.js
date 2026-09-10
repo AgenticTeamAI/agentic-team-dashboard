@@ -29,6 +29,89 @@ const DATA_NIET_IN_BUNDEL = {
   bronkoppeling: "instelling: welk domein in welk systeem woont",
 };
 
+/* i72 — waar woont een domein? Eén afleiding, vier antwoorden.
+ *
+ * `bundle.systeemPerDomein` komt uit het domein `bronkoppeling` en werd tot nu
+ * toe alleen gebruikt om bewerken te blokkeren. De gebruiker kreeg het dus pas
+ * te zien als straf, nádat hij iets probeerde — terwijl hij het nodig heeft
+ * vóórdat hij zoekt.
+ *
+ * "Onbekend" is een eigen antwoord, geen synoniem voor "werkruimte". De kaart
+ * is leeg in drie verschillende situaties: er is geen bronkoppeling, hij was
+ * onleesbaar (de loader slikt die fout), of dit domein staat er niet in.
+ * Zolang de UI niets beweerde was dat onschuldig; zodra we per domein gaan
+ * zéggen waar het woont, wordt samenvouwen een onwaarheid.
+ *
+ * De regels spiegelen die van de instantie, want die beslist uiteindelijk of
+ * een schrijfactie doorgaat: agentic-team-werkruimte/src/werkruimte.ts:51-54
+ * (ALTIJD_WERKRUIMTE, EXTERNE_SYSTEMEN) en :213-217 (trim().toLowerCase()).
+ * Liepen die uit de pas, dan verbiedt of belooft het dashboard iets anders dan
+ * de server doet. */
+const ALTIJD_WERKRUIMTE = ["logboek", "bedrijfscontext", "bronkoppeling", "notities"];
+
+/* Klanttaal per systeem. Een onbekende waarde wordt getoond zoals hij er staat
+ * (geëscaped) — verzinnen is erger dan citeren. Bewust niet in src/teksten.js:
+ * dat bestand is woordelijk juridisch getoetst en elke toevoeging daar vraagt
+ * een nieuwe toets. */
+const BRONSYSTEEM_NAMEN = {
+  notion: "Notion",
+  crm: "je CRM",
+  hubspot: "HubSpot",
+  werkboek: "een werkboek buiten je werkruimte",
+  lokaal: "bestanden op een eigen computer",
+  werkruimte: "je werkruimte",
+};
+
+function bronVan(ctx, key) {
+  if (ALTIJD_WERKRUIMTE.indexOf(key) !== -1) {
+    return { toestand: "hier", systeem: "werkruimte", naam: BRONSYSTEEM_NAMEN.werkruimte };
+  }
+  const kaart = (ctx && ctx.bundle && ctx.bundle.systeemPerDomein) || null;
+  // Is er helemáál geen koppeling, dan weten we van geen enkel domein iets —
+  // dan is er ook niets zinnigs per domein te zeggen. Is er wél een koppeling
+  // maar staat dit domein er niet in, dan is dát een gat dat de gebruiker mag
+  // zien. Twee verschillende soorten "onbekend", twee verschillende antwoorden.
+  const geenKoppeling = !kaart || Object.keys(kaart).length === 0;
+  if (geenKoppeling || !(key in kaart)) return { toestand: "onbekend", systeem: null, naam: null, geenKoppeling };
+  const systeem = String(kaart[key] || "").trim().toLowerCase();
+  if (!systeem) return { toestand: "onbekend", systeem: null, naam: null, geenKoppeling: false };
+  if (systeem === "werkruimte") return { toestand: "hier", systeem, naam: BRONSYSTEEM_NAMEN.werkruimte };
+  if (systeem === "geen") return { toestand: "nergens", systeem, naam: null };
+  return { toestand: "elders", systeem, naam: BRONSYSTEEM_NAMEN[systeem] || systeem };
+}
+
+/* i72 — de Data-tab was 27 gelijkwaardige regels in registryvolgorde. Zelfs de
+ * rijkste testfixture vult er veertien; bij een eenmanszaak eerder zeven. De
+ * rest was een grijze hoop, en dáár zaten ook de domeinen die helemaal niet
+ * leeg zijn maar elders wonen.
+ *
+ * Deze indeling volgt hoe iemand over zijn bedrijf praat, niet hoe wij het
+ * opslaan. Bewust NIET sorteren op aantal rijen of op laatst gewijzigd: dan
+ * schuift de lijst bij elk bezoek en is spiergeheugen weg. Een domein verhuist
+ * precies één keer — als jij er zelf je eerste rij in zet.
+ *
+ * Groeperen op registry-module lag voor de hand maar werkt niet: `core` bevat
+ * elf van de 27 domeinen, dus dat wordt één reuzenblok met zes minigroepjes.
+ * En `module` betekent "in welk pakket zit dit", niet "hoort dit bij elkaar".
+ *
+ * "Overig" is het vangnet: een domein dat na een schema-sync nieuw is en hier
+ * nog niet staat, valt daarin en blijft dus zichtbaar. Een test telt dat élk
+ * browsbaar domein precies één keer op de pagina staat. */
+const DATA_GROEPEN = [
+  { naam: "Werk & ritme", emoji: "🎯", domeinen: ["acties", "ritmetaken", "dagverslagen", "productbacklog"] },
+  { naam: "Klanten & relaties", emoji: "🤝", domeinen: ["organisaties", "contactpersonen", "interacties", "klantsucces", "klantbewijs"] },
+  { naam: "Verkoop", emoji: "💶", domeinen: ["sales_funnel", "offertes", "product_catalogus", "pipeline_weekreview"] },
+  { naam: "Levering", emoji: "📦", domeinen: ["projecten", "tijdregistratie", "delivery_rugzak"] },
+  { naam: "Zichtbaarheid", emoji: "📣", domeinen: ["content_kalender", "autoriteit", "seo_vraagonderzoek", "vindbaarheid_audit", "geo_metingen"] },
+  { naam: "Bedrijfsvoering", emoji: "🏛️", domeinen: ["financieel_overzicht", "contracten", "toolstack", "besluiten"] },
+  { naam: "Wat het team onthoudt", emoji: "💡", domeinen: ["lessen_inzichten", "notities"] },
+];
+const DATA_GROEP_OVERIG = { naam: "Overig", emoji: "🗂️", domeinen: [] };
+
+function groepVan(key) {
+  return DATA_GROEPEN.find(g => g.domeinen.indexOf(key) !== -1) || DATA_GROEP_OVERIG;
+}
+
 let dataZoek = "";  // alleen deze sessie, alleen in het geheugen van de pagina
 let dataWeergave = "tabel";  // f33: 'tabel' of 'bord' — alleen voor domeinen met een Status
 
@@ -363,20 +446,78 @@ function renderDataOverzicht(el, ctx) {
   if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
-  const rijen = domeinen.map(d => {
+
+  // Drie emmers, in deze volgorde van beslissen: heb je er rijen in, dan
+  // gebruik je het (ook als het elders woont — die losse rijen bestaan echt).
+  // Anders: weten we waar het wél woont, dan is dat het antwoord. Pas als we
+  // niets weten, is het "nog niet in gebruik".
+  const inGebruik = [], elders = [], nogNiet = [];
+  for (const d of domeinen) {
     const rows = dataRijenVan(ctx, d.key);
-    const aantal = rows ? rows.length : 0;
-    const leeg = aantal === 0;
-    const spoor = leeg
-      ? `<span class="spoor geen">geen rijen in deze bundel</span>`
-      : `<span class="spoor actief">${aantal} ${aantal === 1 ? "rij" : "rijen"}</span>`;
-    const attrs = leeg ? "" : ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"`;
-    return `<div class="agent-row${leeg ? "" : " klikbaar"}"${attrs}>
+    const item = { d, aantal: rows ? rows.length : 0, bron: bronVan(ctx, d.key) };
+    if (item.aantal > 0) inGebruik.push(item);
+    else if (item.bron.toestand === "elders" || item.bron.toestand === "nergens") elders.push(item);
+    else nogNiet.push(item);
+  }
+
+  function spoorHtml({ aantal, bron }) {
+    const telling = aantal > 0 ? `${aantal} ${aantal === 1 ? "rij" : "rijen"}` : null;
+    if (bron.toestand === "elders") {
+      // Een kale telling is bij een extern domein een onwaarheid in
+      // cijfervorm: "1 rij" leest als "mijn team heeft één actie", terwijl
+      // het er één is die hier is blijven liggen.
+      return telling
+        ? `<span class="spoor elders">🔗 woont in ${esc(bron.naam)} · ${aantal} ${aantal === 1 ? "losse rij" : "losse rijen"} hier</span>`
+        : `<span class="spoor elders">🔗 woont in ${esc(bron.naam)}</span>`;
+    }
+    if (bron.toestand === "nergens") {
+      return telling
+        ? `<span class="spoor elders">${telling} · aangemerkt als: wordt niet bijgehouden</span>`
+        : `<span class="spoor geen">wordt niet bijgehouden</span>`;
+    }
+    return telling
+      ? `<span class="spoor actief">${telling}</span>`
+      : `<span class="spoor geen">nog niets</span>`;
+  }
+
+  function rijHtml(item) {
+    const { d, aantal, bron } = item;
+    // Klikbaar zodra er iets te halen valt: rijen om te lezen, een "nieuwe
+    // rij"-knop als je mag schrijven, of het antwoord op "waar dan wel?".
+    // Alleen leeg-én-onbekend blijft dood — daar is echt niets te zeggen.
+    const klikbaar = aantal > 0 || !!ctx.kanSchrijven || bron.toestand === "elders" || bron.toestand === "nergens";
+    const attrs = klikbaar ? ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"` : "";
+    return `<div class="agent-row${klikbaar ? " klikbaar" : ""}"${attrs}>
       <span class="emoji">${esc(d.emoji || "🗂️")}</span>
       <span class="naam">${esc(d.naam || d.key)}</span>
-      ${spoor}${leeg ? "" : `<span class="pijl">→</span>`}
+      ${spoorHtml(item)}${klikbaar ? `<span class="pijl">→</span>` : ""}
     </div>`;
+  }
+
+  // Binnen een groep ligt de volgorde vast in DATA_GROEPEN — nooit op aantal,
+  // anders schuift de lijst tussen twee bezoeken.
+  const groepenHtml = [...DATA_GROEPEN, DATA_GROEP_OVERIG].map(g => {
+    const leden = inGebruik.filter(i => groepVan(i.d.key) === g);
+    if (!leden.length) return "";
+    leden.sort((a, b) => g.domeinen.indexOf(a.d.key) - g.domeinen.indexOf(b.d.key));
+    return `<h3 class="data-groepkop">${g.emoji} ${esc(g.naam)}</h3>${leden.map(rijHtml).join("")}`;
   }).join("");
+
+  const eldersHtml = elders.length
+    ? `<h3 class="data-groepkop">🔗 Woont niet in je werkruimte <span class="data-groeptelling">${elders.length}</span></h3>
+       ${elders.map(rijHtml).join("")}`
+    : "";
+
+  // Dichtgeklapt, mét telling in de samenvatting. Niet verborgen: dit is de
+  // lijst van wat je team nog voor je kán bijhouden, en dit dashboard laat
+  // nooit stil iets weg. Een schakelaar "toon lege domeinen" zou hetzelfde
+  // doen als verbergen — die zet niemand aan.
+  const nogNietHtml = nogNiet.length
+    ? `<details class="data-leeg">
+        <summary>Nog niet in gebruik <span class="data-groeptelling">${nogNiet.length}</span></summary>
+        ${nogNiet.map(rijHtml).join("")}
+      </details>`
+    : "";
 
   const nietOpgehaald = Object.entries(DATA_NIET_IN_BUNDEL)
     .filter(([k]) => ctx.schema.datadomeinen[k])
@@ -384,12 +525,11 @@ function renderDataOverzicht(el, ctx) {
     .join(" · ");
 
   const leesregel = ctx.kanSchrijven
-    ? `Dit is wat er nú in je werkruimte staat. Je bent ingelogd: open een domein om rijen toe te voegen,
-    te bewerken of te verwijderen. Domeinen die in een ander systeem wonen blijven daar — en bewerk je daar.`
-    : `Dit is wat er nú in je werkruimte staat, opgehaald met je daglink. Alleen lezen: dit
-    dashboard kan niets aanmaken, wijzigen of verwijderen. Wil je iets veranderen, doe dat in het systeem waar
-    het domein woont.`;
-  el.innerHTML = `${rijen}
+    ? `Je bent ingelogd: open een domein om rijen toe te voegen, te bewerken of te verwijderen.`
+    : `Opgehaald met je daglink. Alleen lezen: dit dashboard kan niets aanmaken, wijzigen of verwijderen.`;
+
+  el.innerHTML = `<p class="footnote data-telregel">In gebruik: ${inGebruik.length} van de ${domeinen.length} soorten gegevens die je team kan bijhouden.</p>
+    ${groepenHtml}${eldersHtml}${nogNietHtml}
     <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
@@ -505,6 +645,46 @@ function bordHtml(ctx, key, domein, rijen) {
   return `<div class="bord-scroll"><div class="bord">${kolomHtml}${restHtml}</div></div>`;
 }
 
+/* i72 — de herkomststrook: waar woont dit, en wat betekent dat hier?
+ *
+ * Stond dit eerder ergens? Alleen als voetnoot onder de tabel, en alleen voor
+ * wie kon schrijven — via de foutmelding van magDomeinBewerken(). Dat is de
+ * verkeerde volgorde en de verkeerde plek: de vraag "waar bewerk ik dit dan?"
+ * komt op vóórdat je zoekt, en hij komt op bij iedereen.
+ *
+ * Bewust géén sync-belofte. Dit dashboard leest niet mee in Notion, en dat
+ * hoort er te staan — anders leest een oud aantal als een actueel aantal. */
+function herkomstStrookHtml(ctx, key, domein, aantal) {
+  const bron = bronVan(ctx, key);
+  const naam = esc(domein.naam || key);
+  if (bron.toestand === "elders") {
+    const waar = esc(bron.naam);
+    return `<div class="herkomst-strook">
+      <p><strong>Je team houdt ${naam} bij in ${waar}.</strong></p>
+      <p>Hier kun je meekijken, niet wijzigen — dat doe je in ${waar}.</p>
+      <p>${aantal > 0
+        ? `De ${aantal} ${aantal === 1 ? "rij" : "rijen"} hieronder ${aantal === 1 ? "staat" : "staan"} in je werkruimte en ${aantal === 1 ? "is" : "zijn"} geen kopie van ${waar}. Het volledige beeld staat daar.`
+        : `Er staat hier niets van dit soort gegevens — dat hoort ook zo.`}</p>
+      <p class="footnote">Dit dashboard leest niet mee in ${waar}; het toont wat er in je eigen werkruimte staat.</p>
+    </div>`;
+  }
+  if (bron.toestand === "nergens") {
+    return `<div class="herkomst-strook">
+      <p><strong>${naam} wordt bewust niet bijgehouden.</strong></p>
+      <p>Je team heeft vastgelegd dat dit soort gegevens nergens wordt bijgehouden.${aantal > 0 ? ` Toch staan er hier ${aantal} ${aantal === 1 ? "rij" : "rijen"} — die ${aantal === 1 ? "is" : "zijn"} waarschijnlijk blijven liggen.` : ""}</p>
+    </div>`;
+  }
+  // "Onbekend" met een bestaande koppeling is een gat dat je mag zien. Zonder
+  // koppeling weten we van niets iets, en dan zeggen we ook niets — anders
+  // staat dezelfde hedge zevenentwintig keer op zevenentwintig pagina's.
+  if (bron.toestand === "onbekend" && bron.geenKoppeling === false) {
+    return `<div class="herkomst-strook zacht">
+      <p>Waar ${naam} thuishoort is niet vastgelegd. Wat je hier ziet staat in je werkruimte — of dat alles is, weten we niet.</p>
+    </div>`;
+  }
+  return "";
+}
+
 // ── Eén domein (#/data/<domein>) ──────────────────────────────────────
 function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
@@ -521,8 +701,12 @@ function renderDataDomein(el, key, ctx) {
   const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
   const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
-    el.innerHTML = `${kop}<div class="grijs-blok"><div class="grijs-tekst">Geen rijen in deze bundel. Dat kan
-      betekenen dat dit domein leeg is, of dat je werkdata voor dit domein in een ander systeem woont.</div></div>
+    // De oude tekst hedgede ("leeg, óf het woont ergens anders") terwijl het
+    // antwoord in de bundel zat. Weet de strook het, dan zegt hij het; weet
+    // hij het niet, dan blijft alleen de eerlijke helft over.
+    const strook = herkomstStrookHtml(ctx, key, domein, 0);
+    el.innerHTML = `${kop}${strook}
+      ${strook ? "" : `<div class="grijs-blok"><div class="grijs-tekst">Hier staat nog niets van dit soort gegevens.</div></div>`}
       ${bewerkUitleg}${nieuwKnop}<div data-bewerk-paneel></div>
       <a class="detail-link" href="#/data">← Alle gegevens</a>`;
     if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
@@ -625,6 +809,7 @@ function renderDataDomein(el, key, ctx) {
   }
 
   el.innerHTML = `${kop}
+    ${herkomstStrookHtml(ctx, key, domein, rows.length)}
     <div class="data-toolbar">
       <input type="search" id="data-zoek" placeholder="Zoeken in dit domein…" value="${esc(dataZoek)}" aria-label="Zoeken in dit domein">
       ${vs ? `<span class="filter-chip">🔎 ${esc(vs.label)} <button type="button" class="filter-wis" data-filter-wis aria-label="Filter wissen">✕</button></span>` : ""}
@@ -901,5 +1086,6 @@ if (typeof module !== "undefined") {
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
     statusVerborgen, wisselStatusFilter, wisStatusFilter,
+    bronVan, herkomstStrookHtml, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
   };
 }
