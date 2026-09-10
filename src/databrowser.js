@@ -668,7 +668,21 @@ function renderDataDomein(el, key, ctx) {
       const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
-      if (dom === key) { e.preventDefault(); herteken(); return; }
+      if (dom === key) {
+        e.preventDefault();
+        herteken();
+        // De detailkaart staat bóven de lijst. Klik je een rij aan die verder
+        // naar beneden staat, dan opent hij dus buiten je scherm — en omdat
+        // de browser de ingevoegde hoogte zelf compenseert (scroll-anchoring)
+        // beweegt er niet eens iets. Dat is precies wat de eerste klant zag:
+        // "ik kan er heel leuk op klikken, maar hij doet niks."
+        // block: "nearest" scrollt het kortste stukje en doet niets als de
+        // kaart al in beeld staat. De guard is niet optioneel: jsdom kent
+        // scrollIntoView niet, en zonder guard gaan de tests eraan.
+        const kaart = el.querySelector(".detail-kaart");
+        if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
     }
     // i71: statuschips — één per statuswaarde uit het registryschema, nooit
     // hardgecodeerd. Aanklikken verbergt of toont die status.

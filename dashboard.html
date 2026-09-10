@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-lSZuLPSLU1B1K45OT+iOHIL1yG3y/wwapoxn/xm+oxY=' 'sha256-+BsCRSRIy4w/swx9H9cez87SNJk87+wFM1YyJb/8IaM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-lSZuLPSLU1B1K45OT+iOHIL1yG3y/wwapoxn/xm+oxY=' 'sha256-IrVZB5T1AOOlxddDWf9aMgTXC/VgStHdKuzvjVE/geo='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -23,6 +23,23 @@
   --paars: #A78BFA;
   --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Deze vijf werden 43 keer gebruikt en waren nergens gedefinieerd — het
+     hele Data-tab-blok (detailkaart, bordkolommen, relatiekaarten,
+     invoervelden, gedempte tekst) rendeerde daardoor zonder vlak en zonder
+     rand. Het pijnlijkste geval: `tr.rij-open { background: var(--card) }`,
+     de énige terugkoppeling op de plek waar je een rij aanklikt, kwam uit op
+     transparant. Je klikte, er opende iets buiten beeld, en op je klikplek
+     veranderde geen pixel.
+     Drie zijn een alias van een bestaande kleur, zodat er geen tweede
+     waarheid over dezelfde tint ontstaat; --card en --border zijn nieuw.
+     test/css-tokens.test.js bewaakt de hele klasse: elk gebruikt token moet
+     gedefinieerd zijn. */
+  --bg: var(--navy);
+  --text: var(--white);
+  --muted: var(--grey);
+  --card: #252540;
+  --border: rgba(255,255,255,0.12);
 }
 
 * { box-sizing: border-box; }
@@ -8014,7 +8031,21 @@ function renderDataDomein(el, key, ctx) {
       const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
-      if (dom === key) { e.preventDefault(); herteken(); return; }
+      if (dom === key) {
+        e.preventDefault();
+        herteken();
+        // De detailkaart staat bóven de lijst. Klik je een rij aan die verder
+        // naar beneden staat, dan opent hij dus buiten je scherm — en omdat
+        // de browser de ingevoegde hoogte zelf compenseert (scroll-anchoring)
+        // beweegt er niet eens iets. Dat is precies wat de eerste klant zag:
+        // "ik kan er heel leuk op klikken, maar hij doet niks."
+        // block: "nearest" scrollt het kortste stukje en doet niets als de
+        // kaart al in beeld staat. De guard is niet optioneel: jsdom kent
+        // scrollIntoView niet, en zonder guard gaan de tests eraan.
+        const kaart = el.querySelector(".detail-kaart");
+        if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
     }
     // i71: statuschips — één per statuswaarde uit het registryschema, nooit
     // hardgecodeerd. Aanklikken verbergt of toont die status.
@@ -8899,10 +8930,16 @@ function leesLaatstGebruikt() {
   } catch (e) { return null; }
 }
 
-async function handleBundle(bundle, route, label) {
+async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) {
   currentBundle = bundle;
   rememberChoice(route, label);
-  window.location.hash = ""; // terug naar de Vandaag-tab bij een nieuw geladen bundel
+  // Bij een nieuw geladen bundel begin je op de Vandaag-tab. Maar een bundel
+  // die opnieuw is opgehaald ná een schrijfactie is geen nieuw begin: dan sta
+  // je middenin het bedienen van een rij, en terugspringen naar Vandaag kost
+  // je in één klap je domein, je zoekterm, je bord- of tabelweergave en je
+  // plek in de lijst. Dat overkwam alleen wie kon schrijven — en dus precies
+  // de klant die de bediening voor het eerst gebruikte.
+  if (!behoudRoute) window.location.hash = "";
   renderAll();
 }
 
@@ -8976,7 +9013,8 @@ function buildContext() {
     // bundel zodat de tabel de waarheid van de instantie toont.
     bron: huidigeBron,
     kanSchrijven: bronKanSchrijven(huidigeBron),
-    herlaad: () => laadWerkruimte(huidigeBron),
+    // Na een schrijfactie blijf je waar je was — zie handleBundle().
+    herlaad: () => laadWerkruimte(huidigeBron, { behoudRoute: true }),
   };
 }
 
@@ -9318,12 +9356,12 @@ function toonLoginknop(aan) {
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron) {
+async function laadWerkruimte(bron, { behoudRoute = false } = {}) {
   huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
-    await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute });
   } catch (err) {
     console.error(err);
     if (err.oauthVerlopen) {

@@ -9,7 +9,7 @@
  * De tests bewaken het gedrag, niet de opmaak — behalve waar de opmaak het
  * gedrag ís (de klikbaarheid van een rij, de afwezigheid van een affordance
  * bij een rij die niets kan). */
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it, beforeAll, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -116,6 +116,57 @@ describe("een rij openen", () => {
     bewerkKnop.click();
     // de rij is niet opengeklapt door de klik op de bewerkknop
     expect(c.querySelector("[data-detail-kaart]")).toBeNull();
+  });
+});
+
+/* De klik wérkte altijd — de detailkaart landde alleen buiten beeld.
+ *
+ * De kaart wordt ingevoegd in <div data-data-detail>, dat BOVEN de tabel
+ * staat. Klik je een rij aan die verder naar beneden staat, dan opent hij
+ * ver boven je scherm, en omdat de browser de ingevoegde hoogte zelf
+ * compenseert (scroll-anchoring) beweegt er niet eens iets. Samen met een
+ * dode `tr.rij-open`-markering leverde dat exact "hij doet niks" op — en
+ * omdat het een toggle is, sloot een tweede klik de kaart die je niet zag.
+ *
+ * jsdom kan geen viewport meten, dus dit toetst het mechanisme: wordt de
+ * kaart in beeld gebracht, en gebeurt dat niet bij het dichtklappen. */
+describe("de geopende kaart komt in beeld", () => {
+  const origineel = Object.getOwnPropertyDescriptor(Element.prototype, "scrollIntoView");
+  afterEach(() => {
+    if (origineel) Object.defineProperty(Element.prototype, "scrollIntoView", origineel);
+    else delete Element.prototype.scrollIntoView;
+  });
+
+  it("scrollt naar de detailkaart bij het openen", () => {
+    const spion = vi.fn();
+    Element.prototype.scrollIntoView = spion;
+    const c = verseTabel();
+    c.querySelector('.rij-open-knop[data-open-rij="acties|a1"]').click();
+    expect(c.querySelector("[data-detail-kaart]")).not.toBeNull();
+    expect(spion).toHaveBeenCalledTimes(1);
+    expect(spion.mock.instances[0].classList.contains("detail-kaart")).toBe(true);
+  });
+
+  it("scrollt niet bij het dichtklappen", () => {
+    const spion = vi.fn();
+    Element.prototype.scrollIntoView = spion;
+    const c = verseTabel();
+    const knop = () => c.querySelector('[data-open-rij="acties|a1"].rij-open-knop');
+    knop().click();
+    expect(spion).toHaveBeenCalledTimes(1);
+    knop().click();                                   // toggle: weer dicht
+    expect(c.querySelector("[data-detail-kaart]")).toBeNull();
+    expect(spion).toHaveBeenCalledTimes(1);           // niet nóg een keer
+  });
+
+  /* Zonder guard gooit dit in jsdom (scrollIntoView bestaat daar niet) en
+     sterft de hele click-handler — dan zou de fix het probleem verplaatsen
+     in plaats van oplossen. */
+  it("valt niet om in een omgeving zonder scrollIntoView", () => {
+    delete Element.prototype.scrollIntoView;
+    const c = verseTabel();
+    expect(() => c.querySelector('.rij-open-knop[data-open-rij="acties|a1"]').click()).not.toThrow();
+    expect(c.querySelector("[data-detail-kaart]")).not.toBeNull();
   });
 });
 

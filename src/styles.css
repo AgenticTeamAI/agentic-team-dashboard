@@ -13,6 +13,23 @@
   --paars: #A78BFA;
   --blauw: #60A5FA;
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Deze vijf werden 43 keer gebruikt en waren nergens gedefinieerd — het
+     hele Data-tab-blok (detailkaart, bordkolommen, relatiekaarten,
+     invoervelden, gedempte tekst) rendeerde daardoor zonder vlak en zonder
+     rand. Het pijnlijkste geval: `tr.rij-open { background: var(--card) }`,
+     de énige terugkoppeling op de plek waar je een rij aanklikt, kwam uit op
+     transparant. Je klikte, er opende iets buiten beeld, en op je klikplek
+     veranderde geen pixel.
+     Drie zijn een alias van een bestaande kleur, zodat er geen tweede
+     waarheid over dezelfde tint ontstaat; --card en --border zijn nieuw.
+     test/css-tokens.test.js bewaakt de hele klasse: elk gebruikt token moet
+     gedefinieerd zijn. */
+  --bg: var(--navy);
+  --text: var(--white);
+  --muted: var(--grey);
+  --card: #252540;
+  --border: rgba(255,255,255,0.12);
 }
 
 * { box-sizing: border-box; }

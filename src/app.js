@@ -46,10 +46,16 @@ function leesLaatstGebruikt() {
   } catch (e) { return null; }
 }
 
-async function handleBundle(bundle, route, label) {
+async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) {
   currentBundle = bundle;
   rememberChoice(route, label);
-  window.location.hash = ""; // terug naar de Vandaag-tab bij een nieuw geladen bundel
+  // Bij een nieuw geladen bundel begin je op de Vandaag-tab. Maar een bundel
+  // die opnieuw is opgehaald ná een schrijfactie is geen nieuw begin: dan sta
+  // je middenin het bedienen van een rij, en terugspringen naar Vandaag kost
+  // je in één klap je domein, je zoekterm, je bord- of tabelweergave en je
+  // plek in de lijst. Dat overkwam alleen wie kon schrijven — en dus precies
+  // de klant die de bediening voor het eerst gebruikte.
+  if (!behoudRoute) window.location.hash = "";
   renderAll();
 }
 
@@ -123,7 +129,8 @@ function buildContext() {
     // bundel zodat de tabel de waarheid van de instantie toont.
     bron: huidigeBron,
     kanSchrijven: bronKanSchrijven(huidigeBron),
-    herlaad: () => laadWerkruimte(huidigeBron),
+    // Na een schrijfactie blijf je waar je was — zie handleBundle().
+    herlaad: () => laadWerkruimte(huidigeBron, { behoudRoute: true }),
   };
 }
 
@@ -465,12 +472,12 @@ function toonLoginknop(aan) {
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron) {
+async function laadWerkruimte(bron, { behoudRoute = false } = {}) {
   huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
-    await handleBundle(bundle, "werkruimte", bundle.sourceLabel);
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute });
   } catch (err) {
     console.error(err);
     if (err.oauthVerlopen) {
