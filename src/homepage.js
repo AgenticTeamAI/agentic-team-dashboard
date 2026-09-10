@@ -66,7 +66,9 @@ function nlGetal(n, decimals = 0) {
  * afgeleid — draagt het die, dan is er inhoud en blijft de tab staan. */
 function dataTabBeschikbaar(ctx) {
   if (!ctx || !ctx.bundle) return false;
-  if (ctx.bundle.kind !== "metrics") return Object.keys(ctx.bundle.domains || {}).length > 0;
+  // Zijn er domeinen opgehaald, dan valt er iets te tonen — ook op de
+  // metricsroute, want sinds f33 haalt de loader daar óók de rijen op.
+  if (Object.keys(ctx.bundle.domains || {}).length > 0) return true;
   return Array.isArray(ctx.relaties) && ctx.relaties.length > 0;
 }
 

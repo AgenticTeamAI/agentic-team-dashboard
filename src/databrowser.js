@@ -442,8 +442,22 @@ function dataRelatieKaarten(ctx, key) {
 }
 
 // ── Overzicht (#/data) ────────────────────────────────────────────────
+/* Draagt deze bundel überhaupt rijen? Sinds f33 haalt de loader ze ook op naast
+ * een vers metricsbestand — juist omdat de Data-tab ze moet kunnen tonen. Deze
+ * twee renderers keerden alleen nog steeds meteen om bij kind === "metrics",
+ * dus dat ophalen was werk voor niets: detail, bord en notities bleven
+ * onzichtbaar op precies de omgevingen waar 's ochtends een dagstart draait.
+ * De uitleg hoort bij "geen rijen", niet bij "metricsroute". */
+function bundelHeeftRijen(ctx) {
+  const domains = (ctx && ctx.bundle && ctx.bundle.domains) || {};
+  return Object.keys(domains).some(k => domains[k] && Array.isArray(domains[k].rows) && domains[k].rows.length > 0);
+}
+
 function renderDataOverzicht(el, ctx) {
-  if (ctx.bundle && ctx.bundle.kind === "metrics") { el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null); return; }
+  if (ctx.bundle && ctx.bundle.kind === "metrics" && !bundelHeeftRijen(ctx)) {
+    el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, null);
+    return;
+  }
 
   const domeinen = dataBrowsbareDomeinen(ctx.schema);
 
@@ -485,7 +499,8 @@ function renderDataOverzicht(el, ctx) {
     // Klikbaar zodra er iets te halen valt: rijen om te lezen, een "nieuwe
     // rij"-knop als je mag schrijven, of het antwoord op "waar dan wel?".
     // Alleen leeg-én-onbekend blijft dood — daar is echt niets te zeggen.
-    const klikbaar = aantal > 0 || !!ctx.kanSchrijven || bron.toestand === "elders" || bron.toestand === "nergens";
+    const klikbaar = aantal > 0 || magDomeinBewerken(ctx, d.key).ok
+      || bron.toestand === "elders" || bron.toestand === "nergens";
     const attrs = klikbaar ? ` data-data-domein="${esc(d.key)}" role="link" tabindex="0"` : "";
     return `<div class="agent-row${klikbaar ? " klikbaar" : ""}"${attrs}>
       <span class="emoji">${esc(d.emoji || "🗂️")}</span>
@@ -530,6 +545,7 @@ function renderDataOverzicht(el, ctx) {
 
   el.innerHTML = `<p class="footnote data-telregel">In gebruik: ${inGebruik.length} van de ${domeinen.length} soorten gegevens die je team kan bijhouden.</p>
     ${groepenHtml}${eldersHtml}${nogNietHtml}
+    ${dataRelatieKaarten(ctx, null)}
     <p class="footnote">${leesregel}</p>
     ${nietOpgehaald ? `<p class="footnote">Niet opgehaald: ${nietOpgehaald}.</p>` : ""}
     ${exportBlok()}`;
@@ -689,7 +705,9 @@ function herkomstStrookHtml(ctx, key, domein, aantal) {
 function renderDataDomein(el, key, ctx) {
   const domein = ctx.schema.datadomeinen[key];
   if (!domein) { el.innerHTML = `<p>Onbekend domein.</p><a class="detail-link" href="#/data">← Alle gegevens</a>`; return; }
-  if (ctx.bundle && ctx.bundle.kind === "metrics") {
+  // Zie bundelHeeftRijen(): alleen als er écht geen rijen zijn is de
+  // metricsuitleg het juiste antwoord.
+  if (ctx.bundle && ctx.bundle.kind === "metrics" && !(dataRijenVan(ctx, key) || []).length) {
     el.innerHTML = dataMetricsUitleg() + dataRelatieKaarten(ctx, key) + `<a class="detail-link" href="#/data">← Alle gegevens</a>`;
     return;
   }
@@ -850,7 +868,15 @@ function renderDataDomein(el, key, ctx) {
       && !(inZicht.classList && inZicht.classList.contains("rij-open-knop"))
       && openEl.contains(inZicht);
     if (openEl && !doorKnopBinnenRij) {
-      const [dom, id] = (openEl.getAttribute("data-open-rij") || "").split("|");
+      // Splitsen op de EERSTE pipe, niet op elke. Een domeinslug bestaat uit
+      // [a-z0-9_] en kan er nooit een bevatten; een entry-id wél — de
+      // instantie valideert de tekens daarvan niet. Met split("|") viel zo'n
+      // rij stil uit elkaar en werd hij onklikbaar in tabel én bord, zonder
+      // enige melding.
+      const ruw = openEl.getAttribute("data-open-rij") || "";
+      const scheiding = ruw.indexOf("|");
+      const dom = scheiding === -1 ? ruw : ruw.slice(0, scheiding);
+      const id = scheiding === -1 ? "" : ruw.slice(scheiding + 1);
       if (dom === key && dataDetail && dataDetail.entryId === id) wisDataDetail();
       else zetDataDetail(dom, id);
       if (dom === key) {
@@ -1086,6 +1112,6 @@ if (typeof module !== "undefined") {
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
     statusVerborgen, wisselStatusFilter, wisStatusFilter,
-    bronVan, herkomstStrookHtml, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
+    bronVan, herkomstStrookHtml, bundelHeeftRijen, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
   };
 }
