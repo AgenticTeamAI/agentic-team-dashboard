@@ -74,6 +74,8 @@ describe("herkomst — het artefact komt volledig uit src/ + schema/", () => {
         .replace(/,$/, "")
         .replace(/^"|"$/g, "") ?? "onbekend";
 
+    const lock = JSON.parse(readFileSync(join(ROOT, "agent-architecture.lock.json"), "utf8"));
+
     const cspHash = (tekst) => `'sha256-${createHash("sha256").update(tekst, "utf8").digest("base64")}'`;
     const cspMeta =
       '<meta http-equiv="Content-Security-Policy" content="script-src ' +
@@ -89,7 +91,11 @@ describe("herkomst — het artefact komt volledig uit src/ + schema/", () => {
       .replaceAll("__STYLES__", styles)
       .replaceAll("__SCHEMA__", schema)
       .replaceAll("__APP__", app)
-      .replaceAll("__REGISTRY_VERSION__", registryVersion);
+      .replaceAll("__REGISTRY_VERSION__", registryVersion)
+      // i71: de voettekst noemt naast de schemaversie ook wanneer die is
+      // vastgelegd. Beide komen uit gecommitte bestanden (schema/ en de
+      // lock), dus de herkomstclaim blijft precies even hard.
+      .replaceAll("__SCHEMA_DATUM__", lock.bijgewerkt || "onbekend");
 
     // Geen toEqual op de volledige tekst: bij een verschil is een diff van
     // 240 kB onleesbaar. Eerst de plek aanwijzen, dan pas falen.

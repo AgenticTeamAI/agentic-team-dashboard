@@ -157,6 +157,7 @@ function renderAll() {
     tabbarEl.style.display = "none";
     verbergAlles();
     versionErrorEl.style.display = "none";
+    document.getElementById("kop-acties").style.display = "none";
     return;
   }
   emptyStateEl.style.display = "none";
@@ -213,10 +214,16 @@ function renderAll() {
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);
   renderActiviteitPanel(document.getElementById("panel-activiteit-body"), ctx.activiteit, ctx.periodWeeks);
-  renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
+  renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage, ctx);
   renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
   renderWaarschuwingen(document.getElementById("warnings-box"), ctx);
+
+  // i71: pas zichtbaar zodra er iets te verversen valt.
+  document.getElementById("kop-acties").style.display = "";
+  const nu = new Date();
+  document.getElementById("kop-tijd").textContent =
+    `geladen om ${String(nu.getHours()).padStart(2, "0")}:${String(nu.getMinutes()).padStart(2, "0")}`;
 
   route();
 }
@@ -250,7 +257,7 @@ function renderDetail(key) {
     feed: () => [detailSectionHtml("Teamfeed", "📣", "Wat doet mijn team, zonder dat ik erom hoef te vragen?", "detail-inner"), () => renderDetailFeed(document.getElementById("detail-inner"), ctx)],
     aandacht: () => [detailSectionHtml("Aandacht", "🎯", "Waar besteed ik vandaag mijn halfuur aan?", "detail-inner"), () => renderZone1(document.getElementById("detail-inner"), ctx.z1)],
     context: () => [detailSectionHtml("Contextgezondheid", "🧭", "Moet ik mijn bedrijfscontext bijwerken voordat ik het team weer aan het werk zet?", "detail-inner"), () => renderZone2(document.getElementById("detail-inner"), ctx.z2, ctx.today)],
-    gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage)],
+    gebruik: () => [detailSectionHtml("Gebruik per agent", "👥", "Welke agent laat ik links liggen, en waarom?", "detail-inner"), () => renderDetailGebruik(document.getElementById("detail-inner"), ctx.z3, ctx.schema, ctx.today, ctx.periodDays, ctx.agentUsage, ctx)],
     opbrengst: () => [detailSectionHtml("Opbrengst", "💰", "Levert dit team genoeg op om het te blijven betalen?", "detail-inner"), () => renderZone4(document.getElementById("detail-inner"), ctx.z4, ctx.periodDays)],
     leren: () => [detailSectionHtml("Leren", "💡", "Wat weet dit team nu dat het vorige maand niet wist?", "detail-inner"), () => renderZone5(document.getElementById("detail-inner"), ctx.z5, ctx.periodDays)],
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
@@ -416,6 +423,10 @@ function wireInputs() {
   document.getElementById("period-select").addEventListener("change", (e) => {
     currentPeriodWeeks = parseInt(e.target.value, 10);
     if (currentBundle) renderAll();
+  });
+
+  document.getElementById("btn-ververs").addEventListener("click", () => {
+    if (huidigeBron) laadWerkruimte(huidigeBron);
   });
 
   document.body.addEventListener("change", (e) => {

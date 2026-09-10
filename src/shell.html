@@ -15,6 +15,14 @@ __STYLES__
 <div class="wrap">
   <header class="top" id="kop">
     <h1>🔮 <span class="kop-vol">Agentic Team Dashboard</span><span class="kop-kort">Agentic Team · vandaag</span></h1>
+    <!-- i71: de pagina ververst niet uit zichzelf. Wie hem de hele dag open
+         laat staan (de eerste vraag van de eerste klant die dat deed) heeft
+         een knop nodig, geen instructie om F5 te drukken. Bewust géén
+         automatische poll: dat is netwerkverkeer dat niemand vroeg. -->
+    <p class="kop-acties" id="kop-acties" style="display:none;">
+      <button type="button" id="btn-ververs" title="Opnieuw ophalen uit je werkruimte">↻ Ververs</button>
+      <span class="kop-tijd" id="kop-tijd"></span>
+    </p>
   </header>
 
   <!-- ══ Vier tabs, dezelfde volgorde op desktop en mobiel (f25) ══ -->
@@ -157,8 +165,9 @@ __STYLES__
   <footer class="app-footer">
     Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
     gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
-    op de Vandaag-tab. Gegenereerd uit registryVersion __REGISTRY_VERSION__ van
-    AgenticTeamAI/agent-architecture.
+    op de Vandaag-tab. Teamdefinitie: schemaversie __REGISTRY_VERSION__ uit
+    AgenticTeamAI/agent-architecture, vastgelegd op __SCHEMA_DATUM__. Je connector kan een
+    nieuwere versie draaien — dit is de versie waarop deze pagina is gebouwd.
   </footer>
 </div>
 
