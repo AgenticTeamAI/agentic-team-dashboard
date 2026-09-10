@@ -53,6 +53,15 @@ async function handleBundle(bundle, route, label) {
   renderAll();
 }
 
+/* De teamfeed als tweede bron voor "gebruik per agent". Puur tellen: geen
+ * markeerOpenLussen (dat is presentatie), alleen agentSlug + tijd. Zie
+ * kiesAgentGebruik() in zones.js voor waarom deze terugval bestaat. */
+function feedItemsVoorTelling(bundle, schema, agentLookup) {
+  const feed = bundle && bundle.teamfeed;
+  if (!feed || !Array.isArray(feed.entries) || !feed.entries.length) return [];
+  return normaliseerFeed(feed.entries, schema, agentLookup);
+}
+
 // Bouwt eenmalig de interne metricsvorm (zie metrics.js) voor de huidige
 // bundel/periode, en pakt hem uit tot het platte ctx-object dat de
 // renderlaag verwacht. Dit is de ENIGE plek die weet welke route de data
@@ -76,13 +85,20 @@ function buildContext() {
       bundle, schema, agentLookup, today,
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
-      activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
+      activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
+      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
-      // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
-      // zo zichtbaar te zijn als parse-waarschuwingen
+      // Twee soorten waarschuwingen, bewust apart gehouden. Over de bundel
+      // zelf (verouderd, onleesbaar, onbekend domein) moet je vandaag iets
+      // doen; over losse velden die niet gelezen konden worden meestal niet.
+      // `waarschuwingen` blijft de volledige lijst (bundel eerst), zodat
+      // niets verdwijnt; de splitsing bepaalt de volgorde, de toon van de
+      // samenvatting en welke regels in de herkomst-uitklap thuishoren.
+      bundelWaarschuwingen: (bundle.waarschuwingen || []).slice(),
+      veldWaarschuwingen: (m.waarschuwingen || []).slice(),
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
     };
   }
@@ -92,8 +108,14 @@ function buildContext() {
   return {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
-    activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
+    activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
+    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+    // Op de rijenroute zijn alle waarschuwingen loaderwaarschuwingen: ze gaan
+    // over de bundel, niet over losse velden. Zie de metricsroute hierboven.
+    bundelWaarschuwingen: (m.waarschuwingen || []).slice(),
+    veldWaarschuwingen: [],
+    waarschuwingen: m.waarschuwingen,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
     // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
@@ -194,14 +216,7 @@ function renderAll() {
   renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
   renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
-  const warnEl = document.getElementById("warnings-box");
-  const waarschuwingen = ctx.waarschuwingen || [];
-  if (waarschuwingen.length) {
-    warnEl.style.display = "";
-    warnEl.innerHTML = `<div class="kop">Niet alles kon gelezen worden</div><ul style="margin:0;padding-left:1.1rem;">${waarschuwingen.map(w => `<li>${esc(w)}</li>`).join("")}</ul>`;
-  } else {
-    warnEl.style.display = "none";
-  }
+  renderWaarschuwingen(document.getElementById("warnings-box"), ctx);
 
   route();
 }
@@ -275,9 +290,12 @@ function route() {
     return;
   }
   const ctx = window.__dashboardCtx;
-  const view = bepaalActieveView();
+  let view = bepaalActieveView();
+  // Is de Data-tab er niet (een metricsbestand zonder relatiekaarten), dan mag
+  // een onthouden of getypte #/data-link niet op een lege tab uitkomen.
+  if (view.tab === "data" && !dataTabBeschikbaar(ctx)) view = { soort: "tab", tab: "vandaag" };
   verbergAlles();
-  renderTabbar(document.getElementById("tabbar"), view.tab);
+  renderTabbar(document.getElementById("tabbar"), view.tab, ctx);
 
   if (view.soort === "detail") {
     document.getElementById("detail-view").style.display = "";
@@ -452,9 +470,21 @@ async function laadWerkruimte(bron) {
       toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
       return;
     }
-    if (err.daglinkVerlopen) vergeetDaglink();
+    if (err.daglinkVerlopen) {
+      // De instantie zegt zelf al wat er mis is (verlopen of ingetrokken); die
+      // tekst overschrijven zou hem onnauwkeuriger maken. Alleen bij "verlopen"
+      // hoort de geldigheidsduur erbij — dat is de vraag die er meteen op volgt.
+      vergeetDaglink();
+      const extra = /verlopen/i.test(err.message) ? " Daglinks zijn 24 uur geldig." : "";
+      toonLegeStaat("Deze daglink werkt niet meer", err.message + extra, { login: true });
+      return;
+    }
+    // Noemt de melding zelf al wat je moet doen (bv. de tijdslimiet-tekst), dan
+    // niet nóg een keer om een nieuwe daglink vragen.
+    const heeftAdvies = /Coördinator/.test(err.message);
     toonLegeStaat("Kon je werkruimte niet laden",
-      err.message + " Vraag je Coördinator om een nieuwe daglink.", { login: true });
+      heeftAdvies ? err.message : err.message + " Vraag je Coördinator om een nieuwe daglink.",
+      { login: true });
   }
 }
 
@@ -497,5 +527,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLoginknop(true);
   const uitRedirect = await verwerkOauthRedirect();
   const bron = uitRedirect || restoreBron();
-  if (bron) laadWerkruimte(bron);
+  if (bron) { laadWerkruimte(bron); return; }
+  // Er stond wél iets achter het #-teken, maar er kwam geen bruikbare bron uit.
+  // "Geen daglink gevonden" is dan het verkeerde antwoord: er wás een link.
+  if (hashLijktOpDaglink(window.location.hash)) {
+    toonLegeStaat("Deze link is onvolledig",
+      "Er staat wel iets achter het #-teken van deze link, maar geen bruikbaar daglink-token — meestal is de link afgekapt bij het kopiëren of doorsturen. Vraag je Coördinator om een nieuwe.",
+      { login: true });
+  }
 });

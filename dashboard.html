@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gwOgZTAdH9wZBgFEkQeBpNbSTKPFzlxbdbZZJyX9Avs=' 'sha256-UdIGhFioqreBw+6Zgxlgt5Q6+kIyu1aR0l1r6kj6Zig='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-gwOgZTAdH9wZBgFEkQeBpNbSTKPFzlxbdbZZJyX9Avs=' 'sha256-GzcE9NTkA85TVfHSY3Bar8V/hYn0QsKnHM/CXTYnUuM='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -223,11 +223,25 @@ footer.app-footer {
   line-height: 1.6;
 }
 
+/* Kanttekeningen bij de cijfers — bewust GEEN alarmkader meer. Dit blok
+   stond als geel vlak boven alle vier de tabs en was het eerste wat een
+   klant zag; nu is het één dichtgeklapte regel in de rustige paneelkleur.
+   Alleen als er iets over de bundel zelf mis is (data-let-op) krijgt de
+   samenvatting de oranje accentkleur — dan is er ook echt iets te doen. */
 .warnings-box {
-  background: rgba(251,191,36,0.08); border: 1px solid var(--oranje);
-  border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem;
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.82rem;
 }
-.warnings-box .kop { color: var(--oranje); font-weight: 700; margin-bottom: 0.35rem; }
+.kanttekeningen > summary {
+  cursor: pointer; padding: 0.55rem 1rem; color: var(--grey);
+  list-style-position: inside;
+}
+.kanttekeningen > summary:hover { color: var(--white); }
+.kanttekeningen[data-let-op] > summary { color: var(--oranje); }
+.kanttekeningen > ul {
+  margin: 0; padding: 0 1rem 0.8rem 2.2rem; color: var(--grey); line-height: 1.55;
+}
+.kanttekeningen > ul > li + li { margin-top: 0.3rem; }
 
 .bar-mini {
   display: flex; align-items: flex-end; gap: 3px; height: 34px; margin-top: 0.4rem;
@@ -437,7 +451,9 @@ section.panel {
 /* ── Opbrengst: de harde telling en de schatting mogen niet hetzelfde
       lezen. De schatting is lichter, met de aanname erbij. ── */
 .kpi-tile.kpi-zacht { border-style: dashed; border-color: rgba(255,255,255,0.14); }
-.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; }
+/* De rekenhulp mag niet met de gemeten tegels ernaast concurreren: lichter
+   van kleur, lichter van gewicht en kleiner van corps. */
+.kpi-tile.kpi-zacht .kpi-getal { color: var(--mint-light); font-weight: 600; font-size: 1.5rem; }
 .kpi-aanname { font-size: 0.72rem; color: var(--grey); font-style: italic; margin-top: 0.3rem; }
 .kpi-instelling { margin-top: 0.45rem; }
 
@@ -720,7 +736,7 @@ tr.rij-open { background: var(--card); }
     <section class="panel">
       <div class="panel-header">
         <h2>🗂️ Je gegevens</h2>
-        <span class="decision">Wat staat er precies in mijn werkruimte? Alleen lezen — dit dashboard schrijft nooit.</span>
+        <span class="decision">Wat staat er precies in mijn werkruimte? Met een daglink alleen lezen; ingelogd kun je ook bijwerken.</span>
       </div>
       <div id="tab-data-body"></div>
     </section>
@@ -3520,6 +3536,14 @@ function parseDaglinkFragment(hash) {
 
 /* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen
  * zodat het niet in de history of in een per ongeluk gedeelde URL belandt. */
+/* Draagt het fragment iets dat op een daglink lijkt, maar er geen is? Dan is
+ * "Geen daglink gevonden" het verkeerde antwoord: er wás een link, hij is
+ * alleen onbruikbaar. Detailroutes ("#/…") en een lege hash tellen niet mee. */
+function hashLijktOpDaglink(hash) {
+  if (!hash || hash.startsWith("#/")) return false;
+  return hash.replace(/^#/, "").trim().length > 0;
+}
+
 function restoreDaglink() {
   const uitFragment = parseDaglinkFragment(window.location.hash);
   if (uitFragment) {
@@ -3553,17 +3577,50 @@ function vergeetDaglink() {
   try { sessionStorage.removeItem(DAGLINK_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
+/* Zonder tijdslimiet blijft een uitblijvend antwoord voor altijd op de
+ * laadtekst staan: de browser wacht dan tot hij het zelf opgeeft, en dat kan
+ * minuten duren of helemaal niet gebeuren. Precies dat gebeurde bij een
+ * daglink die geen antwoord kreeg — de pagina bleef hangen op "Live gegevens
+ * uit je werkruimte worden opgehaald…" zonder ooit een fout te tonen.
+ *
+ * 20 seconden is ruim voor een koude instantie (die kan een cold start van
+ * enkele seconden hebben) en kort genoeg om niet als kapot te voelen.
+ *
+ * Bewust GEEN wrapper om de netwerkaanroep heen: de twee aanroepen naar de
+ * eigen instantie blijven letterlijk staan zoals ze stonden, zodat de
+ * telemetriecontrole op het gebouwde artefact (test/geen-telemetrie.test.js)
+ * elke aanroep met naam en bestemming blijft herkennen — die controle telt op
+ * de tekst van dashboard.html. Deze helper levert alleen het afbreeksignaal. */
+const VERZOEK_TIMEOUT_MS = 20000;
+const VERZOEK_TIMEOUT_TEKST = "Je werkruimte reageert niet — na 20 seconden was er nog geen antwoord. Probeer het zo nog eens, of vraag je Coördinator om een nieuwe daglink.";
+
+function tijdslimiet(ms = VERZOEK_TIMEOUT_MS) {
+  if (typeof AbortController === "undefined") return { signal: undefined, klaar: () => {} };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return { signal: ctrl.signal, klaar: () => clearTimeout(timer) };
+}
+
+function isAfgebroken(e) {
+  return !!e && (e.name === "AbortError" || e.name === "TimeoutError");
+}
+
 /* De bron is óf een daglink óf een OAuth-sessie — in beide gevallen
  * {token, instantieUrl}, en bij OAuth met `oauth: true` erbij. Alles
  * stroomafwaarts merkt het verschil niet; alleen de 401-afhandeling hieronder
  * kent het, want alleen een JWT is te vernieuwen. */
 async function doeVerzoek(bron, pad) {
+  const tl = tijdslimiet();
   try {
     return await fetch(bron.instantieUrl + pad, {
       headers: { Authorization: "Bearer " + bron.token },
+      signal: tl.signal,
     });
   } catch (e) {
+    if (isAfgebroken(e)) throw new Error(VERZOEK_TIMEOUT_TEKST);
     throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+  } finally {
+    tl.klaar();
   }
 }
 
@@ -3635,6 +3692,7 @@ async function fetchWerkruimte(bron, pad) {
  * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
 async function schrijfWerkruimte(bron, methode, pad, payload) {
   const doe = async () => {
+    const tl = tijdslimiet();
     try {
       return await fetch(bron.instantieUrl + pad, {
         method: methode,
@@ -3642,10 +3700,14 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
           { Authorization: "Bearer " + bron.token },
           payload === undefined ? {} : { "Content-Type": "application/json" },
         ),
+        signal: tl.signal,
         ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
       });
     } catch (e) {
+      if (isAfgebroken(e)) throw new Error(VERZOEK_TIMEOUT_TEKST);
       throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    } finally {
+      tl.klaar();
     }
   };
   let res = await doe();
@@ -3982,7 +4044,8 @@ function restoreBron() {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
+    parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
+    tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
@@ -4939,6 +5002,72 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
   return { status: "ok", ranking };
 }
 
+// -- Terugval: gebruik per agent uit de teamfeed --------------------------
+// computeAgentGebruikRanking hierboven telt sporen in Acties en Lessen &
+// Inzichten. Een team dat wel draait maar in die twee domeinen niets
+// wegschrijft, komt daar als "elke agent 0" uit - terwijl de Team-tab op
+// hetzelfde moment honderden feedberichten toont. Twee tellingen van
+// hetzelfde ding die elkaar tegenspreken kost meer vertrouwen dan een
+// telling met een voetnoot, dus valt de ranglijst terug op de feed en zegt
+// erbij waar het getal vandaan komt.
+//
+// Dit is de leeskant. De structurele meting - een eigen activatieteller in
+// dashboard_metrics, geschreven vanuit de werkruimte - staat als i68 op de
+// backlog en vervangt deze terugval zodra hij er is.
+//
+// `items` zijn de genormaliseerde feeditems uit normaliseerFeed() (feed.js):
+// elk met agentSlug (of leeg bij een onbekende agent) en tijd (Date).
+function agentGebruikUitTeamfeed(items, schema, today, periodDays) {
+  const lijst = Array.isArray(items) ? items : [];
+  const traces = {};
+  for (const agent of schema.agents) traces[agent.slug] = { aantalPeriode: 0, aantalTotaal: 0 };
+
+  let raak = 0;
+  for (const it of lijst) {
+    const t = it && it.agentSlug ? traces[it.agentSlug] : null;
+    if (!t) continue; // bericht zonder herkenbare agent telt nergens mee
+    raak++;
+    t.aantalTotaal++;
+    const dt = it.tijd instanceof Date ? it.tijd : parseDateField(it.tijd);
+    if (dt && !isNaN(dt.getTime())) {
+      const diff = daysBetween(today, dt);
+      if (diff >= 0 && diff <= periodDays) t.aantalPeriode++;
+    }
+  }
+  // Geen enkel bericht met een herkenbare agent: dan is de feed geen betere
+  // bron dan wat de aanroeper al had. Niets teruggeven, niets verzinnen.
+  if (!raak) return null;
+
+  const ranking = schema.agents
+    .map(a => ({ slug: a.slug, label: a.displayName, emoji: a.emoji, module: a.module, value: traces[a.slug].aantalPeriode, totaal: traces[a.slug].aantalTotaal }))
+    .sort((a, b) => b.value - a.value || b.totaal - a.totaal);
+
+  return { status: "ok", bron: "teamfeed", ranking };
+}
+
+// Draagt een ranglijst uberhaupt signaal? Alle agents op nul is geen
+// ranglijst maar een ontbrekende meting, en hoort dus hetzelfde behandeld te
+// worden als een ontbrekende bron: zeggen waarom, geen twintig balkjes op nul.
+function agentGebruikHeeftSignaal(usage) {
+  if (!usage || usage.status !== "ok" || !Array.isArray(usage.ranking)) return false;
+  return usage.ranking.some(a => (a.totaal || 0) > 0 || (a.value || 0) > 0);
+}
+
+const AGENTGEBRUIK_GEEN_SPOOR = "Geen van je agents heeft in deze bundel een spoor achtergelaten: er staat geen agentnaam op je acties of lessen, en er zijn geen teamfeed-berichten om op terug te vallen. Een ranglijst van nullen zou suggereren dat je team stilstond - dat is hier niet gemeten, alleen niet vastgelegd.";
+
+// De ene plek die bepaalt welke ranglijst het dashboard toont. Beide routes
+// (rijen en metricsbestand) lopen hierlangs, zodat de Team-tab en de
+// Prestaties-tab nooit een ander verhaal vertellen.
+function kiesAgentGebruik(basis, feedItems, schema, today, periodDays) {
+  if (agentGebruikHeeftSignaal(basis)) return basis;
+  const uitFeed = agentGebruikUitTeamfeed(feedItems, schema, today, periodDays);
+  if (uitFeed) return uitFeed;
+  // "geen-bron" en "geen-veld" zijn preciezere redenen dan "geen spoor" -
+  // die laten staan.
+  if (basis && basis.status !== "ok") return basis;
+  return { status: "geen-spoor", reden: AGENTGEBRUIK_GEEN_SPOOR };
+}
+
 // -- Correctievrij-percentage (i25) - de f19-gate ------------------------
 // Aandeel acties dat een agent autonoom op Klaar zette (werkronde + QC) en
 // dat daarna NIET door een mens is gecorrigeerd. Beide routes (rijen én
@@ -5127,6 +5256,7 @@ if (typeof module !== "undefined") {
     voegContextToeAanAandacht, voegRitmeToeAanAandacht, RITME_DREMPEL_PCT, computeActiviteitPerWeek,
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
+    agentGebruikUitTeamfeed, agentGebruikHeeftSignaal, kiesAgentGebruik, AGENTGEBRUIK_GEEN_SPOOR,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
@@ -6463,13 +6593,27 @@ function nlGetal(n, decimals = 0) {
 // ── Tabbar ────────────────────────────────────────────────────────────
 // Gewone links: toetsenbordnavigatie en "open in nieuw tabblad" gratis, en
 // de hash-router doet de rest. Op mobiel plakt deze balk onderaan (styles.css).
-function renderTabbar(el, activeTab) {
+/* Kan de Data-tab iets tonen? Een kant-en-klaar metricsbestand draagt geen
+ * rijen: dan bleef er een tab over die alleen uitlegde waarom hij leeg was.
+ * Uitzondering: de relatiekaarten (f29) worden wél uit zo'n bestand
+ * afgeleid — draagt het die, dan is er inhoud en blijft de tab staan. */
+function dataTabBeschikbaar(ctx) {
+  if (!ctx || !ctx.bundle) return false;
+  if (ctx.bundle.kind !== "metrics") return Object.keys(ctx.bundle.domains || {}).length > 0;
+  return Array.isArray(ctx.relaties) && ctx.relaties.length > 0;
+}
+
+function zichtbareTabs(ctx) {
+  return TABS.filter(t => t.key !== "data" || dataTabBeschikbaar(ctx));
+}
+
+function renderTabbar(el, activeTab, ctx) {
   // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
   // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
-  el.innerHTML = TABS.map(t =>
+  el.innerHTML = zichtbareTabs(ctx).map(t =>
     `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
       <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
     </a>`).join("");
@@ -6503,6 +6647,36 @@ function renderStatusregel(el, ctx) {
     : `Laatste activiteit: ${fmtDate(dt)} (${relAge(dt, ctx.today)}).`;
 }
 
+// ── Kanttekeningen bij de cijfers ─────────────────────────────────────
+// Stond hier eerder als geel kader met de kop "Niet alles kon gelezen
+// worden", altijd open, op alle vier de tabs — het eerste wat een klant zag
+// was dus dat er iets stuk leek. De informatie blijft volledig staan, maar
+// dichtgeklapt achter één regel, en dit blok deelt niet meer de alarmkleur
+// met echte fouten.
+//
+// De volgorde is niet willekeurig: waarschuwingen over de bundel zelf
+// (verouderd, onleesbaar, onbekend domein) vragen om actie en staan boven de
+// veldwaarschuwingen, die vooral beheerdersinformatie zijn.
+function renderWaarschuwingen(el, ctx) {
+  const bundel = (ctx && ctx.bundelWaarschuwingen) || [];
+  const veld = (ctx && ctx.veldWaarschuwingen) || [];
+  const alles = bundel.concat(veld);
+  if (!alles.length) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  el.style.display = "";
+  const aantal = alles.length === 1 ? "1 kanttekening" : `${alles.length} kanttekeningen`;
+  // Alleen als er iets over de bundel zelf mis is, verdient de samenvatting
+  // een "let op" — anders leest elke ontbrekende veldnaam als een storing.
+  const kop = bundel.length ? `Let op: ${aantal} bij deze cijfers` : `${aantal} bij deze cijfers`;
+  el.innerHTML = `<details class="kanttekeningen"${bundel.length ? ' data-let-op="1"' : ""}>
+    <summary>${esc(kop)}</summary>
+    <ul>${alles.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+  </details>`;
+}
+
 // ── Vandaag · privacybelofte ──────────────────────────────────────────
 // De één-regelversie is de samenvatting, de uitklap is de juridische tekst
 // (toets 26-08-2026). De uitklap moet hier staan — in de UI, op het moment
@@ -6519,9 +6693,16 @@ function renderPrivacyBlok(el) {
   </details>`;
 }
 
-// ── Vandaag · Opbrengst — twee tegels ─────────────────────────────────
-// Eén harde telling en één schatting. De schatting krijgt bewust een andere,
-// lichtere behandeling (kpi-zacht) zodat hij niet als meting leest.
+// ── Vandaag · Opbrengst — twee metingen en één rekenhulp ──────────────
+// De tijdwinst stond hier als grootste getal op de pagina, terwijl het het
+// enige getal is dat niets aantoont: een aanname die je zelf invoert, maal
+// een telling. Een sceptische lezer prikt daar in één zin doorheen en neemt
+// dan de rest ook niet meer serieus. Dus staat nu vooraan wat wél gemeten
+// is — afgeronde acties en hoeveel daarvan op tijd waren — en volgt de
+// schatting als expliciet gemarkeerde rekenhulp.
+//
+// "Correctievrij" hoort hier bewust NIET bij, hoe goed het cijfer ook staat:
+// die meting is intern (DASHBOARD_INTERN=1) en niet elke klant heeft hem.
 function renderOpbrengstKpis(el, ctx) {
   const { tijdwinst } = ctx;
   const uren = nlGetal(tijdwinst.uren, 1);
@@ -6529,6 +6710,17 @@ function renderOpbrengstKpis(el, ctx) {
   const actiesLabel = tijdwinst.berekenbaar
     ? `van ${tijdwinst.totaal} acties in de bundel`
     : "Geen Acties-domein aanwezig in deze bundel.";
+
+  // Dezelfde Opvolging-subscore die de Prestaties-tab toont — hier omdat dit
+  // een gemeten opbrengst is. Eén berekening, twee plaatsen: nooit een tweede
+  // formule voor hetzelfde getal.
+  const opvolging = ((ctx.adopt && ctx.adopt.componenten) || []).find(c => c.key === "opvolging")
+    || { berekenbaar: false, reden: "Opvolging is in deze bundel niet te berekenen." };
+  const opvolgingGetal = opvolging.berekenbaar ? `${Math.round(opvolging.waarde)}%` : "n.v.t.";
+  const opvolgingLabel = opvolging.berekenbaar
+    ? `${opvolging.klaar} van ${opvolging.verstreken} acties met een verstreken deadline zijn alsnog afgerond`
+    : opvolging.reden;
+
   const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
   const som = tijdwinst.berekenbaar
     ? `${tijdwinst.afgerond} × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`
@@ -6540,9 +6732,14 @@ function renderOpbrengstKpis(el, ctx) {
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
     </div>
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button"${opvolging.berekenbaar ? "" : ' data-nvt="1"'}>
+      <div class="kpi-getal">${esc(opvolgingGetal)}</div>
+      <div class="kpi-kop">Op tijd afgerond</div>
+      <div class="kpi-label">${esc(opvolgingLabel)}</div>
+    </div>
     <div class="kpi-tile kpi-zacht" data-goto="tijdwinst" tabindex="0" role="button">
       <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
-      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-kop">Rekenhulp · geschatte tijdwinst</div>
       <div class="kpi-aanname">schatting op basis van jouw aanname, geen meting</div>
       <div class="kpi-instelling" data-stop-nav="1">
         <label class="minuten-input-label">min/actie
@@ -6612,9 +6809,23 @@ function renderHerkomst(el, ctx) {
 
   regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
   regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
-  regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
+    regels.push(`<strong>Gebruik per agent</strong> is hier geteld uit de <em>teamfeed</em>: één telling per bericht dat een agent zelf plaatste. Dat is dezelfde bron als de Team-tab, dus beide tabs noemen hetzelfde aantal. De gebruikelijke bron — het veld Agent op je acties en lessen — is in deze bundel nergens gevuld; zonder deze terugval zou hier een ranglijst van nullen staan naast een volle feed.`);
+  } else {
+    regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  }
   regels.push(`<strong>Geschatte tijdwinst</strong> is een schatting op basis van jouw eigen aanname, geen meting: afgeronde acties × de minuten-per-actie die je op de Vandaag-tab instelt.`);
+  if (!dataTabBeschikbaar(ctx)) {
+    regels.push(`<strong>Waarom is er geen Data-tab?</strong> Je werkgegevens zelf staan niet in je werkruimte maar in een ander systeem; dit dashboard krijgt daarvan alleen de dagtellingen door. Je Coördinator weet welk systeem dat is.`);
+  }
   regels.push(`Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module nergens een spoor, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt.`);
+
+  // De kanttekeningen staan bovenaan de pagina dichtgeklapt, maar dit is de
+  // plek waar iemand ze zoekt die wíl weten waar een getal vandaan komt.
+  const veld = (ctx.veldWaarschuwingen || []);
+  if (veld.length) {
+    regels.push(`<strong>Niet elk veld kon gelezen worden:</strong><br>${veld.map(esc).join("<br>")}`);
+  }
 
   const laatst = leesLaatstGebruikt();
   if (laatst) regels.push(`<strong>Laatst geladen:</strong> ${esc(laatst)}`);
@@ -6707,8 +6918,14 @@ function renderGebruikPanel(el, agentUsage) {
   const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
   const top = agentUsage.ranking.slice(0, MAX_TONEN);
   const chart = buildHorizontalBarChart({ items: top });
+  // Komt de telling uit de teamfeed, dan hóórt dat erbij te staan: anders
+  // staat hier een ander getal dan op de Team-tab zonder dat iemand kan zien
+  // waarom (zie kiesAgentGebruik in zones.js).
+  const bron = agentUsage.bron === "teamfeed"
+    ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
+    : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
-    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
+    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
 
@@ -7219,14 +7436,19 @@ function dataRijenVan(ctx, key) {
 
 /* Metricsbestand: de Coördinator levert dan alleen totalen aan, geen rijen.
  * Zelfde eerlijke uitleg als op de agentdetailpagina — nooit een lege tabel
- * die suggereert dat de werkruimte leeg is. */
+ * die suggereert dat de werkruimte leeg is.
+ *
+ * De tekst stond hier eerder in onze eigen woorden ("deze bundel draagt geen
+ * rijen", "vraag waar je werkdata woont — dat staat in de bronkoppeling") en
+ * gaf de lezer daarmee een opdracht in termen die hij nergens anders
+ * tegenkomt. Zelfde feit, nu in zijn taal, en zonder huiswerk. */
 function dataMetricsUitleg() {
   return `<div class="grijs-blok">
-    <div class="grijs-kop">❔ Deze bundel draagt geen rijen</div>
-    <div class="grijs-tekst">Je dashboard leest vandaag een kant-en-klaar metricsbestand: dat bevat de tellingen,
-    niet de onderliggende regels. Wil je hier je acties, deals en lessen doorbladeren, dan moeten de werkdata-rijen
-    in je werkruimte staan in plaats van alleen een dagelijks metricsbestand. Vraag je Coördinator waar je werkdata
-    woont — dat staat in de bronkoppeling.</div>
+    <div class="grijs-kop">❔ Je gegevens staan in een ander systeem</div>
+    <div class="grijs-tekst">Dit dashboard krijgt vandaag alleen de dagtellingen uit je werkruimte door, niet de
+    regels erachter. Je acties, deals en lessen zelf staan in het systeem waarin je ze bijhoudt — je Coördinator
+    weet welk. Wil je ze hier kunnen doorbladeren, vraag hem dan om je werkgegevens naar je werkruimte te
+    verplaatsen.</div>
   </div>`;
 }
 
@@ -8343,6 +8565,15 @@ async function handleBundle(bundle, route, label) {
   renderAll();
 }
 
+/* De teamfeed als tweede bron voor "gebruik per agent". Puur tellen: geen
+ * markeerOpenLussen (dat is presentatie), alleen agentSlug + tijd. Zie
+ * kiesAgentGebruik() in zones.js voor waarom deze terugval bestaat. */
+function feedItemsVoorTelling(bundle, schema, agentLookup) {
+  const feed = bundle && bundle.teamfeed;
+  if (!feed || !Array.isArray(feed.entries) || !feed.entries.length) return [];
+  return normaliseerFeed(feed.entries, schema, agentLookup);
+}
+
 // Bouwt eenmalig de interne metricsvorm (zie metrics.js) voor de huidige
 // bundel/periode, en pakt hem uit tot het platte ctx-object dat de
 // renderlaag verwacht. Dit is de ENIGE plek die weet welke route de data
@@ -8366,13 +8597,20 @@ function buildContext() {
       bundle, schema, agentLookup, today,
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
       z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
-      activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
+      activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
+      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
-      // loader-waarschuwingen (bv. verouderde werkruimte-metrics) horen net
-      // zo zichtbaar te zijn als parse-waarschuwingen
+      // Twee soorten waarschuwingen, bewust apart gehouden. Over de bundel
+      // zelf (verouderd, onleesbaar, onbekend domein) moet je vandaag iets
+      // doen; over losse velden die niet gelezen konden worden meestal niet.
+      // `waarschuwingen` blijft de volledige lijst (bundel eerst), zodat
+      // niets verdwijnt; de splitsing bepaalt de volgorde, de toon van de
+      // samenvatting en welke regels in de herkomst-uitklap thuishoren.
+      bundelWaarschuwingen: (bundle.waarschuwingen || []).slice(),
+      veldWaarschuwingen: (m.waarschuwingen || []).slice(),
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
     };
   }
@@ -8382,8 +8620,14 @@ function buildContext() {
   return {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
     z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
-    activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst, agentUsage: m.agentUsage,
-    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, waarschuwingen: m.waarschuwingen, correctievrij: m.correctievrij,
+    activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
+    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+    sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
+    // Op de rijenroute zijn alle waarschuwingen loaderwaarschuwingen: ze gaan
+    // over de bundel, niet over losse velden. Zie de metricsroute hierboven.
+    bundelWaarschuwingen: (m.waarschuwingen || []).slice(),
+    veldWaarschuwingen: [],
+    waarschuwingen: m.waarschuwingen,
     minutenPerActie: currentMinutenPerActie,
     intern: bundle.intern === true,
     // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
@@ -8484,14 +8728,7 @@ function renderAll() {
   renderGebruikPanel(document.getElementById("panel-gebruik-body"), ctx.agentUsage);
   renderHerkomst(document.getElementById("herkomst-body"), ctx);
 
-  const warnEl = document.getElementById("warnings-box");
-  const waarschuwingen = ctx.waarschuwingen || [];
-  if (waarschuwingen.length) {
-    warnEl.style.display = "";
-    warnEl.innerHTML = `<div class="kop">Niet alles kon gelezen worden</div><ul style="margin:0;padding-left:1.1rem;">${waarschuwingen.map(w => `<li>${esc(w)}</li>`).join("")}</ul>`;
-  } else {
-    warnEl.style.display = "none";
-  }
+  renderWaarschuwingen(document.getElementById("warnings-box"), ctx);
 
   route();
 }
@@ -8565,9 +8802,12 @@ function route() {
     return;
   }
   const ctx = window.__dashboardCtx;
-  const view = bepaalActieveView();
+  let view = bepaalActieveView();
+  // Is de Data-tab er niet (een metricsbestand zonder relatiekaarten), dan mag
+  // een onthouden of getypte #/data-link niet op een lege tab uitkomen.
+  if (view.tab === "data" && !dataTabBeschikbaar(ctx)) view = { soort: "tab", tab: "vandaag" };
   verbergAlles();
-  renderTabbar(document.getElementById("tabbar"), view.tab);
+  renderTabbar(document.getElementById("tabbar"), view.tab, ctx);
 
   if (view.soort === "detail") {
     document.getElementById("detail-view").style.display = "";
@@ -8742,9 +8982,21 @@ async function laadWerkruimte(bron) {
       toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
       return;
     }
-    if (err.daglinkVerlopen) vergeetDaglink();
+    if (err.daglinkVerlopen) {
+      // De instantie zegt zelf al wat er mis is (verlopen of ingetrokken); die
+      // tekst overschrijven zou hem onnauwkeuriger maken. Alleen bij "verlopen"
+      // hoort de geldigheidsduur erbij — dat is de vraag die er meteen op volgt.
+      vergeetDaglink();
+      const extra = /verlopen/i.test(err.message) ? " Daglinks zijn 24 uur geldig." : "";
+      toonLegeStaat("Deze daglink werkt niet meer", err.message + extra, { login: true });
+      return;
+    }
+    // Noemt de melding zelf al wat je moet doen (bv. de tijdslimiet-tekst), dan
+    // niet nóg een keer om een nieuwe daglink vragen.
+    const heeftAdvies = /Coördinator/.test(err.message);
     toonLegeStaat("Kon je werkruimte niet laden",
-      err.message + " Vraag je Coördinator om een nieuwe daglink.", { login: true });
+      heeftAdvies ? err.message : err.message + " Vraag je Coördinator om een nieuwe daglink.",
+      { login: true });
   }
 }
 
@@ -8787,7 +9039,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLoginknop(true);
   const uitRedirect = await verwerkOauthRedirect();
   const bron = uitRedirect || restoreBron();
-  if (bron) laadWerkruimte(bron);
+  if (bron) { laadWerkruimte(bron); return; }
+  // Er stond wél iets achter het #-teken, maar er kwam geen bruikbare bron uit.
+  // "Geen daglink gevonden" is dan het verkeerde antwoord: er wás een link.
+  if (hashLijktOpDaglink(window.location.hash)) {
+    toonLegeStaat("Deze link is onvolledig",
+      "Er staat wel iets achter het #-teken van deze link, maar geen bruikbaar daglink-token — meestal is de link afgekapt bij het kopiëren of doorsturen. Vraag je Coördinator om een nieuwe.",
+      { login: true });
+  }
 });
 
 </script>

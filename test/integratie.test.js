@@ -49,10 +49,19 @@ function domeinenUitTestdata() {
   return domeinen;
 }
 
-function metricsEntry({ vers = true, versie = 1, kapot = false } = {}) {
+function metricsEntry({ vers = true, versie = 1, kapot = false, agentsOpNul = false } = {}) {
   const basis = JSON.parse(readFileSync(join(TESTDATA, "notion-metrics", "metrics.json"), "utf8"));
   if (vers) basis.gegenereerd_op = new Date().toISOString();
   basis.versie = versie;
+  // b58: het geval uit de praktijk — het blok is er, meldt dat het veld Agent
+  // bestaat, en telt vervolgens overal nul. Precies dat gaf "0 van 21 agents"
+  // naast een teamfeed vol berichten.
+  if (agentsOpNul && basis.agents) {
+    basis.agents.veld_aanwezig = true;
+    for (const k of Object.keys(basis.agents.per_agent || {})) {
+      basis.agents.per_agent[k] = { aantal_periode: 0, aantal_totaal: 0, laatst: null };
+    }
+  }
   return [{
     domein: "dashboard_metrics", entryId: "metrics",
     data: { Titel: "Dashboardmetrics", Inhoud: kapot ? "{dit is geen json" : JSON.stringify(basis) },
@@ -189,11 +198,14 @@ describe("werkruimte-route — rijen", () => {
     expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit/);
     expect(d.tekst("privacy-blok")).toMatch(/blijven in je browser/);
     expect(d.$("panel-aandacht-body").querySelectorAll(".attention-list li").length).toBeGreaterThan(0);
-    expect(d.$("opbrengst-grid").querySelectorAll(".kpi-tile").length).toBe(2);
+    expect(d.$("opbrengst-grid").querySelectorAll(".kpi-tile").length).toBe(3);
     // de score staat NIET meer als tegel op de Vandaag-tab (alleen, als hij
-    // onder de drempel zakt, als aandachtspunt — zie de test hieronder)
+    // onder de drempel zakt, als aandachtspunt — zie de test hieronder).
+    // b58: "Op tijd afgerond" staat er wél, maar dat is geen score: het is de
+    // gemeten uitkomst (dezelfde Opvolging-telling als op Prestaties), en hij
+    // staat vóór de schatting omdat de volgorde het punt van die wijziging is.
     expect([...d.$("tab-vandaag").querySelectorAll(".kpi-kop")].map((e) => e.textContent))
-      .toEqual(["Acties afgerond", "Geschatte tijdwinst"]);
+      .toEqual(["Acties afgerond", "Op tijd afgerond", "Rekenhulp · geschatte tijdwinst"]);
 
     // Prestaties: ritme, subscores, grafieken, herkomst
     await d.naarTab("prestaties");
@@ -455,7 +467,34 @@ describe("f25 — waardezones in dashboard.html", () => {
     await d.geladen();
     await d.naarTab("data");
     expect(d.$("tab-data-body").querySelector("table")).toBeNull();
-    expect(d.tekst("tab-data-body")).toMatch(/draagt geen rijen/);
+    expect(d.tekst("tab-data-body")).toMatch(/staan in een ander systeem/);
+    expect(d.fouten).toEqual([]);
+  });
+
+  /* b58 — de bevinding die dit item startte: de Team-tab telde 466 berichten
+     terwijl Prestaties "0 van 21 agents" meldde. Twee bronnen, één product.
+     Deze test bewaakt dat de twee tabs hetzelfde verhaal vertellen zodra de
+     gebruikelijke bron niets levert. */
+  it("Team en Prestaties spreken elkaar niet tegen als het metricsbestand nul telt", async () => {
+    const inhoud = domeinenUitTestdata();
+    inhoud.teamfeed = teamfeedEntries();
+    inhoud.dashboard_metrics = metricsEntry({ vers: true, agentsOpNul: true });
+    const d = await open({ domeinen: inhoud });
+    await d.geladen();
+
+    await d.naarTab("team");
+    const berichten = d.$("tab-team-body").querySelectorAll(".feed-rij").length;
+    expect(berichten).toBeGreaterThan(0);
+
+    await d.naarTab("prestaties");
+    const gebruik = d.tekst("panel-gebruik-body");
+    // geen ranglijst van nullen, en geen stille verzwijging
+    expect(gebruik).not.toMatch(/0 van \d+ agents/);
+    expect(gebruik).toMatch(/Geteld uit de teamfeed/);
+    // en het totaal dat hier geteld wordt komt uit dezelfde berichten
+    const usage = d.w.__dashboardCtx.agentUsage;
+    expect(usage.bron).toBe("teamfeed");
+    expect(usage.ranking.reduce((s, r) => s + r.totaal, 0)).toBeGreaterThan(0);
     expect(d.fouten).toEqual([]);
   });
 

@@ -110,7 +110,7 @@ describe("dataRelatieKaarten — de Data-tab op de metricsroute", () => {
   it("zonder relaties (v1) blijft alleen de bestaande uitleg staan", () => {
     const el = document.createElement("div");
     g.renderDataOverzicht(el, ctxMet(null));
-    expect(el.textContent).toContain("geen rijen");
+    expect(el.textContent).toContain("ander systeem");
     expect(el.querySelector(".relatie-blok")).toBeNull();
   });
 });

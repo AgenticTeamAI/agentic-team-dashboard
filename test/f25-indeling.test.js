@@ -151,11 +151,20 @@ describe("Data-tab — alleen-lezen browser over de bundel", () => {
   it("metricsroute: eerlijke uitleg in plaats van een lege tabel", () => {
     const c = el();
     g.renderDataOverzicht(c, ctxMet({}, "metrics"));
-    expect(c.textContent).toMatch(/draagt geen rijen/);
+    expect(c.textContent).toMatch(/staan in een ander systeem/);
     const d = el();
     g.renderDataDomein(d, "acties", ctxMet({}, "metrics"));
     expect(d.querySelector("table")).toBeNull();
-    expect(d.textContent).toMatch(/draagt geen rijen/);
+    expect(d.textContent).toMatch(/staan in een ander systeem/);
+  });
+
+  /* b58: deze tekst is het enige punt in het dashboard waar de gebruiker een
+     opdracht terugkreeg, en dan ook nog in woorden die alleen wij gebruiken.
+     Woordkeus is hier dus geen smaak maar een eis. */
+  it("metricsroute: de uitleg gebruikt geen interne termen", () => {
+    const c = el();
+    g.renderDataOverzicht(c, ctxMet({}, "metrics"));
+    expect(c.textContent).not.toMatch(/bronkoppeling|metricsbestand|de bundel/i);
   });
 
   it("onbekend domein crasht niet", () => {

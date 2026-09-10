@@ -56,13 +56,27 @@ function nlGetal(n, decimals = 0) {
 // ── Tabbar ────────────────────────────────────────────────────────────
 // Gewone links: toetsenbordnavigatie en "open in nieuw tabblad" gratis, en
 // de hash-router doet de rest. Op mobiel plakt deze balk onderaan (styles.css).
-function renderTabbar(el, activeTab) {
+/* Kan de Data-tab iets tonen? Een kant-en-klaar metricsbestand draagt geen
+ * rijen: dan bleef er een tab over die alleen uitlegde waarom hij leeg was.
+ * Uitzondering: de relatiekaarten (f29) worden wél uit zo'n bestand
+ * afgeleid — draagt het die, dan is er inhoud en blijft de tab staan. */
+function dataTabBeschikbaar(ctx) {
+  if (!ctx || !ctx.bundle) return false;
+  if (ctx.bundle.kind !== "metrics") return Object.keys(ctx.bundle.domains || {}).length > 0;
+  return Array.isArray(ctx.relaties) && ctx.relaties.length > 0;
+}
+
+function zichtbareTabs(ctx) {
+  return TABS.filter(t => t.key !== "data" || dataTabBeschikbaar(ctx));
+}
+
+function renderTabbar(el, activeTab, ctx) {
   // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
   // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
-  el.innerHTML = TABS.map(t =>
+  el.innerHTML = zichtbareTabs(ctx).map(t =>
     `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""}>
       <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
     </a>`).join("");
@@ -96,6 +110,36 @@ function renderStatusregel(el, ctx) {
     : `Laatste activiteit: ${fmtDate(dt)} (${relAge(dt, ctx.today)}).`;
 }
 
+// ── Kanttekeningen bij de cijfers ─────────────────────────────────────
+// Stond hier eerder als geel kader met de kop "Niet alles kon gelezen
+// worden", altijd open, op alle vier de tabs — het eerste wat een klant zag
+// was dus dat er iets stuk leek. De informatie blijft volledig staan, maar
+// dichtgeklapt achter één regel, en dit blok deelt niet meer de alarmkleur
+// met echte fouten.
+//
+// De volgorde is niet willekeurig: waarschuwingen over de bundel zelf
+// (verouderd, onleesbaar, onbekend domein) vragen om actie en staan boven de
+// veldwaarschuwingen, die vooral beheerdersinformatie zijn.
+function renderWaarschuwingen(el, ctx) {
+  const bundel = (ctx && ctx.bundelWaarschuwingen) || [];
+  const veld = (ctx && ctx.veldWaarschuwingen) || [];
+  const alles = bundel.concat(veld);
+  if (!alles.length) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  el.style.display = "";
+  const aantal = alles.length === 1 ? "1 kanttekening" : `${alles.length} kanttekeningen`;
+  // Alleen als er iets over de bundel zelf mis is, verdient de samenvatting
+  // een "let op" — anders leest elke ontbrekende veldnaam als een storing.
+  const kop = bundel.length ? `Let op: ${aantal} bij deze cijfers` : `${aantal} bij deze cijfers`;
+  el.innerHTML = `<details class="kanttekeningen"${bundel.length ? ' data-let-op="1"' : ""}>
+    <summary>${esc(kop)}</summary>
+    <ul>${alles.map(w => `<li>${esc(w)}</li>`).join("")}</ul>
+  </details>`;
+}
+
 // ── Vandaag · privacybelofte ──────────────────────────────────────────
 // De één-regelversie is de samenvatting, de uitklap is de juridische tekst
 // (toets 26-08-2026). De uitklap moet hier staan — in de UI, op het moment
@@ -112,9 +156,16 @@ function renderPrivacyBlok(el) {
   </details>`;
 }
 
-// ── Vandaag · Opbrengst — twee tegels ─────────────────────────────────
-// Eén harde telling en één schatting. De schatting krijgt bewust een andere,
-// lichtere behandeling (kpi-zacht) zodat hij niet als meting leest.
+// ── Vandaag · Opbrengst — twee metingen en één rekenhulp ──────────────
+// De tijdwinst stond hier als grootste getal op de pagina, terwijl het het
+// enige getal is dat niets aantoont: een aanname die je zelf invoert, maal
+// een telling. Een sceptische lezer prikt daar in één zin doorheen en neemt
+// dan de rest ook niet meer serieus. Dus staat nu vooraan wat wél gemeten
+// is — afgeronde acties en hoeveel daarvan op tijd waren — en volgt de
+// schatting als expliciet gemarkeerde rekenhulp.
+//
+// "Correctievrij" hoort hier bewust NIET bij, hoe goed het cijfer ook staat:
+// die meting is intern (DASHBOARD_INTERN=1) en niet elke klant heeft hem.
 function renderOpbrengstKpis(el, ctx) {
   const { tijdwinst } = ctx;
   const uren = nlGetal(tijdwinst.uren, 1);
@@ -122,6 +173,17 @@ function renderOpbrengstKpis(el, ctx) {
   const actiesLabel = tijdwinst.berekenbaar
     ? `van ${tijdwinst.totaal} acties in de bundel`
     : "Geen Acties-domein aanwezig in deze bundel.";
+
+  // Dezelfde Opvolging-subscore die de Prestaties-tab toont — hier omdat dit
+  // een gemeten opbrengst is. Eén berekening, twee plaatsen: nooit een tweede
+  // formule voor hetzelfde getal.
+  const opvolging = ((ctx.adopt && ctx.adopt.componenten) || []).find(c => c.key === "opvolging")
+    || { berekenbaar: false, reden: "Opvolging is in deze bundel niet te berekenen." };
+  const opvolgingGetal = opvolging.berekenbaar ? `${Math.round(opvolging.waarde)}%` : "n.v.t.";
+  const opvolgingLabel = opvolging.berekenbaar
+    ? `${opvolging.klaar} van ${opvolging.verstreken} acties met een verstreken deadline zijn alsnog afgerond`
+    : opvolging.reden;
+
   const tijdwinstGetal = tijdwinst.berekenbaar ? `${uren} uur` : "n.v.t.";
   const som = tijdwinst.berekenbaar
     ? `${tijdwinst.afgerond} × ${tijdwinst.minutenPerActie} min = ${nlGetal(tijdwinst.minuten)} min ≈ ${uren} uur`
@@ -133,9 +195,14 @@ function renderOpbrengstKpis(el, ctx) {
       <div class="kpi-kop">Acties afgerond</div>
       <div class="kpi-label">${esc(actiesLabel)}</div>
     </div>
+    <div class="kpi-tile" data-goto="adoptiescore" tabindex="0" role="button"${opvolging.berekenbaar ? "" : ' data-nvt="1"'}>
+      <div class="kpi-getal">${esc(opvolgingGetal)}</div>
+      <div class="kpi-kop">Op tijd afgerond</div>
+      <div class="kpi-label">${esc(opvolgingLabel)}</div>
+    </div>
     <div class="kpi-tile kpi-zacht" data-goto="tijdwinst" tabindex="0" role="button">
       <div class="kpi-getal">${esc(tijdwinstGetal)}</div>
-      <div class="kpi-kop">Geschatte tijdwinst</div>
+      <div class="kpi-kop">Rekenhulp · geschatte tijdwinst</div>
       <div class="kpi-aanname">schatting op basis van jouw aanname, geen meting</div>
       <div class="kpi-instelling" data-stop-nav="1">
         <label class="minuten-input-label">min/actie
@@ -205,9 +272,23 @@ function renderHerkomst(el, ctx) {
 
   regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
   regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
-  regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
+    regels.push(`<strong>Gebruik per agent</strong> is hier geteld uit de <em>teamfeed</em>: één telling per bericht dat een agent zelf plaatste. Dat is dezelfde bron als de Team-tab, dus beide tabs noemen hetzelfde aantal. De gebruikelijke bron — het veld Agent op je acties en lessen — is in deze bundel nergens gevuld; zonder deze terugval zou hier een ranglijst van nullen staan naast een volle feed.`);
+  } else {
+    regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
+  }
   regels.push(`<strong>Geschatte tijdwinst</strong> is een schatting op basis van jouw eigen aanname, geen meting: afgeronde acties × de minuten-per-actie die je op de Vandaag-tab instelt.`);
+  if (!dataTabBeschikbaar(ctx)) {
+    regels.push(`<strong>Waarom is er geen Data-tab?</strong> Je werkgegevens zelf staan niet in je werkruimte maar in een ander systeem; dit dashboard krijgt daarvan alleen de dagtellingen door. Je Coördinator weet welk systeem dat is.`);
+  }
   regels.push(`Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module nergens een spoor, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt.`);
+
+  // De kanttekeningen staan bovenaan de pagina dichtgeklapt, maar dit is de
+  // plek waar iemand ze zoekt die wíl weten waar een getal vandaan komt.
+  const veld = (ctx.veldWaarschuwingen || []);
+  if (veld.length) {
+    regels.push(`<strong>Niet elk veld kon gelezen worden:</strong><br>${veld.map(esc).join("<br>")}`);
+  }
 
   const laatst = leesLaatstGebruikt();
   if (laatst) regels.push(`<strong>Laatst geladen:</strong> ${esc(laatst)}`);
@@ -300,8 +381,14 @@ function renderGebruikPanel(el, agentUsage) {
   const gebruikt = agentUsage.ranking.filter(a => a.totaal > 0);
   const top = agentUsage.ranking.slice(0, MAX_TONEN);
   const chart = buildHorizontalBarChart({ items: top });
+  // Komt de telling uit de teamfeed, dan hóórt dat erbij te staan: anders
+  // staat hier een ander getal dan op de Team-tab zonder dat iemand kan zien
+  // waarom (zie kiesAgentGebruik in zones.js).
+  const bron = agentUsage.bron === "teamfeed"
+    ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
+    : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
-    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.</p>
+    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
 

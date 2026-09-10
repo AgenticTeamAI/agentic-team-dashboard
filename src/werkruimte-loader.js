@@ -70,6 +70,14 @@ function parseDaglinkFragment(hash) {
 
 /* Fragment -> sessionStorage, en het token meteen uit de adresbalk halen
  * zodat het niet in de history of in een per ongeluk gedeelde URL belandt. */
+/* Draagt het fragment iets dat op een daglink lijkt, maar er geen is? Dan is
+ * "Geen daglink gevonden" het verkeerde antwoord: er wás een link, hij is
+ * alleen onbruikbaar. Detailroutes ("#/…") en een lege hash tellen niet mee. */
+function hashLijktOpDaglink(hash) {
+  if (!hash || hash.startsWith("#/")) return false;
+  return hash.replace(/^#/, "").trim().length > 0;
+}
+
 function restoreDaglink() {
   const uitFragment = parseDaglinkFragment(window.location.hash);
   if (uitFragment) {
@@ -103,17 +111,50 @@ function vergeetDaglink() {
   try { sessionStorage.removeItem(DAGLINK_SS_KEY); } catch (e) { /* zie boven */ }
 }
 
+/* Zonder tijdslimiet blijft een uitblijvend antwoord voor altijd op de
+ * laadtekst staan: de browser wacht dan tot hij het zelf opgeeft, en dat kan
+ * minuten duren of helemaal niet gebeuren. Precies dat gebeurde bij een
+ * daglink die geen antwoord kreeg — de pagina bleef hangen op "Live gegevens
+ * uit je werkruimte worden opgehaald…" zonder ooit een fout te tonen.
+ *
+ * 20 seconden is ruim voor een koude instantie (die kan een cold start van
+ * enkele seconden hebben) en kort genoeg om niet als kapot te voelen.
+ *
+ * Bewust GEEN wrapper om de netwerkaanroep heen: de twee aanroepen naar de
+ * eigen instantie blijven letterlijk staan zoals ze stonden, zodat de
+ * telemetriecontrole op het gebouwde artefact (test/geen-telemetrie.test.js)
+ * elke aanroep met naam en bestemming blijft herkennen — die controle telt op
+ * de tekst van dashboard.html. Deze helper levert alleen het afbreeksignaal. */
+const VERZOEK_TIMEOUT_MS = 20000;
+const VERZOEK_TIMEOUT_TEKST = "Je werkruimte reageert niet — na 20 seconden was er nog geen antwoord. Probeer het zo nog eens, of vraag je Coördinator om een nieuwe daglink.";
+
+function tijdslimiet(ms = VERZOEK_TIMEOUT_MS) {
+  if (typeof AbortController === "undefined") return { signal: undefined, klaar: () => {} };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  return { signal: ctrl.signal, klaar: () => clearTimeout(timer) };
+}
+
+function isAfgebroken(e) {
+  return !!e && (e.name === "AbortError" || e.name === "TimeoutError");
+}
+
 /* De bron is óf een daglink óf een OAuth-sessie — in beide gevallen
  * {token, instantieUrl}, en bij OAuth met `oauth: true` erbij. Alles
  * stroomafwaarts merkt het verschil niet; alleen de 401-afhandeling hieronder
  * kent het, want alleen een JWT is te vernieuwen. */
 async function doeVerzoek(bron, pad) {
+  const tl = tijdslimiet();
   try {
     return await fetch(bron.instantieUrl + pad, {
       headers: { Authorization: "Bearer " + bron.token },
+      signal: tl.signal,
     });
   } catch (e) {
+    if (isAfgebroken(e)) throw new Error(VERZOEK_TIMEOUT_TEKST);
     throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+  } finally {
+    tl.klaar();
   }
 }
 
@@ -185,6 +226,7 @@ async function fetchWerkruimte(bron, pad) {
  * zodat de UI extern-domein (409) anders kan tonen dan een validatiefout. */
 async function schrijfWerkruimte(bron, methode, pad, payload) {
   const doe = async () => {
+    const tl = tijdslimiet();
     try {
       return await fetch(bron.instantieUrl + pad, {
         method: methode,
@@ -192,10 +234,14 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
           { Authorization: "Bearer " + bron.token },
           payload === undefined ? {} : { "Content-Type": "application/json" },
         ),
+        signal: tl.signal,
         ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
       });
     } catch (e) {
+      if (isAfgebroken(e)) throw new Error(VERZOEK_TIMEOUT_TEKST);
       throw new Error("Je werkruimte-instantie is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+    } finally {
+      tl.klaar();
     }
   };
   let res = await doe();
@@ -532,7 +578,8 @@ function restoreBron() {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    parseDaglinkFragment, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
+    parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
+    tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
