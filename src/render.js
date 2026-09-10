@@ -45,7 +45,7 @@ function stempelHtml(staleAt, today) {
  * hij over gaat. Elk itemtype wijst naar zijn domein in de Data-tab; items
  * zonder rijenweergave (bedrijfscontext, ritme) blijven tekst, en een
  * metrics-item met een eigen https-link volgt die link. */
-const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel" };
+const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel", "team-oogst": "acties" };
 
 function aandachtDoelHref(it) {
   if (it.link) return it.link;

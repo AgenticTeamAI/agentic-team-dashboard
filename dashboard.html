@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-spm0Mk+aYc6UAFTtW/KxDFOq5dUsuSd7FYLL0Oigrfc='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-fSvP23z8LveqKbHMN3g7Cs3YsjbfY2Ki2KZNlNiWt2o='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -579,6 +579,9 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
   min-height: 28px;
 }
 .status-chip:hover { border-color: var(--mint); }
+/* f44: "Van je team" is een selectie, geen uitsluiting — actief is dus aan,
+   niet doorgestreept zoals bij de statuschips. */
+.status-chip.van-team.actief { border-color: var(--mint); color: var(--mint); background: rgba(74,222,128,0.10); }
 .status-chip.uit {
   color: var(--grijs-status); border-style: dashed; background: transparent;
   text-decoration: line-through;
@@ -4412,13 +4415,28 @@ function vergeetOauthSessie() {
 
 /* ── Stap 1: wegsturen naar het consentscherm ──────────────────────────── */
 
+/* f44: een deeplink achter de login. Open je
+ * dashboard.agentic-team.ai/#/data/acties zonder sessie, dan wil je ná het
+ * inloggen dáár uitkomen — niet op Vandaag, waar je opnieuw moet gaan zoeken.
+ *
+ * De bedoelde route reist mee in de PKCE-record die er al is: geen nieuwe
+ * opslagsleutel, dus de uitputtende sleutellijst in geen-telemetrie.test.js
+ * blijft precies zoals hij is, en de record ruimt zichzelf al op na gebruik.
+ *
+ * Alleen echte routes ("#/…"), nooit een daglinkfragment of een redirect — een
+ * token hoort hier niet in te belanden. */
+function bedoeldeRoute(hash) {
+  const h = String(hash || "");
+  return h.startsWith("#/") ? h : null;
+}
+
 async function startOauthLogin() {
   const verifier = maakVerifier();
   const state = base64url(willekeurigeBytes(16));
   const challenge = await maakChallenge(verifier);
   // Eerst opslaan, dán navigeren: andersom is er een venster waarin de
   // redirect terugkomt zonder dat de verifier bestaat.
-  bewaarPkce({ verifier, state });
+  bewaarPkce({ verifier, state, route: bedoeldeRoute(window.location.hash) });
   window.location.href = bouwAutorisatieUrl({ challenge, state });
 }
 
@@ -4457,10 +4475,22 @@ class OauthFout extends Error {}
  * Wisselt de code in en levert de sessie. Gooit OauthFout met een leesbare
  * Nederlandse tekst; de aanroeper toont die naast de loginknop.
  */
+let laatsteBedoeldeRoute = null;
+
+/* De route die vóór het inloggen bedoeld was, precies één keer op te halen. */
+function neemBedoeldeRoute() {
+  const r = laatsteBedoeldeRoute;
+  laatsteBedoeldeRoute = null;
+  return r;
+}
+
 async function voltooiOauthLogin(redirect) {
   const bewaard = leesPkce();
   vergeetPkce();
   schoonAdresbalk();
+  // Vóór elke foutafslag hieronder: is de state straks niet geldig, dan
+  // gebruiken we hem toch niet — maar dan is er ook geen sessie.
+  laatsteBedoeldeRoute = bewaard ? bedoeldeRoute(bewaard.route) : null;
 
   if (redirect.fout) {
     throw new OauthFout(
@@ -4570,7 +4600,7 @@ if (typeof module !== "undefined") {
     OAUTH_AUTORISATIE_URL, OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_REDIRECT_URI,
     OAUTH_SCOPE, OAUTH_RESOURCE, OAUTH_SS_KEY, OAUTH_PKCE_SS_KEY,
     oauthDashboardAan, oauthMogelijk, base64url, maakVerifier, maakChallenge,
-    bouwAutorisatieUrl, parseOauthRedirect, startOauthLogin, voltooiOauthLogin,
+    bouwAutorisatieUrl, parseOauthRedirect, bedoeldeRoute, neemBedoeldeRoute, startOauthLogin, voltooiOauthLogin,
     tokenAanvraag, vernieuwOauthSessie, oauthBron, OauthFout,
     bewaarOauthSessie, leesOauthSessie, vergeetOauthSessie, bewaarPkce, leesPkce, vergeetPkce,
   };
@@ -4957,6 +4987,80 @@ function voegRitmeToeAanAandacht(items, adopt) {
   };
   // Oranje: achter rood en grijs aan, net als de sortering in computeZone1.
   return items.concat([item]);
+}
+
+// -- f44: wat je team voor jou klaarzette --------------------------------
+//
+// De aanleiding: een klant ontdekte per ongeluk dat er werk voor haar
+// klaarstond ("Oh je hebt ook een actie?"). computeZone1 kende de categorie
+// simpelweg niet, dus drie verse review-acties leverden letterlijk "Niets
+// vraagt vandaag om aandacht" op.
+//
+// DE DEFINITIE, en waarom de voor de hand liggende versie fout is. Filteren op
+// alleen Status = "Wacht op review" mist waarschijnlijk de grootste berg: alle
+// vier de ritmetaken schrijven Status *Open* met de mens als eigenaar, en
+// core/served/werkronde.md verbiedt "Wacht op review" daar expliciet. Daarom
+// twee takken:
+//   (a) Status = "Wacht op review" en de eigenaar is geen agent, of
+//   (b) "Aangemaakt door" is een agent en de eigenaar is dat niet.
+// Ligt het bij een agent, dan ligt het niet bij jou — dat is de hele grens.
+//
+// Geen agentlijst = niets tonen, nooit gokken. Zelfde regel als bij
+// correctievrij (CORRECTIEVRIJ_GEEN_AGENTLIJST).
+const TEAM_OOGST_TYPE = "team-oogst";
+const TEAM_OOGST_REVIEW = "Wacht op review";
+
+function isAgentNaam(waarde, namen) {
+  if (!namen) return false;
+  const n = normAgentNaam(waarde);
+  return !!n && namen.has(n);
+}
+
+function teamOogstRijen(bundle, schema) {
+  const acties = rows(bundle, "acties");
+  if (!acties) return null;
+  const namen = agentNamen(schema);
+  if (!namen) return null;
+  return acties.filter(r => {
+    if (getField(r, "Status") === "Klaar") return false;
+    if (isAgentNaam(getField(r, "Eigenaar"), namen)) return false;
+    if (getField(r, "Status") === TEAM_OOGST_REVIEW) return true;
+    return isAgentNaam(getField(r, "Aangemaakt door"), namen);
+  });
+}
+
+function voegTeamOogstToeAanAandacht(items, bundle, schema) {
+  if (items.some(it => it.type === TEAM_OOGST_TYPE)) return items;
+  const alle = teamOogstRijen(bundle, schema);
+  if (!alle || !alle.length) return items;
+
+  // Dedupliceren is verplicht, niet netjes. Een ritmetaak-actie krijgt Deadline
+  // vandaag, dus de dag erna staat diezelfde rij óók in "over de deadline" —
+  // en die is rood, alsof jij te laat bent op werk dat je team gisteren
+  // neerlegde. Eén ding, één melding, en de vriendelijke wint.
+  const alGemeld = new Set();
+  for (const it of items) {
+    if (it.type !== "acties-deadline" && it.type !== "qc") continue;
+    for (const r of (it.rows || [])) if (r && r.__entryId) alGemeld.add(r.__entryId);
+  }
+  const nieuw = alle.filter(r => !r.__entryId || !alGemeld.has(r.__entryId));
+  if (!nieuw.length) return items;
+
+  const review = nieuw.filter(r => getField(r, "Status") === TEAM_OOGST_REVIEW).length;
+  const item = {
+    type: TEAM_OOGST_TYPE,
+    ernst: "oranje",
+    label: review
+      ? `Je team zette ${nieuw.length} ding(en) voor je klaar — ${review} wacht${review === 1 ? "" : "en"} op je oordeel`
+      : `Je team zette ${nieuw.length} ding(en) voor je klaar`,
+    rows: nieuw,
+  };
+  // Achter wat écht rood is (over de deadline, kwaliteitscontrole), maar vóór
+  // de rest: dit is werk dat klaarligt, geen achterstand — en het is wél het
+  // eerste wat je wilt weten.
+  const na = items.findIndex(it => it.ernst !== "rood");
+  if (na === -1) return items.concat([item]);
+  return items.slice(0, na).concat([item], items.slice(na));
 }
 
 // -- Homepage - Activiteit per week --------------------------------------
@@ -5438,6 +5542,7 @@ if (typeof module !== "undefined") {
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
+    voegTeamOogstToeAanAandacht, teamOogstRijen, isAgentNaam, TEAM_OOGST_TYPE, TEAM_OOGST_REVIEW,
   };
 }
 
@@ -6195,7 +6300,7 @@ function stempelHtml(staleAt, today) {
  * hij over gaat. Elk itemtype wijst naar zijn domein in de Data-tab; items
  * zonder rijenweergave (bedrijfscontext, ritme) blijven tekst, en een
  * metrics-item met een eigen https-link volgt die link. */
-const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel" };
+const AANDACHT_DOEL = { qc: "acties", "acties-deadline": "acties", klantsucces: "klantsucces", "deals-stil": "sales_funnel", "team-oogst": "acties" };
 
 function aandachtDoelHref(it) {
   if (it.link) return it.link;
@@ -7417,6 +7522,9 @@ function bepaalActieveView() {
 
 const DATA_MAX_RIJEN = 200;
 const DATA_MAX_KOLOMMEN = 6;
+/* f44: velden die altijd in beeld horen, ook als ze buiten de eerste kolommen
+ * vallen — ze beantwoorden "kwam dit van mijn team, of heb ik het zelf gemaakt?" */
+const HERKOMST_VELDEN = ["Aangemaakt door", "Afgerond door"];
 
 // Domeinen die per opzet nooit als rijen in de bundel zitten. We laten ze
 // niet stil weg — een leeg lijstje zonder uitleg leest als "er is niets",
@@ -7537,6 +7645,13 @@ function wisselStatusFilter(domein, status) {
 }
 
 function wisStatusFilter() { dataStatusUit = { domein: null, uit: [] }; }
+
+/* f44 — "Van je team": hetzelfde filter als het aandachtsitem op Vandaag, maar
+ * dan om het een week later nog terug te vinden. Zelfde afleiding
+ * (teamOogstRijen in zones.js), dus de lijst hier en de telling daar kunnen
+ * niet uiteenlopen. Ook dit staat alleen in het geheugen van de pagina. */
+let dataVanTeam = false;
+function wisVanTeamFilter() { dataVanTeam = false; }
 
 function dataVelden(domein) {
   return Array.isArray(domein && domein.velden) ? domein.velden : [];
@@ -8003,7 +8118,7 @@ const BORD_AANDACHT = "Wacht op review";
 function bordKaartHtml(ctx, key, domein, rij) {
   const titel = detailTitel(domein, rij);
   const velden = dataVelden(domein);
-  const toon = ["Eigenaar", "Agent", "Deadline", "Prioriteit"]
+  const toon = ["Eigenaar", "Agent", "Deadline", "Prioriteit", "Aangemaakt door"]
     .map(naam => ({ naam, veld: velden.find(v => v.naam === naam) }))
     .filter(x => x.veld && dataCelTekst(getField(rij, x.naam)) !== "")
     .map(x => `<span class="bord-meta">${dataCelHtml(getField(rij, x.naam), x.veld)}</span>`)
@@ -8138,7 +8253,14 @@ function renderDataDomein(el, key, ctx) {
   const relatieVelden = dataVelden(domein)
     .slice(DATA_MAX_KOLOMMEN)
     .filter(v => v.type === "relatie");
-  const velden = basisVelden.concat(relatieVelden);
+  // f44: "Aangemaakt door" is veld 9 op acties en viel dus buiten de eerste zes
+  // kolommen — precies het veld dat de vraag "kwam dit van mijn team?"
+  // beantwoordt. Zelfde uitzondering als de verwijzingen hierboven: de tabel
+  // scrolt horizontaal, dus een kolom erbij kost geen leesbaarheid.
+  const herkomstVelden = dataVelden(domein)
+    .slice(DATA_MAX_KOLOMMEN)
+    .filter(v => HERKOMST_VELDEN.indexOf(v.naam) !== -1 && relatieVelden.indexOf(v) === -1);
+  const velden = basisVelden.concat(relatieVelden, herkomstVelden);
   const datumVeld = dataDatumVeld(domein);
 
   function zichtbareRijen() {
@@ -8148,6 +8270,12 @@ function renderDataDomein(el, key, ctx) {
     if (q) {
       // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
       uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+    }
+    // f44: "van je team" gaat vóór alles — het is een selectie, geen zoekactie.
+    if (dataVanTeam) {
+      const oogst = teamOogstRijen(ctx.bundle, ctx.schema) || [];
+      const ids = oogst.map(r => r && r.__entryId).filter(Boolean);
+      uit = uit.filter(r => ids.indexOf(r.__entryId) !== -1);
     }
     // i71: het statusfilter zit vóór het zoeken in de keten, zodat zoeken
     // binnen de zichtbare selectie blijft werken zoals het al deed.
@@ -8235,6 +8363,7 @@ function renderDataDomein(el, key, ctx) {
         <button type="button" class="knop-mini${dataWeergave === "tabel" ? " actief" : ""}" data-weergave="tabel">Tabel</button>
         <button type="button" class="knop-mini${dataWeergave === "bord" ? " actief" : ""}" data-weergave="bord">Bord</button>
       </span>` : ""}
+      ${(teamOogstRijen(ctx.bundle, ctx.schema) || []).length ? `<button type="button" class="status-chip van-team${dataVanTeam ? " actief" : ""}" data-van-team aria-pressed="${dataVanTeam}">🤝 Van je team</button>` : ""}
       ${statusVeld ? `<span class="status-chips" role="group" aria-label="Tonen op status">${statusVeld.opties.map(o =>
         `<button type="button" class="status-chip${statusVerborgen(key).indexOf(o) !== -1 ? " uit" : ""}" data-status-chip="${esc(o)}" aria-pressed="${statusVerborgen(key).indexOf(o) === -1}">${esc(o)}</button>`
       ).join("")}</span>` : ""}
@@ -8242,7 +8371,7 @@ function renderDataDomein(el, key, ctx) {
     </div>
     <div data-data-detail>${detailHtml()}</div>
     <div data-data-tabel>${inhoudHtml()}</div>
-    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
+    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""}${herkomstVelden.length ? " plus wie het aanmaakte" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
     ${bewerk.ok ? "Bewerken schrijft rechtstreeks naar je eigen werkruimte." : "Alleen lezen — dit dashboard schrijft nooit terug."} Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
     ${bewerkUitleg}${nieuwKnop ? `<div class="data-toolbar">${nieuwKnop}</div>` : ""}<div data-bewerk-paneel></div>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
@@ -8294,6 +8423,14 @@ function renderDataDomein(el, key, ctx) {
         if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
         return;
       }
+    }
+    const vanTeam = e.target.closest && e.target.closest("[data-van-team]");
+    if (vanTeam) {
+      dataVanTeam = !dataVanTeam;
+      vanTeam.classList.toggle("actief", dataVanTeam);
+      vanTeam.setAttribute("aria-pressed", String(dataVanTeam));
+      herteken();
+      return;
     }
     // i71: statuschips — één per statuswaarde uit het registryschema, nooit
     // hardgecodeerd. Aanklikken verbergt of toont die status.
@@ -8491,7 +8628,7 @@ function renderDataDomein(el, key, ctx) {
   if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
-function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); }
+function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); wisVanTeamFilter(); }
 function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
 
 /* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
@@ -8511,7 +8648,7 @@ if (typeof module !== "undefined") {
     resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
-    statusVerborgen, wisselStatusFilter, wisStatusFilter,
+    statusVerborgen, wisselStatusFilter, wisStatusFilter, wisVanTeamFilter,
     bronVan, herkomstStrookHtml, bundelHeeftRijen, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
   };
 }
@@ -9188,7 +9325,7 @@ function leesLaatstGebruikt() {
   } catch (e) { return null; }
 }
 
-async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) {
+async function handleBundle(bundle, route, label, { behoudRoute = false, naarRoute = null } = {}) {
   currentBundle = bundle;
   rememberChoice(route, label);
   // Bij een nieuw geladen bundel begin je op de Vandaag-tab. Maar een bundel
@@ -9197,7 +9334,11 @@ async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) 
   // je in één klap je domein, je zoekterm, je bord- of tabelweergave en je
   // plek in de lijst. Dat overkwam alleen wie kon schrijven — en dus precies
   // de klant die de bediening voor het eerst gebruikte.
-  if (!behoudRoute) window.location.hash = "";
+  // f44: kwam je binnen via een deeplink en moest je eerst inloggen, dan hoor
+  // je daarna op díé plek uit te komen — niet op Vandaag, waar je opnieuw moet
+  // gaan zoeken naar wat je al gevonden had.
+  if (naarRoute) window.location.hash = naarRoute;
+  else if (!behoudRoute) window.location.hash = "";
   renderAll();
 }
 
@@ -9232,7 +9373,8 @@ function buildContext() {
     return {
       bundle, schema, agentLookup, today,
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
-      z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
+      z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
+      z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
       agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
@@ -9255,7 +9397,13 @@ function buildContext() {
   const m = buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWeeks, currentMinutenPerActie);
   return {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
-    z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
+    // f44: hier en niet in metrics.js, anders dan de twee andere toevoegingen
+    // aan de aandachtlijst. parseNotionMetricsFile() krijgt bewust géén bundel
+    // mee — "geen rij komt ooit in het geheugen" is het ontwerpprincipe van de
+    // metricsroute. buildContext is de enige plek die beide routes ziet én de
+    // rijen in handen heeft, dus dit is één aanroep in plaats van twee.
+    z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
+    z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
     agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
@@ -9614,12 +9762,12 @@ function toonLoginknop(aan) {
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron, { behoudRoute = false } = {}) {
+async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = {}) {
   huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
-    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute });
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
   } catch (err) {
     console.error(err);
     if (err.oauthVerlopen) {
@@ -9687,7 +9835,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLoginknop(true);
   const uitRedirect = await verwerkOauthRedirect();
   const bron = uitRedirect || restoreBron();
-  if (bron) { laadWerkruimte(bron); return; }
+  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
+  // keren; bij een gewone daglink staat de route al in de adresbalk.
+  const naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
   // Er stond wél iets achter het #-teken, maar er kwam geen bruikbare bron uit.
   // "Geen daglink gevonden" is dan het verkeerde antwoord: er wás een link.
   if (hashLijktOpDaglink(window.location.hash)) {

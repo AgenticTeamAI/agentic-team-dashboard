@@ -41,6 +41,24 @@ beforeAll(() => {
   g = globalThis;
 });
 
+/* jsdom levert in deze opzet geen werkende localStorage — window.localStorage
+ * bestaat wél, maar heeft geen setItem/getItem. Een assertie als
+ * `expect({...localStorage}).toEqual(voor)` vergelijkt daardoor twee keer {}
+ * en bewijst niets; die stond hier eerst. Dezelfde minimale stub als
+ * test/f33-notities-bedienen.test.js meet het wél. */
+function stubOpslag() {
+  const kluis = new Map();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k) => (kluis.has(k) ? kluis.get(k) : null),
+      setItem: (k, v) => kluis.set(k, String(v)),
+      removeItem: (k) => kluis.delete(k),
+    },
+  });
+  return kluis;
+}
+
 function el() {
   const d = document.createElement("div");
   document.body.appendChild(d);
@@ -241,10 +259,11 @@ describe("statusfilter", () => {
      uitputtend op wat dit dashboard blijvend in de browser bewaart. Een
      onthouden filter zou die tekst onwaar maken. */
   it("onthoudt niets in localStorage", () => {
-    const voor = { ...window.localStorage };
+    const kluis = stubOpslag();
     const c = verseTabel();
     c.querySelector('[data-status-chip="Klaar"]').click();
-    expect({ ...window.localStorage }).toEqual(voor);
+    c.querySelector('[data-status-chip="Open"]').click();
+    expect([...kluis.keys()], "het statusfilter mag niets bewaren").toEqual([]);
     // en er staat geen enkele opslagaanroep in dit bestand — ook niet voor
     // iets anders, want dan zou de opsomming in de privacytekst alsnog gaan
     // schuiven zodra iemand hem "even" hergebruikt.

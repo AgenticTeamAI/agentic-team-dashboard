@@ -46,7 +46,7 @@ function leesLaatstGebruikt() {
   } catch (e) { return null; }
 }
 
-async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) {
+async function handleBundle(bundle, route, label, { behoudRoute = false, naarRoute = null } = {}) {
   currentBundle = bundle;
   rememberChoice(route, label);
   // Bij een nieuw geladen bundel begin je op de Vandaag-tab. Maar een bundel
@@ -55,7 +55,11 @@ async function handleBundle(bundle, route, label, { behoudRoute = false } = {}) 
   // je in één klap je domein, je zoekterm, je bord- of tabelweergave en je
   // plek in de lijst. Dat overkwam alleen wie kon schrijven — en dus precies
   // de klant die de bediening voor het eerst gebruikte.
-  if (!behoudRoute) window.location.hash = "";
+  // f44: kwam je binnen via een deeplink en moest je eerst inloggen, dan hoor
+  // je daarna op díé plek uit te komen — niet op Vandaag, waar je opnieuw moet
+  // gaan zoeken naar wat je al gevonden had.
+  if (naarRoute) window.location.hash = naarRoute;
+  else if (!behoudRoute) window.location.hash = "";
   renderAll();
 }
 
@@ -90,7 +94,8 @@ function buildContext() {
     return {
       bundle, schema, agentLookup, today,
       periodWeeks: m.periodWeeks, periodDays: m.periodDays,
-      z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
+      z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
+      z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
       agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
@@ -113,7 +118,13 @@ function buildContext() {
   const m = buildMetricsFromRowsBundle(bundle, schema, agentLookup, today, periodWeeks, currentMinutenPerActie);
   return {
     bundle, schema, agentLookup, today, periodWeeks: m.periodWeeks, periodDays: m.periodDays,
-    z1: m.z1, z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
+    // f44: hier en niet in metrics.js, anders dan de twee andere toevoegingen
+    // aan de aandachtlijst. parseNotionMetricsFile() krijgt bewust géén bundel
+    // mee — "geen rij komt ooit in het geheugen" is het ontwerpprincipe van de
+    // metricsroute. buildContext is de enige plek die beide routes ziet én de
+    // rijen in handen heeft, dus dit is één aanroep in plaats van twee.
+    z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
+    z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
     agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
@@ -472,12 +483,12 @@ function toonLoginknop(aan) {
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron, { behoudRoute = false } = {}) {
+async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = {}) {
   huidigeBron = bron;
   toonLegeStaat("Live gegevens uit je werkruimte worden opgehaald…", "", { login: false });
   try {
     const bundle = await loadWerkruimteBundle(bron);
-    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute });
+    await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
   } catch (err) {
     console.error(err);
     if (err.oauthVerlopen) {
@@ -545,7 +556,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLoginknop(true);
   const uitRedirect = await verwerkOauthRedirect();
   const bron = uitRedirect || restoreBron();
-  if (bron) { laadWerkruimte(bron); return; }
+  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
+  // keren; bij een gewone daglink staat de route al in de adresbalk.
+  const naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
   // Er stond wél iets achter het #-teken, maar er kwam geen bruikbare bron uit.
   // "Geen daglink gevonden" is dan het verkeerde antwoord: er wás een link.
   if (hashLijktOpDaglink(window.location.hash)) {
