@@ -17,6 +17,9 @@
 
 const DATA_MAX_RIJEN = 200;
 const DATA_MAX_KOLOMMEN = 6;
+/* f44: velden die altijd in beeld horen, ook als ze buiten de eerste kolommen
+ * vallen — ze beantwoorden "kwam dit van mijn team, of heb ik het zelf gemaakt?" */
+const HERKOMST_VELDEN = ["Aangemaakt door", "Afgerond door"];
 
 // Domeinen die per opzet nooit als rijen in de bundel zitten. We laten ze
 // niet stil weg — een leeg lijstje zonder uitleg leest als "er is niets",
@@ -137,6 +140,13 @@ function wisselStatusFilter(domein, status) {
 }
 
 function wisStatusFilter() { dataStatusUit = { domein: null, uit: [] }; }
+
+/* f44 — "Van je team": hetzelfde filter als het aandachtsitem op Vandaag, maar
+ * dan om het een week later nog terug te vinden. Zelfde afleiding
+ * (teamOogstRijen in zones.js), dus de lijst hier en de telling daar kunnen
+ * niet uiteenlopen. Ook dit staat alleen in het geheugen van de pagina. */
+let dataVanTeam = false;
+function wisVanTeamFilter() { dataVanTeam = false; }
 
 function dataVelden(domein) {
   return Array.isArray(domein && domein.velden) ? domein.velden : [];
@@ -603,7 +613,7 @@ const BORD_AANDACHT = "Wacht op review";
 function bordKaartHtml(ctx, key, domein, rij) {
   const titel = detailTitel(domein, rij);
   const velden = dataVelden(domein);
-  const toon = ["Eigenaar", "Agent", "Deadline", "Prioriteit"]
+  const toon = ["Eigenaar", "Agent", "Deadline", "Prioriteit", "Aangemaakt door"]
     .map(naam => ({ naam, veld: velden.find(v => v.naam === naam) }))
     .filter(x => x.veld && dataCelTekst(getField(rij, x.naam)) !== "")
     .map(x => `<span class="bord-meta">${dataCelHtml(getField(rij, x.naam), x.veld)}</span>`)
@@ -738,7 +748,14 @@ function renderDataDomein(el, key, ctx) {
   const relatieVelden = dataVelden(domein)
     .slice(DATA_MAX_KOLOMMEN)
     .filter(v => v.type === "relatie");
-  const velden = basisVelden.concat(relatieVelden);
+  // f44: "Aangemaakt door" is veld 9 op acties en viel dus buiten de eerste zes
+  // kolommen — precies het veld dat de vraag "kwam dit van mijn team?"
+  // beantwoordt. Zelfde uitzondering als de verwijzingen hierboven: de tabel
+  // scrolt horizontaal, dus een kolom erbij kost geen leesbaarheid.
+  const herkomstVelden = dataVelden(domein)
+    .slice(DATA_MAX_KOLOMMEN)
+    .filter(v => HERKOMST_VELDEN.indexOf(v.naam) !== -1 && relatieVelden.indexOf(v) === -1);
+  const velden = basisVelden.concat(relatieVelden, herkomstVelden);
   const datumVeld = dataDatumVeld(domein);
 
   function zichtbareRijen() {
@@ -748,6 +765,12 @@ function renderDataDomein(el, key, ctx) {
     if (q) {
       // Bewust op `uit`, niet op `rows`: zoeken werkt bínnen de voorselectie.
       uit = uit.filter(r => velden.some(v => dataCelTekst(getField(r, v.naam)).toLowerCase().includes(q)));
+    }
+    // f44: "van je team" gaat vóór alles — het is een selectie, geen zoekactie.
+    if (dataVanTeam) {
+      const oogst = teamOogstRijen(ctx.bundle, ctx.schema) || [];
+      const ids = oogst.map(r => r && r.__entryId).filter(Boolean);
+      uit = uit.filter(r => ids.indexOf(r.__entryId) !== -1);
     }
     // i71: het statusfilter zit vóór het zoeken in de keten, zodat zoeken
     // binnen de zichtbare selectie blijft werken zoals het al deed.
@@ -835,6 +858,7 @@ function renderDataDomein(el, key, ctx) {
         <button type="button" class="knop-mini${dataWeergave === "tabel" ? " actief" : ""}" data-weergave="tabel">Tabel</button>
         <button type="button" class="knop-mini${dataWeergave === "bord" ? " actief" : ""}" data-weergave="bord">Bord</button>
       </span>` : ""}
+      ${(teamOogstRijen(ctx.bundle, ctx.schema) || []).length ? `<button type="button" class="status-chip van-team${dataVanTeam ? " actief" : ""}" data-van-team aria-pressed="${dataVanTeam}">🤝 Van je team</button>` : ""}
       ${statusVeld ? `<span class="status-chips" role="group" aria-label="Tonen op status">${statusVeld.opties.map(o =>
         `<button type="button" class="status-chip${statusVerborgen(key).indexOf(o) !== -1 ? " uit" : ""}" data-status-chip="${esc(o)}" aria-pressed="${statusVerborgen(key).indexOf(o) === -1}">${esc(o)}</button>`
       ).join("")}</span>` : ""}
@@ -842,7 +866,7 @@ function renderDataDomein(el, key, ctx) {
     </div>
     <div data-data-detail>${detailHtml()}</div>
     <div data-data-tabel>${inhoudHtml()}</div>
-    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
+    <p class="footnote">Eerste ${basisVelden.length} velden${relatieVelden.length ? " plus de verwijzingen" : ""}${herkomstVelden.length ? " plus wie het aanmaakte" : ""} uit het registryschema${datumVeld ? `, nieuwste ${esc(datumVeld)} boven` : ""}.
     ${bewerk.ok ? "Bewerken schrijft rechtstreeks naar je eigen werkruimte." : "Alleen lezen — dit dashboard schrijft nooit terug."} Herkomst: ${esc((ctx.bundle.domains[key] || {}).herkomstLabel || "je werkruimte")}.</p>
     ${bewerkUitleg}${nieuwKnop ? `<div class="data-toolbar">${nieuwKnop}</div>` : ""}<div data-bewerk-paneel></div>
     <a class="detail-link" href="#/data">← Alle gegevens</a>`;
@@ -894,6 +918,14 @@ function renderDataDomein(el, key, ctx) {
         if (kaart && kaart.scrollIntoView) kaart.scrollIntoView({ block: "nearest", behavior: "smooth" });
         return;
       }
+    }
+    const vanTeam = e.target.closest && e.target.closest("[data-van-team]");
+    if (vanTeam) {
+      dataVanTeam = !dataVanTeam;
+      vanTeam.classList.toggle("actief", dataVanTeam);
+      vanTeam.setAttribute("aria-pressed", String(dataVanTeam));
+      herteken();
+      return;
     }
     // i71: statuschips — één per statuswaarde uit het registryschema, nooit
     // hardgecodeerd. Aanklikken verbergt of toont die status.
@@ -1091,7 +1123,7 @@ function renderDataDomein(el, key, ctx) {
   if (bewerk.ok) wireDataBewerken(el, key, ctx, ctx.herlaad || (() => {}));
 }
 
-function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); }
+function resetDataZoek() { dataZoek = ""; dataWeergave = "tabel"; wisDataDetail(); wisStatusFilter(); wisVanTeamFilter(); }
 function zetDataZoek(waarde) { dataZoek = typeof waarde === "string" ? waarde : ""; }
 
 /* Klikproef-ronde 2 (1 sep): een alert klikt door naar precies zíjn rijen.
@@ -1111,7 +1143,7 @@ if (typeof module !== "undefined") {
     resetDataZoek, zetDataZoek, zetDataVoorselectie, wisDataVoorselectie, DATA_MAX_RIJEN, DATA_NIET_IN_BUNDEL,
     zetDataDetail, wisDataDetail, terugverwijzingen, dataDetailHtml, bordHtml, statusVeldVan, subacties, verwijstNaar,
     notitiesBij, notitiedraadHtml, notitieVeldVan, bedienHtml,
-    statusVerborgen, wisselStatusFilter, wisStatusFilter,
+    statusVerborgen, wisselStatusFilter, wisStatusFilter, wisVanTeamFilter,
     bronVan, herkomstStrookHtml, bundelHeeftRijen, DATA_GROEPEN, DATA_GROEP_OVERIG, groepVan, BRONSYSTEEM_NAMEN, ALTIJD_WERKRUIMTE,
   };
 }

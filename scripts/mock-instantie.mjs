@@ -61,6 +61,7 @@ if (process.env.MOCK_ZONDER_TEAMFEED !== '1') {
 
 // f24-testvarianten voor het dashboard_metrics-domein:
 //   MOCK_METRICS=vers|oud|kapot|versie2   (weggelaten = geen metrics-entry)
+//   MOCK_TEAM_OOGST=1  (f44: twee acties die je team voor je klaarzette)
 //   MOCK_ALLEEN_GEHEUGEN=1                (alleen logboek+bedrijfscontext als
 //                                          rows — simuleert een klant met
 //                                          werkdata buiten de werkruimte)
@@ -103,6 +104,30 @@ if (process.env.MOCK_ALLEEN_GEHEUGEN === '1') {
     if (!['bedrijfscontext', 'dashboard_metrics', 'bronkoppeling', 'teamfeed', '_strayActies'].includes(naam) && naam !== 'logboek') delete domeinen[naam]
   }
 }
+// f44: werk dat het team voor de gebruiker heeft klaargezet. De gewone fixture
+// bevat hier geen enkel voorbeeld van — geen actie op "Wacht op review", geen
+// enkele met "Aangemaakt door" — en dat is mede waarom niemand opmerkte dat het
+// dashboard die categorie helemaal niet kende. Twee rijen, één per tak van de
+// definitie: eentje die op je oordeel wacht, en eentje zoals een ritmetaak hem
+// wegschrijft (Status Open, mens als eigenaar, deadline vandaag).
+if (process.env.MOCK_TEAM_OOGST === '1') {
+  const vandaag = new Date().toISOString().slice(0, 10)
+  domeinen.acties = (domeinen.acties || []).concat([
+    {
+      domein: 'acties', entryId: 'oogst-1',
+      data: { Actie: 'Concept offerte De Linde — klaar voor jouw blik', Status: 'Wacht op review',
+              Eigenaar: 'Nina de Groot', Agent: 'Dealmaker', 'Aangemaakt door': 'Dealmaker', Type: 'Sales' },
+      aangemaakt: `${vandaag}T07:04:00Z`, bijgewerkt: `${vandaag}T07:04:00Z`,
+    },
+    {
+      domein: 'acties', entryId: 'oogst-2',
+      data: { Actie: 'Dubbele deal-entry opruimen (uit de datakwaliteit-check)', Status: 'Open',
+              Eigenaar: 'Nina de Groot', 'Aangemaakt door': 'Coördinator', Deadline: vandaag, Type: 'Intern' },
+      aangemaakt: `${vandaag}T07:05:00Z`, bijgewerkt: `${vandaag}T07:05:00Z`,
+    },
+  ])
+}
+
 if (domeinen._strayActies) {
   domeinen.acties = domeinen._strayActies
   delete domeinen._strayActies

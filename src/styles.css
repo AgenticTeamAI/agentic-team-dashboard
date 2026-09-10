@@ -569,6 +569,9 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
   min-height: 28px;
 }
 .status-chip:hover { border-color: var(--mint); }
+/* f44: "Van je team" is een selectie, geen uitsluiting — actief is dus aan,
+   niet doorgestreept zoals bij de statuschips. */
+.status-chip.van-team.actief { border-color: var(--mint); color: var(--mint); background: rgba(74,222,128,0.10); }
 .status-chip.uit {
   color: var(--grijs-status); border-style: dashed; background: transparent;
   text-decoration: line-through;

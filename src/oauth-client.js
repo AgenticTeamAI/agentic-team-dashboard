@@ -178,13 +178,28 @@ function vergeetOauthSessie() {
 
 /* ── Stap 1: wegsturen naar het consentscherm ──────────────────────────── */
 
+/* f44: een deeplink achter de login. Open je
+ * dashboard.agentic-team.ai/#/data/acties zonder sessie, dan wil je ná het
+ * inloggen dáár uitkomen — niet op Vandaag, waar je opnieuw moet gaan zoeken.
+ *
+ * De bedoelde route reist mee in de PKCE-record die er al is: geen nieuwe
+ * opslagsleutel, dus de uitputtende sleutellijst in geen-telemetrie.test.js
+ * blijft precies zoals hij is, en de record ruimt zichzelf al op na gebruik.
+ *
+ * Alleen echte routes ("#/…"), nooit een daglinkfragment of een redirect — een
+ * token hoort hier niet in te belanden. */
+function bedoeldeRoute(hash) {
+  const h = String(hash || "");
+  return h.startsWith("#/") ? h : null;
+}
+
 async function startOauthLogin() {
   const verifier = maakVerifier();
   const state = base64url(willekeurigeBytes(16));
   const challenge = await maakChallenge(verifier);
   // Eerst opslaan, dán navigeren: andersom is er een venster waarin de
   // redirect terugkomt zonder dat de verifier bestaat.
-  bewaarPkce({ verifier, state });
+  bewaarPkce({ verifier, state, route: bedoeldeRoute(window.location.hash) });
   window.location.href = bouwAutorisatieUrl({ challenge, state });
 }
 
@@ -223,10 +238,22 @@ class OauthFout extends Error {}
  * Wisselt de code in en levert de sessie. Gooit OauthFout met een leesbare
  * Nederlandse tekst; de aanroeper toont die naast de loginknop.
  */
+let laatsteBedoeldeRoute = null;
+
+/* De route die vóór het inloggen bedoeld was, precies één keer op te halen. */
+function neemBedoeldeRoute() {
+  const r = laatsteBedoeldeRoute;
+  laatsteBedoeldeRoute = null;
+  return r;
+}
+
 async function voltooiOauthLogin(redirect) {
   const bewaard = leesPkce();
   vergeetPkce();
   schoonAdresbalk();
+  // Vóór elke foutafslag hieronder: is de state straks niet geldig, dan
+  // gebruiken we hem toch niet — maar dan is er ook geen sessie.
+  laatsteBedoeldeRoute = bewaard ? bedoeldeRoute(bewaard.route) : null;
 
   if (redirect.fout) {
     throw new OauthFout(
@@ -336,7 +363,7 @@ if (typeof module !== "undefined") {
     OAUTH_AUTORISATIE_URL, OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_REDIRECT_URI,
     OAUTH_SCOPE, OAUTH_RESOURCE, OAUTH_SS_KEY, OAUTH_PKCE_SS_KEY,
     oauthDashboardAan, oauthMogelijk, base64url, maakVerifier, maakChallenge,
-    bouwAutorisatieUrl, parseOauthRedirect, startOauthLogin, voltooiOauthLogin,
+    bouwAutorisatieUrl, parseOauthRedirect, bedoeldeRoute, neemBedoeldeRoute, startOauthLogin, voltooiOauthLogin,
     tokenAanvraag, vernieuwOauthSessie, oauthBron, OauthFout,
     bewaarOauthSessie, leesOauthSessie, vergeetOauthSessie, bewaarPkce, leesPkce, vergeetPkce,
   };

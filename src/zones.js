@@ -380,6 +380,80 @@ function voegRitmeToeAanAandacht(items, adopt) {
   return items.concat([item]);
 }
 
+// -- f44: wat je team voor jou klaarzette --------------------------------
+//
+// De aanleiding: een klant ontdekte per ongeluk dat er werk voor haar
+// klaarstond ("Oh je hebt ook een actie?"). computeZone1 kende de categorie
+// simpelweg niet, dus drie verse review-acties leverden letterlijk "Niets
+// vraagt vandaag om aandacht" op.
+//
+// DE DEFINITIE, en waarom de voor de hand liggende versie fout is. Filteren op
+// alleen Status = "Wacht op review" mist waarschijnlijk de grootste berg: alle
+// vier de ritmetaken schrijven Status *Open* met de mens als eigenaar, en
+// core/served/werkronde.md verbiedt "Wacht op review" daar expliciet. Daarom
+// twee takken:
+//   (a) Status = "Wacht op review" en de eigenaar is geen agent, of
+//   (b) "Aangemaakt door" is een agent en de eigenaar is dat niet.
+// Ligt het bij een agent, dan ligt het niet bij jou — dat is de hele grens.
+//
+// Geen agentlijst = niets tonen, nooit gokken. Zelfde regel als bij
+// correctievrij (CORRECTIEVRIJ_GEEN_AGENTLIJST).
+const TEAM_OOGST_TYPE = "team-oogst";
+const TEAM_OOGST_REVIEW = "Wacht op review";
+
+function isAgentNaam(waarde, namen) {
+  if (!namen) return false;
+  const n = normAgentNaam(waarde);
+  return !!n && namen.has(n);
+}
+
+function teamOogstRijen(bundle, schema) {
+  const acties = rows(bundle, "acties");
+  if (!acties) return null;
+  const namen = agentNamen(schema);
+  if (!namen) return null;
+  return acties.filter(r => {
+    if (getField(r, "Status") === "Klaar") return false;
+    if (isAgentNaam(getField(r, "Eigenaar"), namen)) return false;
+    if (getField(r, "Status") === TEAM_OOGST_REVIEW) return true;
+    return isAgentNaam(getField(r, "Aangemaakt door"), namen);
+  });
+}
+
+function voegTeamOogstToeAanAandacht(items, bundle, schema) {
+  if (items.some(it => it.type === TEAM_OOGST_TYPE)) return items;
+  const alle = teamOogstRijen(bundle, schema);
+  if (!alle || !alle.length) return items;
+
+  // Dedupliceren is verplicht, niet netjes. Een ritmetaak-actie krijgt Deadline
+  // vandaag, dus de dag erna staat diezelfde rij óók in "over de deadline" —
+  // en die is rood, alsof jij te laat bent op werk dat je team gisteren
+  // neerlegde. Eén ding, één melding, en de vriendelijke wint.
+  const alGemeld = new Set();
+  for (const it of items) {
+    if (it.type !== "acties-deadline" && it.type !== "qc") continue;
+    for (const r of (it.rows || [])) if (r && r.__entryId) alGemeld.add(r.__entryId);
+  }
+  const nieuw = alle.filter(r => !r.__entryId || !alGemeld.has(r.__entryId));
+  if (!nieuw.length) return items;
+
+  const review = nieuw.filter(r => getField(r, "Status") === TEAM_OOGST_REVIEW).length;
+  const item = {
+    type: TEAM_OOGST_TYPE,
+    ernst: "oranje",
+    label: review
+      ? `Je team zette ${nieuw.length} ding(en) voor je klaar — ${review} wacht${review === 1 ? "" : "en"} op je oordeel`
+      : `Je team zette ${nieuw.length} ding(en) voor je klaar`,
+    rows: nieuw,
+  };
+  // Achter wat écht rood is (over de deadline, kwaliteitscontrole), maar vóór
+  // de rest: dit is werk dat klaarligt, geen achterstand — en het is wél het
+  // eerste wat je wilt weten.
+  const na = items.findIndex(it => it.ernst !== "rood");
+  if (na === -1) return items.concat([item]);
+  return items.slice(0, na).concat([item], items.slice(na));
+}
+
 // -- Homepage - Activiteit per week --------------------------------------
 // Vier series, elk uit hun eigen datumveld. Weken zonder een van de vier
 // series blijven in de output staan met totaal 0 (leeg=true) - nooit
@@ -859,5 +933,6 @@ if (typeof module !== "undefined") {
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
+    voegTeamOogstToeAanAandacht, teamOogstRijen, isAgentNaam, TEAM_OOGST_TYPE, TEAM_OOGST_REVIEW,
   };
 }
