@@ -246,6 +246,17 @@ describe("deeplink achter de login", () => {
   /* Geen nieuwe opslagsleutel: de route reist mee in de PKCE-record die er al
      is en die zichzelf na gebruik opruimt. Anders breekt de uitputtende
      sleutellijst in geen-telemetrie.test.js én de juridische opsomming. */
+  /* Wie de link uit het slotbericht opent zonder sessie, kreeg "Geen daglink
+     gevonden" te zien — met de inlogknop ernaast. Dat leest als een storing,
+     terwijl er niets stuk is. */
+  it("zegt bij een deeplink zonder sessie wat je moet doen, niet wat er ontbreekt", () => {
+    const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
+    expect(html).toContain("Log in om deze pagina te openen");
+    expect(html).toMatch(/bedoeldeRoute\(window\.location\.hash\) && oauthMogelijk\(\)/);
+    // en de daglink-uitleg blijft bestaan voor wie niet kán inloggen
+    expect(html).toContain("Geen daglink gevonden");
+  });
+
   /* De route hoort in de PKCE-record die er al is, niet in een eigen sleutel:
      anders breekt de uitputtende sleutellijst in geen-telemetrie.test.js én de
      juridisch getoetste opsomming in teksten.js. */
