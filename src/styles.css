@@ -742,6 +742,27 @@ tr.rij-open { background: var(--card); }
 .detail-regel:last-of-type { border-bottom: none; }
 .detail-veld { color: var(--muted); flex: 0 0 34%; max-width: 34%; }
 .detail-waarde { flex: 1 1 auto; overflow-wrap: anywhere; }
+/* i75 — lange tekst leesbaar: een maatregel voor de regellengte (een oog
+   verliest de volgende regel boven ±75 tekens), lucht tussen de alinea's, en
+   de structuur die de agent bedoelde ook echt zichtbaar. */
+.detail-lang { border-bottom: 1px solid var(--border); padding: 9px 0 11px; }
+.detail-lang:last-of-type { border-bottom: none; }
+.detail-lang-kop { flex: none; max-width: none; margin: 0 0 6px; font-size: 0.92em; }
+.prosa { max-width: 68ch; line-height: 1.65; overflow-wrap: anywhere; }
+.prosa > :first-child { margin-top: 0; }
+.prosa > :last-child { margin-bottom: 0; }
+.prosa p { margin: 0 0 0.7em; }
+.prosa strong { color: var(--white); }
+.prosa .prosa-kop { margin: 1.15em 0 0.35em; color: var(--white); font-weight: 600; }
+.prosa .prosa-kop:first-child { margin-top: 0; }
+.prosa ul, .prosa ol { margin: 0 0 0.7em; padding-left: 1.35em; }
+.prosa li { margin: 0.15em 0; }
+.prosa blockquote { margin: 0 0 0.8em; padding: 2px 0 2px 12px; border-left: 2px solid var(--mint-light); color: var(--grey); }
+.prosa blockquote p:last-child { margin-bottom: 0; }
+.prosa hr { border: none; border-top: 1px solid var(--border); margin: 1.15em 0; }
+.prosa code { font-family: monospace; font-size: 0.92em; background: rgba(255,255,255,0.06); padding: 1px 4px; border-radius: 4px; }
+.notitie-tekst.prosa { margin: 4px 0 0; white-space: normal; font-size: 0.92em; }
+
 .detail-kop-terug { margin: 14px 0 4px; }
 .detail-terug ul { margin: 2px 0 10px; padding-left: 18px; }
 .detail-terug p { margin: 0; }

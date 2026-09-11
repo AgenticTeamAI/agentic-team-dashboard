@@ -237,6 +237,17 @@ function terugverwijzingen(ctx, domein, entryId) {
   return uit;
 }
 
+/* i75: welke velden verdienen de volle breedte? Niet op veldnaam — die
+ * verschilt per domein en per registryversie — maar op wat er in staat. Een
+ * regelovergang betekent dat de schrijver structuur bedoelde; boven de 180
+ * tekens past het sowieso niet meer in een tabelcel. Verwijzingen en links
+ * blijven uit deze tak: die worden al als klikbare titel gerenderd. */
+const LANGE_TEKST_VANAF = 180;
+function isLangeTekst(veld, tekst) {
+  if (veld && (veld.type === "relatie" || veld.type === "url")) return false;
+  return tekst.indexOf("\n") !== -1 || tekst.length > LANGE_TEKST_VANAF;
+}
+
 function detailTitel(domein, rij) {
   const titelVeld = dataVelden(domein).find(v => v.type === "titel");
   return (titelVeld && dataCelTekst(getField(rij, titelVeld.naam))) || "(zonder titel)";
@@ -247,11 +258,32 @@ function dataDetailHtml(ctx, key, rij) {
   const velden = dataVelden(domein);
   const gevuld = velden.filter(v => dataCelTekst(getField(rij, v.naam)) !== "");
   const leeg = velden.filter(v => dataCelTekst(getField(rij, v.naam)) === "").map(v => v.naam);
-  const regels = gevuld.map(v =>
+
+  // i75: een veld als Toelichting draagt het hele werkstuk van een agent. In de
+  // smalle waardekolom werd dat één blok van duizenden tekens op regels van
+  // honderdtwintig aanslagen, en de metadata eronder (Aangemaakt door, Afgerond
+  // op) verdween twee schermen naar beneden. Lange tekst krijgt daarom de volle
+  // breedte, zijn eigen opmaak, en staat ná de korte velden.
+  const kort = [], lang = [];
+  for (const v of gevuld) {
+    const tekst = dataCelTekst(getField(rij, v.naam));
+    (isLangeTekst(v, tekst) ? lang : kort).push({ veld: v, tekst });
+  }
+  const regels = kort.map(({ veld: v }) =>
     `<div class="detail-regel"><span class="detail-veld">${esc(v.naam)}</span>
       <span class="detail-waarde">${dataCelHtml(getField(rij, v.naam), v)}</span></div>`).join("");
+  const langeRegels = lang.map(({ veld: v, tekst }) =>
+    `<div class="detail-lang"><p class="detail-veld detail-lang-kop">${esc(v.naam)}</p>
+      <div class="prosa">${langeTekstHtml(tekst)}</div></div>`).join("");
 
-  const terug = terugverwijzingen(ctx, key, rij.__entryId);
+  // i75: staat de notitiedraad hierboven al uitgeschreven — mét tekst, auteur
+  // en datum — dan is dezelfde notitie hieronder als kale titel een tweede,
+  // armere melding van hetzelfde. Alleen weglaten als die draad er ook echt
+  // is: draagt deze registry of instantie geen notities, dan is de
+  // terugverwijzing de énige plek waar je ze ziet.
+  const draad = notitiedraadHtml(ctx, key, rij);
+  const terug = terugverwijzingen(ctx, key, rij.__entryId)
+    .filter(t => !(draad && t.slug === "notities"));
   const terugHtml = terug.length
     ? terug.map(t => {
         const items = t.treffers.slice(0, 25).map(r => {
@@ -278,8 +310,9 @@ function dataDetailHtml(ctx, key, rij) {
     </div>
     ${bedienHtml(ctx, key, domein, rij)}
     ${regels}
+    ${langeRegels}
     ${leeg.length ? `<p class="footnote">Niet ingevuld: ${esc(leeg.join(", "))}.</p>` : ""}
-    ${notitiedraadHtml(ctx, key, rij)}
+    ${draad}
     <p class="detail-kop-terug"><strong>Wat hieraan hangt</strong></p>
     ${terugHtml}
     <div class="bewerk-knoppen">${knoppen}</div>
@@ -366,7 +399,7 @@ function notitiedraadHtml(ctx, key, rij) {
     return `<li class="notitie">
       <p class="notitie-kop"><strong>${esc(dataCelTekst(getField(n, "Onderwerp")) || "Notitie")}</strong>
         <span class="footnote">${esc([wie, soort, wanneer].filter(Boolean).join(" · "))}</span></p>
-      <p class="notitie-tekst">${esc(dataCelTekst(getField(n, "Notitie")))}</p>
+      <div class="notitie-tekst prosa">${langeTekstHtml(dataCelTekst(getField(n, "Notitie")))}</div>
     </li>`;
   }).join("");
 
