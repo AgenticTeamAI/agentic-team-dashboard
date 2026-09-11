@@ -444,7 +444,10 @@ function wireInputs() {
   });
 
   document.getElementById("btn-ververs").addEventListener("click", () => {
-    if (huidigeBron) laadWerkruimte(huidigeBron);
+    // behoudRoute, net als na een schrijfactie: verversen is geen nieuw begin.
+    // Zonder deze vlag maakt handleBundle() de hash leeg en sta je ineens op
+    // Vandaag terwijl je op de Data-tab naar iets stond te kijken.
+    if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true });
   });
 
   document.body.addEventListener("change", (e) => {

@@ -715,8 +715,25 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
 .bewerk-knoppen { display: flex; gap: 8px; margin-top: 6px; }
 
 /* f33 fase A: één rij openklappen — detailkaart met terugverwijzingen */
-.rij-open-knop { background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
-.rij-open-knop:hover { color: var(--mint-light); }
+/* De titelcel was een knop mét stippellijn, uit de tijd dat alleen díé cel
+   klikbaar was. Nu de hele rij klikbaar is (i71) staat die lijn onder élke
+   titel in de tabel — dertig keer hetzelfde signaal voor hetzelfde ding, en
+   bij een lange titel over vier regels. De knop blijft, de nadruk gaat weg:
+   pas bij hover licht hij op, en dan volstaat de kleur. */
+.rij-open-knop {
+  background: none; border: none; padding: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; text-decoration: none;
+  -webkit-user-select: none; user-select: none;
+}
+tr.rij-klikbaar:hover .rij-open-knop, .rij-open-knop:hover { color: var(--mint-light); }
+/* Toetsenbordgebruikers moeten wél kunnen zien waar ze zijn. */
+.rij-open-knop:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; border-radius: 3px; }
+
+/* Een klik in de tabel selecteerde de celtekst — met de standaard-
+   selectiekleur van de browser, die op dit donkere vlak knalgroen uitpakt.
+   De cellen zelf blijven selecteerbaar (je wilt een titel kunnen kopiëren);
+   alleen de klikbare titelknop niet, want daar is klikken de bedoeling. */
+::selection { background: rgba(74,222,128,0.28); color: var(--white); }
 tr.rij-open { background: var(--card); }
 .detail-kaart { background: var(--card); border: 1px solid var(--mint-light); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
 .detail-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }

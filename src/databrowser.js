@@ -803,7 +803,10 @@ function renderDataDomein(el, key, ctx) {
       const cellen = velden.map((v, i) => {
         const cel = dataCelHtml(getField(r, v.naam), v);
         if (i !== 0 || !r.__entryId) return `<td>${cel}</td>`;
-        return `<td><button type="button" class="rij-open-knop" data-open-rij="${esc(key)}|${esc(r.__entryId)}" title="Rij openen">${cel || "(zonder titel)"}</button></td>`;
+        // De knop blijft (toetsenbordroute en toegankelijk label), maar zonder
+        // tooltip: de hele rij is klikbaar, dus "Rij openen" bij élke titel is
+        // dezelfde mededeling dertig keer.
+        return `<td><button type="button" class="rij-open-knop" data-open-rij="${esc(key)}|${esc(r.__entryId)}" aria-label="Rij openen: ${esc(dataCelTekst(getField(r, v.naam)) || "zonder titel")}">${cel || "(zonder titel)"}</button></td>`;
       }).join("");
       const acties = bewerk.ok && r.__entryId
         ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
