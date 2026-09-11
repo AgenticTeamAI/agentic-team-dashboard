@@ -118,9 +118,25 @@ jobs:
           BASIS=$(git rev-parse --quiet --verify "refs/remotes/origin/${TAK}" || true)
           git push -u origin "${TAK}" --force-with-lease="${TAK}:${BASIS}"
 
-          BESTAAND=$(gh pr list --state open --search "chore(sync) in:title" --json number --jq 'length')
-          if [ "$BESTAAND" != "0" ]; then
-            echo "::notice::Er staat al een sync-PR open; tak ${TAK} is gepusht maar er is geen tweede PR geopend."
+          # Staat er al een PR op DEZE tak, dan is die door de push hierboven
+          # bijgewerkt en zijn we klaar. Dit stond eerst als een zoekopdracht
+          # op de titel — en die gaf altijd 0, omdat de haakjes in
+          # "chore(sync)" de zoekparser van GitHub breken. Gevolg: de guard
+          # sloeg nooit aan, `gh pr create` liep daarna tegen "a pull request
+          # for branch ... already exists", en de run werd rood ná een
+          # geslaagde push. Nagemeten op 11-09-2026: zoekvorm 0, `--head` 1.
+          # `--head` is exact en heeft geen zoeksyntaxis nodig.
+          if [ "$(gh pr list --state open --head "${TAK}" --json number --jq 'length')" != "0" ]; then
+            echo "::notice::De open PR voor ${TAK} is bijgewerkt door deze push."
+            exit 0
+          fi
+
+          # Een ándere sync-PR open laten staan: twee open sync-PR's zijn
+          # verwarrend en dan wordt de oudste genegeerd. Op de takname
+          # filteren, niet op de titel — zelfde reden als hierboven.
+          ANDERE=$(gh pr list --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("sync/"))] | length')
+          if [ "$ANDERE" != "0" ]; then
+            echo "::notice::Er staat al een andere sync-PR open; tak ${TAK} is gepusht maar er is geen tweede PR geopend."
             exit 0
           fi
           gh pr create --title "chore(sync): registry $VERSIE" --body "$(printf '%s\n' \
