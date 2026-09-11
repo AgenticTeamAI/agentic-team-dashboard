@@ -87,7 +87,12 @@ jobs:
           TAK="sync/registry-$VERSIE"
           git checkout -b "${TAK}"
           git add -A
-          git commit -m "chore(sync): registry $VERSIE" \
+          # -s: de DCO-poort eist een Signed-off-by op élke commit in een PR
+          # (dco.yml). Zonder die vlag kwam elke sync-PR met een rode check
+          # binnen — en een poort die altijd rood staat, leest niemand meer.
+          # Naam en adres komen uit de git-config hierboven, dus de regel
+          # noemt github-actions[bot] en dat is precies wie het ondertekent.
+          git commit -s -m "chore(sync): registry $VERSIE" \
                      -m "Automatisch bijgewerkt door .github/workflows/sync.yml. De diff is inhoud die bij de klant terechtkomt — lees hem."
 
           # De tak heet naar de registryVERSIE, maar de pin bevat ook een
