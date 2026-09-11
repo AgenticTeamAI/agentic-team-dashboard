@@ -84,15 +84,38 @@ jobs:
           VERSIE=$(jq -er .registryVersion agent-architecture.lock.json)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "sync/registry-$VERSIE"
+          TAK="sync/registry-$VERSIE"
+          git checkout -b "${TAK}"
           git add -A
           git commit -m "chore(sync): registry $VERSIE" \
                      -m "Automatisch bijgewerkt door .github/workflows/sync.yml. De diff is inhoud die bij de klant terechtkomt — lees hem."
-          git push -u origin "sync/registry-$VERSIE" --force-with-lease
+
+          # De tak heet naar de registryVERSIE, maar de pin bevat ook een
+          # arch-COMMIT die vaker wijzigt. Twee syncs voor dezelfde versie zijn
+          # dus normaal — en elke tweede liep stuk:
+          #
+          #   ! [rejected] sync/registry-1.89.0 (stale info)
+          #
+          # `--force-with-lease` zonder waarde zoekt de lease bij de UPSTREAM
+          # van de tak, en `git checkout -b` zet die niet. Dan weigert git,
+          # óók als de tak gewoon bestaat en niemand eraan heeft gezeten. De
+          # sync faalde daardoor elke dag opnieuw tot de versie een keer
+          # opsprong — hij herstelde zichzelf schijnbaar, en juist dat maakte
+          # het onzichtbaar (9 en 10 september 2026, gevonden via
+          # /intern/infra).
+          #
+          # Daarom de expliciete vorm: haal de tak op en zeg wélke waarde we
+          # verwachten. Bestaat hij niet, dan is de verwachting "afwezig" en
+          # klopt dat ook. Bewust geen `--force`: heeft iemand er met de hand
+          # op gecommit, dan hoort deze push te weigeren — nagemeten, dat doet
+          # hij nog steeds.
+          git fetch origin "+refs/heads/${TAK}:refs/remotes/origin/${TAK}" 2>/dev/null || true
+          BASIS=$(git rev-parse --quiet --verify "refs/remotes/origin/${TAK}" || true)
+          git push -u origin "${TAK}" --force-with-lease="${TAK}:${BASIS}"
 
           BESTAAND=$(gh pr list --state open --search "chore(sync) in:title" --json number --jq 'length')
           if [ "$BESTAAND" != "0" ]; then
-            echo "::notice::Er staat al een sync-PR open; deze tak is gepusht maar er is geen tweede PR geopend."
+            echo "::notice::Er staat al een sync-PR open; tak ${TAK} is gepusht maar er is geen tweede PR geopend."
             exit 0
           fi
           gh pr create --title "chore(sync): registry $VERSIE" --body "$(printf '%s\n' \
