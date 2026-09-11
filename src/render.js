@@ -9,6 +9,87 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, ch => ESC_MAP[ch]);
 }
 
+/* ── i75: het werkstuk van een agent leesbaar maken ───────────────────
+ *
+ * Een veld als Toelichting draagt vaak het hele resultaat van een agent:
+ * koppen, vette tussenkoppen, opsommingen, en soms een citaatblok met een
+ * conceptbericht erin. Die regelovergangen staan gewoon in de werkruimte —
+ * maar HTML vouwt elke \n tot een spatie, en dus kwam er vijfduizend tekens
+ * als één ononderbroken blok op het scherm. Het bewijs stond in dat blok
+ * zelf: "> > Beste Gerrit" kan alleen ontstaan uit twee citaatregels met
+ * een lege regel ertussen.
+ *
+ * Dit is met opzet géén markdown-parser. Álles gaat eerst door esc(); pas
+ * daarna herkennen we een kleine, vaste set blokvormen. Opmaak die we niet
+ * kennen blijft leesbare tekst staan — er komt nooit HTML uit de bron mee.
+ * De tekst is geschreven door een LLM-agent, dus dat is geen detail. */
+const PROSA_KOP       = /^#{1,6}\s+(.*)$/;
+const PROSA_VETTE_KOP = /^\*\*([^*]+)\*\*:?\s*$/;
+const PROSA_STREEP    = /^([-*_])\s*\1\s*\1[\s\-*_]*$/;   // --- of *** of ___
+const PROSA_BULLET    = /^[-*•]\s+(.*)$/;
+const PROSA_NUMMER    = /^(\d{1,3})[.)]\s+(.*)$/;
+const PROSA_CITAAT    = /^>\s?(.*)$/;
+
+function prosaInline(tekst) {
+  return esc(tekst)
+    .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+}
+
+function langeTekstHtml(tekst) {
+  const regels = String(tekst ?? "").replace(/\r\n?/g, "\n").split("\n");
+  let html = "", lijst = null, citaat = [], alinea = [];
+
+  const sluitAlinea = () => { if (alinea.length) html += `<p>${alinea.join(" ")}</p>`; alinea = []; };
+  const sluitLijst = () => {
+    if (!lijst) return;
+    const start = lijst.tag === "ol" && lijst.start > 1 ? ` start="${lijst.start}"` : "";
+    html += `<${lijst.tag}${start}>${lijst.items.map(i => `<li>${i}</li>`).join("")}</${lijst.tag}>`;
+    lijst = null;
+  };
+  const sluitCitaat = () => {
+    if (citaat.length) html += `<blockquote>${citaat.map(c => `<p>${c}</p>`).join("")}</blockquote>`;
+    citaat = [];
+  };
+  const sluitAlles = () => { sluitAlinea(); sluitLijst(); sluitCitaat(); };
+  const inLijst = (tag, tekst, start) => {
+    sluitAlinea();
+    if (!lijst || lijst.tag !== tag) { sluitLijst(); lijst = { tag, items: [], start }; }
+    lijst.items.push(prosaInline(tekst));
+  };
+
+  for (const ruw of regels) {
+    const r = ruw.trim();
+    if (!r) { sluitAlles(); continue; }
+
+    // Een citaatblok loopt door over lege ">"-regels heen; dat is precies de
+    // vorm waarin een agent een conceptmail in de Toelichting zet.
+    const citaatM = r.match(PROSA_CITAAT);
+    if (citaatM) {
+      sluitAlinea(); sluitLijst();
+      if (citaatM[1].trim()) citaat.push(prosaInline(citaatM[1]));
+      continue;
+    }
+    sluitCitaat();
+
+    if (PROSA_STREEP.test(r)) { sluitAlles(); html += "<hr>"; continue; }
+
+    const kopM = r.match(PROSA_KOP) || r.match(PROSA_VETTE_KOP);
+    if (kopM) { sluitAlles(); html += `<p class="prosa-kop">${prosaInline(kopM[1])}</p>`; continue; }
+
+    const bulM = r.match(PROSA_BULLET);
+    if (bulM) { inLijst("ul", bulM[1]); continue; }
+
+    const numM = r.match(PROSA_NUMMER);
+    if (numM) { inLijst("ol", numM[2], Number(numM[1])); continue; }
+
+    sluitLijst();
+    alinea.push(prosaInline(r));
+  }
+  sluitAlles();
+  return html;
+}
+
 function fmtDate(dt) {
   if (!dt || isNaN(dt.getTime())) return "onbekend";
   return dt.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -215,5 +296,5 @@ function renderVersionError(el, result, bundle) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderZone1, renderZone2, renderZone3, renderZone4, renderZone5, renderVersionError, fmtDate, relAge, badgeHtml, esc };
+  module.exports = { renderZone1, renderZone2, renderZone3, renderZone4, renderZone5, renderVersionError, fmtDate, relAge, badgeHtml, esc, langeTekstHtml };
 }
