@@ -104,6 +104,20 @@ describe("een rij openen", () => {
     expect(rij.classList.contains("rij-klikbaar")).toBe(true);
   });
 
+  /* Nu de hele rij klikbaar is, was de knop in kolom 1 dubbel signaal: een
+     stippellijn onder élke titel plus een "Rij openen"-tooltip bij elke cel.
+     De knop blijft — hij draagt de toetsenbordroute — maar zonder de nadruk. */
+  it("legt geen tweede nadruk op de titelcel", () => {
+    const c = verseTabel();
+    const knop = c.querySelector(".rij-open-knop");
+    expect(knop.getAttribute("title"), "de hele rij is klikbaar; een tooltip per titel is ruis").toBeNull();
+    expect(knop.getAttribute("aria-label")).toMatch(/^Rij openen: /);
+    const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
+    expect(css).toMatch(/\.rij-open-knop \{[^}]*text-decoration: none/);
+    // maar wél zichtbaar voor wie met het toetsenbord navigeert
+    expect(css).toMatch(/\.rij-open-knop:focus-visible/);
+  });
+
   it("houdt de knop in de eerste kolom voor toetsenbordgebruik", () => {
     const c = verseTabel();
     expect(c.querySelector('.rij-open-knop[data-open-rij="acties|a1"]')).not.toBeNull();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-qxOYniQcbgNOjEJnJGZMhVgWcZWMOY3akNQSiva91KU='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-mt4vh2yFt8AYptkyKs7ahuSh/H6TvOMwiw2DY73U6sA=' 'sha256-YtsPtgDA0KKemBvVrWSWYGtMY2Ivq3vWx/bRKhdeErg='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -725,8 +725,25 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
 .bewerk-knoppen { display: flex; gap: 8px; margin-top: 6px; }
 
 /* f33 fase A: één rij openklappen — detailkaart met terugverwijzingen */
-.rij-open-knop { background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
-.rij-open-knop:hover { color: var(--mint-light); }
+/* De titelcel was een knop mét stippellijn, uit de tijd dat alleen díé cel
+   klikbaar was. Nu de hele rij klikbaar is (i71) staat die lijn onder élke
+   titel in de tabel — dertig keer hetzelfde signaal voor hetzelfde ding, en
+   bij een lange titel over vier regels. De knop blijft, de nadruk gaat weg:
+   pas bij hover licht hij op, en dan volstaat de kleur. */
+.rij-open-knop {
+  background: none; border: none; padding: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; text-decoration: none;
+  -webkit-user-select: none; user-select: none;
+}
+tr.rij-klikbaar:hover .rij-open-knop, .rij-open-knop:hover { color: var(--mint-light); }
+/* Toetsenbordgebruikers moeten wél kunnen zien waar ze zijn. */
+.rij-open-knop:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; border-radius: 3px; }
+
+/* Een klik in de tabel selecteerde de celtekst — met de standaard-
+   selectiekleur van de browser, die op dit donkere vlak knalgroen uitpakt.
+   De cellen zelf blijven selecteerbaar (je wilt een titel kunnen kopiëren);
+   alleen de klikbare titelknop niet, want daar is klikken de bedoeling. */
+::selection { background: rgba(74,222,128,0.28); color: var(--white); }
 tr.rij-open { background: var(--card); }
 .detail-kaart { background: var(--card); border: 1px solid var(--mint-light); border-radius: 10px; padding: 14px 16px; margin: 12px 0; }
 .detail-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -8308,7 +8325,10 @@ function renderDataDomein(el, key, ctx) {
       const cellen = velden.map((v, i) => {
         const cel = dataCelHtml(getField(r, v.naam), v);
         if (i !== 0 || !r.__entryId) return `<td>${cel}</td>`;
-        return `<td><button type="button" class="rij-open-knop" data-open-rij="${esc(key)}|${esc(r.__entryId)}" title="Rij openen">${cel || "(zonder titel)"}</button></td>`;
+        // De knop blijft (toetsenbordroute en toegankelijk label), maar zonder
+        // tooltip: de hele rij is klikbaar, dus "Rij openen" bij élke titel is
+        // dezelfde mededeling dertig keer.
+        return `<td><button type="button" class="rij-open-knop" data-open-rij="${esc(key)}|${esc(r.__entryId)}" aria-label="Rij openen: ${esc(dataCelTekst(getField(r, v.naam)) || "zonder titel")}">${cel || "(zonder titel)"}</button></td>`;
       }).join("");
       const acties = bewerk.ok && r.__entryId
         ? `<td class="bewerk-kolom"><button type="button" class="knop-mini" data-bewerk-rij="${esc(r.__entryId)}" title="Bewerken">✏️</button><button type="button" class="knop-mini" data-verwijder-rij="${esc(r.__entryId)}" title="Verwijderen">🗑</button></td>`
@@ -9723,7 +9743,10 @@ function wireInputs() {
   });
 
   document.getElementById("btn-ververs").addEventListener("click", () => {
-    if (huidigeBron) laadWerkruimte(huidigeBron);
+    // behoudRoute, net als na een schrijfactie: verversen is geen nieuw begin.
+    // Zonder deze vlag maakt handleBundle() de hash leeg en sta je ineens op
+    // Vandaag terwijl je op de Data-tab naar iets stond te kijken.
+    if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true });
   });
 
   document.body.addEventListener("change", (e) => {

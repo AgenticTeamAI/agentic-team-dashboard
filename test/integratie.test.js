@@ -509,6 +509,21 @@ describe("f25 — waardezones in dashboard.html", () => {
     expect(d.fouten).toEqual([]);
   });
 
+  /* De ververs-knop kreeg bij f44 de behoudRoute-vlag níet mee en viel dus
+     terug op het oude gedrag: je stond op de Data-tab te kijken, drukte op
+     Ververs, en kwam op Vandaag uit. Waargenomen door de eerste gebruiker. */
+  it("de ververs-knop laat je staan waar je was", async () => {
+    const d = await open();
+    await d.geladen();
+    await d.naar("#/data/acties");
+    expect(d.zichtbaar("tab-data")).toBe(true);
+
+    d.$("btn-ververs").click();
+    await d.tot(() => d.zichtbaar("tab-data"), "nog steeds op de Data-tab");
+    expect(d.w.location.hash).toBe("#/data/acties");
+    expect(d.fouten).toEqual([]);
+  });
+
   /* De keerzijde: een nieuw geladen bundel hoort je wél op Vandaag te zetten.
      Zonder deze test zou "hash nooit meer leegmaken" ook groen zijn. */
   it("maar een vers geladen bundel begint gewoon op Vandaag", async () => {
