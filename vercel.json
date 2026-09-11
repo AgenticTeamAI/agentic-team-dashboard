@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 scripts/build.py ${DASHBOARD_NOINDEX:+--noindex} ${OAUTH_DASHBOARD:+--oauth} && rm -rf out && mkdir out && cp dashboard.html out/index.html && cp dashboard.html out/dashboard.html && cp public/favicon.ico out/favicon.ico && python3 scripts/version-json.py out/version.json",
+  "buildCommand": "python3 scripts/build.py ${DASHBOARD_NOINDEX:+--noindex} ${OAUTH_DASHBOARD:+--oauth} && python3 scripts/publiceer.py",
   "outputDirectory": "out",
   "headers": [
     {
