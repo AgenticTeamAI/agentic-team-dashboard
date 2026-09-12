@@ -53,6 +53,52 @@ function zetMijnNaam(bron, naam) {
   } catch (e) { return ""; }
 }
 
+/* i77: wat stellen we voor als naam?
+ *
+ * De prompt vroeg om een naam terwijl je net was ingelogd, en dat is een vraag
+ * die onze kant niet kán beantwoorden uit het token: `sub` is
+ * `licentie#seathash` en het inlogscherm heeft maar één veld (e-mail). De site
+ * kan het wél: die kent de adressen van deze licentie en kan uitrekenen welk
+ * adres bij jouw seat hoort. `/api/dashboard/wie-ben-ik` geeft daarvan het deel
+ * vóór de @ terug, of null.
+ *
+ * Drie dingen die hier bewust zo zijn:
+ * - het loopt door `modulesFetch`, de enige plek die de site aanroept, zodat de
+ *   inventaris van de telemetriecontrole op vier aanroepen blijft staan;
+ * - het gebeurt pas bij de eerste schrijfactie zonder opgeslagen naam, niet bij
+ *   het laden — wie nooit schrijft, laat ons nooit een adres opzoeken;
+ * - het antwoord is een suggestie in een prompt, geen stille invulling. Een
+ *   persoonsgegeven in de werkdata van de klant hoort langs de gebruiker.
+ *
+ * Mislukt de aanroep (offline, geen sessie, licentie buiten de allowlist), dan
+ * is het voorstel leeg en verandert er niets aan het oude gedrag. */
+let naamvoorstelSeat = null;
+let naamvoorstelBelofte = null;
+
+function haalNaamvoorstel(bron) {
+  // Al een naam in deze browser? Dan is dát het voorstel, en laten we de site
+  // niets opzoeken. Deze regel is de privacybelofte uit de kop: er gaat alleen
+  // een aanroep uit voor iemand die nog geen naam heeft.
+  const bekend = mijnNaam(bron);
+  if (bekend) return Promise.resolve(bekend);
+
+  const seat = tokenSeat(bron && bron.token);
+  if (!seat) return Promise.resolve("");
+  if (naamvoorstelSeat !== seat) {
+    naamvoorstelSeat = seat;
+    naamvoorstelBelofte = (async () => {
+      try {
+        const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron && bron.token);
+        const voorstel = uit && uit.status === 200 && uit.body ? uit.body.voorstel : null;
+        return typeof voorstel === "string" ? voorstel : "";
+      } catch (e) {
+        return "";
+      }
+    })();
+  }
+  return naamvoorstelBelofte;
+}
+
 /* f33: één veld wijzigen zonder het formulier — de kanbansleep en de
  * toewijsknoppen. PATCH mengt bij de instantie over de bestaande rij heen, dus
  * velden die dit dashboard niet kent blijven staan. Met PUT zouden die stil
