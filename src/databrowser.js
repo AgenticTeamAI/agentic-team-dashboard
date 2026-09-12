@@ -1025,23 +1025,35 @@ function renderDataDomein(el, key, ctx) {
     return rows.find(r => r.__entryId === dataDetail.entryId) || null;
   }
 
-  function vraagNaam() {
+  /* i77: de prompt komt voorgevuld met wat de site over deze seat weet, en
+   * blijft een prompt — stil invullen zou een persoonsgegeven in de werkdata
+   * van de klant zetten zonder dat iemand het zag. Async omdat het voorstel van
+   * de site komt; zonder antwoord gedraagt hij zich precies als voorheen. */
+  async function vraagNaam() {
     const nu = mijnNaam(ctx.bron);
-    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", nu);
+    const voorstel = (await haalNaamvoorstel(ctx.bron)) || "";
+    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel);
     if (ingevuld === null) return nu;
     return zetMijnNaam(ctx.bron, ingevuld);
+  }
+
+  /* Al een naam? Dan geen vraag en geen aanroep naar de site. */
+  function naamVoorSchrijfactie() {
+    const nu = mijnNaam(ctx.bron);
+    return nu ? Promise.resolve(nu) : vraagNaam();
   }
 
   function bedienKlik(e) {
     const rij = huidigeRij();
     const mij = e.target.closest && e.target.closest("[data-snel-mij]");
     if (mij && rij) {
-      const naam = mijnNaam(ctx.bron) || vraagNaam();
-      if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      naamVoorSchrijfactie().then((naam) => {
+        if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      });
       return true;
     }
     const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
-    if (wijzig) { vraagNaam(); herteken(); return true; }
+    if (wijzig) { vraagNaam().then(herteken); return true; }
     return false;
   }
 
@@ -1125,17 +1137,18 @@ function renderDataDomein(el, key, ctx) {
     const onderwerp = form.querySelector("[data-notitie-onderwerp]").value.trim();
     const tekst = form.querySelector("[data-notitie-tekst]").value.trim();
     if (!onderwerp && !tekst) return;
-    const naam = mijnNaam(ctx.bron) || vraagNaam();
     const info = notitieVeldVan(ctx);
-    const data = {
-      Onderwerp: onderwerp || tekst.slice(0, 60),
-      Datum: new Date().toISOString().slice(0, 10),
-      Soort: "Mens",
-      [info.veld.naam]: { domein: key, id: rij.__entryId },
-    };
-    if (tekst) data.Notitie = tekst;
-    if (naam) data.Auteur = naam;
-    pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
+    naamVoorSchrijfactie().then((naam) => {
+      const data = {
+        Onderwerp: onderwerp || tekst.slice(0, 60),
+        Datum: new Date().toISOString().slice(0, 10),
+        Soort: "Mens",
+        [info.veld.naam]: { domein: key, id: rij.__entryId },
+      };
+      if (tekst) data.Notitie = tekst;
+      if (naam) data.Auteur = naam;
+      pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
+    });
   });
 
   // Een kaart is klikbaar, dus hij hoort ook met Enter/spatie te openen.
