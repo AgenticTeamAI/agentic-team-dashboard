@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-MM1q2ANcETbUWikbJ2S3jcS6yYID/x336uIK8CCC5Mo=' 'sha256-84sZHJJQZZ9ogByXH+NNKQYnb1cHQ6y+pWU8sPjqSBM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-hg91L0TMEuvhZ23tTPw+JXK/lljxTFBcwHT9o/3dK/w=' 'sha256-84sZHJJQZZ9ogByXH+NNKQYnb1cHQ6y+pWU8sPjqSBM='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -975,8 +975,8 @@ tr.rij-open { background: var(--card); }
   <footer class="app-footer">
     Agentic Team Dashboard — leest, toont en rekent; het is nooit de bron van iets en bewaart zelf geen
     gegevens. Wat het wel en niet ziet, staat voluit achter het info-icoon bij de privacyregel
-    op de Vandaag-tab. Teamdefinitie: schemaversie 1.90.0 uit
-    AgenticTeamAI/agent-architecture, vastgelegd op 2026-09-11. Je connector kan een
+    op de Vandaag-tab. Teamdefinitie: schemaversie 1.91.0 uit
+    AgenticTeamAI/agent-architecture, vastgelegd op 2026-09-12. Je connector kan een
     nieuwere versie draaien — dit is de versie waarop deze pagina is gebouwd.
   </footer>
 </div>
@@ -986,20 +986,20 @@ tr.rij-open { background: var(--card); }
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.90.0
-//   registry updated: 2026-09-07
-//   bron-commit     : e8f0055fc53071b0590b6c78346df68eb19998f4
-//   geextraheerd op : 2026-09-11T13:41:45Z
+//   registryVersion : 1.91.0
+//   registry updated: 2026-09-11
+//   bron-commit     : af54a0de62b1fb2fcceee53cb277ec94db2932b0
+//   geextraheerd op : 2026-09-12T17:46:43Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.90.0",
-  "registryUpdated": "2026-09-07",
-  "sourceCommit": "e8f0055fc53071b0590b6c78346df68eb19998f4",
-  "extractedAt": "2026-09-11T13:41:45Z",
+  "registryVersion": "1.91.0",
+  "registryUpdated": "2026-09-11",
+  "sourceCommit": "af54a0de62b1fb2fcceee53cb277ec94db2932b0",
+  "extractedAt": "2026-09-12T17:46:43Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -2289,6 +2289,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "titel"
         },
         {
+          "naam": "Verslag",
+          "type": "tekst"
+        },
+        {
           "naam": "Type",
           "type": "select",
           "opties": [
@@ -2521,6 +2525,10 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Correctie",
           "type": "tekst"
+        },
+        {
+          "naam": "Wachten tot",
+          "type": "datum"
         },
         {
           "naam": "Deal",
