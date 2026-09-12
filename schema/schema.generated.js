@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.90.0
-//   registry updated: 2026-09-07
-//   bron-commit     : e8f0055fc53071b0590b6c78346df68eb19998f4
-//   geextraheerd op : 2026-09-11T13:41:45Z
+//   registryVersion : 1.91.0
+//   registry updated: 2026-09-11
+//   bron-commit     : af54a0de62b1fb2fcceee53cb277ec94db2932b0
+//   geextraheerd op : 2026-09-12T17:46:43Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.90.0",
-  "registryUpdated": "2026-09-07",
-  "sourceCommit": "e8f0055fc53071b0590b6c78346df68eb19998f4",
-  "extractedAt": "2026-09-11T13:41:45Z",
+  "registryVersion": "1.91.0",
+  "registryUpdated": "2026-09-11",
+  "sourceCommit": "af54a0de62b1fb2fcceee53cb277ec94db2932b0",
+  "extractedAt": "2026-09-12T17:46:43Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -1305,6 +1305,10 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "titel"
         },
         {
+          "naam": "Verslag",
+          "type": "tekst"
+        },
+        {
           "naam": "Type",
           "type": "select",
           "opties": [
@@ -1537,6 +1541,10 @@ window.AGENTIC_TEAM_SCHEMA = {
         {
           "naam": "Correctie",
           "type": "tekst"
+        },
+        {
+          "naam": "Wachten tot",
+          "type": "datum"
         },
         {
           "naam": "Deal",
