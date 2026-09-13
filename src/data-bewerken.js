@@ -65,7 +65,7 @@ function zetMijnNaam(bron, naam) {
       .catch(() => {});
   } catch (e) { /* modulesFetch niet beschikbaar: kopie volstaat */ }
   naamvoorstelSeat = tokenSeat(bron && bron.token);
-  naamvoorstelBelofte = Promise.resolve(schoon);
+  naamvoorstelBelofte = Promise.resolve({ voorstel: schoon, gezet: !!schoon });
   return schoon;
 }
 
@@ -100,15 +100,30 @@ function _resetNaamvoorstel() {
   naamvoorstelBelofte = null;
 }
 
+/* Geeft {voorstel, gezet}.
+ *
+ * `gezet` betekent: iemand heeft deze naam gekózen — jij eerder in deze browser,
+ * jij op een ander apparaat, of je beheerder. Alleen dán mag hij zonder vragen
+ * de werkdata in. Is hij false, dan is `voorstel` een afleiding uit je adres
+ * (het deel vóór de @) en hoort hij alleen de prompt voor te vullen.
+ *
+ * Vlak dat onderscheid niet weg tot één string: dan is een afleiding niet meer
+ * van een keuze te onderscheiden, en schrijft het dashboard stilletjes
+ * `jan.jansen` in de gedeelde kolom `Eigenaar` van de klant. */
 function haalNaamvoorstel(bron) {
-  const seat = tokenSeat(bron && bron.token);
-  if (!seat) return Promise.resolve(mijnNaam(bron) || "");
+  const lokaalNu = mijnNaam(bron);
+  // Daglinksessie: geen ingelogde seat en geen licentie-token. Niets naar de
+  // site sturen — het daglink-token hoort onze server nooit te bereiken.
+  if (!bron || !bron.oauth || !bron.token || !tokenSeat(bron.token)) {
+    return Promise.resolve({ voorstel: lokaalNu || "", gezet: !!lokaalNu });
+  }
+  const seat = tokenSeat(bron.token);
   if (naamvoorstelSeat !== seat) {
     naamvoorstelSeat = seat;
     naamvoorstelBelofte = (async () => {
       const lokaal = mijnNaam(bron);
       try {
-        const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron && bron.token);
+        const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron.token);
         const ok = uit && uit.status === 200 && uit.body;
         const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
         if (ok && uit.body.gezet) {
@@ -116,20 +131,20 @@ function haalNaamvoorstel(bron) {
           // iets anders onthield. Anders zou een correctie door de beheerder
           // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
           bewaarKopie(bron, voorstel);
-          return voorstel;
+          return { voorstel, gezet: true };
         }
         if (lokaal) {
           // Overgang naar i77: de server kent nog geen gekozen naam, deze
           // browser wel. Til hem één keer omhoog in plaats van hem te
           // overschrijven met het deel vóór de @ van het adres.
-          void modulesFetch("/api/dashboard/wie-ben-ik", { naam: lokaal }, bron && bron.token)
+          void modulesFetch("/api/dashboard/wie-ben-ik", { naam: lokaal }, bron.token)
             .catch(() => {});
-          return lokaal;
+          return { voorstel: lokaal, gezet: true };
         }
-        return voorstel;
+        return { voorstel, gezet: false };
       } catch (e) {
         // Offline of geen sessie: de kopie in deze browser is de terugval.
-        return lokaal || "";
+        return { voorstel: lokaal || "", gezet: !!lokaal };
       }
     })();
   }

@@ -19,9 +19,24 @@
 let teamLijst = null; // laatste geslaagde antwoord; null = niet (voor ons) beschikbaar
 let teamVoorToken = null;
 
+/* Alleen voor tests: deze cache leeft per paginalading, wat in een browser
+ * precies goed is. Een testbestand draait alle gevallen in één context, dus
+ * daar moet hij tussendoor leeg. Zelfde patroon als _resetNaamvoorstel. */
+function _resetTeam() {
+  teamLijst = null;
+  teamVoorToken = null;
+}
+
 async function laadTeam(bron) {
-  const token = bron && bron.token ? bron.token : "";
-  if (!token || teamVoorToken === token) return teamLijst;
+  // Daglinksessie: geen ingelogde seat, dus geen beheerderschap — en het
+  // daglink-token hoort onze server sowieso nooit te bereiken. Zelfde poort als
+  // het modulepaneel.
+  if (!bron || !bron.oauth || !bron.token) {
+    teamLijst = null;
+    return null;
+  }
+  const token = bron.token;
+  if (teamVoorToken === token) return teamLijst;
   teamVoorToken = token;
   try {
     const uit = await modulesFetch("/api/dashboard/team", undefined, token);
@@ -66,9 +81,15 @@ function renderTeamPanel(sectieEl) {
   wireTeamPanel(sectieEl);
 }
 
+/* Eén keer binden, niet per hertekening. De listener hangt aan de vaste
+ * <section> — die blijft bestaan terwijl alleen het lichaam wordt vervangen —
+ * dus zonder deze vlag stapelt elke render een extra listener op en stuurt één
+ * naamwijziging er net zoveel identieke POSTs uit. */
 function wireTeamPanel(sectieEl) {
-  const melding = sectieEl.querySelector("[data-team-melding]");
+  if (sectieEl.dataset.bedraad === "1") return;
+  sectieEl.dataset.bedraad = "1";
   sectieEl.addEventListener("change", async (e) => {
+    const melding = sectieEl.querySelector("[data-team-melding]");
     const veld = e.target.closest && e.target.closest("[data-team-seat]");
     if (!veld) return;
     const seat = veld.getAttribute("data-team-seat");

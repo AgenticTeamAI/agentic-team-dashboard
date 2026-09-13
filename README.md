@@ -137,8 +137,10 @@ veranderen.
 
 - `test/geen-telemetrie.test.js` bewaakt het gebouwde artefact: verboden
   patronen (sendBeacon, gtag, `_vercel/insights`, Sentry, PostHog, …), precies
-  **twee** `fetch`-plaatsen — de eigen werkruimte via de router, en sinds p10
-  de OAuth-token-uitwisseling — geen host buiten de allowlist, de CSP-grenzen
+  **vier** `fetch`-plaatsen — de eigen werkruimte via de router (lezen én
+  schrijven), sinds p10 de OAuth-token-uitwisseling, en sinds f34 één plek naar
+  het eigen domein (`modulesFetch`) waar de modules-API, je weergavenaam en het
+  namenpaneel doorheen lopen — geen host buiten de allowlist, de CSP-grenzen
   (`connect-src` én `script-src` exact-match, verbod 10/11 uit het
   OAuth-contract), en of de goedgekeurde tekst er letterlijk in staat.
 - **De token-call is geen telemetrie.** Hij gaat naar ons domein, maar draagt
@@ -152,7 +154,10 @@ veranderen.
   codewijziging**; de hash-only `script-src` blokkeert het script dan wel,
   maar dat is een vangrail, niet de afspraak.
 - Wat er wél lokaal in de browser wordt bewaard staat in de uitklaptekst en
-  wordt door dezelfde test op vier sleutels vastgepind.
+  wordt door dezelfde test op **zeven** sleutels vastgepind. Sinds i77 is de
+  weergavenaam daarvan een terugvalkopie en niet meer de bron: die hoort bij je
+  seat en staat versleuteld bij je licentie, zodat een tweede apparaat hem kent
+  en je beheerder hem kan rechtzetten.
 
 Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
 niets naar agentic-team.ai": de pagina zelf komt van

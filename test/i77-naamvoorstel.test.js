@@ -44,7 +44,7 @@ let kluis;
 function bron(seat, token = true) {
   if (!token) return {};
   const payload = btoa(JSON.stringify({ sub: seat })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return { token: `kop.${payload}.handtekening` };
+  return { oauth: true, token: `kop.${payload}.handtekening` };
 }
 
 beforeAll(() => {
@@ -63,7 +63,7 @@ beforeEach(() => {
 describe("haalNaamvoorstel", () => {
   it("neemt de naam die de server heeft vastgelegd", async () => {
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
-    expect(await g.haalNaamvoorstel(bron("lic#seat-a"))).toBe("Janine Bakker");
+    expect(await g.haalNaamvoorstel(bron("lic#seat-a"))).toEqual({ voorstel: "Janine Bakker", gezet: true });
     expect(g.modulesFetch.mock.calls[0][0]).toBe("/api/dashboard/wie-ben-ik");
   });
 
@@ -71,7 +71,7 @@ describe("haalNaamvoorstel", () => {
     const b = bron("lic#seat-b");
     g.bewaarKopie(b, "typfuot");
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
-    expect(await g.haalNaamvoorstel(b)).toBe("Janine Bakker");
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Janine Bakker", gezet: true });
   });
 
   it("overschrijft een zelfgekozen naam NIET met een afleiding uit het adres", async () => {
@@ -79,7 +79,7 @@ describe("haalNaamvoorstel", () => {
     g.bewaarKopie(b, "Tijmen Kip");
     // Server kent nog geen gekozen naam en stelt het deel vóór de @ voor.
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "tijmen", gezet: false } }));
-    expect(await g.haalNaamvoorstel(b)).toBe("Tijmen Kip");
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Tijmen Kip", gezet: true });
   });
 
   it("tilt die naam één keer omhoog naar de server", async () => {
@@ -92,9 +92,12 @@ describe("haalNaamvoorstel", () => {
     expect(schrijf[0][1].naam).toBe("Tijmen Kip");
   });
 
-  it("stelt het deel vóór de @ voor als niemand een naam koos", async () => {
+  it("markeert een afleiding uit het adres als NIET gekozen", async () => {
+    // Dit onderscheid draagt de prompt: een afleiding mag voorvullen, niet
+    // vervangen. Vlak je het weg tot één string, dan belandt 'janine' stil in
+    // de gedeelde kolom Eigenaar van de klant.
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "janine", gezet: false } }));
-    expect(await g.haalNaamvoorstel(bron("lic#seat-e"))).toBe("janine");
+    expect(await g.haalNaamvoorstel(bron("lic#seat-e"))).toEqual({ voorstel: "janine", gezet: false });
   });
 
   it("vraagt hoogstens één keer per seat", async () => {
@@ -111,8 +114,15 @@ describe("haalNaamvoorstel", () => {
     expect(g.modulesFetch.mock.calls.filter((c) => c[1] === undefined)).toHaveLength(2);
   });
 
+  it("stuurt in een daglinksessie niets naar de site", async () => {
+    // Het daglink-token hoort onze server nooit te bereiken.
+    const daglink = { token: "dag-token-zonder-oauth" };
+    expect(await g.haalNaamvoorstel(daglink)).toEqual({ voorstel: "", gezet: false });
+    expect(g.modulesFetch).not.toHaveBeenCalled();
+  });
+
   it("vraagt niets zonder sessie", async () => {
-    expect(await g.haalNaamvoorstel(bron("", false))).toBe("");
+    expect(await g.haalNaamvoorstel(bron("", false))).toEqual({ voorstel: "", gezet: false });
     expect(g.modulesFetch).not.toHaveBeenCalled();
   });
 
@@ -120,12 +130,12 @@ describe("haalNaamvoorstel", () => {
     const b = bron("lic#seat-i");
     g.bewaarKopie(b, "Tijmen");
     g.modulesFetch = vi.fn(async () => { throw new Error("offline"); });
-    expect(await g.haalNaamvoorstel(b)).toBe("Tijmen");
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Tijmen", gezet: true });
   });
 
   it("levert leeg bij een foutstatus zonder kopie", async () => {
     g.modulesFetch = vi.fn(async () => ({ status: 404, body: null }));
-    expect(await g.haalNaamvoorstel(bron("lic#seat-j"))).toBe("");
+    expect(await g.haalNaamvoorstel(bron("lic#seat-j"))).toEqual({ voorstel: "", gezet: false });
   });
 });
 
