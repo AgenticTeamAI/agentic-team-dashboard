@@ -5,7 +5,7 @@
 //   registryVersion : 1.91.0
 //   registry updated: 2026-09-11
 //   bron-commit     : af54a0de62b1fb2fcceee53cb277ec94db2932b0
-//   geextraheerd op : 2026-09-12T17:46:43Z
+//   geextraheerd op : 2026-09-13T12:20:47Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
@@ -15,7 +15,7 @@ window.AGENTIC_TEAM_SCHEMA = {
   "registryVersion": "1.91.0",
   "registryUpdated": "2026-09-11",
   "sourceCommit": "af54a0de62b1fb2fcceee53cb277ec94db2932b0",
-  "extractedAt": "2026-09-12T17:46:43Z",
+  "extractedAt": "2026-09-13T12:20:47Z",
   "modules": {
     "core": {
       "naam": "Core",
