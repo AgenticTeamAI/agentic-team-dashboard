@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-hg91L0TMEuvhZ23tTPw+JXK/lljxTFBcwHT9o/3dK/w=' 'sha256-84sZHJJQZZ9ogByXH+NNKQYnb1cHQ6y+pWU8sPjqSBM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-hg91L0TMEuvhZ23tTPw+JXK/lljxTFBcwHT9o/3dK/w=' 'sha256-U7hwUxn1kNufHbTYMNzkV1R/Hfngniqjael8q+fIRPQ='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -893,6 +893,18 @@ tr.rij-open { background: var(--card); }
         <span class="decision">Wat heb ik, en wat kost het per maand?</span>
       </div>
       <div id="panel-modules-body"></div>
+    </section>
+
+    <!-- i77: alleen zichtbaar voor de beheerder van deze licentie. De
+         weergavenaam bepaalt hoe iemand in Eigenaar en Afgerond door
+         verschijnt, en dat is een gedeelde kolom — één persoon in drie
+         spellingen maakt filters en de dagstart onbetrouwbaar. -->
+    <section class="panel" id="panel-team-namen" style="display:none;">
+      <div class="panel-header">
+        <h2>🙋 Wie werkt er mee</h2>
+        <span class="decision">Onder welke naam verschijnt iedereen in je werkdata?</span>
+      </div>
+      <div id="panel-team-namen-body"></div>
     </section>
   </div>
 
@@ -3543,11 +3555,16 @@ const PRIVACY_UITKLAP_ALINEAS = [
   "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
-   * door"). Die naam geef je zelf op, staat alleen in deze browser en gaat
-   * verder nergens heen dan als gewone veldwaarde in je eigen werkruimte —
-   * maar dat maakt de opsomming niet minder uitputtend. Delta voor het
-   * juridische memo (i47). */
-  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden, je minuten-per-actie-instelling en, als je die invult, de naam waaronder je werkt.",
+   * door").
+   *
+   * i77 verplaatste die naam van deze browser naar de licentie: hij hoort bij
+   * je seat en staat versleuteld naast je e-mailadres in de uitnodigingenlijst,
+   * zodat een tweede apparaat hem kent en de beheerder hem kan rechtzetten. De
+   * browser houdt nog een kopie als terugval. Dat zijn twee bewaarplekken in
+   * plaats van één, en een opsomming die dat niet noemt is niet uitputtend meer
+   * — vandaar dat deze alinea beide noemt, plus dat de browser er één keer per
+   * sessie om vraagt. */
+  "In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg — en blijvend alleen het moment van laatst laden, je minuten-per-actie-instelling en een kopie van de naam waaronder je werkt. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
@@ -8662,17 +8679,16 @@ function renderDataDomein(el, key, ctx) {
    * van de klant zetten zonder dat iemand het zag. Async omdat het voorstel van
    * de site komt; zonder antwoord gedraagt hij zich precies als voorheen. */
   async function vraagNaam() {
-    const nu = mijnNaam(ctx.bron);
-    const voorstel = (await haalNaamvoorstel(ctx.bron)) || "";
-    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel);
+    const nu = (await haalNaamvoorstel(ctx.bron)) || "";
+    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", nu);
     if (ingevuld === null) return nu;
     return zetMijnNaam(ctx.bron, ingevuld);
   }
 
-  /* Al een naam? Dan geen vraag en geen aanroep naar de site. */
+  /* Eén pad: vraag de naam op (gecachet per seat, dus hoogstens één aanroep per
+   * sessie) en vraag alleen als er niets is. */
   function naamVoorSchrijfactie() {
-    const nu = mijnNaam(ctx.bron);
-    return nu ? Promise.resolve(nu) : vraagNaam();
+    return haalNaamvoorstel(ctx.bron).then((n) => n || vraagNaam());
   }
 
   function bedienKlik(e) {
@@ -8876,13 +8892,29 @@ function mijnNaam(bron) {
   try { return window.localStorage.getItem(naamSleutel(bron)) || ""; } catch (e) { return ""; }
 }
 
-function zetMijnNaam(bron, naam) {
+/* De kopie in deze browser. Sinds i77 is dit een terugval, geen bron: de naam
+ * hoort bij je seat en staat bij je licentie. */
+function bewaarKopie(bron, naam) {
   try {
     const schoon = String(naam || "").trim().slice(0, 80);
     if (schoon) window.localStorage.setItem(naamSleutel(bron), schoon);
     else window.localStorage.removeItem(naamSleutel(bron));
     return schoon;
   } catch (e) { return ""; }
+}
+
+function zetMijnNaam(bron, naam) {
+  const schoon = bewaarKopie(bron, naam);
+  // Naar de server, zodat je andere apparaten hem ook kennen en de beheerder
+  // hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
+  // de volgende sessie het opnieuw — geen reden om de gebruiker op te houden.
+  try {
+    void modulesFetch("/api/dashboard/wie-ben-ik", { naam: schoon }, bron && bron.token)
+      .catch(() => {});
+  } catch (e) { /* modulesFetch niet beschikbaar: kopie volstaat */ }
+  naamvoorstelSeat = tokenSeat(bron && bron.token);
+  naamvoorstelBelofte = Promise.resolve(schoon);
+  return schoon;
 }
 
 /* i77: wat stellen we voor als naam?
@@ -8907,24 +8939,45 @@ function zetMijnNaam(bron, naam) {
 let naamvoorstelSeat = null;
 let naamvoorstelBelofte = null;
 
-function haalNaamvoorstel(bron) {
-  // Al een naam in deze browser? Dan is dát het voorstel, en laten we de site
-  // niets opzoeken. Deze regel is de privacybelofte uit de kop: er gaat alleen
-  // een aanroep uit voor iemand die nog geen naam heeft.
-  const bekend = mijnNaam(bron);
-  if (bekend) return Promise.resolve(bekend);
+/* Alleen voor tests: de cache hierboven leeft per paginalading, en dat is in
+ * een browser precies goed. Een testbestand draait alle gevallen in één context,
+ * dus daar moet hij tussendoor leeg — zonder dit haalt de ene test het antwoord
+ * van de vorige op. Zelfde patroon als _resetSleutelCache in de site. */
+function _resetNaamvoorstel() {
+  naamvoorstelSeat = null;
+  naamvoorstelBelofte = null;
+}
 
+function haalNaamvoorstel(bron) {
   const seat = tokenSeat(bron && bron.token);
-  if (!seat) return Promise.resolve("");
+  if (!seat) return Promise.resolve(mijnNaam(bron) || "");
   if (naamvoorstelSeat !== seat) {
     naamvoorstelSeat = seat;
     naamvoorstelBelofte = (async () => {
+      const lokaal = mijnNaam(bron);
       try {
         const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron && bron.token);
-        const voorstel = uit && uit.status === 200 && uit.body ? uit.body.voorstel : null;
-        return typeof voorstel === "string" ? voorstel : "";
+        const ok = uit && uit.status === 200 && uit.body;
+        const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
+        if (ok && uit.body.gezet) {
+          // De server heeft een gekozen naam; die wint, ook als deze browser
+          // iets anders onthield. Anders zou een correctie door de beheerder
+          // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
+          bewaarKopie(bron, voorstel);
+          return voorstel;
+        }
+        if (lokaal) {
+          // Overgang naar i77: de server kent nog geen gekozen naam, deze
+          // browser wel. Til hem één keer omhoog in plaats van hem te
+          // overschrijven met het deel vóór de @ van het adres.
+          void modulesFetch("/api/dashboard/wie-ben-ik", { naam: lokaal }, bron && bron.token)
+            .catch(() => {});
+          return lokaal;
+        }
+        return voorstel;
       } catch (e) {
-        return "";
+        // Offline of geen sessie: de kopie in deze browser is de terugval.
+        return lokaal || "";
       }
     })();
   }
@@ -9499,6 +9552,99 @@ function renderDetailModules(el) {
 }
 
 
+/* i77 — wie werkt er mee, en onder welke naam.
+ *
+ * De weergavenaam stond tot nu toe per browser in localStorage. Dat werkte voor
+ * één persoon op één apparaat en verder nergens: een tweede laptop vroeg het
+ * opnieuw, en bij meerdere mensen op één licentie kon niemand corrigeren dat
+ * dezelfde persoon in drie spellingen in dezelfde kolom stond. Sinds i77 hoort
+ * de naam bij de seat en staat hij bij de licentie; dit paneel is de plek waar
+ * de beheerder hem ziet en rechtzet.
+ *
+ * Dat is geen cosmetiek: `Eigenaar` is een gedeelde kolom in de werkdata, en het
+ * statuscontract van de werkronde leunt erop ("Wacht op review is altijd een
+ * mens"). Drie spellingen van één persoon maken filters, de dagstart en de
+ * correctievrij-meting onbetrouwbaar.
+ *
+ * Alle site-verkeer loopt door modulesFetch — de enige aanroepplek naar het
+ * eigen domein. Zo blijft de telemetrie-inventaris op precies vier fetches.
+ */
+
+let teamLijst = null; // laatste geslaagde antwoord; null = niet (voor ons) beschikbaar
+let teamVoorToken = null;
+
+async function laadTeam(bron) {
+  const token = bron && bron.token ? bron.token : "";
+  if (!token || teamVoorToken === token) return teamLijst;
+  teamVoorToken = token;
+  try {
+    const uit = await modulesFetch("/api/dashboard/team", undefined, token);
+    // 404 = geen beheerder, of deze licentie doet niet mee. Afwezig is geen
+    // fout: het paneel blijft dan gewoon weg.
+    teamLijst = uit && uit.status === 200 && uit.body && Array.isArray(uit.body.team)
+      ? uit.body.team
+      : null;
+  } catch (e) {
+    teamLijst = null;
+  }
+  return teamLijst;
+}
+
+function teamRijHtml(r) {
+  const wachtNog = !r.aanvaardOp;
+  return `<tr>
+    <td><input class="team-naam" type="text" maxlength="80" value="${esc(r.naam || "")}"
+        data-team-seat="${esc(r.seat)}" aria-label="Weergavenaam van ${esc(r.adres)}"></td>
+    <td class="footnote">${esc(r.adres)}</td>
+    <td class="footnote">${wachtNog ? "uitgenodigd, nog niet ingelogd" : "actief"}</td>
+  </tr>`;
+}
+
+function renderTeamPanel(sectieEl) {
+  if (!sectieEl) return;
+  if (!teamLijst || !teamLijst.length) {
+    sectieEl.style.display = "none";
+    return;
+  }
+  sectieEl.style.display = "";
+  sectieEl.querySelector("#panel-team-namen-body").innerHTML = `
+    <p class="footnote">Deze naam komt in <strong>Eigenaar</strong> en <strong>Afgerond door</strong>
+      te staan. Pas hem aan en klik ernaast om op te slaan.</p>
+    <div class="tabel-scroll">
+      <table class="data-tabel">
+        <thead><tr><th>Naam</th><th>E-mailadres</th><th>Status</th></tr></thead>
+        <tbody>${teamLijst.map(teamRijHtml).join("")}</tbody>
+      </table>
+    </div>
+    <p class="footnote" data-team-melding aria-live="polite"></p>`;
+  wireTeamPanel(sectieEl);
+}
+
+function wireTeamPanel(sectieEl) {
+  const melding = sectieEl.querySelector("[data-team-melding]");
+  sectieEl.addEventListener("change", async (e) => {
+    const veld = e.target.closest && e.target.closest("[data-team-seat]");
+    if (!veld) return;
+    const seat = veld.getAttribute("data-team-seat");
+    const naam = veld.value.trim().slice(0, 80);
+    veld.disabled = true;
+    try {
+      const uit = await modulesFetch("/api/dashboard/team", { seat, naam });
+      if (uit && uit.status === 200 && uit.body && Array.isArray(uit.body.team)) {
+        teamLijst = uit.body.team;
+        if (melding) melding.textContent = "Opgeslagen.";
+      } else if (melding) {
+        melding.textContent = "Niet opgeslagen — probeer het opnieuw.";
+      }
+    } catch (err) {
+      if (melding) melding.textContent = "Niet opgeslagen — geen verbinding.";
+    } finally {
+      veld.disabled = false;
+    }
+  });
+}
+
+
 /* Wiring: daglink -> werkruimte laden -> berekenen -> tonen, de
  * periodeschakelaar en de hash-router tussen de vier tabs (Vandaag · Team ·
  * Data · Prestaties) en de detailpagina's. Schrijft nooit iets terug behalve,
@@ -9727,6 +9873,14 @@ function renderAll() {
       renderModulesPanel(document.getElementById("panel-modules"));
       route();
     }
+  });
+
+  // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie
+  // — de site geeft anders 404 en laadTeam levert null. Zelfde patroon als het
+  // modulepaneel: eerst tekenen wat er is, dan eenmalig ophalen en bijtekenen.
+  renderTeamPanel(document.getElementById("panel-team-namen"));
+  void laadTeam(huidigeBron).then((team) => {
+    if (team) renderTeamPanel(document.getElementById("panel-team-namen"));
   });
 
   // ── Tab 4 · Prestaties ──

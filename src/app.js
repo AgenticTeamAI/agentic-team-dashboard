@@ -228,6 +228,14 @@ function renderAll() {
     }
   });
 
+  // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie
+  // — de site geeft anders 404 en laadTeam levert null. Zelfde patroon als het
+  // modulepaneel: eerst tekenen wat er is, dan eenmalig ophalen en bijtekenen.
+  renderTeamPanel(document.getElementById("panel-team-namen"));
+  void laadTeam(huidigeBron).then((team) => {
+    if (team) renderTeamPanel(document.getElementById("panel-team-namen"));
+  });
+
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
   renderAdoptieSubscores(document.getElementById("panel-adoptie-body"), ctx.adopt);

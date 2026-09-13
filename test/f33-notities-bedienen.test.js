@@ -54,7 +54,7 @@ beforeAll(() => {
   for (const rel of MODULES) vm.runInThisContext(readFileSync(join(ROOT, rel), "utf8"), { filename: rel });
   g = globalThis;
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); g._resetNaamvoorstel(); });
 
 const NOTITIES_DOMEIN = {
   naam: "Notities", module: "core", emoji: "📝",

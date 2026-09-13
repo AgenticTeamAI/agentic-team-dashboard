@@ -186,12 +186,17 @@ describe("terug van /oauth/authorize", () => {
     expect(naarWerkruimte.length).toBeGreaterThan(0);
     for (const g of naarWerkruimte) expect(g.opties.headers.Authorization).toBe("Bearer " + DASHBOARD_JWT);
 
-    // 4. en naar agentic-team.ai ging precies één token-call; de enige andere
-    //    toegestane site-call is het f34-moduleoverzicht (leesactie met het
-    //    JWT, draagt geen bundeldata en mag falen zonder dat iets breekt)
+    // 4. en naar agentic-team.ai ging precies één token-call. De andere
+    //    toegestane site-calls zijn leesacties met het JWT die geen bundeldata
+    //    dragen en mogen falen zonder dat iets breekt: het f34-moduleoverzicht,
+    //    en sinds i77 de naam die bij je seat hoort (wie-ben-ik) plus het
+    //    namenpaneel voor de beheerder (team). Deze lijst is de bewuste grens —
+    //    een endpoint erbij hoort hier een regel te kosten.
     const naarSite = gevraagd.filter((g) => g.url.startsWith("https://www.agentic-team.ai"));
     expect(naarSite.filter((g) => g.url.includes("/api/oauth/token"))).toHaveLength(1);
-    for (const g of naarSite) expect(g.url).toMatch(/\/api\/(oauth\/token|dashboard\/modules)$/);
+    for (const g of naarSite) {
+      expect(g.url).toMatch(/\/api\/(oauth\/token|dashboard\/(modules|team|wie-ben-ik))$/);
+    }
     expect(w.__dashboardCtx.bundle.sourceLabel).toBe("werkruimte van Testbedrijf BV");
   });
 
