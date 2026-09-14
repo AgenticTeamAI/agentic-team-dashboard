@@ -278,7 +278,9 @@ function renderHerkomst(el, ctx) {
 
   regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
   regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
-  if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
+  if (ctx.agentUsage && ctx.agentUsage.bron === "activaties") {
+    regels.push(`<strong>Gebruik per agent</strong> telt inzet: elke keer dat een agent in een gesprek aan de slag ging (zijn playbook ophaalde), ook als hij daarna niets wegschreef. Je werkruimte telt dat zelf, per week${ctx.agentUsage.sinds ? `, sinds ${esc(fmtDate(parseDateField(ctx.agentUsage.sinds)))}` : ""}; er gaat geen gesprek of inhoud mee, alleen per agent een aantal. Vervolgstappen binnen hetzelfde werk tellen niet opnieuw.`);
+  } else if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
     regels.push(`<strong>Gebruik per agent</strong> is hier geteld uit de <em>teamfeed</em>: één telling per bericht dat een agent zelf plaatste. Dat is dezelfde bron als de Team-tab, dus beide tabs noemen hetzelfde aantal. De gebruikelijke bron — het veld Agent op je acties en lessen — is in deze bundel nergens gevuld; zonder deze terugval zou hier een ranglijst van nullen staan naast een volle feed.`);
   } else {
     regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
@@ -391,11 +393,14 @@ function renderGebruikPanel(el, agentUsage, ctx) {
   // Komt de telling uit de teamfeed, dan hóórt dat erbij te staan: anders
   // staat hier een ander getal dan op de Team-tab zonder dat iemand kan zien
   // waarom (zie kiesAgentGebruik in zones.js).
-  const bron = agentUsage.bron === "teamfeed"
-    ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
-    : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
+  const sinds = agentUsage.sinds ? fmtDate(parseDateField(agentUsage.sinds)) : null;
+  const telling = agentUsage.bron === "activaties"
+    ? `${gebruikt.length} van ${agentUsage.ranking.length} agents is minstens één keer ingezet${sinds ? ` sinds ${esc(sinds)}` : ""}. Geteld als inzet: elke keer dat een agent aan de slag ging, ook zonder iets weg te schrijven.`
+    : `${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.` + (agentUsage.bron === "teamfeed"
+      ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
+      : ` Geteld uit Acties en Lessen &amp; Inzichten.`);
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
-    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
+    <p class="footnote">${telling}</p>
     ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
@@ -597,10 +602,41 @@ function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage, ctx)
     ${ctx ? agentSuggestiesHtml(ctx) : ""}`;
     return;
   }
-  renderZone3(el, z3, schema, today, periodDays);
+  if (agentUsage.bron === "activaties") renderGebruikUitActivaties(el, agentUsage, schema, today, periodDays);
+  else renderZone3(el, z3, schema, today, periodDays);
   // De sectiekop vraagt "welke agent laat ik links liggen, en waarom?" — dit
   // is het antwoord, niet de ranglijst erboven.
   if (ctx) el.insertAdjacentHTML("beforeend", agentSuggestiesHtml(ctx));
+}
+
+/* i68 — dezelfde indeling per module als de sporenweergave (renderZone3),
+ * maar met de inzet die de werkruimte telde. Bewust niet náást de sporen:
+ * twee tellingen van "gebruik" die elkaar tegenspreken kosten meer vertrouwen
+ * dan ze uitleggen. */
+function renderGebruikUitActivaties(el, usage, schema, today, periodDays) {
+  const perSlug = {};
+  for (const r of usage.ranking) perSlug[r.slug] = r;
+  const sinds = usage.sinds ? fmtDate(parseDateField(usage.sinds)) : null;
+  const perModule = {};
+  for (const a of schema.agents) (perModule[a.module] = perModule[a.module] || []).push(a);
+  const blokken = Object.entries(perModule).map(([modKey, agents]) => {
+    const modNaam = (schema.modules[modKey] && schema.modules[modKey].naam) || modKey;
+    const rijen = agents.map(a => {
+      const r = perSlug[a.slug] || { value: 0, totaal: 0 };
+      const inzet = r.totaal === 0
+        ? `<span class="spoor geen">nog niet ingezet${sinds ? ` sinds ${esc(sinds)}` : ""}</span>`
+        : `<span class="spoor actief">${r.value}× ingezet in ${periodDays}d · ${r.totaal}× ${sinds ? `sinds ${esc(sinds)}` : "totaal"}</span>`;
+      return `<div class="agent-row klikbaar" data-goto="agent/${esc(a.slug)}" role="link" tabindex="0"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${inzet}<span class="pijl">→</span></div>`;
+    }).join("");
+    return `<div class="module-block"><h3>${esc(modNaam)}</h3>${rijen}</div>`;
+  }).join("");
+  const weken = (usage.perWeek || []).map(w =>
+    `<tr><td>week van ${esc(fmtDate(parseDateField(w.week_start)))}</td><td>${w.totaal}</td></tr>`).join("");
+  el.innerHTML = blokken + (weken
+    ? `<h3>Inzet per week</h3><div class="tabel-scroll"><table class="detail-table"><thead><tr><th>Week</th><th>Keer ingezet</th></tr></thead><tbody>${weken}</tbody></table></div>`
+    : "") + `
+    <p class="footnote">Inzet telt elke keer dat een agent in een gesprek aan de slag ging, ook als hij daarna niets wegschreef. Je werkruimte houdt dat zelf bij, per week en per agent; er gaat geen gesprek of inhoud mee. "Nog niet ingezet" gaat alleen over de periode sinds de telling begon.</p>
+    <p class="footnote warn">Dit dashboard kan niet zien welke modules je hebt aangeschaft. Is een agent nooit ingezet, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je die module niet hebt.</p>`;
 }
 
 // ── Detail per agent (f4: doorklik per agent) ─────────────────────────
@@ -611,7 +647,14 @@ function renderDetailAgent(el, slug, ctx) {
   const t = perMod.find(a => a.slug === slug) || { geenSpoor: true, aantalPeriode: 0, aantalTotaal: 0, laatst: null };
   const modNaam = (ctx.schema.modules[agent.module] && ctx.schema.modules[agent.module].naam) || agent.module;
 
-  const cards = `<div class="grid-9">
+  // i68: de inzet uit de werkruimte bovenaan. De kaarten eronder gaan over
+  // sporen (rijen met deze agentnaam) en heten ook zo.
+  const usage = ctx.agentUsage;
+  const inzetRij = usage && usage.bron === "activaties" ? usage.ranking.find(r => r.slug === slug) : null;
+  const inzet = inzetRij
+    ? `<p class="footnote">Ingezet: <strong>${inzetRij.value}×</strong> in de laatste ${ctx.periodDays} dagen, ${inzetRij.totaal}× ${usage.sinds ? `sinds ${esc(fmtDate(parseDateField(usage.sinds)))}` : "totaal"}. Sporen hieronder zijn wat deze agent daarbij wegschreef.</p>`
+    : "";
+  const cards = `${inzet}<div class="grid-9">
     <div class="card"><div class="kop">Sporen in de periode</div><div class="getal">${t.aantalPeriode}</div><div class="detail">laatste ${ctx.periodDays} dagen</div></div>
     <div class="card"><div class="kop">Sporen totaal</div><div class="getal">${t.aantalTotaal}</div><div class="detail">in de hele bundel</div></div>
     <div class="card${t.laatst ? "" : " signaal-grijs"}"><div class="kop">Laatste spoor</div><div class="getal">${t.laatst ? fmtDate(t.laatst) : "—"}</div><div class="detail">${t.laatst ? relAge(t.laatst, ctx.today) : "geen spoor met datum gevonden"}</div></div>

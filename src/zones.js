@@ -684,9 +684,10 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
 // telling met een voetnoot, dus valt de ranglijst terug op de feed en zegt
 // erbij waar het getal vandaan komt.
 //
-// Dit is de leeskant. De structurele meting - een eigen activatieteller in
-// dashboard_metrics, geschreven vanuit de werkruimte - staat als i68 op de
-// backlog en vervangt deze terugval zodra hij er is.
+// Sinds i68 telt de werkruimte-instantie zelf hoe vaak een agent aan de slag
+// ging (agentGebruikUitActivaties hieronder). Waar die teller er is, gaat hij
+// vóór deze terugval én vóór de sporen; dit blijft voor instanties die nog
+// een ouder image draaien en voor teams zonder werkruimte-connector.
 //
 // `items` zijn de genormaliseerde feeditems uit normaliseerFeed() (feed.js):
 // elk met agentSlug (of leeg bij een onbekende agent) en tijd (Date).
@@ -718,6 +719,48 @@ function agentGebruikUitTeamfeed(items, schema, today, periodDays) {
   return { status: "ok", bron: "teamfeed", ranking };
 }
 
+// -- i68: gebruik per agent uit de activatieteller van de werkruimte ------
+// Sporen tellen is niet hetzelfde als inzet meten: een agent die draaide maar
+// niets wegschreef, stond in de ranglijst op nul. De instantie ziet elke
+// inzet wel - elke get_playbook loopt erdoorheen - en telt per week per
+// agent hoe vaak een agent aan de slag ging (zijn oriëntatie ophaalde).
+// /dashboard/overzicht levert dat als `activaties`.
+//
+// Ontbreekt het veld, dan draait de instantie een image zonder teller: dan
+// null, en valt het dashboard terug op sporen en teamfeed zoals voorheen.
+// Het saneren gebeurt bij binnenkomst, in werkruimte-loader.js.
+function agentGebruikUitActivaties(activaties, schema, today, periodDays) {
+  if (!activaties || !Array.isArray(activaties.weken)) return null;
+  const traces = {};
+  for (const agent of schema.agents) traces[agent.slug] = { aantalPeriode: 0, aantalTotaal: 0 };
+  const perWeek = [];
+  let raak = 0;
+  for (const w of activaties.weken) {
+    const start = parseDateField(w.week_start);
+    const diff = start ? daysBetween(today, start) : NaN;
+    const inPeriode = diff >= 0 && diff <= periodDays;
+    let weekTotaal = 0;
+    for (const [slug, n] of Object.entries(w.per_agent || {})) {
+      const t = traces[slug];
+      if (!t) continue;
+      t.aantalTotaal += n;
+      if (inPeriode) t.aantalPeriode += n;
+      weekTotaal += n;
+    }
+    raak += weekTotaal;
+    if (inPeriode) perWeek.push({ week_start: w.week_start, totaal: weekTotaal });
+  }
+  // Nog niets geteld: dat zegt alleen dat de teller net aanstaat, niet dat
+  // het team stilstond. De bestaande bronnen weten dan meer.
+  if (!raak) return null;
+
+  const ranking = schema.agents
+    .map(a => ({ slug: a.slug, label: a.displayName, emoji: a.emoji, module: a.module, value: traces[a.slug].aantalPeriode, totaal: traces[a.slug].aantalTotaal }))
+    .sort((a, b) => b.value - a.value || b.totaal - a.totaal);
+
+  return { status: "ok", bron: "activaties", sinds: activaties.sinds, perWeek, ranking };
+}
+
 // Draagt een ranglijst uberhaupt signaal? Alle agents op nul is geen
 // ranglijst maar een ontbrekende meting, en hoort dus hetzelfde behandeld te
 // worden als een ontbrekende bron: zeggen waarom, geen twintig balkjes op nul.
@@ -731,7 +774,13 @@ const AGENTGEBRUIK_GEEN_SPOOR = "Geen van je agents heeft in deze bundel een spo
 // De ene plek die bepaalt welke ranglijst het dashboard toont. Beide routes
 // (rijen en metricsbestand) lopen hierlangs, zodat de Team-tab en de
 // Prestaties-tab nooit een ander verhaal vertellen.
-function kiesAgentGebruik(basis, feedItems, schema, today, periodDays) {
+//
+// i68: de activatieteller gaat voor alles. Hij vervangt de sporentelling
+// (niet ernaast), zodat er nooit twee getallen voor "gebruik" op het scherm
+// staan die elkaar tegenspreken.
+function kiesAgentGebruik(basis, feedItems, schema, today, periodDays, activaties) {
+  const uitTeller = agentGebruikUitActivaties(activaties, schema, today, periodDays);
+  if (uitTeller) return uitTeller;
   if (agentGebruikHeeftSignaal(basis)) return basis;
   const uitFeed = agentGebruikUitTeamfeed(feedItems, schema, today, periodDays);
   if (uitFeed) return uitFeed;
@@ -930,6 +979,7 @@ if (typeof module !== "undefined") {
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
     agentGebruikUitTeamfeed, agentGebruikHeeftSignaal, kiesAgentGebruik, AGENTGEBRUIK_GEEN_SPOOR,
+    agentGebruikUitActivaties,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,

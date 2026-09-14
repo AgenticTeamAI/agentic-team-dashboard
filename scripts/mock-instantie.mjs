@@ -135,6 +135,23 @@ if (domeinen._strayActies) {
 
 // Zelfde CORS-gedrag als de echte instantie (http.ts -> dashboardRoute):
 // alleen de dashboard-origin mag deze routes vanuit de browser aanroepen.
+/** i68: vier weken inzet, eindigend in de lopende week. Slugs uit de registry. */
+function mockActivaties() {
+  const maandag = new Date()
+  maandag.setUTCHours(0, 0, 0, 0)
+  maandag.setUTCDate(maandag.getUTCDate() - ((maandag.getUTCDay() + 6) % 7))
+  const week = (terug) => new Date(maandag.getTime() - terug * 7 * 86_400_000).toISOString().slice(0, 10)
+  return {
+    sinds: week(3),
+    weken: [
+      { week_start: week(3), per_agent: { orchestrator: 5, jurist: 1 } },
+      { week_start: week(2), per_agent: { orchestrator: 5, controller: 2 } },
+      { week_start: week(1), per_agent: { orchestrator: 4, jurist: 3, 'content-strateeg': 2 } },
+      { week_start: week(0), per_agent: { orchestrator: 2, jurist: 1 } },
+    ],
+  }
+}
+
 const DASHBOARD_ORIGIN = process.env.DASHBOARD_ORIGIN ?? 'http://localhost:3000'
 
 /** De productie-CSP uit vercel.json, met deze mock-origin erbij in connect-src. */
@@ -177,6 +194,8 @@ const server = createServer((req, res) => {
       return json(200, {
         klant: 'Mockbedrijf BV',
         domeinen: Object.entries(domeinen).map(([domein, e]) => ({ domein, aantal: e.length })),
+        // i68: de activatieteller zoals een instantie vanaf 0.14.0 hem levert.
+        activaties: mockActivaties(),
       })
     }
     if (url.pathname === '/dashboard/entries') {
