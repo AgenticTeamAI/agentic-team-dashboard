@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.91.0
+//   registryVersion : 1.91.1
 //   registry updated: 2026-09-11
-//   bron-commit     : af54a0de62b1fb2fcceee53cb277ec94db2932b0
-//   geextraheerd op : 2026-09-12T17:46:43Z
+//   bron-commit     : 6cb4cf1344f78ec0c7c916150578a1585af5ad9d
+//   geextraheerd op : 2026-09-14T13:09:02Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.91.0",
+  "registryVersion": "1.91.1",
   "registryUpdated": "2026-09-11",
-  "sourceCommit": "af54a0de62b1fb2fcceee53cb277ec94db2932b0",
-  "extractedAt": "2026-09-12T17:46:43Z",
+  "sourceCommit": "6cb4cf1344f78ec0c7c916150578a1585af5ad9d",
+  "extractedAt": "2026-09-14T13:09:02Z",
   "modules": {
     "core": {
       "naam": "Core",
