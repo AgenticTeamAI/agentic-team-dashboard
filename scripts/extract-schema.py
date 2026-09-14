@@ -40,6 +40,18 @@ def git_commit(repo_path):
         return None
 
 
+# i62: alleen de veldsleutels die het dashboard gebruikt gaan het publieke
+# schema in. Een nieuwe sleutel in de registry (zoals 'kolommen', de regels
+# van een kaart in een tekstveld) wordt zo pas publiek na een bewuste keuze
+# hier, in plaats van stil mee te lopen. Zelfde set als VELDSLEUTELS in
+# agent-architecture/installer/validate_registry.py, min 'kolommen'.
+PUBLIEKE_VELDSLEUTELS = ("naam", "type", "opties", "opties_dynamisch", "format", "naar", "meervoud", "crossModuleBedoeld")
+
+
+def publiek_veld(veld):
+    return {k: v for k, v in veld.items() if k in PUBLIEKE_VELDSLEUTELS}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Extraheer datadomeinen + agentlijst uit agent-architecture")
     parser.add_argument("--source", required=True, help="Pad naar een verse clone van AgenticTeamAI/agent-architecture")
@@ -97,7 +109,7 @@ def main():
         # domein, telt niet mee in breedte/volledigheid. werkruimte-loader.js
         # heeft daarnaast een eigen slug-skip als tweede vangrail.
         "datadomeinen": {
-            slug: domein
+            slug: {**domein, "velden": [publiek_veld(v) for v in domein.get("velden", [])]}
             for slug, domein in registry.get("datadomeinen", {}).items()
             if domein.get("opslag") != "werkruimte"
         },
