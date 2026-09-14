@@ -97,7 +97,7 @@ function buildContext() {
       z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
       z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
-      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
@@ -126,7 +126,7 @@ function buildContext() {
     z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
     z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
-    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
     // Op de rijenroute zijn alle waarschuwingen loaderwaarschuwingen: ze gaan
     // over de bundel, niet over losse velden. Zie de metricsroute hierboven.

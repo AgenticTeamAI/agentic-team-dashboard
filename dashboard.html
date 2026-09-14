@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ksNJD9z4AnjD161jTDJVVzGZHN5srzkvaEFr/sS5cqU=' 'sha256-w0VmQSp0Zmx5xtFQeICNNyVCgqtyj/xzLY1inB37K9M='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-ksNJD9z4AnjD161jTDJVVzGZHN5srzkvaEFr/sS5cqU=' 'sha256-ssmiFYO8EHCjABpSPr038DJbQNJH1adKqO5/aIb9/uY='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -3740,13 +3740,43 @@ if (typeof module !== "undefined") {
  */
 
 function emptyBundle(source, sourceLabel) {
-  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [], activaties: null };
 }
 
 // Beslist, puur op vorm, of een payload het kant-en-klare metricsbestand is
 // (een "versie"- of "type"-veld) — de versiecontrole zelf zit in metrics.js.
 function looksLikeMetricsPayload(raw) {
   return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
+}
+
+/* i68 — de activatieteller uit /dashboard/overzicht, gesaneerd bij binnenkomst:
+ * alleen agent-slugs uit het schema, alleen hele niet-negatieve aantallen,
+ * alleen geldige weekdata. Ontbreekt het veld, dan draait de instantie een
+ * image zonder teller: null. */
+const ACTIVATIE_MAX_WEKEN = 60;
+function saneerActivaties(raw, schema) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const slugs = new Set(((schema && schema.agents) || []).map(a => a.slug));
+  // Rondreis in plaats van Date.parse: die maakt van 31 februari stil 3 maart.
+  const datumOk = v => {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + "T00:00:00Z");
+    return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  };
+  const weken = (Array.isArray(raw.weken) ? raw.weken : [])
+    .filter(w => w && typeof w === "object" && datumOk(w.week_start))
+    .slice(-ACTIVATIE_MAX_WEKEN)
+    .map(w => {
+      const perAgent = {};
+      const bron = w.per_agent && typeof w.per_agent === "object" && !Array.isArray(w.per_agent) ? w.per_agent : {};
+      for (const [slug, n] of Object.entries(bron)) {
+        if (!slugs.has(slug)) continue;
+        if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > 1e6) continue;
+        perAgent[slug] = n;
+      }
+      return { week_start: w.week_start, per_agent: perAgent };
+    });
+  return { sinds: datumOk(raw.sinds) ? raw.sinds : null, weken };
 }
 
 const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
@@ -4161,6 +4191,8 @@ async function loadWerkruimteBundle(bron) {
   // het dashboard de interne tegels (correctievrij / f19-gate).
   bundle.intern = overzicht.intern === true;
   const schema = getSchema();
+  // i68: de activatieteller van de instantie. null = een image zonder teller.
+  bundle.activaties = saneerActivaties(overzicht.activaties, schema);
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
@@ -4291,7 +4323,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
-    emptyBundle, looksLikeMetricsPayload, metPlafond,
+    emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };
@@ -5356,9 +5388,10 @@ function computeAgentGebruikRanking(bundle, agentLookup, schema, today, periodDa
 // telling met een voetnoot, dus valt de ranglijst terug op de feed en zegt
 // erbij waar het getal vandaan komt.
 //
-// Dit is de leeskant. De structurele meting - een eigen activatieteller in
-// dashboard_metrics, geschreven vanuit de werkruimte - staat als i68 op de
-// backlog en vervangt deze terugval zodra hij er is.
+// Sinds i68 telt de werkruimte-instantie zelf hoe vaak een agent aan de slag
+// ging (agentGebruikUitActivaties hieronder). Waar die teller er is, gaat hij
+// vóór deze terugval én vóór de sporen; dit blijft voor instanties die nog
+// een ouder image draaien en voor teams zonder werkruimte-connector.
 //
 // `items` zijn de genormaliseerde feeditems uit normaliseerFeed() (feed.js):
 // elk met agentSlug (of leeg bij een onbekende agent) en tijd (Date).
@@ -5390,6 +5423,48 @@ function agentGebruikUitTeamfeed(items, schema, today, periodDays) {
   return { status: "ok", bron: "teamfeed", ranking };
 }
 
+// -- i68: gebruik per agent uit de activatieteller van de werkruimte ------
+// Sporen tellen is niet hetzelfde als inzet meten: een agent die draaide maar
+// niets wegschreef, stond in de ranglijst op nul. De instantie ziet elke
+// inzet wel - elke get_playbook loopt erdoorheen - en telt per week per
+// agent hoe vaak een agent aan de slag ging (zijn oriëntatie ophaalde).
+// /dashboard/overzicht levert dat als `activaties`.
+//
+// Ontbreekt het veld, dan draait de instantie een image zonder teller: dan
+// null, en valt het dashboard terug op sporen en teamfeed zoals voorheen.
+// Het saneren gebeurt bij binnenkomst, in werkruimte-loader.js.
+function agentGebruikUitActivaties(activaties, schema, today, periodDays) {
+  if (!activaties || !Array.isArray(activaties.weken)) return null;
+  const traces = {};
+  for (const agent of schema.agents) traces[agent.slug] = { aantalPeriode: 0, aantalTotaal: 0 };
+  const perWeek = [];
+  let raak = 0;
+  for (const w of activaties.weken) {
+    const start = parseDateField(w.week_start);
+    const diff = start ? daysBetween(today, start) : NaN;
+    const inPeriode = diff >= 0 && diff <= periodDays;
+    let weekTotaal = 0;
+    for (const [slug, n] of Object.entries(w.per_agent || {})) {
+      const t = traces[slug];
+      if (!t) continue;
+      t.aantalTotaal += n;
+      if (inPeriode) t.aantalPeriode += n;
+      weekTotaal += n;
+    }
+    raak += weekTotaal;
+    if (inPeriode) perWeek.push({ week_start: w.week_start, totaal: weekTotaal });
+  }
+  // Nog niets geteld: dat zegt alleen dat de teller net aanstaat, niet dat
+  // het team stilstond. De bestaande bronnen weten dan meer.
+  if (!raak) return null;
+
+  const ranking = schema.agents
+    .map(a => ({ slug: a.slug, label: a.displayName, emoji: a.emoji, module: a.module, value: traces[a.slug].aantalPeriode, totaal: traces[a.slug].aantalTotaal }))
+    .sort((a, b) => b.value - a.value || b.totaal - a.totaal);
+
+  return { status: "ok", bron: "activaties", sinds: activaties.sinds, perWeek, ranking };
+}
+
 // Draagt een ranglijst uberhaupt signaal? Alle agents op nul is geen
 // ranglijst maar een ontbrekende meting, en hoort dus hetzelfde behandeld te
 // worden als een ontbrekende bron: zeggen waarom, geen twintig balkjes op nul.
@@ -5403,7 +5478,13 @@ const AGENTGEBRUIK_GEEN_SPOOR = "Geen van je agents heeft in deze bundel een spo
 // De ene plek die bepaalt welke ranglijst het dashboard toont. Beide routes
 // (rijen en metricsbestand) lopen hierlangs, zodat de Team-tab en de
 // Prestaties-tab nooit een ander verhaal vertellen.
-function kiesAgentGebruik(basis, feedItems, schema, today, periodDays) {
+//
+// i68: de activatieteller gaat voor alles. Hij vervangt de sporentelling
+// (niet ernaast), zodat er nooit twee getallen voor "gebruik" op het scherm
+// staan die elkaar tegenspreken.
+function kiesAgentGebruik(basis, feedItems, schema, today, periodDays, activaties) {
+  const uitTeller = agentGebruikUitActivaties(activaties, schema, today, periodDays);
+  if (uitTeller) return uitTeller;
   if (agentGebruikHeeftSignaal(basis)) return basis;
   const uitFeed = agentGebruikUitTeamfeed(feedItems, schema, today, periodDays);
   if (uitFeed) return uitFeed;
@@ -5602,6 +5683,7 @@ if (typeof module !== "undefined") {
     computeRitme, computeBreedte, computeOpvolging, computeAdoptiescore,
     computeTijdwinst, computeAgentGebruikRanking,
     agentGebruikUitTeamfeed, agentGebruikHeeftSignaal, kiesAgentGebruik, AGENTGEBRUIK_GEEN_SPOOR,
+    agentGebruikUitActivaties,
     CORRECTIEVRIJ_VENSTER_DAGEN, CORRECTIEVRIJ_DREMPEL_PCT, CORRECTIEVRIJ_WEKEN, CORRECTIEVRIJ_WEKEN_VEREIST,
     checkboxWaar, berekenCorrectievrij, computeCorrectievrij,
     agentNamen, normAgentNaam, CORRECTIEVRIJ_GEEN_AGENTLIJST,
@@ -7242,7 +7324,9 @@ function renderHerkomst(el, ctx) {
 
   regels.push(`<strong>Ritme van je team</strong> is het ongewogen gemiddelde van drie subscores (ritme · breedte · opvolging), elk 0–100, over de gekozen periode. Ontbreekt de bron voor een subscore, dan telt hij niet mee — nooit als 0.`);
   regels.push(`<strong>Activiteit per week</strong> komt per serie uit het eigen datumveld (Interacties·Datum, Dagverslagen·Dag, Lessen &amp; Inzichten·Datum, Content Kalender·Publicatiedatum). Een week zonder spoor blijft zichtbaar met het label "geen" — het gat is het signaal, geen weggelaten balk.`);
-  if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
+  if (ctx.agentUsage && ctx.agentUsage.bron === "activaties") {
+    regels.push(`<strong>Gebruik per agent</strong> telt inzet: elke keer dat een agent in een gesprek aan de slag ging (zijn playbook ophaalde), ook als hij daarna niets wegschreef. Je werkruimte telt dat zelf, per week${ctx.agentUsage.sinds ? `, sinds ${esc(fmtDate(parseDateField(ctx.agentUsage.sinds)))}` : ""}; er gaat geen gesprek of inhoud mee, alleen per agent een aantal. Vervolgstappen binnen hetzelfde werk tellen niet opnieuw.`);
+  } else if (ctx.agentUsage && ctx.agentUsage.bron === "teamfeed") {
     regels.push(`<strong>Gebruik per agent</strong> is hier geteld uit de <em>teamfeed</em>: één telling per bericht dat een agent zelf plaatste. Dat is dezelfde bron als de Team-tab, dus beide tabs noemen hetzelfde aantal. De gebruikelijke bron — het veld Agent op je acties en lessen — is in deze bundel nergens gevuld; zonder deze terugval zou hier een ranglijst van nullen staan naast een volle feed.`);
   } else {
     regels.push(`<strong>Gebruik per agent</strong> komt uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "0" betekent geen spoor in deze bundel — niet noodzakelijk "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.`);
@@ -7355,11 +7439,14 @@ function renderGebruikPanel(el, agentUsage, ctx) {
   // Komt de telling uit de teamfeed, dan hóórt dat erbij te staan: anders
   // staat hier een ander getal dan op de Team-tab zonder dat iemand kan zien
   // waarom (zie kiesAgentGebruik in zones.js).
-  const bron = agentUsage.bron === "teamfeed"
-    ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
-    : ` Geteld uit Acties en Lessen &amp; Inzichten.`;
+  const sinds = agentUsage.sinds ? fmtDate(parseDateField(agentUsage.sinds)) : null;
+  const telling = agentUsage.bron === "activaties"
+    ? `${gebruikt.length} van ${agentUsage.ranking.length} agents is minstens één keer ingezet${sinds ? ` sinds ${esc(sinds)}` : ""}. Geteld als inzet: elke keer dat een agent aan de slag ging, ook zonder iets weg te schrijven.`
+    : `${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.` + (agentUsage.bron === "teamfeed"
+      ? ` Geteld uit de teamfeed — berichten van je agents — omdat je acties en lessen in deze bundel geen agentnaam dragen.`
+      : ` Geteld uit Acties en Lessen &amp; Inzichten.`);
   el.innerHTML = `<div class="chart-scroll chart-scroll-smal">${chart}</div>
-    <p class="footnote">${gebruikt.length} van ${agentUsage.ranking.length} agents heeft minstens één spoor in de bundel.${bron}</p>
+    <p class="footnote">${telling}</p>
     ${ctx ? agentSuggestiesHtml(ctx) : ""}
     <a class="detail-link" data-goto="gebruik">Alle ${agentUsage.ranking.length} agents, per module →</a>`;
 }
@@ -7561,10 +7648,41 @@ function renderDetailGebruik(el, z3, schema, today, periodDays, agentUsage, ctx)
     ${ctx ? agentSuggestiesHtml(ctx) : ""}`;
     return;
   }
-  renderZone3(el, z3, schema, today, periodDays);
+  if (agentUsage.bron === "activaties") renderGebruikUitActivaties(el, agentUsage, schema, today, periodDays);
+  else renderZone3(el, z3, schema, today, periodDays);
   // De sectiekop vraagt "welke agent laat ik links liggen, en waarom?" — dit
   // is het antwoord, niet de ranglijst erboven.
   if (ctx) el.insertAdjacentHTML("beforeend", agentSuggestiesHtml(ctx));
+}
+
+/* i68 — dezelfde indeling per module als de sporenweergave (renderZone3),
+ * maar met de inzet die de werkruimte telde. Bewust niet náást de sporen:
+ * twee tellingen van "gebruik" die elkaar tegenspreken kosten meer vertrouwen
+ * dan ze uitleggen. */
+function renderGebruikUitActivaties(el, usage, schema, today, periodDays) {
+  const perSlug = {};
+  for (const r of usage.ranking) perSlug[r.slug] = r;
+  const sinds = usage.sinds ? fmtDate(parseDateField(usage.sinds)) : null;
+  const perModule = {};
+  for (const a of schema.agents) (perModule[a.module] = perModule[a.module] || []).push(a);
+  const blokken = Object.entries(perModule).map(([modKey, agents]) => {
+    const modNaam = (schema.modules[modKey] && schema.modules[modKey].naam) || modKey;
+    const rijen = agents.map(a => {
+      const r = perSlug[a.slug] || { value: 0, totaal: 0 };
+      const inzet = r.totaal === 0
+        ? `<span class="spoor geen">nog niet ingezet${sinds ? ` sinds ${esc(sinds)}` : ""}</span>`
+        : `<span class="spoor actief">${r.value}× ingezet in ${periodDays}d · ${r.totaal}× ${sinds ? `sinds ${esc(sinds)}` : "totaal"}</span>`;
+      return `<div class="agent-row klikbaar" data-goto="agent/${esc(a.slug)}" role="link" tabindex="0"><span class="emoji">${a.emoji}</span><span class="naam">${esc(a.displayName)}</span>${inzet}<span class="pijl">→</span></div>`;
+    }).join("");
+    return `<div class="module-block"><h3>${esc(modNaam)}</h3>${rijen}</div>`;
+  }).join("");
+  const weken = (usage.perWeek || []).map(w =>
+    `<tr><td>week van ${esc(fmtDate(parseDateField(w.week_start)))}</td><td>${w.totaal}</td></tr>`).join("");
+  el.innerHTML = blokken + (weken
+    ? `<h3>Inzet per week</h3><div class="tabel-scroll"><table class="detail-table"><thead><tr><th>Week</th><th>Keer ingezet</th></tr></thead><tbody>${weken}</tbody></table></div>`
+    : "") + `
+    <p class="footnote">Inzet telt elke keer dat een agent in een gesprek aan de slag ging, ook als hij daarna niets wegschreef. Je werkruimte houdt dat zelf bij, per week en per agent; er gaat geen gesprek of inhoud mee. "Nog niet ingezet" gaat alleen over de periode sinds de telling begon.</p>
+    <p class="footnote warn">Dit dashboard kan niet zien welke modules je hebt aangeschaft. Is een agent nooit ingezet, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je die module niet hebt.</p>`;
 }
 
 // ── Detail per agent (f4: doorklik per agent) ─────────────────────────
@@ -7575,7 +7693,14 @@ function renderDetailAgent(el, slug, ctx) {
   const t = perMod.find(a => a.slug === slug) || { geenSpoor: true, aantalPeriode: 0, aantalTotaal: 0, laatst: null };
   const modNaam = (ctx.schema.modules[agent.module] && ctx.schema.modules[agent.module].naam) || agent.module;
 
-  const cards = `<div class="grid-9">
+  // i68: de inzet uit de werkruimte bovenaan. De kaarten eronder gaan over
+  // sporen (rijen met deze agentnaam) en heten ook zo.
+  const usage = ctx.agentUsage;
+  const inzetRij = usage && usage.bron === "activaties" ? usage.ranking.find(r => r.slug === slug) : null;
+  const inzet = inzetRij
+    ? `<p class="footnote">Ingezet: <strong>${inzetRij.value}×</strong> in de laatste ${ctx.periodDays} dagen, ${inzetRij.totaal}× ${usage.sinds ? `sinds ${esc(fmtDate(parseDateField(usage.sinds)))}` : "totaal"}. Sporen hieronder zijn wat deze agent daarbij wegschreef.</p>`
+    : "";
+  const cards = `${inzet}<div class="grid-9">
     <div class="card"><div class="kop">Sporen in de periode</div><div class="getal">${t.aantalPeriode}</div><div class="detail">laatste ${ctx.periodDays} dagen</div></div>
     <div class="card"><div class="kop">Sporen totaal</div><div class="getal">${t.aantalTotaal}</div><div class="detail">in de hele bundel</div></div>
     <div class="card${t.laatst ? "" : " signaal-grijs"}"><div class="kop">Laatste spoor</div><div class="getal">${t.laatst ? fmtDate(t.laatst) : "—"}</div><div class="detail">${t.laatst ? relAge(t.laatst, ctx.today) : "geen spoor met datum gevonden"}</div></div>
@@ -9782,7 +9907,7 @@ function buildContext() {
       z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
       z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
       activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
-      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+      agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
       minutenPerActie: currentMinutenPerActie,
@@ -9811,7 +9936,7 @@ function buildContext() {
     z1: voegTeamOogstToeAanAandacht(m.z1, bundle, schema),
     z2: m.z2, z3: m.z3, z4: m.z4, z5: m.z5,
     activiteit: m.activiteit, adopt: m.adopt, tijdwinst: m.tijdwinst,
-    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays),
+    agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
     sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
     // Op de rijenroute zijn alle waarschuwingen loaderwaarschuwingen: ze gaan
     // over de bundel, niet over losse velden. Zie de metricsroute hierboven.

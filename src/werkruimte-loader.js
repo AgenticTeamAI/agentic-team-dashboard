@@ -30,13 +30,43 @@
  */
 
 function emptyBundle(source, sourceLabel) {
-  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [] };
+  return { source, sourceLabel, kind: "rows", domains: {}, bedrijfscontext: null, waarschuwingen: [], activaties: null };
 }
 
 // Beslist, puur op vorm, of een payload het kant-en-klare metricsbestand is
 // (een "versie"- of "type"-veld) — de versiecontrole zelf zit in metrics.js.
 function looksLikeMetricsPayload(raw) {
   return raw !== null && typeof raw === "object" && !Array.isArray(raw) && (("versie" in raw) || ("type" in raw));
+}
+
+/* i68 — de activatieteller uit /dashboard/overzicht, gesaneerd bij binnenkomst:
+ * alleen agent-slugs uit het schema, alleen hele niet-negatieve aantallen,
+ * alleen geldige weekdata. Ontbreekt het veld, dan draait de instantie een
+ * image zonder teller: null. */
+const ACTIVATIE_MAX_WEKEN = 60;
+function saneerActivaties(raw, schema) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const slugs = new Set(((schema && schema.agents) || []).map(a => a.slug));
+  // Rondreis in plaats van Date.parse: die maakt van 31 februari stil 3 maart.
+  const datumOk = v => {
+    if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+    const d = new Date(v + "T00:00:00Z");
+    return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  };
+  const weken = (Array.isArray(raw.weken) ? raw.weken : [])
+    .filter(w => w && typeof w === "object" && datumOk(w.week_start))
+    .slice(-ACTIVATIE_MAX_WEKEN)
+    .map(w => {
+      const perAgent = {};
+      const bron = w.per_agent && typeof w.per_agent === "object" && !Array.isArray(w.per_agent) ? w.per_agent : {};
+      for (const [slug, n] of Object.entries(bron)) {
+        if (!slugs.has(slug)) continue;
+        if (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > 1e6) continue;
+        perAgent[slug] = n;
+      }
+      return { week_start: w.week_start, per_agent: perAgent };
+    });
+  return { sinds: datumOk(raw.sinds) ? raw.sinds : null, weken };
 }
 
 const DAGLINK_SS_KEY = "agentic-team-dashboard:daglink";
@@ -451,6 +481,8 @@ async function loadWerkruimteBundle(bron) {
   // het dashboard de interne tegels (correctievrij / f19-gate).
   bundle.intern = overzicht.intern === true;
   const schema = getSchema();
+  // i68: de activatieteller van de instantie. null = een image zonder teller.
+  bundle.activaties = saneerActivaties(overzicht.activaties, schema);
   const opslagDomeinen = werkruimteDomeinen(schema);
 
   const gevuld = (overzicht.domeinen || []).filter(d => d && d.aantal > 0);
@@ -581,7 +613,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
-    emptyBundle, looksLikeMetricsPayload, metPlafond,
+    emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
   };

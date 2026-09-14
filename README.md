@@ -199,9 +199,13 @@ De panelen tonen, verdeeld over de Vandaag- en Prestaties-tab:
    (Ritme/Breedte/Opvolging) met de subscores, plus één regel die de
    optelsom letterlijk uitschrijft. Die narekenregel blijft bewust bij het
    cijfer staan: dat is geen herkomst-voetnoot maar de belofte zelf.
-5. **Gebruik per agent** — gerangschikte horizontale staafgrafiek. Ontbreekt
-   het brongegeven (zie hieronder), dan een expliciet grijs blok met de
-   reden, geen twintig balkjes op nul. Vanuit de detailpagina is elke agent
+5. **Gebruik per agent** — gerangschikte horizontale staafgrafiek. Bron, in
+   volgorde (i68, `kiesAgentGebruik`): de **activatieteller** van de
+   werkruimte-instantie (`activaties` in `/dashboard/overzicht`: hoe vaak een
+   agent aan de slag ging, ook zonder iets weg te schrijven), anders de
+   sporen in Acties en Lessen, anders de teamfeed. Nooit twee van die
+   tellingen naast elkaar. Ontbreekt elke bron, dan een expliciet grijs blok
+   met de reden, geen twintig balkjes op nul. Vanuit de detailpagina is elke agent
    **per agent doorklikbaar** (`#/detail/agent/<slug>`): kerncijfers
    (sporen in periode/totaal, laatste spoor) plus — bij werkdata-rijen — de
    onderliggende acties en lessen van die agent; een metricsbestand draagt
