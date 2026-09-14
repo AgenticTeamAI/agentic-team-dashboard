@@ -1030,17 +1030,18 @@ function renderDataDomein(el, key, ctx) {
    * van de klant zetten zonder dat iemand het zag. Async omdat het voorstel van
    * de site komt; zonder antwoord gedraagt hij zich precies als voorheen. */
   async function vraagNaam() {
-    const nu = mijnNaam(ctx.bron);
-    const voorstel = (await haalNaamvoorstel(ctx.bron)) || "";
-    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel);
-    if (ingevuld === null) return nu;
+    const { voorstel } = await haalNaamvoorstel(ctx.bron);
+    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel || "");
+    if (ingevuld === null) return voorstel || "";
     return zetMijnNaam(ctx.bron, ingevuld);
   }
 
-  /* Al een naam? Dan geen vraag en geen aanroep naar de site. */
+  /* Alleen een GEKOZEN naam mag zonder vragen de werkdata in — dat is wat
+   * `gezet` betekent. Een afleiding uit je adres (het deel vóór de @) vult de
+   * prompt voor maar vervangt hem niet: stil invullen zou een persoonsgegeven
+   * in de werkdata van de klant zetten zonder dat iemand het zag. */
   function naamVoorSchrijfactie() {
-    const nu = mijnNaam(ctx.bron);
-    return nu ? Promise.resolve(nu) : vraagNaam();
+    return haalNaamvoorstel(ctx.bron).then((r) => (r.gezet ? r.voorstel : vraagNaam()));
   }
 
   function bedienKlik(e) {

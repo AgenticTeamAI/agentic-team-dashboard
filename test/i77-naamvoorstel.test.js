@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
-/* i77 — het dashboard vroeg om een naam terwijl je al was ingelogd.
+/* i77 — de naam hoort bij je seat, niet bij je browser.
  *
- * De prompt komt nu voorgevuld met wat de site over jouw seat weet. Wat hier
- * vastgezet wordt is niet de tekst maar de terughoudendheid: er gaat alléén een
- * aanroep naar de site uit voor iemand die nog geen naam heeft opgeslagen, en
- * één keer per seat. Een regressie daarop zou betekenen dat het dashboard bij
- * elke schrijfactie een adres laat opzoeken voor iemand die het allang weet. */
+ * Eerst stond de weergavenaam alleen in localStorage. Dat werkte voor één
+ * persoon op één apparaat en verder nergens: een tweede laptop vroeg het
+ * opnieuw, en bij meerdere mensen op één licentie kon niemand corrigeren dat
+ * dezelfde persoon in drie spellingen in dezelfde kolom stond. Nu is de server
+ * de bron en houdt de browser een terugvalkopie.
+ *
+ * Drie dingen staan hier vast, en ze zijn alle drie eerder fout gegaan:
+ * (1) een gekozen naam van de server wint van de kopie — anders komt een
+ *     correctie door de beheerder nooit aan, en dan is het beheerpaneel decor;
+ * (2) een naam die deze browser al kende wordt NIET overschreven door het deel
+ *     vóór de @ van het adres, maar één keer omhooggetild;
+ * (3) hoogstens één aanroep per seat, en zonder sessie geen enkele. */
 import { describe, expect, it, beforeAll, beforeEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -37,7 +44,7 @@ let kluis;
 function bron(seat, token = true) {
   if (!token) return {};
   const payload = btoa(JSON.stringify({ sub: seat })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return { token: `kop.${payload}.handtekening` };
+  return { oauth: true, token: `kop.${payload}.handtekening` };
 }
 
 beforeAll(() => {
@@ -48,55 +55,104 @@ beforeAll(() => {
 
 beforeEach(() => {
   kluis.clear();
+  g._resetNaamvoorstel();
   // Nieuwe seat per test, zodat de cache van de vorige test niet meelift.
   g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "janine" } }));
 });
 
 describe("haalNaamvoorstel", () => {
-  it("vraagt de site om een voorstel als er nog geen naam is", async () => {
-    expect(await g.haalNaamvoorstel(bron("lic#seat-a"))).toBe("janine");
-    expect(g.modulesFetch).toHaveBeenCalledTimes(1);
+  it("neemt de naam die de server heeft vastgelegd", async () => {
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
+    expect(await g.haalNaamvoorstel(bron("lic#seat-a"))).toEqual({ voorstel: "Janine Bakker", gezet: true });
     expect(g.modulesFetch.mock.calls[0][0]).toBe("/api/dashboard/wie-ben-ik");
   });
 
-  it("vraagt NIETS als deze browser de naam al kent", async () => {
+  it("laat een correctie door de beheerder winnen van de kopie in deze browser", async () => {
     const b = bron("lic#seat-b");
-    g.zetMijnNaam(b, "Tijmen");
-    expect(await g.haalNaamvoorstel(b)).toBe("Tijmen");
-    expect(g.modulesFetch).not.toHaveBeenCalled();
+    g.bewaarKopie(b, "typfuot");
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Janine Bakker", gezet: true });
+  });
+
+  it("overschrijft een zelfgekozen naam NIET met een afleiding uit het adres", async () => {
+    const b = bron("lic#seat-c");
+    g.bewaarKopie(b, "Tijmen Kip");
+    // Server kent nog geen gekozen naam en stelt het deel vóór de @ voor.
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "tijmen", gezet: false } }));
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Tijmen Kip", gezet: true });
+  });
+
+  it("tilt die naam één keer omhoog naar de server", async () => {
+    const b = bron("lic#seat-d");
+    g.bewaarKopie(b, "Tijmen Kip");
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "tijmen", gezet: false } }));
+    await g.haalNaamvoorstel(b);
+    const schrijf = g.modulesFetch.mock.calls.filter((c) => c[1] && c[1].naam);
+    expect(schrijf).toHaveLength(1);
+    expect(schrijf[0][1].naam).toBe("Tijmen Kip");
+  });
+
+  it("markeert een afleiding uit het adres als NIET gekozen", async () => {
+    // Dit onderscheid draagt de prompt: een afleiding mag voorvullen, niet
+    // vervangen. Vlak je het weg tot één string, dan belandt 'janine' stil in
+    // de gedeelde kolom Eigenaar van de klant.
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "janine", gezet: false } }));
+    expect(await g.haalNaamvoorstel(bron("lic#seat-e"))).toEqual({ voorstel: "janine", gezet: false });
   });
 
   it("vraagt hoogstens één keer per seat", async () => {
-    const b = bron("lic#seat-c");
+    const b = bron("lic#seat-f");
     await g.haalNaamvoorstel(b);
     await g.haalNaamvoorstel(b);
     await g.haalNaamvoorstel(b);
-    expect(g.modulesFetch).toHaveBeenCalledTimes(1);
+    expect(g.modulesFetch.mock.calls.filter((c) => c[1] === undefined)).toHaveLength(1);
   });
 
   it("vraagt opnieuw voor een andere seat", async () => {
-    await g.haalNaamvoorstel(bron("lic#seat-d"));
-    await g.haalNaamvoorstel(bron("lic#seat-e"));
-    expect(g.modulesFetch).toHaveBeenCalledTimes(2);
+    await g.haalNaamvoorstel(bron("lic#seat-g"));
+    await g.haalNaamvoorstel(bron("lic#seat-h"));
+    expect(g.modulesFetch.mock.calls.filter((c) => c[1] === undefined)).toHaveLength(2);
   });
 
-  it("vraagt niets zonder sessie", async () => {
-    expect(await g.haalNaamvoorstel(bron("", false))).toBe("");
+  it("stuurt in een daglinksessie niets naar de site", async () => {
+    // Het daglink-token hoort onze server nooit te bereiken.
+    const daglink = { token: "dag-token-zonder-oauth" };
+    expect(await g.haalNaamvoorstel(daglink)).toEqual({ voorstel: "", gezet: false });
     expect(g.modulesFetch).not.toHaveBeenCalled();
   });
 
-  it("levert leeg bij een leeg serverantwoord", async () => {
-    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: null } }));
-    expect(await g.haalNaamvoorstel(bron("lic#seat-f"))).toBe("");
+  it("vraagt niets zonder sessie", async () => {
+    expect(await g.haalNaamvoorstel(bron("", false))).toEqual({ voorstel: "", gezet: false });
+    expect(g.modulesFetch).not.toHaveBeenCalled();
   });
 
-  it("levert leeg bij een foutstatus", async () => {
-    g.modulesFetch = vi.fn(async () => ({ status: 404, body: null }));
-    expect(await g.haalNaamvoorstel(bron("lic#seat-g"))).toBe("");
-  });
-
-  it("blokkeert niet als de aanroep gooit", async () => {
+  it("valt bij een storing terug op de kopie in deze browser", async () => {
+    const b = bron("lic#seat-i");
+    g.bewaarKopie(b, "Tijmen");
     g.modulesFetch = vi.fn(async () => { throw new Error("offline"); });
-    expect(await g.haalNaamvoorstel(bron("lic#seat-h"))).toBe("");
+    expect(await g.haalNaamvoorstel(b)).toEqual({ voorstel: "Tijmen", gezet: true });
+  });
+
+  it("levert leeg bij een foutstatus zonder kopie", async () => {
+    g.modulesFetch = vi.fn(async () => ({ status: 404, body: null }));
+    expect(await g.haalNaamvoorstel(bron("lic#seat-j"))).toEqual({ voorstel: "", gezet: false });
+  });
+});
+
+describe("zetMijnNaam", () => {
+  it("bewaart een kopie én stuurt hem naar de server", async () => {
+    const b = bron("lic#seat-k");
+    expect(g.zetMijnNaam(b, "  Janine  ")).toBe("Janine");
+    expect(g.mijnNaam(b)).toBe("Janine");
+    const schrijf = g.modulesFetch.mock.calls.filter((c) => c[1] && "naam" in c[1]);
+    expect(schrijf).toHaveLength(1);
+    expect(schrijf[0][1].naam).toBe("Janine");
+  });
+
+  it("houdt de gebruiker niet op als de server niet bereikbaar is", () => {
+    g.modulesFetch = vi.fn(async () => { throw new Error("offline"); });
+    const b = bron("lic#seat-l");
+    expect(g.zetMijnNaam(b, "Janine")).toBe("Janine");
+    expect(g.mijnNaam(b)).toBe("Janine");
   });
 });

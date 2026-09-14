@@ -54,7 +54,7 @@ beforeAll(() => {
   for (const rel of MODULES) vm.runInThisContext(readFileSync(join(ROOT, rel), "utf8"), { filename: rel });
   g = globalThis;
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); g._resetNaamvoorstel(); });
 
 const NOTITIES_DOMEIN = {
   naam: "Notities", module: "core", emoji: "📝",
@@ -206,6 +206,47 @@ describe("f33 — bedienen", () => {
 
     expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Yoram" });
     expect(g.mijnNaam(ctx.bron)).toBe("Yoram");
+  });
+
+  it("vraagt nog steeds, ook als de site een naam uit je adres afleidt", async () => {
+    // i77-regressie: toen haalNaamvoorstel één string teruggaf, was het deel
+    // vóór de @ altijd truthy en werd de prompt nooit meer bereikt — dan
+    // belandde 'jan.jansen' ongevraagd in de gedeelde kolom Eigenaar van de
+    // klant. `gezet:false` hoort de prompt vóór te vullen, niet te vervangen.
+    const ctx = ctxMet();
+    window.localStorage.removeItem("agentic-team-dashboard:naam:at_test#seat1");
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "jan.jansen", gezet: false } }));
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue("Jan Jansen");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ entry: {} }),
+    });
+    const c = openRij(ctx);
+    c.querySelector("[data-snel-mij]").click();
+    await new Promise(r => setTimeout(r, 0));
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(prompt).toHaveBeenCalled();
+    expect(prompt.mock.calls[0][1]).toBe("jan.jansen"); // voorgevuld, niet ingevuld
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Jan Jansen" });
+    delete g.modulesFetch;
+  });
+
+  it("schrijft zonder vragen als de naam wél gekozen is", async () => {
+    const ctx = ctxMet();
+    window.localStorage.removeItem("agentic-team-dashboard:naam:at_test#seat1");
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
+    const prompt = vi.spyOn(window, "prompt");
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ entry: {} }),
+    });
+    const c = openRij(ctx);
+    c.querySelector("[data-snel-mij]").click();
+    await new Promise(r => setTimeout(r, 0));
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(prompt).not.toHaveBeenCalled();
+    expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Janine Bakker" });
+    delete g.modulesFetch;
   });
 
   it("de bedienbalk bestaat niet op de daglink", () => {

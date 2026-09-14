@@ -44,13 +44,29 @@ function mijnNaam(bron) {
   try { return window.localStorage.getItem(naamSleutel(bron)) || ""; } catch (e) { return ""; }
 }
 
-function zetMijnNaam(bron, naam) {
+/* De kopie in deze browser. Sinds i77 is dit een terugval, geen bron: de naam
+ * hoort bij je seat en staat bij je licentie. */
+function bewaarKopie(bron, naam) {
   try {
     const schoon = String(naam || "").trim().slice(0, 80);
     if (schoon) window.localStorage.setItem(naamSleutel(bron), schoon);
     else window.localStorage.removeItem(naamSleutel(bron));
     return schoon;
   } catch (e) { return ""; }
+}
+
+function zetMijnNaam(bron, naam) {
+  const schoon = bewaarKopie(bron, naam);
+  // Naar de server, zodat je andere apparaten hem ook kennen en de beheerder
+  // hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
+  // de volgende sessie het opnieuw — geen reden om de gebruiker op te houden.
+  try {
+    void modulesFetch("/api/dashboard/wie-ben-ik", { naam: schoon }, bron && bron.token)
+      .catch(() => {});
+  } catch (e) { /* modulesFetch niet beschikbaar: kopie volstaat */ }
+  naamvoorstelSeat = tokenSeat(bron && bron.token);
+  naamvoorstelBelofte = Promise.resolve({ voorstel: schoon, gezet: !!schoon });
+  return schoon;
 }
 
 /* i77: wat stellen we voor als naam?
@@ -75,24 +91,60 @@ function zetMijnNaam(bron, naam) {
 let naamvoorstelSeat = null;
 let naamvoorstelBelofte = null;
 
-function haalNaamvoorstel(bron) {
-  // Al een naam in deze browser? Dan is dát het voorstel, en laten we de site
-  // niets opzoeken. Deze regel is de privacybelofte uit de kop: er gaat alleen
-  // een aanroep uit voor iemand die nog geen naam heeft.
-  const bekend = mijnNaam(bron);
-  if (bekend) return Promise.resolve(bekend);
+/* Alleen voor tests: de cache hierboven leeft per paginalading, en dat is in
+ * een browser precies goed. Een testbestand draait alle gevallen in één context,
+ * dus daar moet hij tussendoor leeg — zonder dit haalt de ene test het antwoord
+ * van de vorige op. Zelfde patroon als _resetSleutelCache in de site. */
+function _resetNaamvoorstel() {
+  naamvoorstelSeat = null;
+  naamvoorstelBelofte = null;
+}
 
-  const seat = tokenSeat(bron && bron.token);
-  if (!seat) return Promise.resolve("");
+/* Geeft {voorstel, gezet}.
+ *
+ * `gezet` betekent: iemand heeft deze naam gekózen — jij eerder in deze browser,
+ * jij op een ander apparaat, of je beheerder. Alleen dán mag hij zonder vragen
+ * de werkdata in. Is hij false, dan is `voorstel` een afleiding uit je adres
+ * (het deel vóór de @) en hoort hij alleen de prompt voor te vullen.
+ *
+ * Vlak dat onderscheid niet weg tot één string: dan is een afleiding niet meer
+ * van een keuze te onderscheiden, en schrijft het dashboard stilletjes
+ * `jan.jansen` in de gedeelde kolom `Eigenaar` van de klant. */
+function haalNaamvoorstel(bron) {
+  const lokaalNu = mijnNaam(bron);
+  // Daglinksessie: geen ingelogde seat en geen licentie-token. Niets naar de
+  // site sturen — het daglink-token hoort onze server nooit te bereiken.
+  if (!bron || !bron.oauth || !bron.token || !tokenSeat(bron.token)) {
+    return Promise.resolve({ voorstel: lokaalNu || "", gezet: !!lokaalNu });
+  }
+  const seat = tokenSeat(bron.token);
   if (naamvoorstelSeat !== seat) {
     naamvoorstelSeat = seat;
     naamvoorstelBelofte = (async () => {
+      const lokaal = mijnNaam(bron);
       try {
-        const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron && bron.token);
-        const voorstel = uit && uit.status === 200 && uit.body ? uit.body.voorstel : null;
-        return typeof voorstel === "string" ? voorstel : "";
+        const uit = await modulesFetch("/api/dashboard/wie-ben-ik", undefined, bron.token);
+        const ok = uit && uit.status === 200 && uit.body;
+        const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
+        if (ok && uit.body.gezet) {
+          // De server heeft een gekozen naam; die wint, ook als deze browser
+          // iets anders onthield. Anders zou een correctie door de beheerder
+          // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
+          bewaarKopie(bron, voorstel);
+          return { voorstel, gezet: true };
+        }
+        if (lokaal) {
+          // Overgang naar i77: de server kent nog geen gekozen naam, deze
+          // browser wel. Til hem één keer omhoog in plaats van hem te
+          // overschrijven met het deel vóór de @ van het adres.
+          void modulesFetch("/api/dashboard/wie-ben-ik", { naam: lokaal }, bron.token)
+            .catch(() => {});
+          return { voorstel: lokaal, gezet: true };
+        }
+        return { voorstel, gezet: false };
       } catch (e) {
-        return "";
+        // Offline of geen sessie: de kopie in deze browser is de terugval.
+        return { voorstel: lokaal || "", gezet: !!lokaal };
       }
     })();
   }
