@@ -33,7 +33,8 @@ const DETAIL_VOLGORDE = [
   { key: "correctievrij", titel: "Correctievrij — de f19-gate", emoji: "🛡️", intern: true },
   { key: "leren", titel: "Leren", emoji: "💡" },
   // f34 fase 0: alleen in de nav zodra de site het overzicht heeft geleverd
-  // (ingelogde sessie + licentie in de allowlist) — zie modules-beheer.js.
+  // (ingelogde sessie + licentie in de allowlist), en alleen voor de
+  // licentiebeheerder — zie modules-beheer.js.
   { key: "modules", titel: "Jouw modules", emoji: "🧩", modulesTegel: true },
 ];
 
