@@ -231,9 +231,12 @@ function renderAll() {
   // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie
   // — de site geeft anders 404 en laadTeam levert null. Zelfde patroon als het
   // modulepaneel: eerst tekenen wat er is, dan eenmalig ophalen en bijtekenen.
+  // Altijd bijtekenen, ook als er niets kwam: wie in hetzelfde tabblad van een
+  // ingelogde sessie naar een daglink wisselt, houdt anders het beheerpaneel
+  // van daarnet in beeld. laadTeam geeft bij hetzelfde token zijn cache terug.
   renderTeamPanel(document.getElementById("panel-team-namen"));
-  void laadTeam(huidigeBron).then((team) => {
-    if (team) renderTeamPanel(document.getElementById("panel-team-namen"));
+  void laadTeam(huidigeBron).then(() => {
+    renderTeamPanel(document.getElementById("panel-team-namen"));
   });
 
   // ── Tab 4 · Prestaties ──

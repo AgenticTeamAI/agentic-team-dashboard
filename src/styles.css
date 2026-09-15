@@ -605,7 +605,11 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
 
 /* ── Data-tab ── */
 .data-toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0 0.2rem; }
-.data-toolbar input[type="search"] {
+/* Eén invoerstijl voor zoekveld en teampaneel (uitnodigen + weergavenamen);
+   anders staan witte browservelden naast donkere in hetzelfde paneel. */
+.data-toolbar input[type="search"],
+.team-uitnodigen input[type="email"],
+input.team-naam {
   flex: 1 1 220px; min-height: 40px;
   background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
   color: var(--white); font-family: var(--font); font-size: 0.85rem; padding: 0.4rem 0.7rem;
@@ -813,11 +817,7 @@ tr.rij-open { background: var(--card); }
 .team-uitnodigen { max-width: 560px; margin: 0 0 0.4rem; }
 .team-uitnodigen label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
 .team-uitnodigen-rij { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
-.team-uitnodigen input[type="email"] {
-  flex: 1 1 220px; min-height: 40px;
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-  color: var(--white); font-family: var(--font); font-size: 0.85rem; padding: 0.4rem 0.7rem;
-}
+input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .team-uitnodigen .footnote { margin-top: 0.35rem; }
 .team-actie { white-space: nowrap; }
 /* Verwijderen is onomkeerbaar voor wie eruit gaat — dus rood, niet mint. */
@@ -826,3 +826,18 @@ tr.rij-open { background: var(--card); }
 .team-verwijder[disabled]:hover { background: transparent; color: var(--rood); }
 .team-bevestig { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; white-space: normal; max-width: 360px; }
 .team-bevestig span { font-size: 0.8rem; color: var(--text); flex-basis: 100%; }
+/* Lege meldregels nemen geen ruimte in, maar blijven in de DOM: een
+   aria-live-regio die pas bij de melding verschijnt, wordt niet altijd voorgelezen. */
+.team-melding { margin: 0.3rem 0; }
+.team-melding:empty { margin: 0; min-height: 0; }
+.team-tabel td { vertical-align: middle; }
+@media (max-width: 640px) {
+  /* Op een telefoon viel de laatste kolom (Verwijderen) buiten beeld in de
+     scrollende tabel, zonder zichtbare scrollbalk. Daarom één blok per persoon. */
+  .team-tabel thead { display: none; }
+  .team-tabel, .team-tabel tbody, .team-tabel tr, .team-tabel td { display: block; width: 100%; box-sizing: border-box; }
+  .team-tabel tr { padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .team-tabel td { border-bottom: none; padding: 0.15rem 0; }
+  .team-actie { white-space: normal; }
+  .team-bevestig { max-width: none; }
+}

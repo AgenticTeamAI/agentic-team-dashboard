@@ -34,6 +34,7 @@ function sectie() {
 }
 
 beforeEach(() => {
+  g.huidigeBron = { oauth: true, token: "jwt" };
   g.modulesFetch = vi.fn(async () => ({ status: 200, body: { team: TEAM } }));
   g._resetTeam();
 });
