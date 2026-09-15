@@ -231,9 +231,12 @@ function renderAll() {
   // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie
   // — de site geeft anders 404 en laadTeam levert null. Zelfde patroon als het
   // modulepaneel: eerst tekenen wat er is, dan eenmalig ophalen en bijtekenen.
+  // Altijd bijtekenen, ook als er niets kwam: wie in hetzelfde tabblad van een
+  // ingelogde sessie naar een daglink wisselt, houdt anders het beheerpaneel
+  // van daarnet in beeld. laadTeam geeft bij hetzelfde token zijn cache terug.
   renderTeamPanel(document.getElementById("panel-team-namen"));
-  void laadTeam(huidigeBron).then((team) => {
-    if (team) renderTeamPanel(document.getElementById("panel-team-namen"));
+  void laadTeam(huidigeBron).then(() => {
+    renderTeamPanel(document.getElementById("panel-team-namen"));
   });
 
   // ── Tab 4 · Prestaties ──
@@ -289,7 +292,8 @@ function renderDetail(key) {
     adoptiescore: () => [detailSectionHtml("Ritme van je team — herkomst", "📊", "Klopt het ritme, en kan ik het zelf narekenen?", "detail-inner"), () => renderDetailAdoptiescore(document.getElementById("detail-inner"), ctx.adopt, ctx.periodWeeks)],
     tijdwinst: () => [detailSectionHtml("Geschatte tijdwinst — aanname", "⏱️", "Hoe komt dit dashboard aan het tijdwinst-getal, en wat is de aanname?", "detail-inner"), () => renderDetailTijdwinst(document.getElementById("detail-inner"), ctx.tijdwinst)],
     // f34 fase 0: alleen zodra de site het moduleoverzicht leverde (ingelogde
-    // sessie + allowlist) — zelfde patroon als de interne tegel hieronder.
+    // sessie + allowlist) én alleen voor de licentiebeheerder — zelfde patroon
+    // als de interne tegel hieronder.
     ...(moduleOverzichtBeschikbaar() ? { modules: () => [detailSectionHtml("Jouw modules", "🧩", "Welke modules heb ik nu, en wat kosten ze per maand?", "detail-inner"), () => renderDetailModules(document.getElementById("detail-inner"))] } : {}),
     // Interne tegel: alleen met ctx.intern (werkruimte met DASHBOARD_INTERN=1).
     ...(ctx.intern ? { correctievrij: () => [detailSectionHtml("Correctievrij — de f19-gate", "🛡️", "Kan het team autonoom afronden zonder dat ik moet ingrijpen?", "detail-inner"), () => renderDetailCorrectievrij(document.getElementById("detail-inner"), ctx.correctievrij)] } : {}),

@@ -6,7 +6,8 @@
  * drijven uit elkaar. Alleen bereikbaar met een ingelogde p10-sessie (de
  * daglink kan dit niet) en een licentie in de allowlist van de site; in alle
  * andere gevallen antwoordt de site niet-200 en blijven tegel én detailpagina
- * gewoon weg — afwezig is geen fout.
+ * gewoon weg — afwezig is geen fout. Tegel en detailpagina zijn bovendien
+ * alleen voor de licentiebeheerder (zie moduleOverzichtBeschikbaar).
  *
  * Schakelen/opzeggen verschijnt alleen als de site `magSchakelen: true`
  * meegeeft (schakel-vlag aan én dit is de seat van het aankoopadres); de
@@ -29,15 +30,27 @@ const MODULES_SCHERMTEKST_VERSIE = "f34-scherm 2026-09-03.1";
 let moduleOverzicht = null; // laatste geslaagde site-antwoord
 let moduleOverzichtVoorToken = null; // token waarvoor (al) geladen is/wordt
 
+/* Tegel, detail-nav en detailpagina zijn er alleen voor de licentiebeheerder
+ * (het aankoopadres, PV 3.9 lid 2). Een ander teamlid krijgt van de site
+ * alleen welke modules er aan staan — genoeg voor de agentsuggesties, niet
+ * voor pakket en bedragen — en hoort dus ook geen tegel te zien.
+ *
+ * Een site van vóór dit onderscheid stuurt het veld `beheerder` niet mee. Dan
+ * beslist de vorm: een volledig overzicht (met maandbedrag) tonen we zoals
+ * voorheen, zodat dit dashboard niet stukgaat als het eerder live staat dan de
+ * site. */
 function moduleOverzichtBeschikbaar() {
-  return moduleOverzicht !== null;
+  if (!moduleOverzicht) return false;
+  if (typeof moduleOverzicht.beheerder === "boolean") return moduleOverzicht.beheerder;
+  return moduleOverzicht.maandbedragExclBtw !== undefined && moduleOverzicht.maandbedragExclBtw !== null;
 }
 
 /* i71: welke modules heeft deze klant écht? Geeft null als we het niet weten
  * (geen ingelogde sessie, of een licentie buiten de allowlist) — en dat is
  * wat anders dan "geen enkele". De aanroeper hoort dat verschil te maken:
  * een suggestie voor een module die iemand niet heeft, is een verkooppraatje
- * op de verkeerde plek. */
+ * op de verkeerde plek. Werkt voor élk teamlid: het beperkte antwoord voor
+ * niet-beheerders draagt de module-keys ook. */
 function actieveModuleKeys() {
   if (!moduleOverzicht || !Array.isArray(moduleOverzicht.modules)) return null;
   return moduleOverzicht.modules.filter((m) => m && m.actief).map((m) => m.key);
