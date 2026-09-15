@@ -808,3 +808,21 @@ tr.rij-open { background: var(--card); }
 .modules-verzoek textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; margin-bottom: 8px; }
 .modules-keuze { display: block; margin: 4px 0; }
 .modules-keuze input { margin-right: 6px; }
+
+/* ── i77 · Wie werkt er mee: uitnodigen en verwijderen ─────────────────── */
+.team-uitnodigen { max-width: 560px; margin: 0 0 0.4rem; }
+.team-uitnodigen label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
+.team-uitnodigen-rij { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.team-uitnodigen input[type="email"] {
+  flex: 1 1 220px; min-height: 40px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  color: var(--white); font-family: var(--font); font-size: 0.85rem; padding: 0.4rem 0.7rem;
+}
+.team-uitnodigen .footnote { margin-top: 0.35rem; }
+.team-actie { white-space: nowrap; }
+/* Verwijderen is onomkeerbaar voor wie eruit gaat — dus rood, niet mint. */
+.team-verwijder { color: var(--rood); border-color: var(--rood-rand); }
+.team-verwijder:hover { background: var(--rood); color: var(--navy); }
+.team-verwijder[disabled]:hover { background: transparent; color: var(--rood); }
+.team-bevestig { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; white-space: normal; max-width: 360px; }
+.team-bevestig span { font-size: 0.8rem; color: var(--text); flex-basis: 100%; }
