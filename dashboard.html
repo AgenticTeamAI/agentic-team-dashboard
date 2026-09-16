@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-9PWsYcubJ7vGW61wu0AAPQC+RuCN8NTZLu2T/B879+A=' 'sha256-DaEEOv6cNL/Vk2+TkLF6IN4Cb+yiTu7xlAdO9xlxpV8='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-9PWsYcubJ7vGW61wu0AAPQC+RuCN8NTZLu2T/B879+A=' 'sha256-2G3XVmuYKiqcMI5UAk2w/IEH82vC/txNgz5bXiTS6iY='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -9482,6 +9482,10 @@ async function modulesFetch(pad, body, tokenOverride) {
 async function laadModuleOverzicht(bron) {
   if (!bron || !bron.oauth || !bron.token) {
     moduleOverzicht = null;
+    // Ook de token-cache weg (zelfde patroon als laadTeam): wie na een daglink
+    // terugwisselt naar dezelfde ingelogde sessie, krijgt het overzicht opnieuw
+    // in plaats van de null van de daglink.
+    moduleOverzichtVoorToken = null;
     return null;
   }
   if (moduleOverzichtVoorToken === bron.token) return moduleOverzicht;
@@ -9853,7 +9857,7 @@ function teamActieHtml(r) {
     // Eerst de uitleg, dan de knoppen: zo staat "Ja, verwijderen" niet op de
     // plek waar net "Verwijderen" stond, en doet een dubbelklik niets onomkeerbaars.
     return `<div class="team-bevestig" role="group" aria-label="Verwijderen van ${esc(r.adres)} bevestigen">
-      <span>${esc(r.adres)} kan daarna niet meer inloggen, en lopende sessies worden afgesloten.</span>
+      <span>${esc(r.adres)} kan daarna niet meer inloggen. Een sessie die nog open staat, stopt binnen een uur.</span>
       <button type="button" class="team-verwijder" data-team-verwijder-ja="${esc(r.seat)}"${uit}>Ja, verwijderen</button>
       <button type="button" class="knop-secundair" data-team-verwijder-nee="${esc(r.seat)}"${uit}>Annuleren</button>
     </div>`;
@@ -10363,12 +10367,14 @@ function renderAll() {
   // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
   // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
   // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  // Altijd bijtekenen, ook als er niets kwam: wie in hetzelfde tabblad van een
+  // ingelogde sessie naar een daglink wisselt, hield anders de moduletegel (met
+  // bedragen) van daarnet in beeld. Zelfde patroon als het teampaneel hieronder.
+  const hadModuleOverzicht = moduleOverzichtBeschikbaar();
   renderModulesPanel(document.getElementById("panel-modules"));
   void laadModuleOverzicht(huidigeBron).then((overzicht) => {
-    if (overzicht) {
-      renderModulesPanel(document.getElementById("panel-modules"));
-      route();
-    }
+    renderModulesPanel(document.getElementById("panel-modules"));
+    if (overzicht || hadModuleOverzicht) route();
   });
 
   // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie

@@ -220,12 +220,14 @@ function renderAll() {
   // f34 fase 0: het modulepaneel tekent direct wat er (voor dit token) al
   // geladen is, en haalt het overzicht anders eenmalig op — verschijnt het
   // alsnog, dan tekenen paneel én detail-nav bij. Geen overzicht = geen paneel.
+  // Altijd bijtekenen, ook als er niets kwam: wie in hetzelfde tabblad van een
+  // ingelogde sessie naar een daglink wisselt, hield anders de moduletegel (met
+  // bedragen) van daarnet in beeld. Zelfde patroon als het teampaneel hieronder.
+  const hadModuleOverzicht = moduleOverzichtBeschikbaar();
   renderModulesPanel(document.getElementById("panel-modules"));
   void laadModuleOverzicht(huidigeBron).then((overzicht) => {
-    if (overzicht) {
-      renderModulesPanel(document.getElementById("panel-modules"));
-      route();
-    }
+    renderModulesPanel(document.getElementById("panel-modules"));
+    if (overzicht || hadModuleOverzicht) route();
   });
 
   // i77: het namenpaneel verschijnt alleen voor de beheerder van deze licentie

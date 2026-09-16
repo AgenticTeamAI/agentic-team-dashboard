@@ -316,7 +316,10 @@ describe("verwijderen", () => {
     expect(g.modulesFetch).not.toHaveBeenCalled();
     const bevestig = el.querySelector(".team-bevestig");
     expect(bevestig.textContent).toContain("janine@klant.nl kan daarna niet meer inloggen");
-    expect(bevestig.textContent).toContain("sessies worden afgesloten");
+    expect(bevestig.textContent).toContain("stopt binnen een uur");
+    // Niet meer "worden afgesloten": bij een eigen werkruimte loopt een open
+    // sessie tot het access token verloopt (intrekken fase 1, 16-09-2026).
+    expect(bevestig.textContent).not.toContain("worden afgesloten");
     // Focus op de veilige keuze.
     expect(document.activeElement).toBe(el.querySelector('[data-team-verwijder-nee="seat-b"]'));
 
