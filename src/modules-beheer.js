@@ -81,6 +81,10 @@ async function modulesFetch(pad, body, tokenOverride) {
 async function laadModuleOverzicht(bron) {
   if (!bron || !bron.oauth || !bron.token) {
     moduleOverzicht = null;
+    // Ook de token-cache weg (zelfde patroon als laadTeam): wie na een daglink
+    // terugwisselt naar dezelfde ingelogde sessie, krijgt het overzicht opnieuw
+    // in plaats van de null van de daglink.
+    moduleOverzichtVoorToken = null;
     return null;
   }
   if (moduleOverzichtVoorToken === bron.token) return moduleOverzicht;

@@ -166,6 +166,42 @@ async function openIngelogd(modulesAntwoord) {
   return { w, $, fouten, naarDetailModules };
 }
 
+describe("gewisseld naar een daglink (zelfde tabblad)", () => {
+  // De modules zijn al in deze context geladen door het eerste describe-blok;
+  // nog eens laden botst op dubbele const-declaraties.
+  beforeEach(() => {
+    zet("moduleOverzicht", null);
+    zet("moduleOverzichtVoorToken", null);
+    document.body.innerHTML = `<section id="panel-modules" style="display:none;"><div id="panel-modules-body"></div></section><nav id="detail-nav"></nav>`;
+  });
+
+  it("verbergt de tegel van de beheerder zodra de bron een daglink is", async () => {
+    const aanroepen = [];
+    zet("modulesFetch", async (pad, body, token) => { aanroepen.push(token); return { ok: true, status: 200, body: BEHEERDER }; });
+    await lees("laadModuleOverzicht")({ oauth: true, token: "jwt" });
+    const el = document.getElementById("panel-modules");
+    lees("renderModulesPanel")(el);
+    expect(el.style.display).toBe("");
+
+    await lees("laadModuleOverzicht")({ token: "daglinktoken" });
+    lees("renderModulesPanel")(el);
+    expect(el.style.display).toBe("none");
+    expect(lees("moduleOverzichtBeschikbaar")()).toBe(false);
+    // Het daglink-token hoort onze server nooit te bereiken.
+    expect(aanroepen).toEqual(["jwt"]);
+  });
+
+  it("haalt het overzicht opnieuw op bij terugkeer naar dezelfde ingelogde sessie", async () => {
+    const aanroepen = [];
+    zet("modulesFetch", async (pad, body, token) => { aanroepen.push(token); return { ok: true, status: 200, body: BEHEERDER }; });
+    const sessie = { oauth: true, token: "jwt" };
+    await lees("laadModuleOverzicht")(sessie);
+    await lees("laadModuleOverzicht")({ token: "daglinktoken" });
+    expect(await lees("laadModuleOverzicht")(sessie)).not.toBeNull();
+    expect(aanroepen).toEqual(["jwt", "jwt"]);
+  });
+});
+
 describe("dashboard.html — tegel, nav en detailroute", () => {
   it("een teamlid ziet geen moduletegel, geen nav-item en geen detailpagina, maar de keys werken", async () => {
     const { w, $, fouten, naarDetailModules } = await openIngelogd(TEAMLID);

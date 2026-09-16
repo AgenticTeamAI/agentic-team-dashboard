@@ -109,7 +109,7 @@ function teamActieHtml(r) {
     // Eerst de uitleg, dan de knoppen: zo staat "Ja, verwijderen" niet op de
     // plek waar net "Verwijderen" stond, en doet een dubbelklik niets onomkeerbaars.
     return `<div class="team-bevestig" role="group" aria-label="Verwijderen van ${esc(r.adres)} bevestigen">
-      <span>${esc(r.adres)} kan daarna niet meer inloggen, en lopende sessies worden afgesloten.</span>
+      <span>${esc(r.adres)} kan daarna niet meer inloggen. Een sessie die nog open staat, stopt binnen een uur.</span>
       <button type="button" class="team-verwijder" data-team-verwijder-ja="${esc(r.seat)}"${uit}>Ja, verwijderen</button>
       <button type="button" class="knop-secundair" data-team-verwijder-nee="${esc(r.seat)}"${uit}>Annuleren</button>
     </div>`;
