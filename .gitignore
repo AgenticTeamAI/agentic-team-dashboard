@@ -7,3 +7,8 @@ node_modules/
 # Vercel-buildoutput (vercel.json)
 out/
 .vercel/
+
+# Impeccable: de engine-binary haalt de launcher zelf op (sha256-gecontroleerd,
+# naar ~/.impeccable/bin); per-ontwikkelaar-instellingen blijven lokaal.
+.claude/skills/impeccable/scripts/bin/
+.impeccable/config.local.json
