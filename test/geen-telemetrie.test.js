@@ -153,7 +153,7 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     // tekst moet allebei beschrijven. Verdwijnt deze zin, dan beschrijft de
     // verklaring nog maar de helft van wat het dashboard doet.
     expect(HTML).toContain("wisselt je browser eenmalig een inlogcode om bij agentic-team.ai");
-    expect(HTML).toContain("In je browser bewaren we je inlogtoken en de daglink voor de duur van dit tabblad");
+    expect(HTML).toContain("In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad");
     // B3-toets: zonder deze zin kan een lezer opmaken dat inloggen spoorloos
     // is. Dat is het niet — de inlogwissel legt vast wélke licentie inlogt en
     // wanneer, en het privacyblok op de site vertelt dat ook. Valt deze zin
