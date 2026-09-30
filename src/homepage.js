@@ -23,7 +23,7 @@ const TABS = [
 /* f48: vier tabs, nooit een vijfde. Prestaties is een deel van Team
  * geworden ("Resultaat"); het adres #/prestaties blijft werken en licht de
  * Team-tab op. */
-const TAB_DEEL_VAN = { prestaties: "team", ronde: "vandaag" };
+const TAB_DEEL_VAN = { prestaties: "team", "vaste-taken": "team", ronde: "vandaag" };
 const TAB_ROUTES = TABS.map(t => t.key).concat(Object.keys(TAB_DEEL_VAN));
 
 const DETAIL_VOLGORDE = [
@@ -740,7 +740,7 @@ function bepaalActieveView() {
     return { soort: "item", domein: "acties", id, tab: "acties" };
   }
 
-  const tab = hash.match(/^#\/([a-z]+)/);
+  const tab = hash.match(/^#\/([a-z-]+)/);
   if (tab && TAB_ROUTES.indexOf(tab[1]) !== -1) return { soort: "tab", tab: tab[1] };
 
   return { soort: "tab", tab: "vandaag" };
