@@ -69,25 +69,50 @@ function isTeLaat(rij, namen, nu) {
   return !!deadline && deadline < vjVandaag(nu) && vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen);
 }
 
-/* Koppeltabel status → soort. Elke status uit de registry staat hier; een
- * nieuwe status in de registry maakt test/f46-aan-jou.test.js rood in plaats
+/* i85: de rol van een status komt uit de registry (acties.Status.opties_meta,
+ * vanaf registry 1.92.0): voorstel, open, bezig, wacht, check of klaar. Zo
+ * hardcodeert het dashboard geen statusnamen. Draagt het schema die sleutel
+ * nog niet (tot de sync), dan geldt deze terugval — dezelfde indeling. */
+const STATUS_ROL_TERUGVAL = { [VJ_VOORSTEL]: "voorstel", [VJ_OPEN]: "open", [VJ_BEZIG]: "bezig", [VJ_WACHT]: "wacht", [VJ_REVIEW]: "check", [VJ_KLAAR]: "klaar" };
+function statusRol(status, schema) {
+  const s = schema || (typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null);
+  const dom = s && s.datadomeinen && s.datadomeinen.acties;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Status") : null;
+  const meta = veld && veld.opties_meta && veld.opties_meta[status];
+  return (meta && meta.rol) || STATUS_ROL_TERUGVAL[status] || null;
+}
+
+/* Koppeltabel rol → soort. Elke rol uit de registry staat hier; een status
+ * zonder (bekende) rol maakt test/i85-rol-uit-registry.test.js rood in plaats
  * van dat hij stil als "klopt niet" in beeld komt. */
-const SOORT_PER_STATUS = {
-  [VJ_KLAAR]: () => "klaar",
-  [VJ_VOORSTEL]: () => "voorstel",
+const SOORT_PER_ROL = {
+  klaar: () => "klaar",
+  voorstel: () => "voorstel",
   // Wacht op review op naam van een agent is volgens het statuscontract een
   // fout-toestand: niemand is dan aan zet.
-  [VJ_REVIEW]: (rij, namen) => (vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen) ? "check" : "klopt-niet"),
-  [VJ_WACHT]: (rij, namen, nu) => {
+  check: (rij, namen) => (vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen) ? "check" : "klopt-niet"),
+  wacht: (rij, namen, nu) => {
     if (!vjVerlopen(rij, nu)) return "wacht";
     return vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "weer";
   },
-  [VJ_OPEN]: (rij, namen) => {
+  open: (rij, namen) => {
     if (vjIsAgent(vjTekst(rij, "Eigenaar"), namen)) return "team";
     return vjTekst(rij, "Type") === "Alert" ? "signaal" : "taak";
   },
-  [VJ_BEZIG]: (rij, namen) => (vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "taak"),
+  bezig: (rij, namen) => (vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "taak"),
 };
+
+/* Status → regel, via de rol: precies de statussen uit de registry die een
+ * bekende rol hebben. */
+const SOORT_PER_STATUS = (() => {
+  const s = typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null;
+  const dom = s && s.datadomeinen && s.datadomeinen.acties;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Status") : null;
+  const statussen = veld && Array.isArray(veld.opties) ? veld.opties : Object.keys(STATUS_ROL_TERUGVAL);
+  const uit = {};
+  for (const st of statussen) { const regel = SOORT_PER_ROL[statusRol(st, s)]; if (regel) uit[st] = regel; }
+  return uit;
+})();
 
 const SOORT_LABEL = {
   check: "Klaar om te checken",
