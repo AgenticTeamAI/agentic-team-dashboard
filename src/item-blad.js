@@ -51,7 +51,10 @@ function itemVeldenHtml(ctx, key, rij) {
   return `<dl class="blad-velden">${regels}</dl>`;
 }
 
-function itemBladHtml(ctx, key, rij) {
+/* `opties.kop` vervangt de terugregel bovenaan (de ronde zet daar zijn eigen
+ * voortgang en knoppen neer). */
+function itemBladHtml(ctx, key, rij, opties) {
+  const o = opties || {};
   const schema = ctx.schema;
   const nu = ctx.today || new Date();
   const knoppen = afhandelKnoppen(rij, schema, nu);
@@ -86,7 +89,7 @@ function itemBladHtml(ctx, key, rij) {
   }
 
   return `<article class="blad" data-blad data-blad-id="${esc(rij.__entryId)}">
-    <a class="detail-link" href="#/acties">← Alle acties</a>
+    ${o.kop || `<a class="detail-link" href="#/acties">← Alle acties</a>`}
     <h2 class="blad-titel" tabindex="-1">${esc(titel)}</h2>
     <p class="blad-meta"><span class="soort-pil">${esc(SOORT_LABEL[knoppen.soort] || "")}</span>
       <span class="beurt beurt-${esc(knoppen.soort)}">${esc(BEURT_TEKST[knoppen.soort] || "")}</span>
