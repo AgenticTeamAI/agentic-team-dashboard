@@ -34,7 +34,8 @@ function vjIk(ctx) {
 }
 
 function voorJouLijst(ctx) {
-  if (!ctx || !ctx.bundle || ctx.bundle.kind !== "rows") return null;
+  // b62: ook op de metricsroute, zolang de acties-rijen er zijn.
+  if (!ctx || !ctx.bundle || !rows(ctx.bundle, "acties")) return null;
   return aanJouZet(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
 }
 
@@ -143,8 +144,8 @@ function renderVoorJou(paneel, ctx) {
   const nu = ctx.today || new Date();
   const oudste = lijst.reduce((min, r) => { const s = sindsVan(r); return s && (!min || s < min) ? s : min; }, null);
   const oudsteDagen = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
-  const inlogRegel = !kanAfhandelen && !(ctx.bron && ctx.bron.oauth) && typeof oauthMogelijk === "function" && oauthMogelijk()
-    ? `<p class="vj-inlog">Je kijkt mee met je daglink. <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen en afhandelen</button></p>` : "";
+  // Op de daglink staat de inlogknop in de balk bovenaan (b62), niet ook nog hier.
+  const inlogRegel = "";
 
   body.innerHTML = `
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>

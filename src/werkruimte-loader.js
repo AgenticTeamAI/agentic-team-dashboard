@@ -615,9 +615,45 @@ async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
  * een expliciete actie van de gebruiker en wint altijd; daarna telt een
  * lopende inlogsessie (het JWT), en pas daarna een eerder opgeslagen daglink.
  * Zonder alle drie blijft de lege staat staan. */
+/* b62: voor welke licentie is een token? Een daglink is `body.handtekening`
+ * met de payload in het eerste deel (daglink.ts in de werkruimte: `licentie`);
+ * een access-token is een JWT met de payload in het tweede deel (`lic`). Alleen
+ * lezen om te vergelijken — de instantie controleert de handtekeningen zelf. */
+function tokenPayloadDeel(token, deel) {
+  try {
+    const stuk = String(token || "").split(".")[deel];
+    return JSON.parse(atob(stuk.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch (e) { return null; }
+}
+function daglinkLicentie(token) {
+  const p = tokenPayloadDeel(token, 0);
+  return p && typeof p.licentie === "string" ? p.licentie : null;
+}
+function sessieLicentie(token) {
+  const p = tokenPayloadDeel(token, 1);
+  return p && typeof p.lic === "string" ? p.lic : null;
+}
+
+/* Welke bron gebruikt deze pagina?
+ * - Een verse daglink in het fragment is een expliciete actie van de
+ *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
+ *   dezelfde licentie: dan kun je met die sessie ook afhandelen, en er is
+ *   geen reden om je terug te zetten op alleen-lezen. De daglink wordt dan
+ *   wel uit de adresbalk gehaald en bewaard, als terugval.
+ * - Is de licentie anders (iemand met meer licenties, of een gedeelde link),
+ *   dan wint de daglink: stil een andere werkruimte tonen is erger.
+ * - Daarna de sessie, en pas daarna een eerder opgeslagen daglink. */
 function restoreBron() {
-  if (parseDaglinkFragment(window.location.hash)) return restoreDaglink();
+  const vers = parseDaglinkFragment(window.location.hash);
   const sessie = leesOauthSessie();
+  if (vers) {
+    const lic = daglinkLicentie(vers.token);
+    if (sessie && lic && lic === sessieLicentie(sessie.access_token)) {
+      restoreDaglink();
+      return oauthBron(sessie);
+    }
+    return restoreDaglink();
+  }
   if (sessie) return oauthBron(sessie);
   return restoreDaglink();
 }
@@ -628,7 +664,7 @@ if (typeof module !== "undefined") {
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
-    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader,
   };
 }

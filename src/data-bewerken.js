@@ -285,7 +285,10 @@ function bronKanSchrijven(bron) {
  * kan uitleggen in plaats van stil een knop weg te laten. */
 function magDomeinBewerken(ctx, key) {
   if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
-  if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
+  // b62: ook op de metricsroute. Daar komen de cijfers uit een metricsbestand,
+  // maar de rijen zelf komen gewoon uit je werkruimte — en die mag je dan ook
+  // bijwerken. Wat elders woont, blijft lezen (bronVan hieronder).
+  if (!ctx.bundle || (ctx.bundle.kind !== "rows" && ctx.bundle.source !== "werkruimte")) return { ok: false, reden: null };
   if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
   // i72: één afleiding voor "waar woont dit" — bronVan() in databrowser.js.
   // Daarvóór stond hier een eigen vergelijking op de ruwe klantwaarde, en die

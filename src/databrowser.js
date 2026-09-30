@@ -630,9 +630,13 @@ function renderDataOverzicht(el, ctx) {
     .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
     .join(" · ");
 
+  // b62: zeg waaróm het alleen-lezen is. "Opgehaald met je daglink" stond er
+  // ook bij wie gewoon ingelogd was.
   const leesregel = ctx.kanSchrijven
-    ? `Je bent ingelogd: open een domein om rijen toe te voegen, te bewerken of te verwijderen.`
-    : `Opgehaald met je daglink. Alleen lezen: dit dashboard kan niets aanmaken, wijzigen of verwijderen.`;
+    ? `Je bent ingelogd: open een soort gegevens om iets toe te voegen, te bewerken of te verwijderen.`
+    : ctx.bron && ctx.bron.oauth
+      ? `Je sessie mag alleen lezen. Log opnieuw in om ook te kunnen bijwerken.`
+      : `Opgehaald met je daglink: alleen lezen. Log in om ook te kunnen bijwerken.`;
 
   el.innerHTML = `<p class="footnote data-telregel">In gebruik: ${inGebruik.length} van de ${domeinen.length} soorten gegevens die je team kan bijhouden.</p>
     ${groepenHtml}${eldersHtml}${nogNietHtml}

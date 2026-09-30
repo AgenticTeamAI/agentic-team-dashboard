@@ -31,7 +31,7 @@ const BAAN_KOP = {
 const AFGEROND_TONEN = 15;
 
 function actiesTabBeschikbaar(ctx) {
-  return !!(ctx && ctx.bundle && ctx.bundle.kind === "rows" && rows(ctx.bundle, "acties"));
+  return !!(ctx && ctx.bundle && rows(ctx.bundle, "acties"));
 }
 
 function actieZoekTekst(rij) {
