@@ -37,6 +37,7 @@ const MODULES = [
   "src/acties-tab.js",
   "src/vaste-taken.js",
   "src/hulp.js",
+  "src/opdracht.js",
   "src/modules-beheer.js",
   "src/team-beheer.js",
   "src/app.js",

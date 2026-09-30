@@ -1174,3 +1174,34 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   .hulp-banen dd, .hulp-woorden dd { margin-bottom: 8px; }
   .kop-hulp { margin-right: 4px; }
 }
+
+/* ── f50 · Opdracht geven ─────────────────────────────────────────────── */
+a.opdracht-knop { display: inline-flex; align-items: center; gap: 4px; text-decoration: none; white-space: nowrap; font-weight: 600; font-size: 0.9rem;
+  min-height: 40px; padding: 0 14px; border-radius: 8px; background: var(--team); color: var(--op-team); border: 1px solid var(--team); box-sizing: border-box; }
+a.opdracht-knop:hover { filter: brightness(1.08); }
+a.opdracht-knop:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.vj-opdracht { margin: 14px 0 0; }
+.opdracht-titel { font-size: 1.2rem; margin: 4px 0 12px; }
+.opdracht-titel:focus { outline: none; }
+.opdracht { display: flex; flex-direction: column; gap: 16px; max-width: 680px; }
+.opdracht-veld { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.opdracht-veld small { font-weight: 400; color: var(--muted); }
+.opdracht textarea, .opdracht select, .opdracht input[type="date"] { font: inherit; font-weight: 400; color: var(--ink); background: var(--surface); border: 1px solid var(--veldrand); border-radius: 8px; padding: 8px 10px; min-height: 40px; box-sizing: border-box; }
+.opdracht textarea { width: 100%; resize: vertical; line-height: 1.45; }
+.opdracht-groep { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.opdracht-groep legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.opdracht-keuzes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.opdracht-keuze { font: inherit; font-size: 0.9rem; min-height: 40px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); cursor: pointer; }
+.opdracht-keuze[aria-pressed="true"] { background: var(--team); border-color: var(--team); color: var(--op-team); }
+.opdracht-keuze.mens[aria-pressed="true"] { background: var(--jij); border-color: var(--jij); color: var(--op-jij); }
+.opdracht-keuze.datum[aria-pressed="true"] { background: var(--surface-2); border-color: var(--ink); color: var(--ink); font-weight: 700; }
+.opdracht-verwachting { margin: 2px 0 0; padding: 8px 10px; border-radius: 8px; font-size: 0.9rem; }
+.opdracht-verwachting.ok { background: var(--team-zacht); color: var(--ink); }
+.opdracht-verwachting.mens { background: var(--jij-zacht); color: var(--ink); }
+.opdracht-verwachting.let { background: var(--rood-zacht); color: var(--ink); border-left: 3px solid var(--rood); }
+.opdracht-meer summary { cursor: pointer; color: var(--team-tekst); font-weight: 600; min-height: 32px; }
+.opdracht-fout { color: var(--rood); margin: 0; min-height: 0; }
+.opdracht-fout:empty { display: none; }
+.opdracht [data-opdracht-ok] { align-self: flex-start; }
+.opdracht [data-opdracht-ok]:disabled { opacity: 0.55; cursor: not-allowed; }
+@media (max-width: 600px) { .opdracht [data-opdracht-ok] { align-self: stretch; } }
