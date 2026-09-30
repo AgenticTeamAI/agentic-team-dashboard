@@ -61,7 +61,7 @@ function notionTakenHtml(ctx, rijen) {
   const rij = (t) => {
     const s = taakStatus(t, nu);
     return `<li class="vt-rij${t.Actief ? "" : " uit"}"><div class="vt-rij-kop"><span class="vt-titel">${esc(t.Taak)}</span>
-      <span class="footnote">${esc([agentWeergaveNaam(ctx.schema, t.Agent) || t.Agent, RITME_KLANTTAAL[t.Ritme] || t.Ritme, t.Actief ? "" : "uit"].filter(Boolean).join(" · "))}</span></div>
+      <span class="footnote">${esc([agentWeergaveNaam(ctx.schema, t.Agent) || t.Agent, (typeof ritmeLabel === "function" ? ritmeLabel(t.Ritme) : RITME_KLANTTAAL[t.Ritme] || t.Ritme), t.Actief ? "" : "uit"].filter(Boolean).join(" · "))}</span></div>
       <p class="vt-status vt-${s.k}">${esc(s.tekst)}</p>
       ${t.__url ? `<a class="detail-link" href="${esc(t.__url)}" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a>` : ""}</li>`;
   };

@@ -19,6 +19,17 @@
  * elk-uur-regel en maakt uithongering erger, en de Instructie hoort bij de
  * hersync van de template. */
 
+/* i85: het klantlabel van een ritme komt uit de registry
+ * (ritmetaken.Ritme.opties_meta[optie].klantlabel, vanaf registry 1.92.0);
+ * tot de sync deze tabel. */
+function ritmeLabel(ritme, schema) {
+  const s = schema || (typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null);
+  const dom = s && s.datadomeinen && s.datadomeinen.ritmetaken;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Ritme") : null;
+  const meta = veld && veld.opties_meta && veld.opties_meta[ritme];
+  return (meta && meta.klantlabel) || RITME_KLANTTAAL[ritme] || ritme || "";
+}
+
 const RITME_KLANTTAAL = {
   "elk-uur": "Elk uur",
   "elke-2-uur": "Om de 2 uur",
@@ -48,8 +59,8 @@ function ritmeKeuzes(schema) {
   const dom = schema && schema.datadomeinen && schema.datadomeinen.ritmetaken;
   const veld = dom && (dom.velden || []).find(v => v.naam === "Ritme");
   const kent = (veld && veld.opties) || Object.keys(RITME_KLANTTAAL);
-  return Object.keys(RITME_KLANTTAAL).map(r => ({ waarde: r, label: RITME_KLANTTAAL[r], kan: kent.indexOf(r) !== -1 }))
-    .concat(kent.filter(r => !RITME_KLANTTAAL[r]).map(r => ({ waarde: r, label: r, kan: true })));
+  return Object.keys(RITME_KLANTTAAL).map(r => ({ waarde: r, label: ritmeLabel(r, schema), kan: kent.indexOf(r) !== -1 }))
+    .concat(kent.filter(r => !RITME_KLANTTAAL[r]).map(r => ({ waarde: r, label: ritmeLabel(r, schema), kan: true })));
 }
 
 /* Werkdagen (ma–vr) ná `van`, tot en met `tot`. */
@@ -237,7 +248,7 @@ function vtMelding(titel, patch) {
   if ("Actief" in patch) {
     return patch.Actief ? `‘${titel}’ staat aan.` : `‘${titel}’ staat uit. Je team slaat hem over tot je hem weer aanzet.`;
   }
-  return `‘${titel}’: ${(RITME_KLANTTAAL[patch.Ritme] || patch.Ritme || "").toLowerCase()}.`;
+  return `‘${titel}’: ${(ritmeLabel(patch.Ritme) || "").toLowerCase()}.`;
 }
 
 function renderVasteTaken(el, ctx) {
@@ -545,6 +556,6 @@ function stilKaartHtml(ctx) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderVasteTaken, vasteTakenHtml, taakStatus, weekTelling, werkdagenNa, ritmeKeuzes, RITME_KLANTTAAL,
+  module.exports = { renderVasteTaken, vasteTakenHtml, taakStatus, weekTelling, werkdagenNa, ritmeKeuzes, RITME_KLANTTAAL, ritmeLabel,
     klaarCheck, klaarSamenvatting, renderKlaar, klaarRegelHtml, stilKaartHtml, werkmomentSporen, WERKMOMENT_OPDRACHT };
 }

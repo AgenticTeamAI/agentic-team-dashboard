@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-NZWcsUiyDXD2k3RTMQVS9CtYJCTlYzOMXPW3fhfNM4g='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-AAPDhKPM26JyMc4uTP47VgxjkLFdXbI2lS618xoMhSU='">
 
 
 
@@ -6336,25 +6336,50 @@ function isTeLaat(rij, namen, nu) {
   return !!deadline && deadline < vjVandaag(nu) && vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen);
 }
 
-/* Koppeltabel status → soort. Elke status uit de registry staat hier; een
- * nieuwe status in de registry maakt test/f46-aan-jou.test.js rood in plaats
+/* i85: de rol van een status komt uit de registry (acties.Status.opties_meta,
+ * vanaf registry 1.92.0): voorstel, open, bezig, wacht, check of klaar. Zo
+ * hardcodeert het dashboard geen statusnamen. Draagt het schema die sleutel
+ * nog niet (tot de sync), dan geldt deze terugval — dezelfde indeling. */
+const STATUS_ROL_TERUGVAL = { [VJ_VOORSTEL]: "voorstel", [VJ_OPEN]: "open", [VJ_BEZIG]: "bezig", [VJ_WACHT]: "wacht", [VJ_REVIEW]: "check", [VJ_KLAAR]: "klaar" };
+function statusRol(status, schema) {
+  const s = schema || (typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null);
+  const dom = s && s.datadomeinen && s.datadomeinen.acties;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Status") : null;
+  const meta = veld && veld.opties_meta && veld.opties_meta[status];
+  return (meta && meta.rol) || STATUS_ROL_TERUGVAL[status] || null;
+}
+
+/* Koppeltabel rol → soort. Elke rol uit de registry staat hier; een status
+ * zonder (bekende) rol maakt test/i85-rol-uit-registry.test.js rood in plaats
  * van dat hij stil als "klopt niet" in beeld komt. */
-const SOORT_PER_STATUS = {
-  [VJ_KLAAR]: () => "klaar",
-  [VJ_VOORSTEL]: () => "voorstel",
+const SOORT_PER_ROL = {
+  klaar: () => "klaar",
+  voorstel: () => "voorstel",
   // Wacht op review op naam van een agent is volgens het statuscontract een
   // fout-toestand: niemand is dan aan zet.
-  [VJ_REVIEW]: (rij, namen) => (vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen) ? "check" : "klopt-niet"),
-  [VJ_WACHT]: (rij, namen, nu) => {
+  check: (rij, namen) => (vjMensOfLeeg(vjTekst(rij, "Eigenaar"), namen) ? "check" : "klopt-niet"),
+  wacht: (rij, namen, nu) => {
     if (!vjVerlopen(rij, nu)) return "wacht";
     return vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "weer";
   },
-  [VJ_OPEN]: (rij, namen) => {
+  open: (rij, namen) => {
     if (vjIsAgent(vjTekst(rij, "Eigenaar"), namen)) return "team";
     return vjTekst(rij, "Type") === "Alert" ? "signaal" : "taak";
   },
-  [VJ_BEZIG]: (rij, namen) => (vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "taak"),
+  bezig: (rij, namen) => (vjIsAgent(vjTekst(rij, "Eigenaar"), namen) ? "team" : "taak"),
 };
+
+/* Status → regel, via de rol: precies de statussen uit de registry die een
+ * bekende rol hebben. */
+const SOORT_PER_STATUS = (() => {
+  const s = typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null;
+  const dom = s && s.datadomeinen && s.datadomeinen.acties;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Status") : null;
+  const statussen = veld && Array.isArray(veld.opties) ? veld.opties : Object.keys(STATUS_ROL_TERUGVAL);
+  const uit = {};
+  for (const st of statussen) { const regel = SOORT_PER_ROL[statusRol(st, s)]; if (regel) uit[st] = regel; }
+  return uit;
+})();
 
 const SOORT_LABEL = {
   check: "Klaar om te checken",
@@ -12154,6 +12179,17 @@ if (typeof module !== "undefined") {
  * elk-uur-regel en maakt uithongering erger, en de Instructie hoort bij de
  * hersync van de template. */
 
+/* i85: het klantlabel van een ritme komt uit de registry
+ * (ritmetaken.Ritme.opties_meta[optie].klantlabel, vanaf registry 1.92.0);
+ * tot de sync deze tabel. */
+function ritmeLabel(ritme, schema) {
+  const s = schema || (typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null);
+  const dom = s && s.datadomeinen && s.datadomeinen.ritmetaken;
+  const veld = dom && Array.isArray(dom.velden) ? dom.velden.find(v => v.naam === "Ritme") : null;
+  const meta = veld && veld.opties_meta && veld.opties_meta[ritme];
+  return (meta && meta.klantlabel) || RITME_KLANTTAAL[ritme] || ritme || "";
+}
+
 const RITME_KLANTTAAL = {
   "elk-uur": "Elk uur",
   "elke-2-uur": "Om de 2 uur",
@@ -12183,8 +12219,8 @@ function ritmeKeuzes(schema) {
   const dom = schema && schema.datadomeinen && schema.datadomeinen.ritmetaken;
   const veld = dom && (dom.velden || []).find(v => v.naam === "Ritme");
   const kent = (veld && veld.opties) || Object.keys(RITME_KLANTTAAL);
-  return Object.keys(RITME_KLANTTAAL).map(r => ({ waarde: r, label: RITME_KLANTTAAL[r], kan: kent.indexOf(r) !== -1 }))
-    .concat(kent.filter(r => !RITME_KLANTTAAL[r]).map(r => ({ waarde: r, label: r, kan: true })));
+  return Object.keys(RITME_KLANTTAAL).map(r => ({ waarde: r, label: ritmeLabel(r, schema), kan: kent.indexOf(r) !== -1 }))
+    .concat(kent.filter(r => !RITME_KLANTTAAL[r]).map(r => ({ waarde: r, label: ritmeLabel(r, schema), kan: true })));
 }
 
 /* Werkdagen (ma–vr) ná `van`, tot en met `tot`. */
@@ -12372,7 +12408,7 @@ function vtMelding(titel, patch) {
   if ("Actief" in patch) {
     return patch.Actief ? `‘${titel}’ staat aan.` : `‘${titel}’ staat uit. Je team slaat hem over tot je hem weer aanzet.`;
   }
-  return `‘${titel}’: ${(RITME_KLANTTAAL[patch.Ritme] || patch.Ritme || "").toLowerCase()}.`;
+  return `‘${titel}’: ${(ritmeLabel(patch.Ritme) || "").toLowerCase()}.`;
 }
 
 function renderVasteTaken(el, ctx) {
@@ -12680,7 +12716,7 @@ function stilKaartHtml(ctx) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderVasteTaken, vasteTakenHtml, taakStatus, weekTelling, werkdagenNa, ritmeKeuzes, RITME_KLANTTAAL,
+  module.exports = { renderVasteTaken, vasteTakenHtml, taakStatus, weekTelling, werkdagenNa, ritmeKeuzes, RITME_KLANTTAAL, ritmeLabel,
     klaarCheck, klaarSamenvatting, renderKlaar, klaarRegelHtml, stilKaartHtml, werkmomentSporen, WERKMOMENT_OPDRACHT };
 }
 
@@ -13557,7 +13593,7 @@ function notionTakenHtml(ctx, rijen) {
   const rij = (t) => {
     const s = taakStatus(t, nu);
     return `<li class="vt-rij${t.Actief ? "" : " uit"}"><div class="vt-rij-kop"><span class="vt-titel">${esc(t.Taak)}</span>
-      <span class="footnote">${esc([agentWeergaveNaam(ctx.schema, t.Agent) || t.Agent, RITME_KLANTTAAL[t.Ritme] || t.Ritme, t.Actief ? "" : "uit"].filter(Boolean).join(" · "))}</span></div>
+      <span class="footnote">${esc([agentWeergaveNaam(ctx.schema, t.Agent) || t.Agent, (typeof ritmeLabel === "function" ? ritmeLabel(t.Ritme) : RITME_KLANTTAAL[t.Ritme] || t.Ritme), t.Actief ? "" : "uit"].filter(Boolean).join(" · "))}</span></div>
       <p class="vt-status vt-${s.k}">${esc(s.tekst)}</p>
       ${t.__url ? `<a class="detail-link" href="${esc(t.__url)}" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a>` : ""}</li>`;
   };
