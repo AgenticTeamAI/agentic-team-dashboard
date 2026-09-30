@@ -1247,3 +1247,11 @@ section[data-baan].sleep-over { outline: 2px dashed var(--team); outline-offset:
 .verplaats-keuzes .knop-mini:hover, .verplaats-keuzes .knop-mini:focus-visible { transform: none; border-color: var(--team); background: var(--team-zacht); color: var(--ink); }
 [data-verplaats-slot]:empty { display: none; }
 .verplaats-keuzes select { font: inherit; font-size: 0.85rem; min-height: 36px; padding: 4px 8px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); max-width: 100%; }
+
+/* ── f55 · Beschikbaar voor jouw team ────────────────────────────────── */
+.vt-catalogus-lijst { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vt-catalogus-rij { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px dashed var(--line-2); border-radius: 10px; background: var(--surface); }
+.vt-catalogus-rij .vt-titel { margin: 0; }
+.vt-catalogus-rij .footnote, .vt-catalogus-rij .vt-meta { margin: 2px 0 0; }
+.vt-zet-aan { flex: 0 0 auto; min-height: 36px; padding: 4px 12px; border: 1px solid var(--team); border-radius: 999px; color: var(--team-tekst); background: var(--surface); }
+.vt-zet-aan:hover { background: var(--team); color: var(--op-team); transform: none; }

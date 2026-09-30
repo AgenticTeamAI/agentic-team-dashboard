@@ -253,6 +253,16 @@ function vtMelding(titel, patch) {
 
 function renderVasteTaken(el, ctx) {
   el.innerHTML = vasteTakenHtml(ctx);
+  // f55: wat er nog meer bij je modules hoort, met "Zet aan" — alleen als de
+  // vaste taken in je werkruimte wonen.
+  const inWerkruimte = bronVan(ctx, "ritmetaken").toestand !== "elders"
+    && !(ctx.bundle && ctx.bundle.kind === "metrics" && !dataRijenVan(ctx, "ritmetaken"));
+  if (typeof wireCatalogus === "function" && inWerkruimte) {
+    const slot = document.createElement("div");
+    slot.setAttribute("data-vt-catalogus", "");
+    el.appendChild(slot);
+    wireCatalogus(slot, ctx);
+  }
   const wijzig = (li, patch, bediening) => {
     const id = li.getAttribute("data-vt-id");
     const rij = (dataRijenVan(ctx, "ritmetaken") || []).find(r => r.__entryId === id);
