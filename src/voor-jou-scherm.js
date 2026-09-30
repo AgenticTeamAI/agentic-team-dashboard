@@ -151,6 +151,7 @@ function renderVoorJou(paneel, ctx) {
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${vjIk(ctx) ? `<span class="footnote">als ${esc(vjIk(ctx))} · <button type="button" class="filter-wis" data-vj-naam-wijzig>wijzig</button></span>` : ""}
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
@@ -203,6 +204,18 @@ function vjNaamRegelHtml(ctx) {
 }
 
 function wireVjNaam(el, ctx) {
+  const wijzig = el.querySelector("[data-vj-naam-wijzig]");
+  if (wijzig) {
+    wijzig.addEventListener("click", () => {
+      let slot = el.querySelector('[data-naam-slot="vj"]');
+      if (!slot) { slot = document.createElement("div"); slot.setAttribute("data-naam-slot", "vj"); wijzig.closest(".vj-kop").after(slot); }
+      vraagNaamIn(slot, ctx.bron).then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        meld(`Je werkt nu als ${naam}.`);
+        if (ctx.hertekenAlles) ctx.hertekenAlles();
+      });
+    });
+  }
   const knop = el.querySelector("[data-vj-naam]");
   if (!knop) return;
   knop.addEventListener("click", () => {

@@ -81,8 +81,13 @@ function zetMijnNaam(bron, naam) {
  * Drie dingen die hier bewust zo zijn:
  * - het loopt door `modulesFetch`, de enige plek die de site aanroept, zodat de
  *   inventaris van de telemetriecontrole op vier aanroepen blijft staan;
- * - het gebeurt pas bij de eerste schrijfactie zonder opgeslagen naam, niet bij
- *   het laden — wie nooit schrijft, laat ons nooit een adres opzoeken;
+ * - b62 (30-09): met een ingelogde sessie gebeurt het één keer bij het laden
+ *   (naamBijLaden in app.js), niet pas bij de eerste schrijfactie. "Voor jou"
+ *   telt per persoon, en dat kan alleen als het dashboard weet wie je bent; de
+ *   naam is bij het inloggen ook gewoon bekend. Het is dezelfde site die bij
+ *   het laden al het moduleoverzicht levert, en de privacytekst belooft
+ *   "hoogstens één keer per sessie" — dat blijft zo (de belofte hieronder
+ *   cachet per seat). Met een daglink gaat er niets naar de site;
  * - het antwoord is een suggestie in een prompt, geen stille invulling. Een
  *   persoonsgegeven in de werkdata van de klant hoort langs de gebruiker.
  *

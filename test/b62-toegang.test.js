@@ -9,7 +9,7 @@
  *   ingelogd is mag die bijwerken — per domein, via de bronkoppeling;
  * - één eerlijke regel bovenaan: meekijken met een daglink (met een
  *   inlogknop), of acties die in Notion wonen. */
-import { describe, expect, it, beforeAll, afterEach } from "vitest";
+import { describe, expect, it, beforeAll, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -40,8 +40,21 @@ const MODULES = [
   "src/app.js",
 ];
 
+function stubOpslag() {
+  const kluis = new Map();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k) => (kluis.has(k) ? kluis.get(k) : null),
+      setItem: (k, v) => kluis.set(k, String(v)),
+      removeItem: (k) => kluis.delete(k),
+    },
+  });
+}
+
 let g;
 beforeAll(() => {
+  stubOpslag();
   for (const rel of MODULES) vm.runInThisContext(readFileSync(join(ROOT, rel), "utf8"), { filename: rel });
   g = globalThis;
 });
@@ -132,5 +145,41 @@ describe("b62 — de balk bovenaan", () => {
 
   it("ingelogd met je werkruimte: geen balk", () => {
     expect(g.toegangsBalkHtml(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "werkruimte" }))).toBe("");
+  });
+});
+
+describe("b62 — je naam is bij het inloggen bekend", () => {
+  // modules-beheer.js declareert modulesFetch als functie: overschrijven mag,
+  // verwijderen niet — dus na elke test de echte terugzetten.
+  let echteModulesFetch;
+  beforeAll(() => { echteModulesFetch = g.modulesFetch; });
+  afterEach(() => { vi.restoreAllMocks(); g._resetNaamvoorstel(); g.modulesFetch = echteModulesFetch; });
+
+  it("een gekozen naam komt één keer bij het laden binnen, en dan telt Voor jou per persoon", async () => {
+    const bron = { oauth: true, token: jwt("at_een", "dashboard:lees dashboard:schrijf") };
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Sanne Verbeek", gezet: true } }));
+    const renderAll = vi.spyOn(g, "renderAll").mockImplementation(() => {});
+    g.naamBijLaden({ bron });
+    await vi.waitFor(() => expect(renderAll).toHaveBeenCalledTimes(1));
+    expect(g.mijnNaam(bron)).toBe("Sanne Verbeek");
+    g.naamBijLaden({ bron }); // bekend: niet nog eens vragen
+    expect(g.modulesFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("een afleiding uit je adres telt niet: die blijft een voorzet in de naamvraag", async () => {
+    const bron = { oauth: true, token: jwt("at_twee", "dashboard:lees dashboard:schrijf") };
+    g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "sanne.verbeek", gezet: false } }));
+    const renderAll = vi.spyOn(g, "renderAll").mockImplementation(() => {});
+    g.naamBijLaden({ bron });
+    await new Promise(r => setTimeout(r, 0));
+    await new Promise(r => setTimeout(r, 0));
+    expect(g.mijnNaam(bron)).toBe("");
+    expect(renderAll).not.toHaveBeenCalled();
+  });
+
+  it("met een daglink gaat er niets naar de site", () => {
+    g.modulesFetch = vi.fn();
+    g.naamBijLaden({ bron: { token: daglink("at_een") } });
+    expect(g.modulesFetch).not.toHaveBeenCalled();
   });
 });

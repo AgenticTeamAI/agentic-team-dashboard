@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-h+07Mdr5tfAatMnFjeN3g8o5WgVE4g0rSLw4qDUXtG4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-boZvysy2de9nmDHt4aCH/wTGvBLFg5sNLd0Y2tQVeYo='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -10040,8 +10040,13 @@ function zetMijnNaam(bron, naam) {
  * Drie dingen die hier bewust zo zijn:
  * - het loopt door `modulesFetch`, de enige plek die de site aanroept, zodat de
  *   inventaris van de telemetriecontrole op vier aanroepen blijft staan;
- * - het gebeurt pas bij de eerste schrijfactie zonder opgeslagen naam, niet bij
- *   het laden — wie nooit schrijft, laat ons nooit een adres opzoeken;
+ * - b62 (30-09): met een ingelogde sessie gebeurt het één keer bij het laden
+ *   (naamBijLaden in app.js), niet pas bij de eerste schrijfactie. "Voor jou"
+ *   telt per persoon, en dat kan alleen als het dashboard weet wie je bent; de
+ *   naam is bij het inloggen ook gewoon bekend. Het is dezelfde site die bij
+ *   het laden al het moduleoverzicht levert, en de privacytekst belooft
+ *   "hoogstens één keer per sessie" — dat blijft zo (de belofte hieronder
+ *   cachet per seat). Met een daglink gaat er niets naar de site;
  * - het antwoord is een suggestie in een prompt, geen stille invulling. Een
  *   persoonsgegeven in de werkdata van de klant hoort langs de gebruiker.
  *
@@ -11184,6 +11189,7 @@ function renderVoorJou(paneel, ctx) {
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${vjIk(ctx) ? `<span class="footnote">als ${esc(vjIk(ctx))} · <button type="button" class="filter-wis" data-vj-naam-wijzig>wijzig</button></span>` : ""}
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
@@ -11236,6 +11242,18 @@ function vjNaamRegelHtml(ctx) {
 }
 
 function wireVjNaam(el, ctx) {
+  const wijzig = el.querySelector("[data-vj-naam-wijzig]");
+  if (wijzig) {
+    wijzig.addEventListener("click", () => {
+      let slot = el.querySelector('[data-naam-slot="vj"]');
+      if (!slot) { slot = document.createElement("div"); slot.setAttribute("data-naam-slot", "vj"); wijzig.closest(".vj-kop").after(slot); }
+      vraagNaamIn(slot, ctx.bron).then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        meld(`Je werkt nu als ${naam}.`);
+        if (ctx.hertekenAlles) ctx.hertekenAlles();
+      });
+    });
+  }
   const knop = el.querySelector("[data-vj-naam]");
   if (!knop) return;
   knop.addEventListener("click", () => {
@@ -12397,6 +12415,21 @@ function schrijfHaken() {
   };
 }
 
+/* b62: wie ben je? Met een ingelogde sessie één keer bij het laden (zie de
+ * uitleg bij haalNaamvoorstel). Alleen een GEKOZEN naam telt: die bewaart
+ * haalNaamvoorstel als kopie, en dan tellen Voor jou en Acties per persoon.
+ * Een afleiding uit je adres blijft een voorzet in de naamvraag. */
+let naamBijLadenGedaan = null;
+function naamBijLaden(ctx) {
+  const bron = ctx.bron;
+  if (!bron || !bron.oauth || mijnNaam(bron)) return;
+  if (naamBijLadenGedaan === bron.token) return;
+  naamBijLadenGedaan = bron.token;
+  void haalNaamvoorstel(bron).then((r) => {
+    if (r && r.gezet && mijnNaam(bron)) renderAll();
+  }).catch(() => { /* geen naam: dan telt alles, met "Zeg wie je bent" */ });
+}
+
 /* b62: één eerlijke regel bovenaan over wat je hier kunt.
  * - Daglink: je kijkt mee; inloggen brengt je terug op precies deze plek
  *   (de bedoelde route reist mee in de PKCE-record, f44).
@@ -12524,6 +12557,8 @@ function renderAll() {
   void laadTeam(huidigeBron).then(() => {
     renderTeamPanel(document.getElementById("panel-team-namen"));
   });
+
+  naamBijLaden(ctx);
 
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);

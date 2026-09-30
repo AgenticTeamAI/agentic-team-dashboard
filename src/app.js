@@ -204,6 +204,21 @@ function schrijfHaken() {
   };
 }
 
+/* b62: wie ben je? Met een ingelogde sessie één keer bij het laden (zie de
+ * uitleg bij haalNaamvoorstel). Alleen een GEKOZEN naam telt: die bewaart
+ * haalNaamvoorstel als kopie, en dan tellen Voor jou en Acties per persoon.
+ * Een afleiding uit je adres blijft een voorzet in de naamvraag. */
+let naamBijLadenGedaan = null;
+function naamBijLaden(ctx) {
+  const bron = ctx.bron;
+  if (!bron || !bron.oauth || mijnNaam(bron)) return;
+  if (naamBijLadenGedaan === bron.token) return;
+  naamBijLadenGedaan = bron.token;
+  void haalNaamvoorstel(bron).then((r) => {
+    if (r && r.gezet && mijnNaam(bron)) renderAll();
+  }).catch(() => { /* geen naam: dan telt alles, met "Zeg wie je bent" */ });
+}
+
 /* b62: één eerlijke regel bovenaan over wat je hier kunt.
  * - Daglink: je kijkt mee; inloggen brengt je terug op precies deze plek
  *   (de bedoelde route reist mee in de PKCE-record, f44).
@@ -331,6 +346,8 @@ function renderAll() {
   void laadTeam(huidigeBron).then(() => {
     renderTeamPanel(document.getElementById("panel-team-namen"));
   });
+
+  naamBijLaden(ctx);
 
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);
