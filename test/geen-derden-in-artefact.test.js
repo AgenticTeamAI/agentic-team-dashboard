@@ -96,6 +96,7 @@ describe("herkomst — het artefact komt volledig uit src/ + schema/", () => {
       .replaceAll("__CSP_META__", cspMeta)
       .replaceAll("__ROBOTS_META__", "") // productiebouw: geen noindex
       .replaceAll("__OAUTH_META__", "") // productiebouw: OAUTH_DASHBOARD uit
+      .replaceAll("__BASIS_META__", "") // zonder --basis: gewoon op /
       .replaceAll("__STYLES__", styles)
       .replaceAll("__SCHEMA__", schema)
       .replaceAll("__APP__", app)

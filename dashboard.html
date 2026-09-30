@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-ouq2TYevaA7q1TXJGJQq3eDz3Ecjm7+SZFPgPaGGOuc='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-n4Fs8fZCzXQ00RoygVfRG6ALIRxWtOOclBacXHDZeew='">
+
 
 
 <title>Agentic Team Dashboard</title>
@@ -4872,7 +4873,19 @@ if (typeof module !== "undefined") {
 const OAUTH_AUTORISATIE_URL = "https://www.agentic-team.ai/oauth/authorize";
 const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token";
 const OAUTH_CLIENT_ID = "https://www.agentic-team.ai/oauth/clients/dashboard";
-const OAUTH_REDIRECT_URI = "https://dashboard.agentic-team.ai/";
+/* Losse link (dashboard v2): onder een pad op dezelfde origin keert de login
+ * terug naar dat pad. build.py zet het pad als meta; zonder meta is het "/".
+ * De site kent elke terugkeer-URL bij naam (redirect_uris, exacte match). */
+function dashboardBasis() {
+  try {
+    const m = document.querySelector('meta[name="at-basis"]');
+    const b = m && m.getAttribute("content");
+    return b && /^\/[a-z0-9-]+\/$/.test(b) ? b : "/";
+  } catch (e) {
+    return "/";
+  }
+}
+const OAUTH_REDIRECT_URI = "https://dashboard.agentic-team.ai" + dashboardBasis();
 // f23: de login vraagt lezen én schrijven; de site bepaalt wat hij echt
 // uitgeeft (contract 1.6 — beide, voor elke p10-login van de licentie).
 const OAUTH_SCOPE = "dashboard:lees dashboard:schrijf";
