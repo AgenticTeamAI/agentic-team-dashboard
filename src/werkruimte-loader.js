@@ -371,6 +371,14 @@ async function metPlafond(items, plafond, werk) {
   return uit;
 }
 
+/* Eén entry uit de instantie → één rij zoals de rest van het dashboard hem
+ * leest. Staat apart omdat er twee ingangen zijn: het laden van de bundel en
+ * (i81) het antwoord op een schrijfactie, dat de rij ter plekke vervangt. Twee
+ * eigen vormen zouden na de eerste klik stil uit elkaar gaan lopen. */
+function rijVanEntry(e) {
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId });
+}
+
 function maxBijgewerkt(entries) {
   let laatst = null;
   for (const e of entries) {
@@ -590,7 +598,7 @@ async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
       aanwezig: true,
       // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
       // schemaveld en komt dus nooit als kolom in beeld.
-      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
+      rows: entries.map(rijVanEntry),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
@@ -612,7 +620,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,

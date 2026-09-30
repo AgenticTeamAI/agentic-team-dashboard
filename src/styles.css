@@ -805,6 +805,34 @@ tr.rij-open { background: var(--card); }
 .notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .notitie-nieuw .knop { align-self: flex-start; }
 
+/* i81: bijwerken ter plekke — bezig, bevestigen, melden */
+[aria-busy="true"] { cursor: progress; }
+.detail-kaart[aria-busy="true"] .bedien-balk, .bewerk-formulier[aria-busy="true"] { opacity: 0.7; }
+.knop-gevaar { background: transparent; color: var(--rood); border: 1px solid var(--rood-rand); }
+.knop-gevaar:hover { background: var(--rood-rand); color: var(--white); }
+.naam-vraag { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 0 0 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+.naam-vraag .footnote { flex-basis: 100%; margin: 0; }
+.melding {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50;
+  display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--mint);
+  border-radius: 10px; padding: 10px 12px 10px 16px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 0.92rem;
+}
+.melding[hidden] { display: none; }
+body.met-melding { padding-bottom: 96px; }
+[data-kaart-paneel] .bewerk-formulier { margin-bottom: 0; }
+@media (max-width: 700px) {
+  /* Boven de vaste tabbar, en wat de focus krijgt, schuift er nooit onder. */
+  html { scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); }
+  .melding { bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 24px); }
+  body.met-melding { padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px)); }
+}
+.melding-fout { border-left-color: var(--rood-rand); }
+.melding-tekst { overflow-wrap: anywhere; }
+.melding-knop { white-space: nowrap; min-height: 36px; }
+.melding-sluit { background: none; border: none; color: var(--muted); padding: 4px 6px; min-height: 36px; }
+.melding-sluit:hover { background: none; color: var(--text); }
+
 /* ── f34 · Jouw modules ────────────────────────────────────────────────── */
 .modules-samenvatting { margin: 0 0 6px; }
 .modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }

@@ -63,6 +63,49 @@ async function handleBundle(bundle, route, label, { behoudRoute = false, naarRou
   renderAll();
 }
 
+/* i81: één rij bijwerken na een schrijfactie, zonder de bundel opnieuw op te
+ * halen. Elke klik haalde eerst de héle werkruimte opnieuw op (tientallen
+ * verzoeken), liet zolang de laadtekst zien en sprong daarna naar boven — wie
+ * tien acties afhandelde, zocht tien keer zijn plek terug.
+ *
+ * `wijziging` is { entry } (het antwoord op PATCH/POST: de rij zoals de
+ * instantie hem opsloeg) of { weg: entryId } (na DELETE). `focus` is optioneel
+ * de selector van wat na het tekenen de focus hoort te krijgen. Daarna rekent
+ * renderAll alles opnieuw uit, zodat tellers, Vandaag en de Data-tab dezelfde
+ * rijen tonen. Geeft false als er niets bij te werken viel; de aanroeper valt
+ * dan terug op herladen. */
+let volgendeFocus = null;
+
+function werkRijBij(key, wijziging) {
+  const bundle = currentBundle;
+  const w = wijziging || {};
+  if (!bundle || !bundle.domains || !key) return false;
+  let dom = bundle.domains[key];
+  if (w.weg) {
+    if (!dom || !Array.isArray(dom.rows)) return false;
+    dom.rows = dom.rows.filter(r => r.__entryId !== w.weg);
+  } else if (w.entry && w.entry.entryId) {
+    // Een domein dat bij het laden leeg was, staat niet in de bundel.
+    if (!dom || !Array.isArray(dom.rows)) {
+      dom = bundle.domains[key] = { aanwezig: true, rows: [], staleAt: null,
+        herkomstLabel: `werkruimte — ${key} (0 entries, live opgehaald)` };
+    }
+    const rij = rijVanEntry(w.entry);
+    const plek = dom.rows.findIndex(r => r.__entryId === rij.__entryId);
+    dom.rows = plek === -1 ? [rij].concat(dom.rows) : dom.rows.map((r, i) => (i === plek ? rij : r));
+    const dt = w.entry.bijgewerkt ? new Date(w.entry.bijgewerkt) : null;
+    if (dt && !isNaN(dt.getTime()) && (!dom.staleAt || dt > dom.staleAt)) dom.staleAt = dt;
+  } else {
+    return false;
+  }
+  if (typeof dom.herkomstLabel === "string") {
+    dom.herkomstLabel = dom.herkomstLabel.replace(/\(\d+ entries/, `(${dom.rows.length} entries`);
+  }
+  volgendeFocus = w.focus || null;
+  renderAll();
+  return true;
+}
+
 /* De teamfeed als tweede bron voor "gebruik per agent". Puur tellen: geen
  * markeerOpenLussen (dat is presentatie), alleen agentSlug + tijd. Zie
  * kiesAgentGebruik() in zones.js voor waarom deze terugval bestaat. */
@@ -142,6 +185,9 @@ function buildContext() {
     kanSchrijven: bronKanSchrijven(huidigeBron),
     // Na een schrijfactie blijf je waar je was — zie handleBundle().
     herlaad: () => laadWerkruimte(huidigeBron, { behoudRoute: true }),
+    // i81: normaal hoeft dat niet eens: de instantie stuurt de opgeslagen rij
+    // terug, en die vervangt de rij hier ter plekke.
+    werkBij: (key, wijziging) => werkRijBij(key, wijziging),
   };
 }
 
@@ -318,6 +364,23 @@ const TAB_TITELS = {
   prestaties: "Prestaties — Agentic Team Dashboard",
 };
 
+/* i81: wordt dezelfde weergave opnieuw getekend (na een schrijfactie, of
+ * omdat het moduleoverzicht binnenkwam), dan blijft de pagina staan waar hij
+ * stond en houdt de bediening die je gebruikte de focus. Alleen een ándere
+ * weergave begint bovenaan. */
+let vorigeWeergave = null;
+
+function blijfOfNaarBoven(zelfde, scrollY, focus) {
+  if (!zelfde) { window.scrollTo(0, 0); return; }
+  if (focus) {
+    try {
+      const doel = document.querySelector(focus);
+      if (doel && doel.focus) doel.focus({ preventScroll: true });
+    } catch (e) { /* ongeldige selector: dan geen focus, geen fout */ }
+  }
+  if (typeof scrollY === "number" && window.scrollY !== scrollY) window.scrollTo(0, scrollY);
+}
+
 function route() {
   const bundle = currentBundle;
   if (!bundle) return;
@@ -333,13 +396,19 @@ function route() {
   // Is de Data-tab er niet (een metricsbestand zonder relatiekaarten), dan mag
   // een onthouden of getypte #/data-link niet op een lege tab uitkomen.
   if (view.tab === "data" && !dataTabBeschikbaar(ctx)) view = { soort: "tab", tab: "vandaag" };
+  const sleutel = [view.soort, view.tab, view.key || "", view.domein || ""].join("|");
+  const zelfde = sleutel === vorigeWeergave;
+  vorigeWeergave = sleutel;
+  const scrollY = window.scrollY;
+  const focus = zelfde ? (volgendeFocus || focusSelector(document.activeElement)) : null;
+  volgendeFocus = null;
   verbergAlles();
   renderTabbar(document.getElementById("tabbar"), view.tab, ctx);
 
   if (view.soort === "detail") {
     document.getElementById("detail-view").style.display = "";
     renderDetail(view.key);
-    window.scrollTo(0, 0);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
     return;
   }
 
@@ -348,11 +417,13 @@ function route() {
 
   if (view.soort === "data") {
     renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
-    window.scrollTo(0, 0);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
   if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  // Een tab begon nooit bovenaan; die blijft staan, alleen de focus komt terug.
+  if (zelfde) blijfOfNaarBoven(true, null, focus);
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render

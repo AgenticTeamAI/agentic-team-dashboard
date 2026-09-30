@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-MWsxRMPVv6iBd+6M6vXgrXxm09ZZrIhHTrTsGnPpzrE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-v5bPoL88CrZC570LkGkdN/eiEuVYTpl4Wz3RkxIX65U='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -815,6 +815,34 @@ tr.rij-open { background: var(--card); }
 .notitie-nieuw input, .notitie-nieuw textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .notitie-nieuw .knop { align-self: flex-start; }
 
+/* i81: bijwerken ter plekke — bezig, bevestigen, melden */
+[aria-busy="true"] { cursor: progress; }
+.detail-kaart[aria-busy="true"] .bedien-balk, .bewerk-formulier[aria-busy="true"] { opacity: 0.7; }
+.knop-gevaar { background: transparent; color: var(--rood); border: 1px solid var(--rood-rand); }
+.knop-gevaar:hover { background: var(--rood-rand); color: var(--white); }
+.naam-vraag { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 0 0 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
+.naam-vraag .footnote { flex-basis: 100%; margin: 0; }
+.melding {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50;
+  display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--mint);
+  border-radius: 10px; padding: 10px 12px 10px 16px; box-shadow: 0 6px 24px rgba(0,0,0,0.35); font-size: 0.92rem;
+}
+.melding[hidden] { display: none; }
+body.met-melding { padding-bottom: 96px; }
+[data-kaart-paneel] .bewerk-formulier { margin-bottom: 0; }
+@media (max-width: 700px) {
+  /* Boven de vaste tabbar, en wat de focus krijgt, schuift er nooit onder. */
+  html { scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)); }
+  .melding { bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 24px); }
+  body.met-melding { padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px)); }
+}
+.melding-fout { border-left-color: var(--rood-rand); }
+.melding-tekst { overflow-wrap: anywhere; }
+.melding-knop { white-space: nowrap; min-height: 36px; }
+.melding-sluit { background: none; border: none; color: var(--muted); padding: 4px 6px; min-height: 36px; }
+.melding-sluit:hover { background: none; color: var(--text); }
+
 /* ── f34 · Jouw modules ────────────────────────────────────────────────── */
 .modules-samenvatting { margin: 0 0 6px; }
 .modules-verzoek { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin: 16px 0; max-width: 560px; }
@@ -1026,6 +1054,8 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
     nieuwere versie draaien — dit is de versie waarop deze pagina is gebouwd.
   </footer>
 </div>
+
+<div id="melding" class="melding" role="status" aria-live="polite" hidden></div>
 
 <script>
 // GEGENEREERD BESTAND - NIET HANDMATIG BEWERKEN.
@@ -4115,6 +4145,14 @@ async function metPlafond(items, plafond, werk) {
   return uit;
 }
 
+/* Eén entry uit de instantie → één rij zoals de rest van het dashboard hem
+ * leest. Staat apart omdat er twee ingangen zijn: het laden van de bundel en
+ * (i81) het antwoord op een schrijfactie, dat de rij ter plekke vervangt. Twee
+ * eigen vormen zouden na de eerste klik stil uit elkaar gaan lopen. */
+function rijVanEntry(e) {
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId });
+}
+
 function maxBijgewerkt(entries) {
   let laatst = null;
   for (const e of entries) {
@@ -4334,7 +4372,7 @@ async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
       aanwezig: true,
       // f23: __entryId reist mee voor bewerken/verwijderen; het is geen
       // schemaveld en komt dus nooit als kolom in beeld.
-      rows: entries.map(e => Object.assign({}, e.data, { __entryId: e.entryId })),
+      rows: entries.map(rijVanEntry),
       staleAt,
       herkomstLabel: `werkruimte — ${domein} (${entries.length} entries, live opgehaald)`,
     };
@@ -4356,7 +4394,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
     downloadExport, bestandsnaamUitHeader,
@@ -8118,6 +8156,7 @@ function dataDetailHtml(ctx, key, rij) {
       <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
     </div>
     ${bedienHtml(ctx, key, domein, rij)}
+    <p class="bewerk-fout" data-snel-fout></p>
     ${regels}
     ${langeRegels}
     ${leeg.length ? `<p class="footnote">Niet ingevuld: ${esc(leeg.join(", "))}.</p>` : ""}
@@ -8125,7 +8164,7 @@ function dataDetailHtml(ctx, key, rij) {
     <p class="detail-kop-terug"><strong>Wat hieraan hangt</strong></p>
     ${terugHtml}
     <div class="bewerk-knoppen">${knoppen}</div>
-    <p class="bewerk-fout" data-snel-fout role="alert"></p>
+    <div data-kaart-paneel></div>
   </div>`;
 }
 
@@ -8148,7 +8187,8 @@ function bedienHtml(ctx, key, domein, rij) {
 
   const huidig = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
   const naam = mijnNaam(ctx.bron);
-  const agenten = (ctx.schema.agents || []).map(a => a.displayName || a.naam || a.slug).filter(Boolean);
+  // Zelfde lijst als waartegen de instantie valideert (b60).
+  const agenten = agentOpties(ctx.schema);
 
   return `<div class="bedien-balk">
     ${statusVeld ? `<label class="bedien-veld"><span>Status</span>
@@ -8164,7 +8204,8 @@ function bedienHtml(ctx, key, domein, rij) {
         ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
       </select></label>` : ""}
     ${naam ? `<span class="footnote">Je werkt als ${esc(naam)} · <button type="button" class="filter-wis" data-naam-wijzig>wijzig</button></span>` : ""}
-  </div>`;
+  </div>
+  <div data-naam-slot="bedien"></div>`;
 }
 
 /* ── f33 fase E: de notitiedraad ──────────────────────────────────────
@@ -8222,7 +8263,9 @@ function notitiedraadHtml(ctx, key, rij) {
     ? `<form class="notitie-nieuw" data-notitie-form>
         <input type="text" data-notitie-onderwerp placeholder="Onderwerp" maxlength="120">
         <textarea data-notitie-tekst rows="2" placeholder="Wat is er gebeurd of afgesproken?"></textarea>
-        <button type="submit" class="knop">Notitie toevoegen</button>
+        <div data-naam-slot="notitie"></div>
+        <p class="bewerk-fout" data-notitie-fout></p>
+        <button type="submit" class="knop" data-notitie-knop>Notitie toevoegen</button>
       </form>`
     : uitleg;
 
@@ -8568,7 +8611,7 @@ function renderDataDomein(el, key, ctx) {
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
   // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
   const bewerk = magDomeinBewerken(ctx, key);
-  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
+  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuw</button>` : "";
   const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     // De oude tekst hedgede ("leeg, óf het woont ergens anders") terwijl het
@@ -8812,21 +8855,64 @@ function renderDataDomein(el, key, ctx) {
   });
 
   /* f33 fase F — bedienen. Elke schrijfactie loopt via PATCH (of, voor een
-   * notitie, POST) en daarna een herlaadde bundel: het dashboard verzint nooit
-   * zelf hoe de rij er na afloop uitziet, want de instantie kan er meer mee
-   * gedaan hebben (relatietitels verversen, velden normaliseren). */
-  function foutmelder() { return el.querySelector("[data-snel-fout]"); }
+   * notitie, POST). i81: het antwoord van de instantie vervangt daarna de rij
+   * ter plekke (verwerkAntwoord) — geen herlaad, geen sprong naar boven. Het
+   * dashboard verzint nog steeds niet zelf hoe de rij er na afloop uitziet: het
+   * neemt over wat de instantie terugstuurt.
+   *
+   * `bediening` is het element dat de actie startte. Dat staat uit zolang de
+   * actie loopt, zodat een tweede klik geen tweede schrijfactie wordt. Mislukt
+   * het, dan tekent de kaart opnieuw vanuit de rijen — de kiezer staat dan weer
+   * op wat er écht is opgeslagen — en de fout staat ernaast, met de knop om het
+   * nog eens te proberen. */
+  function foutmelder(o) { return el.querySelector((o && o.foutPlek) || "[data-snel-fout]"); }
 
-  async function pasToe(actie) {
-    const fout = foutmelder();
+  async function pasToe(actie, opties) {
+    const o = opties || {};
+    const fout = foutmelder(o);
     if (fout) fout.textContent = "";
+    const kaart = el.querySelector("[data-detail-kaart]");
+    if (o.bediening) o.bediening.disabled = true;
+    if (kaart) kaart.setAttribute("aria-busy", "true");
     try {
-      await actie();
-      await (ctx.herlaad ? ctx.herlaad() : Promise.resolve());
+      const antwoord = await actie();
+      await verwerkAntwoord(ctx, o.domein || key, antwoord, { focus: o.focus });
+      if (o.melding) meld(o.melding, o.ongedaan ? { actie: o.ongedaan } : {});
+      return true;
     } catch (f) {
-      if (fout) fout.textContent = f.message || "Dat is niet gelukt.";
-      else window.alert(f.message || "Dat is niet gelukt.");
+      const tekst = (f && f.message) || "Dat is niet gelukt.";
+      if (o.bediening) o.bediening.disabled = false;
+      if (kaart) kaart.removeAttribute("aria-busy");
+      if (o.herstel !== false) {
+        herteken();
+        const terug = o.focus ? el.querySelector(o.focus) : null;
+        if (terug && terug.focus) terug.focus();
+      }
+      const plek = foutmelder(o);
+      if (plek) plek.textContent = tekst;
+      meld("Niet gelukt: " + tekst, { fout: true, actie: { label: "Opnieuw", doe: () => pasToe(actie, o) } });
+      return false;
     }
+  }
+
+  /* Eén veldwijziging op een rij, met "ongedaan maken" in de meldingsregel.
+   * Wat al zo stond, gaat niet nog eens naar de instantie: een kaart naar zijn
+   * eigen kolom slepen of een naam ongewijzigd bevestigen is geen wijziging,
+   * en hoort ook geen melding op te leveren. */
+  function wijzigRij(rij, patch, bediening) {
+    const leeg = (v) => (v === undefined || v === "" ? null : v);
+    if ("Status" in patch && leeg(rij.Status) === leeg(patch.Status)) return Promise.resolve(false);
+    for (const k of Object.keys(patch)) {
+      if (JSON.stringify(leeg(rij[k])) === JSON.stringify(leeg(patch[k]))) delete patch[k];
+    }
+    if (!Object.keys(patch).length) return Promise.resolve(false);
+    const vorige = vorigeWaarden(rij, patch);
+    return pasToe(() => snelWijzig(ctx, key, rij.__entryId, patch), {
+      bediening,
+      focus: bediening ? focusSelector(bediening) : null,
+      melding: wijzigingTekst(patch),
+      ongedaan: ongedaanPatch(ctx, key, rij.__entryId, vorige),
+    });
   }
 
   function huidigeRij() {
@@ -8834,50 +8920,81 @@ function renderDataDomein(el, key, ctx) {
     return rows.find(r => r.__entryId === dataDetail.entryId) || null;
   }
 
-  /* i77: de prompt komt voorgevuld met wat de site over deze seat weet, en
-   * blijft een prompt — stil invullen zou een persoonsgegeven in de werkdata
-   * van de klant zetten zonder dat iemand het zag. Async omdat het voorstel van
-   * de site komt; zonder antwoord gedraagt hij zich precies als voorheen. */
-  async function vraagNaam() {
-    const { voorstel } = await haalNaamvoorstel(ctx.bron);
-    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel || "");
-    if (ingevuld === null) return voorstel || "";
-    return zetMijnNaam(ctx.bron, ingevuld);
+  /* i77 + i81: de naamvraag staat in de pagina, niet in window.prompt. Hij komt
+   * voorgevuld met wat de site over deze seat weet en blijft een vraag — stil
+   * invullen zou een persoonsgegeven in de werkdata van de klant zetten zonder
+   * dat iemand het zag. Geeft de gekozen naam, of null als je afziet. */
+  function vraagNaam(plek, { overslaan = false } = {}) {
+    return haalNaamvoorstel(ctx.bron).then(({ voorstel }) => new Promise((klaar) => {
+      const slot = el.querySelector(`[data-naam-slot="${plek}"]`);
+      if (!slot) { klaar(null); return; }
+      slot.innerHTML = `<div class="naam-vraag" role="group" aria-label="Je naam">
+        <label class="bedien-veld"><span>Onder welke naam werk je?</span>
+          <input type="text" data-naam-invoer maxlength="80" autocomplete="name" value="${esc(voorstel || "")}"></label>
+        <button type="button" class="knop" data-naam-ok>Opslaan</button>
+        <button type="button" class="knop knop-secundair" data-naam-niet>${overslaan ? "Zonder naam" : "Annuleren"}</button>
+        <p class="footnote">Je collega's zien deze naam bij wat je aan jezelf toewijst en bij je notities. Je kiest hem één keer; wijzigen kan altijd.</p>
+      </div>`;
+      const invoer = slot.querySelector("[data-naam-invoer]");
+      const klaarMet = (naam) => { slot.innerHTML = ""; klaar(naam); };
+      const bevestig = () => {
+        const naam = zetMijnNaam(ctx.bron, invoer.value);
+        if (naam) klaarMet(naam); else invoer.focus();
+      };
+      slot.querySelector("[data-naam-ok]").addEventListener("click", bevestig);
+      slot.querySelector("[data-naam-niet]").addEventListener("click", () => klaarMet(null));
+      invoer.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); bevestig(); }
+        if (e.key === "Escape") { e.preventDefault(); klaarMet(null); }
+      });
+      invoer.focus();
+      if (invoer.select) invoer.select();
+    }));
   }
 
   /* Alleen een GEKOZEN naam mag zonder vragen de werkdata in — dat is wat
    * `gezet` betekent. Een afleiding uit je adres (het deel vóór de @) vult de
-   * prompt voor maar vervangt hem niet: stil invullen zou een persoonsgegeven
-   * in de werkdata van de klant zetten zonder dat iemand het zag. */
-  function naamVoorSchrijfactie() {
-    return haalNaamvoorstel(ctx.bron).then((r) => (r.gezet ? r.voorstel : vraagNaam()));
+   * vraag voor maar vervangt hem niet. */
+  function naamVoorSchrijfactie(plek, opties) {
+    return haalNaamvoorstel(ctx.bron).then((r) => (r.gezet ? r.voorstel : vraagNaam(plek, opties)));
   }
 
   function bedienKlik(e) {
     const rij = huidigeRij();
     const mij = e.target.closest && e.target.closest("[data-snel-mij]");
     if (mij && rij) {
-      naamVoorSchrijfactie().then((naam) => {
-        if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      naamVoorSchrijfactie("bedien").then((naam) => {
+        if (!naam) { mij.focus(); return; }
+        const actueel = huidigeRij() || rij;
+        wijzigRij(actueel, { Eigenaar: naam }, mij);
       });
       return true;
     }
     const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
-    if (wijzig) { vraagNaam().then(herteken); return true; }
+    if (wijzig) {
+      vraagNaam("bedien").then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        herteken();
+        meld(`Je werkt nu als ${naam}.`);
+      });
+      return true;
+    }
     return false;
   }
 
   /* i71: één plek waar een statuswissel gebeurt, of hij nu uit de kiezer op
    * de kaart komt of uit een sleepbeweging. */
-  function verplaatsNaar(entryId, status) {
+  function verplaatsNaar(entryId, status, bediening) {
     if (!entryId || !status) return;
-    pasToe(() => snelWijzig(ctx, key, entryId, statusPatch(domein, status))).then(herteken);
+    const rij = rows.find(r => r.__entryId === entryId);
+    if (!rij) return;
+    wijzigRij(rij, statusPatch(domein, status), bediening);
   }
 
   el.addEventListener("change", (e) => {
     // Op het bord staat er geen rij open: de kaart draagt zijn eigen id.
     const bord = e.target.closest && e.target.closest("[data-bord-status]");
-    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value); return; }
+    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value, bord); return; }
 
     const rij = huidigeRij();
     if (!rij) return;
@@ -8885,13 +9002,13 @@ function renderDataDomein(el, key, ctx) {
     if (status) {
       const gekozen = status.value;
       if (!gekozen) return;
-      pasToe(() => snelWijzig(ctx, key, rij.__entryId, statusPatch(domein, gekozen)));
+      wijzigRij(rij, statusPatch(domein, gekozen), status);
       return;
     }
     const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
-    if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
+    if (eigenaar) { wijzigRij(rij, { Eigenaar: eigenaar.value.trim() || null }, eigenaar); return; }
     const agent = e.target.closest && e.target.closest("[data-snel-agent]");
-    if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+    if (agent) wijzigRij(rij, { Agent: agent.value || null }, agent);
   });
 
   /* Slepen tussen kolommen. Bewust bovenop de kiezer op de kaart en niet
@@ -8948,7 +9065,8 @@ function renderDataDomein(el, key, ctx) {
     const tekst = form.querySelector("[data-notitie-tekst]").value.trim();
     if (!onderwerp && !tekst) return;
     const info = notitieVeldVan(ctx);
-    naamVoorSchrijfactie().then((naam) => {
+    const knop = form.querySelector("[data-notitie-knop]");
+    naamVoorSchrijfactie("notitie", { overslaan: true }).then((naam) => {
       const data = {
         Onderwerp: onderwerp || tekst.slice(0, 60),
         Datum: new Date().toISOString().slice(0, 10),
@@ -8957,7 +9075,11 @@ function renderDataDomein(el, key, ctx) {
       };
       if (tekst) data.Notitie = tekst;
       if (naam) data.Auteur = naam;
-      pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
+      // Mislukt het, dan blijft je tekst staan: niet opnieuw tekenen.
+      pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }), {
+        domein: "notities", bediening: knop, herstel: false, melding: "Notitie toegevoegd.", foutPlek: "[data-notitie-fout]",
+        focus: "[data-notitie-onderwerp]",
+      });
     });
   });
 
@@ -9215,23 +9337,59 @@ function magDomeinBewerken(ctx, key) {
 }
 
 /* Grote-tekst-heuristiek: het schema kent geen "lang tekstveld", maar deze
- * canonieke velden zijn in de praktijk alinea's. */
-const TEXTAREA_VELDEN = ["Resultaat", "Inhoud", "Notitie", "Vervolg", "Omschrijving", "Samenvatting"];
+ * canonieke velden zijn in de praktijk alinea's. b60: Toelichting, Instructie
+ * en Correctie stonden er niet bij — juist de velden waarin een agent zijn hele
+ * werkstuk zet. In een invoer van één regel viel dat plat tot één lange zin, en
+ * wie hem opsloeg, sloeg de regeleinden kapot mee op. Staat er al tekst met
+ * regeleinden of van enige lengte, dan krijgt elk tekstveld een tekstvak. */
+const TEXTAREA_VELDEN = ["Resultaat", "Inhoud", "Notitie", "Notities", "Vervolg", "Omschrijving", "Samenvatting",
+  "Toelichting", "Instructie", "Correctie", "Beschrijving"];
+const TEXTAREA_VANAF = 90;
+
+function wordtTekstvak(veld, tekst) {
+  if (veld.type !== "tekst") return false;
+  return TEXTAREA_VELDEN.indexOf(veld.naam) !== -1 || tekst.indexOf("\n") !== -1 || tekst.length > TEXTAREA_VANAF;
+}
+
+/* b60: de keuzes van een selectveld. De registry kent twee soorten die niet in
+ * `opties` staan: `agent_options` (de instantie valideert tegen de agentnamen
+ * uit dezelfde registry, displayName vóór naam — bak-registry.mjs) en
+ * `segment_options` (klantspecifiek, vrije tekst). Zonder deze afleiding was
+ * de Agent-lijst leeg, en een leeg gekozen veld werd bij opslaan gewist. */
+function agentOpties(schema) {
+  return ((schema && schema.agents) || []).map(a => a.displayName || a.naam).filter(Boolean);
+}
+
+function veldOpties(veld, ctx) {
+  if (veld.opties && veld.opties.length) return veld.opties;
+  if (veld.opties_dynamisch === "agent_options") return agentOpties(ctx && ctx.schema);
+  return null; // vrije tekst
+}
 
 function veldInvoerHtml(veld, waarde, ctx) {
   const naam = esc(veld.naam);
   const w = waarde === undefined || waarde === null ? "" : waarde;
   switch (veld.type) {
     case "select": {
-      const opties = (veld.opties || []).map(o =>
+      const lijst = veldOpties(veld, ctx);
+      if (!lijst) {
+        return `<input type="text" name="${naam}" data-veldtype="select" value="${esc(String(w))}">`;
+      }
+      // Een opgeslagen waarde die (nog) niet in de lijst staat, blijft zichtbaar
+      // en gekozen. Anders toont het formulier leeg wat niet leeg is.
+      const extra = w && lijst.indexOf(w) === -1
+        ? `<option value="${esc(String(w))}" selected>${esc(String(w))}</option>` : "";
+      const opties = lijst.map(o =>
         `<option value="${esc(o)}"${o === w ? " selected" : ""}>${esc(o)}</option>`).join("");
-      return `<select name="${naam}" data-veldtype="select"><option value=""></option>${opties}</select>`;
+      return `<select name="${naam}" data-veldtype="select"><option value=""></option>${extra}${opties}</select>`;
     }
     case "multi_select": {
       const gekozen = Array.isArray(w) ? w : [];
-      const opties = (veld.opties || []).map(o =>
+      const lijst = veldOpties(veld, ctx) || [];
+      const extra = gekozen.filter(o => lijst.indexOf(o) === -1);
+      const opties = extra.concat(lijst).map(o =>
         `<option value="${esc(o)}"${gekozen.indexOf(o) !== -1 ? " selected" : ""}>${esc(o)}</option>`).join("");
-      return `<select name="${naam}" data-veldtype="multi_select" multiple size="${Math.min((veld.opties || []).length || 3, 5)}">${opties}</select>`;
+      return `<select name="${naam}" data-veldtype="multi_select" multiple size="${Math.min(lijst.length + extra.length || 3, 5)}">${opties}</select>`;
     }
     case "datum":
       return `<input type="date" name="${naam}" data-veldtype="datum" value="${esc(String(w).slice(0, 10))}">`;
@@ -9272,10 +9430,12 @@ function veldInvoerHtml(veld, waarde, ctx) {
         : `<select name="${naam}" data-veldtype="relatie"><option value=""></option>${opties}</select>`;
     }
     default: { // titel, tekst
-      if (veld.type === "tekst" && TEXTAREA_VELDEN.indexOf(veld.naam) !== -1) {
-        return `<textarea name="${naam}" data-veldtype="tekst" rows="3">${esc(String(w))}</textarea>`;
+      const tekst = String(w);
+      if (wordtTekstvak(veld, tekst)) {
+        const regels = Math.min(14, Math.max(3, tekst.split("\n").length + Math.floor(tekst.length / 80)));
+        return `<textarea name="${naam}" data-veldtype="tekst" rows="${regels}">${esc(tekst)}</textarea>`;
       }
-      return `<input type="text" name="${naam}" data-veldtype="${esc(veld.type)}" value="${esc(String(w))}">`;
+      return `<input type="text" name="${naam}" data-veldtype="${esc(veld.type)}" value="${esc(tekst)}">`;
     }
   }
 }
@@ -9284,7 +9444,8 @@ function dataFormulierHtml(domein, ctx, bestaande, entryId) {
   const rijen = (domein.velden || []).map(v =>
     `<label class="bewerk-veld"><span class="bewerk-label">${esc(v.naam)}</span>${veldInvoerHtml(v, bestaande ? getField(bestaande, v.naam) : undefined, ctx)}</label>`).join("");
   return `<form class="bewerk-formulier" data-bewerk-formulier data-entry-id="${esc(entryId || "")}">
-    <p><strong>${entryId ? "Rij bewerken" : "Nieuwe rij"}</strong></p>
+    <p><strong>${entryId && bestaande ? `Bewerken: ${esc(detailTitel(domein, bestaande))}` : `Nieuw in ${esc(domein.naam || "")}`}</strong></p>
+    ${entryId ? `<p class="footnote">Alleen wat je verandert wordt opgeslagen; de rest blijft zoals het was.</p>` : ""}
     ${rijen}
     <p class="bewerk-fout" data-bewerk-fout role="alert"></p>
     <div class="bewerk-knoppen">
@@ -9320,74 +9481,315 @@ function leesFormulier(formEl) {
   return data;
 }
 
-async function verstuurEntry(ctx, key, entryId, data) {
-  if (entryId) {
-    return schrijfWerkruimte(ctx.bron, "PUT",
-      "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId), { data });
+/* ── b60: alleen versturen wat je veranderde ─────────────────────────
+ *
+ * Het formulier deed een PUT met wat erin stond, en PUT vervangt de hele rij.
+ * Alles wat het formulier niet kon tonen ging daarmee verloren: een Agent die
+ * niet in de (lege) keuzelijst stond, de tijd achter een datum, velden die dit
+ * dashboard niet kent, de regeleinden in een Toelichting. Nu legt het
+ * formulier bij het openen vast wat het toont, en gaat bij opslaan alleen het
+ * verschil als PATCH naar de instantie. Wat je niet aanraakte, raakt het
+ * dashboard ook niet aan — hoe het formulier het ook weergaf.
+ *
+ * Een veld dat je leegmaakte, gaat als `null`: bij PATCH betekent dat "weg"
+ * (werkruimte.mengData). */
+function wijzigingenVan(voor, na) {
+  const patch = {};
+  const namen = new Set(Object.keys(voor || {}).concat(Object.keys(na || {})));
+  for (const naam of namen) {
+    const oud = voor ? voor[naam] : undefined;
+    const nieuw = na ? na[naam] : undefined;
+    if (JSON.stringify(oud) === JSON.stringify(nieuw)) continue;
+    patch[naam] = nieuw === undefined ? null : nieuw;
   }
-  return schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data });
+  return patch;
+}
+
+/* Klaar via het formulier laat dezelfde sporen na als Klaar via de kiezer
+ * (statusPatch). Wat je zelf in het formulier invulde, wint. */
+function formulierPatch(domein, voor, na) {
+  const patch = wijzigingenVan(voor, na);
+  if (typeof patch.Status === "string" && patch.Status) {
+    const extra = statusPatch(domein, patch.Status);
+    for (const k of Object.keys(extra)) {
+      if (!(k in patch) && !(na && na[k])) patch[k] = extra[k];
+    }
+  }
+  return patch;
+}
+
+/* De waarden van vóór een PATCH, zodat "Ongedaan maken" precies die velden
+ * terugzet. Wat er niet stond, gaat terug als `null` (weer weg). */
+function vorigeWaarden(rij, patch) {
+  const terug = {};
+  for (const k of Object.keys(patch || {})) {
+    const oud = rij ? rij[k] : undefined;
+    terug[k] = oud === undefined || oud === "" ? null : oud;
+  }
+  return terug;
+}
+
+function entryPad(key, entryId) {
+  return "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId);
 }
 
 function verwijderEntry(ctx, key, entryId) {
-  return schrijfWerkruimte(ctx.bron, "DELETE",
-    "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(entryId));
+  return schrijfWerkruimte(ctx.bron, "DELETE", entryPad(key, entryId));
+}
+
+/* ── i81: het antwoord verwerken zonder alles opnieuw te laden ─────────
+ *
+ * De instantie stuurt bij PATCH en POST de rij terug zoals hij hem opsloeg
+ * ({entry}). Die vervangt de rij in de geladen bundel; de pagina blijft staan
+ * waar je was. Het dashboard verzint dus nog steeds niet zelf hoe de rij
+ * eruitziet — het neemt over wat de instantie zegt. Geen entry in het
+ * antwoord, of een context zonder werkBij (tests, oudere aanroepers)? Dan de
+ * oude weg: de hele bundel opnieuw ophalen. */
+function verwerkAntwoord(ctx, key, antwoord, opties) {
+  const o = opties || {};
+  const entry = antwoord && antwoord.entry;
+  if (ctx.werkBij && (o.weg || (entry && entry.entryId))) {
+    const bijgewerkt = ctx.werkBij(key, o.weg ? { weg: o.weg, focus: o.focus } : { entry, focus: o.focus });
+    if (bijgewerkt !== false) return Promise.resolve(bijgewerkt);
+  }
+  return Promise.resolve(ctx.herlaad ? ctx.herlaad() : undefined);
+}
+
+/* ── i81: één meldingsregel, met ongedaan maken ────────────────────────
+ *
+ * Vervangt window.alert/confirm/prompt: die blokkeren de pagina, zijn op een
+ * telefoon nauwelijks te lezen en de in-app browser van de Claude-app toont ze
+ * soms niet eens. De regel staat vast onderin (#melding in shell.html) en is
+ * een live-regio, zodat een schermlezer hem voorleest zonder dat de focus
+ * verspringt. Blijft staan zolang je muis of focus erop staat. */
+let meldingKlok = null;
+
+function meld(tekst, opties) {
+  const o = opties || {};
+  const vak = typeof document !== "undefined" ? document.getElementById("melding") : null;
+  if (!vak) return;
+  clearTimeout(meldingKlok);
+  vak.className = "melding" + (o.fout ? " melding-fout" : "");
+  vak.innerHTML = `<span class="melding-tekst">${esc(tekst)}</span>`
+    + (o.actie ? `<button type="button" class="melding-knop" data-melding-actie>${esc(o.actie.label)}</button>` : "")
+    + `<button type="button" class="melding-sluit" data-melding-sluit aria-label="Melding sluiten">✕</button>`;
+  vak.hidden = false;
+  // Ruimte onder de pagina zolang de melding er staat, zodat hij nooit de
+  // laatste knoppen afdekt: je kunt er altijd onderuit scrollen.
+  document.body.classList.add("met-melding");
+  const duur = o.actie ? 10000 : 5000;
+  const verberg = () => { vak.hidden = true; vak.innerHTML = ""; document.body.classList.remove("met-melding"); };
+  const start = () => { clearTimeout(meldingKlok); meldingKlok = setTimeout(verberg, duur); };
+  vak.onmouseenter = () => clearTimeout(meldingKlok);
+  vak.onmouseleave = start;
+  vak.onfocusin = () => clearTimeout(meldingKlok);
+  vak.onfocusout = (e) => { if (!vak.contains(e.relatedTarget)) start(); };
+  vak.onclick = (e) => {
+    if (e.target.closest("[data-melding-sluit]")) { verberg(); return; }
+    const knop = e.target.closest("[data-melding-actie]");
+    if (!knop || !o.actie) return;
+    knop.disabled = true;
+    knop.setAttribute("aria-busy", "true");
+    Promise.resolve().then(o.actie.doe).catch((f) => {
+      meld((f && f.message) || "Dat is niet gelukt.", { fout: true });
+    });
+  };
+  start();
+}
+
+/* "Ongedaan maken" na een PATCH: dezelfde velden terug naar hun oude waarde. */
+function ongedaanPatch(ctx, key, entryId, vorige) {
+  return {
+    label: "Ongedaan maken",
+    doe: async () => {
+      const antwoord = await snelWijzig(ctx, key, entryId, vorige);
+      await verwerkAntwoord(ctx, key, antwoord);
+      meld("Teruggezet.");
+    },
+  };
+}
+
+/* "Ongedaan maken" na een nieuwe rij: die rij weer weghalen. */
+function ongedaanNieuw(ctx, key, entryId) {
+  return {
+    label: "Ongedaan maken",
+    doe: async () => {
+      await verwijderEntry(ctx, key, entryId);
+      await verwerkAntwoord(ctx, key, null, { weg: entryId });
+      meld("Weer weggehaald.");
+    },
+  };
+}
+
+/* Een korte zin over wat je net wijzigde, voor in de meldingsregel. */
+function wijzigingTekst(patch) {
+  const p = patch || {};
+  if (typeof p.Status === "string" && p.Status) return `Status is nu ${p.Status}.`;
+  const namen = Object.keys(p);
+  if (namen.length === 1) {
+    const w = p[namen[0]];
+    if (w === null) return `${namen[0]} gewist.`;
+    if (typeof w === "string" && w.length <= 40) return `${namen[0]} is nu ${w}.`;
+    return `${namen[0]} opgeslagen.`;
+  }
+  return "Opgeslagen.";
+}
+
+function verwijderBevestigingHtml(titel) {
+  return `<div class="bewerk-formulier verwijder-bevestiging" data-verwijder-bevestiging role="group" aria-label="Verwijderen bevestigen">
+    <p><strong>‘${esc(titel)}’ verwijderen?</strong></p>
+    <p class="footnote">Dit haalt hem definitief uit je werkruimte. Dat kun je niet ongedaan maken.</p>
+    <p class="bewerk-fout" data-bewerk-fout role="alert"></p>
+    <div class="bewerk-knoppen">
+      <button type="button" class="knop knop-gevaar" data-verwijder-ja>Ja, verwijderen</button>
+      <button type="button" class="knop knop-secundair" data-bewerk-annuleer>Nee, laten staan</button>
+    </div>
+  </div>`;
 }
 
 /* Hangt de bewerk-interactie aan een gerenderd domein. `herteken` is de
- * verversing na een geslaagde write (app.js herlaadt de bundel). */
+ * terugval als de instantie geen rij terugstuurt (app.js herlaadt dan de
+ * bundel); normaal werkt ctx.werkBij de rij ter plekke bij. */
 function wireDataBewerken(el, key, ctx, herteken) {
   const domein = ctx.schema.datadomeinen[key];
   const paneel = el.querySelector("[data-bewerk-paneel]");
   if (!paneel || !domein) return;
+  const ctxMetTerugval = Object.assign({}, ctx, { herlaad: herteken });
 
-  function toonFormulier(bestaande, entryId) {
+  function rijMetId(id) {
+    return (dataRijenVan(ctx, key) || []).find(r => r.__entryId === id) || null;
+  }
+
+  /* Opent het vanuit de detailkaart, dan verschijnt het formulier ín die
+   * kaart, onder de knop waarop je klikte — niet onderaan de pagina, een
+   * tabel verderop. */
+  let open = paneel;
+  function paneelVoor(opener) {
+    const kaart = opener && opener.closest && opener.closest("[data-detail-kaart]");
+    const inKaart = kaart && kaart.querySelector("[data-kaart-paneel]");
+    for (const p of [paneel, inKaart]) if (p) p.innerHTML = "";
+    open = inKaart || paneel;
+    return open;
+  }
+
+  function sluitPaneel(terugNaar) {
+    open.innerHTML = "";
+    if (terugNaar && terugNaar.focus) terugNaar.focus();
+  }
+
+  function toonFormulier(bestaande, entryId, opener) {
+    const paneel = paneelVoor(opener);
     paneel.innerHTML = dataFormulierHtml(domein, ctx, bestaande, entryId);
     const form = paneel.querySelector("[data-bewerk-formulier]");
+    // Wat het formulier nu toont, gelezen op precies dezelfde manier als
+    // straks bij opslaan. Het verschil daartussen is wat jij veranderde.
+    const voor = entryId ? leesFormulier(form) : null;
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const foutEl = form.querySelector("[data-bewerk-fout]");
       const knop = form.querySelector('button[type="submit"]');
-      knop.disabled = true;
+      const knopTekst = knop.textContent;
+      const na = leesFormulier(form);
       foutEl.textContent = "";
+      if (entryId) {
+        const patch = formulierPatch(domein, voor, na);
+        if (!Object.keys(patch).length) { sluitPaneel(opener); meld("Niets gewijzigd."); return; }
+        const vorige = vorigeWaarden(bestaande, patch);
+        knop.disabled = true; knop.textContent = "Opslaan…"; form.setAttribute("aria-busy", "true");
+        try {
+          const antwoord = await snelWijzig(ctx, key, entryId, patch);
+          paneel.innerHTML = "";
+          await verwerkAntwoord(ctxMetTerugval, key, antwoord, { focus: `[data-bewerk-rij="${cssWaarde(entryId)}"]` });
+          meld(wijzigingTekst(patch), { actie: ongedaanPatch(ctxMetTerugval, key, entryId, vorige) });
+        } catch (fout) {
+          foutEl.textContent = (fout.message || "Het opslaan is niet gelukt.") + " Je invoer staat er nog; probeer het opnieuw.";
+          knop.disabled = false; knop.textContent = knopTekst; form.removeAttribute("aria-busy");
+        }
+        return;
+      }
+      const extra = typeof na.Status === "string" && na.Status ? statusPatch(domein, na.Status) : {};
+      for (const k of Object.keys(extra)) if (!(k in na)) na[k] = extra[k];
+      knop.disabled = true; knop.textContent = "Toevoegen…"; form.setAttribute("aria-busy", "true");
       try {
-        await verstuurEntry(ctx, key, entryId, leesFormulier(form));
+        const antwoord = await schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data: na });
         paneel.innerHTML = "";
-        await herteken();
+        const nieuwId = antwoord && antwoord.entry && antwoord.entry.entryId;
+        await verwerkAntwoord(ctxMetTerugval, key, antwoord);
+        meld("Toegevoegd.", nieuwId ? { actie: ongedaanNieuw(ctxMetTerugval, key, nieuwId) } : {});
       } catch (fout) {
-        foutEl.textContent = fout.message || "Het opslaan is niet gelukt.";
-        knop.disabled = false;
+        foutEl.textContent = (fout.message || "Het toevoegen is niet gelukt.") + " Je invoer staat er nog; probeer het opnieuw.";
+        knop.disabled = false; knop.textContent = knopTekst; form.removeAttribute("aria-busy");
       }
     });
-    form.querySelector("[data-bewerk-annuleer]").addEventListener("click", () => { paneel.innerHTML = ""; });
+    form.addEventListener("keydown", (e) => { if (e.key === "Escape") sluitPaneel(opener); });
+    form.querySelector("[data-bewerk-annuleer]").addEventListener("click", () => sluitPaneel(opener));
     const eerste = form.querySelector("input, select, textarea");
     if (eerste) eerste.focus();
   }
 
-  el.addEventListener("click", async (e) => {
+  /* i38-lijn: een destructieve actie bevestigt een mens expliciet. Niet meer
+   * met window.confirm, maar in de pagina zelf: de knop die het doet noemt
+   * wat er gebeurt, en de veilige keuze krijgt de focus. */
+  function toonVerwijderen(id, opener) {
+    const paneel = paneelVoor(opener);
+    const rij = rijMetId(id);
+    paneel.innerHTML = verwijderBevestigingHtml(rij ? detailTitel(domein, rij) : "Dit item");
+    const vak = paneel.querySelector("[data-verwijder-bevestiging]");
+    const nee = vak.querySelector("[data-bewerk-annuleer]");
+    const ja = vak.querySelector("[data-verwijder-ja]");
+    nee.addEventListener("click", () => sluitPaneel(opener));
+    vak.addEventListener("keydown", (e) => { if (e.key === "Escape") sluitPaneel(opener); });
+    ja.addEventListener("click", async () => {
+      const foutEl = vak.querySelector("[data-bewerk-fout]");
+      foutEl.textContent = "";
+      ja.disabled = true; ja.textContent = "Verwijderen…"; vak.setAttribute("aria-busy", "true");
+      try {
+        await verwijderEntry(ctx, key, id);
+        paneel.innerHTML = "";
+        if (typeof dataDetail !== "undefined" && dataDetail && dataDetail.entryId === id) wisDataDetail();
+        await verwerkAntwoord(ctxMetTerugval, key, null, { weg: id });
+        meld("Verwijderd.");
+      } catch (fout) {
+        foutEl.textContent = (fout.message || "Het verwijderen is niet gelukt.") + " Probeer het opnieuw.";
+        ja.disabled = false; ja.textContent = "Ja, verwijderen"; vak.removeAttribute("aria-busy");
+      }
+    });
+    if (vak.scrollIntoView) vak.scrollIntoView({ block: "nearest" });
+    nee.focus();
+  }
+
+  el.addEventListener("click", (e) => {
     const nieuw = e.target.closest && e.target.closest("[data-bewerk-nieuw]");
-    if (nieuw) { toonFormulier(null, null); return; }
+    if (nieuw) { toonFormulier(null, null, nieuw); return; }
     const bewerk = e.target.closest && e.target.closest("[data-bewerk-rij]");
     if (bewerk) {
       const id = bewerk.getAttribute("data-bewerk-rij");
-      const rij = (dataRijenVan(ctx, key) || []).find(r => r.__entryId === id);
-      toonFormulier(rij || null, id);
+      toonFormulier(rijMetId(id), id, bewerk);
       return;
     }
     const weg = e.target.closest && e.target.closest("[data-verwijder-rij]");
-    if (weg) {
-      const id = weg.getAttribute("data-verwijder-rij");
-      // i38-lijn: een destructieve actie bevestigt een mens expliciet.
-      if (!window.confirm("Deze rij definitief verwijderen? Dit is niet ongedaan te maken.")) return;
-      weg.disabled = true;
-      try {
-        await verwijderEntry(ctx, key, id);
-        await herteken();
-      } catch (fout) {
-        weg.disabled = false;
-        window.alert(fout.message || "Het verwijderen is niet gelukt.");
-      }
-    }
+    if (weg) toonVerwijderen(weg.getAttribute("data-verwijder-rij"), weg);
   });
+}
+
+/* Waarde veilig in een CSS-attribuutselector. */
+function cssWaarde(v) {
+  return String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\a ");
+}
+
+/* i81: hetzelfde element terugvinden nadat de pagina opnieuw is getekend. Een
+ * bediening draagt zijn betekenis in data-attributen (data-snel-status,
+ * data-bord-status="<id>", data-bewerk-rij="<id>"); die vormen samen de
+ * selector. Zonder data-attributen is er niets betrouwbaars om op terug te
+ * vallen, en dan geen selector — beter geen focus dan de verkeerde. */
+function focusSelector(elem) {
+  if (!elem || !elem.attributes || !elem.tagName) return null;
+  const delen = [];
+  for (const a of Array.from(elem.attributes)) {
+    if (a.name.indexOf("data-") === 0) delen.push(`[${a.name}="${cssWaarde(a.value)}"]`);
+  }
+  if (!delen.length && elem.id) delen.push(`[id="${cssWaarde(elem.id)}"]`);
+  return delen.length ? elem.tagName.toLowerCase() + delen.join("") : null;
 }
 
 if (typeof module !== "undefined") {
@@ -9395,6 +9797,8 @@ if (typeof module !== "undefined") {
     bronKanSchrijven, magDomeinBewerken, dataFormulierHtml, leesFormulier,
     veldInvoerHtml, wireDataBewerken, tokenScopes,
     mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
+    agentOpties, veldOpties, wijzigingenVan, formulierPatch, vorigeWaarden, verwerkAntwoord,
+    meld, ongedaanPatch, wijzigingTekst, cssWaarde, focusSelector,
   };
 }
 
@@ -10210,6 +10614,49 @@ async function handleBundle(bundle, route, label, { behoudRoute = false, naarRou
   renderAll();
 }
 
+/* i81: één rij bijwerken na een schrijfactie, zonder de bundel opnieuw op te
+ * halen. Elke klik haalde eerst de héle werkruimte opnieuw op (tientallen
+ * verzoeken), liet zolang de laadtekst zien en sprong daarna naar boven — wie
+ * tien acties afhandelde, zocht tien keer zijn plek terug.
+ *
+ * `wijziging` is { entry } (het antwoord op PATCH/POST: de rij zoals de
+ * instantie hem opsloeg) of { weg: entryId } (na DELETE). `focus` is optioneel
+ * de selector van wat na het tekenen de focus hoort te krijgen. Daarna rekent
+ * renderAll alles opnieuw uit, zodat tellers, Vandaag en de Data-tab dezelfde
+ * rijen tonen. Geeft false als er niets bij te werken viel; de aanroeper valt
+ * dan terug op herladen. */
+let volgendeFocus = null;
+
+function werkRijBij(key, wijziging) {
+  const bundle = currentBundle;
+  const w = wijziging || {};
+  if (!bundle || !bundle.domains || !key) return false;
+  let dom = bundle.domains[key];
+  if (w.weg) {
+    if (!dom || !Array.isArray(dom.rows)) return false;
+    dom.rows = dom.rows.filter(r => r.__entryId !== w.weg);
+  } else if (w.entry && w.entry.entryId) {
+    // Een domein dat bij het laden leeg was, staat niet in de bundel.
+    if (!dom || !Array.isArray(dom.rows)) {
+      dom = bundle.domains[key] = { aanwezig: true, rows: [], staleAt: null,
+        herkomstLabel: `werkruimte — ${key} (0 entries, live opgehaald)` };
+    }
+    const rij = rijVanEntry(w.entry);
+    const plek = dom.rows.findIndex(r => r.__entryId === rij.__entryId);
+    dom.rows = plek === -1 ? [rij].concat(dom.rows) : dom.rows.map((r, i) => (i === plek ? rij : r));
+    const dt = w.entry.bijgewerkt ? new Date(w.entry.bijgewerkt) : null;
+    if (dt && !isNaN(dt.getTime()) && (!dom.staleAt || dt > dom.staleAt)) dom.staleAt = dt;
+  } else {
+    return false;
+  }
+  if (typeof dom.herkomstLabel === "string") {
+    dom.herkomstLabel = dom.herkomstLabel.replace(/\(\d+ entries/, `(${dom.rows.length} entries`);
+  }
+  volgendeFocus = w.focus || null;
+  renderAll();
+  return true;
+}
+
 /* De teamfeed als tweede bron voor "gebruik per agent". Puur tellen: geen
  * markeerOpenLussen (dat is presentatie), alleen agentSlug + tijd. Zie
  * kiesAgentGebruik() in zones.js voor waarom deze terugval bestaat. */
@@ -10289,6 +10736,9 @@ function buildContext() {
     kanSchrijven: bronKanSchrijven(huidigeBron),
     // Na een schrijfactie blijf je waar je was — zie handleBundle().
     herlaad: () => laadWerkruimte(huidigeBron, { behoudRoute: true }),
+    // i81: normaal hoeft dat niet eens: de instantie stuurt de opgeslagen rij
+    // terug, en die vervangt de rij hier ter plekke.
+    werkBij: (key, wijziging) => werkRijBij(key, wijziging),
   };
 }
 
@@ -10465,6 +10915,23 @@ const TAB_TITELS = {
   prestaties: "Prestaties — Agentic Team Dashboard",
 };
 
+/* i81: wordt dezelfde weergave opnieuw getekend (na een schrijfactie, of
+ * omdat het moduleoverzicht binnenkwam), dan blijft de pagina staan waar hij
+ * stond en houdt de bediening die je gebruikte de focus. Alleen een ándere
+ * weergave begint bovenaan. */
+let vorigeWeergave = null;
+
+function blijfOfNaarBoven(zelfde, scrollY, focus) {
+  if (!zelfde) { window.scrollTo(0, 0); return; }
+  if (focus) {
+    try {
+      const doel = document.querySelector(focus);
+      if (doel && doel.focus) doel.focus({ preventScroll: true });
+    } catch (e) { /* ongeldige selector: dan geen focus, geen fout */ }
+  }
+  if (typeof scrollY === "number" && window.scrollY !== scrollY) window.scrollTo(0, scrollY);
+}
+
 function route() {
   const bundle = currentBundle;
   if (!bundle) return;
@@ -10480,13 +10947,19 @@ function route() {
   // Is de Data-tab er niet (een metricsbestand zonder relatiekaarten), dan mag
   // een onthouden of getypte #/data-link niet op een lege tab uitkomen.
   if (view.tab === "data" && !dataTabBeschikbaar(ctx)) view = { soort: "tab", tab: "vandaag" };
+  const sleutel = [view.soort, view.tab, view.key || "", view.domein || ""].join("|");
+  const zelfde = sleutel === vorigeWeergave;
+  vorigeWeergave = sleutel;
+  const scrollY = window.scrollY;
+  const focus = zelfde ? (volgendeFocus || focusSelector(document.activeElement)) : null;
+  volgendeFocus = null;
   verbergAlles();
   renderTabbar(document.getElementById("tabbar"), view.tab, ctx);
 
   if (view.soort === "detail") {
     document.getElementById("detail-view").style.display = "";
     renderDetail(view.key);
-    window.scrollTo(0, 0);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
     return;
   }
 
@@ -10495,11 +10968,13 @@ function route() {
 
   if (view.soort === "data") {
     renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
-    window.scrollTo(0, 0);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
   if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
+  // Een tab begon nooit bovenaan; die blijft staan, alleen de focus komt terug.
+  if (zelfde) blijfOfNaarBoven(true, null, focus);
 }
 
 /* f30 — de download. De knop staat op de Data-tab en wordt bij elke render
