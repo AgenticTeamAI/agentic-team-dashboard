@@ -136,7 +136,12 @@ function renderVoorJou(paneel, ctx) {
   if (!paneel) return;
   const body = paneel.querySelector("#panel-voor-jou-body") || paneel;
   const lijst = voorJouLijst(ctx);
-  if (!lijst) { paneel.style.display = "none"; body.innerHTML = ""; return; }
+  if (!lijst) {
+    // f54: Notion-klanten krijgen de werkbak uit hun dagstart, alleen lezen.
+    const uitDagstart = typeof metricsVoorJou === "function" ? metricsVoorJou(ctx) : null;
+    if (uitDagstart) { paneel.style.display = ""; body.innerHTML = notionVoorJouHtml(ctx, uitDagstart); return; }
+    paneel.style.display = "none"; body.innerHTML = ""; return;
+  }
   paneel.style.display = "";
   const genummerd = vjGenummerd(ctx.bundle, lijst);
   const kanAfhandelen = magDomeinBewerken(ctx, "acties").ok;
@@ -369,7 +374,9 @@ function zetSneltoetsenAan() {
 /* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
 function voorJouAantal(ctx) {
   const lijst = voorJouLijst(ctx);
-  return lijst ? lijst.length : null;
+  if (lijst) return lijst.length;
+  const uitDagstart = typeof metricsVoorJou === "function" ? metricsVoorJou(ctx) : null;
+  return uitDagstart ? uitDagstart.length : null;
 }
 
 if (typeof module !== "undefined") {
