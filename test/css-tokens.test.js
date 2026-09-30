@@ -38,3 +38,79 @@ describe("CSS-tokens", () => {
     expect(css).toMatch(/--card\s*:/);
   });
 });
+
+/* i86 — huisstijl v2: licht/donker/systeem via tokens.
+ *
+ * Drie dingen die stil mis kunnen gaan en daarom hier vastliggen:
+ * - een losse kleur buiten de tokenblokken klopt maar in één van de twee
+ *   thema's (typisch: wit op wit in licht);
+ * - een token dat alleen in licht of alleen in donker bestaat, valt in het
+ *   andere thema terug op iets onbedoelds;
+ * - de tekst/vlak-paren moeten in béíde thema's AA halen (4,5:1 voor tekst,
+ *   3:1 voor randen en grote vlakken met betekenis). */
+describe("i86 — thema's", () => {
+  const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
+  const licht = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")) + 1);
+  const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
+  const donkerStart = css.indexOf(":root {", mediaStart);
+  const donker = css.slice(donkerStart, css.indexOf("}", donkerStart) + 1);
+  const tokens = (blok) => Object.fromEntries([...blok.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const L = tokens(licht);
+  const D = tokens(donker);
+
+  it("heeft een licht thema en een donker thema dat de systeeminstelling volgt", () => {
+    expect(Object.keys(L).length).toBeGreaterThan(20);
+    expect(donkerStart).toBeGreaterThan(mediaStart);
+    expect(licht).toMatch(/color-scheme:\s*light/);
+    expect(donker).toMatch(/color-scheme:\s*dark/);
+  });
+
+  it("donker definieert dezelfde kleurtokens als licht", () => {
+    const kleuren = (t) => Object.keys(t).filter((k) => !["--font", "--mono"].includes(k)).sort();
+    expect(kleuren(D)).toEqual(kleuren(L));
+  });
+
+  it("gebruikt buiten de tokenblokken geen losse kleuren", () => {
+    const rest = css.replace(licht, "").replace(donker, "");
+    const los = [...rest.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)].map((m) => m[0]);
+    expect(los, "losse kleuren in styles.css — maak er een token van").toEqual([]);
+    for (const bestand of ["src/charts.js", "src/render.js", "src/homepage.js", "src/databrowser.js", "src/shell.html"]) {
+      const bron = readFileSync(join(ROOT, bestand), "utf8");
+      expect(bron.match(/(fill|stroke|color|background)\s*[=:]\s*["']?#[0-9a-fA-F]{3,6}\b/g), bestand).toBeNull();
+    }
+  });
+
+  function lum(hex) {
+    const h = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrast(a, b) {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  }
+
+  // [voorgrond, achtergrond, minimum]
+  const PAREN = [
+    ["--ink", "--bg", 4.5], ["--ink", "--surface", 4.5], ["--ink", "--card", 4.5],
+    ["--muted", "--bg", 4.5], ["--muted", "--surface", 4.5], ["--muted", "--card", 4.5],
+    ["--team-tekst", "--surface", 4.5], ["--team-tekst", "--card", 4.5], ["--team-tekst", "--bg", 4.5],
+    ["--jij-tekst", "--surface", 4.5], ["--jij-tekst", "--jij-zacht", 4.5],
+    ["--rood", "--surface", 4.5], ["--rood", "--rood-zacht", 4.5], ["--surface", "--rood", 4.5],
+    ["--klaar", "--surface", 4.5], ["--klaar", "--klaar-zacht", 4.5],
+    ["--op-team", "--team", 4.5], ["--op-jij", "--jij", 4.5],
+    ["--blauw", "--surface", 4.5], ["--paars", "--surface", 4.5],
+    ["--team", "--surface", 3], ["--veldrand", "--surface", 3], ["--focus", "--surface", 3],
+  ];
+  for (const [thema, T] of [["licht", () => L], ["donker", () => D]]) {
+    it(`haalt AA-contrast in ${thema}`, () => {
+      const te = [];
+      for (const [voor, achter, min] of PAREN) {
+        const c = contrast(T()[voor], T()[achter]);
+        if (c < min) te.push(`${voor} op ${achter}: ${c.toFixed(2)} < ${min}`);
+      }
+      expect(te).toEqual([]);
+    });
+  }
+});

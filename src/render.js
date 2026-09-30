@@ -156,7 +156,7 @@ function aandachtWrap(it, binnen) {
 // ── Zone 1 ────────────────────────────────────────────────────────────
 function renderZone1(el, items) {
   if (!items.length) {
-    el.innerHTML = `<p style="font-size:1rem;color:var(--white);margin:0.5rem 0;">✅ Niets vraagt vandaag om aandacht in de aangesloten domeinen.</p>
+    el.innerHTML = `<p style="font-size:1rem;color:var(--ink);margin:0.5rem 0;">✅ Niets vraagt vandaag om aandacht in de aangesloten domeinen.</p>
       <p class="footnote">Deze zone is een samenvatting van rood/grijs/oranje uit de andere vier zones — geen eigen databron.</p>`;
     return;
   }
