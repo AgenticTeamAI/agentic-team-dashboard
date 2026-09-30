@@ -148,6 +148,7 @@ function renderVoorJou(paneel, ctx) {
   const inlogRegel = "";
 
   body.innerHTML = `
+    ${typeof stilKaartHtml === "function" ? stilKaartHtml(ctx) : ""}
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>

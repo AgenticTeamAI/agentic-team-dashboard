@@ -23,7 +23,7 @@ const TABS = [
 /* f48: vier tabs, nooit een vijfde. Prestaties is een deel van Team
  * geworden ("Resultaat"); het adres #/prestaties blijft werken en licht de
  * Team-tab op. */
-const TAB_DEEL_VAN = { prestaties: "team", "vaste-taken": "team", ronde: "vandaag" };
+const TAB_DEEL_VAN = { prestaties: "team", "vaste-taken": "team", klaar: "team", ronde: "vandaag" };
 const TAB_ROUTES = TABS.map(t => t.key).concat(Object.keys(TAB_DEEL_VAN));
 
 const DETAIL_VOLGORDE = [
@@ -123,6 +123,16 @@ function renderStatusregel(el, ctx) {
   if (!dt) { el.textContent = "Nog geen activiteit gevonden in deze bundel."; return; }
   const dagen = daysBetween(ctx.today, dt);
   const tijd = `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+  // f52: een wijziging van jezelf zet de stempel ook op vandaag. Zijn er vaste
+  // taken, dan zeggen we "je team werkte" alleen op een spoor van een
+  // werkmoment — anders stond hier "draaide vandaag" boven "je team staat stil".
+  if (typeof werkmomentSporen === "function" && rows(ctx.bundle, "ritmetaken")) {
+    const sporen = werkmomentSporen(ctx);
+    const recent = sporen.length ? new Date(Math.max(...sporen)) : null;
+    el.textContent = recent ? `Je team werkte laatst ${vtWanneer(recent, ctx.today)}.`
+      : `Laatst bijgewerkt ${dagen === 0 ? tijd : fmtDate(dt)}.`;
+    return;
+  }
   el.textContent = dagen === 0
     ? `Je team draaide vandaag — laatst bijgewerkt ${tijd}.`
     : `Laatste activiteit: ${fmtDate(dt)} (${relAge(dt, ctx.today)}).`;
