@@ -29,6 +29,7 @@ JS_MODULES_IN_ORDER = [
     "werkruimte-loader.js",
     "oauth-client.js",
     "zones.js",
+    "voor-jou.js",
     "metrics-sanitize.js",
     "metrics.js",
     "render.js",
