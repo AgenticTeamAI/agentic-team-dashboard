@@ -640,6 +640,7 @@ tr.rij-klikbaar > td.bewerk-kolom { cursor: default; }
    anders staan witte browservelden naast donkere in hetzelfde paneel. */
 .data-toolbar input[type="search"],
 .team-uitnodigen input[type="email"],
+.team-uitnodigen input[type="text"],
 input.team-naam {
   flex: 1 1 220px; min-height: 40px;
   background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 8px;
@@ -877,7 +878,10 @@ body.met-melding { padding-bottom: 96px; }
 /* ── i77 · Wie werkt er mee: uitnodigen en verwijderen ─────────────────── */
 .team-uitnodigen { max-width: 560px; margin: 0 0 0.4rem; }
 .team-uitnodigen label { display: block; font-size: 0.85em; color: var(--muted); margin-bottom: 3px; }
-.team-uitnodigen-rij { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.team-uitnodigen-rij { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: flex-end; }
+.team-uitnodigen-rij .bedien-veld { flex: 1 1 200px; display: flex; flex-direction: column; gap: 3px; }
+.team-uitnodigen-rij .bedien-veld input { width: 100%; }
+.team-uitnodigen-kop { margin: 0 0 6px; }
 input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .team-uitnodigen .footnote { margin-top: 0.35rem; }
 .team-actie { white-space: nowrap; }

@@ -83,14 +83,17 @@ describe("dashboard.html — teambeheer", () => {
   it("stuurt een uitnodiging als POST met het sessietoken en toont de nieuwe rij", async () => {
     const { w, $, fouten, siteCalls, tot } = await openIngelogd();
     const paneel = $("panel-team-namen");
+    // Dashboard v2 (besluit 30-09): uitnodigen vraagt ook de naam.
+    paneel.querySelector("[data-team-uitnodig-naam]").value = "Nieuw Lid";
     paneel.querySelector("[data-team-uitnodig-adres]").value = "nieuw@voorbeeld.nl";
     paneel.querySelector('[data-team-uitnodigen] button[type="submit"]').click();
     await tot(() => paneel.querySelector('[data-team-seat="seat-c"]'), "nieuwe rij");
 
     const post = siteCalls.find((c) => c.pad === "/api/dashboard/team/uitnodigen");
-    expect(post).toEqual({ pad: "/api/dashboard/team/uitnodigen", methode: "POST", auth: "Bearer " + JWT, body: { adres: "nieuw@voorbeeld.nl" } });
-    expect(paneel.querySelector("[data-team-melding]").textContent).toBe("Uitnodiging verstuurd naar nieuw@voorbeeld.nl.");
-    expect(w.document.activeElement).toBe(paneel.querySelector("[data-team-uitnodig-adres]"));
+    expect(post).toEqual({ pad: "/api/dashboard/team/uitnodigen", methode: "POST", auth: "Bearer " + JWT, body: { adres: "nieuw@voorbeeld.nl", naam: "Nieuw Lid" } });
+    expect(paneel.querySelector("[data-team-melding]").textContent).toBe("Uitnodiging verstuurd naar Nieuw Lid (nieuw@voorbeeld.nl).");
+    // Na succes begint de volgende uitnodiging bij de naam.
+    expect(w.document.activeElement).toBe(paneel.querySelector("[data-team-uitnodig-naam]"));
     expect(fouten).toEqual([]);
   });
 
