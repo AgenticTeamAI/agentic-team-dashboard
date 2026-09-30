@@ -153,7 +153,8 @@ function renderVoorJou(paneel, ctx) {
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
       ${vjIk(ctx) ? `<span class="footnote">als ${esc(vjIk(ctx))} · <button type="button" class="filter-wis" data-vj-naam-wijzig>wijzig</button></span>` : ""}
-      ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
+      ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}
+      ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("voor-jou") : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
     ${lijst.length >= 2 ? `<a class="knop blad-knop vj-ronde-start" href="#/ronde">Loop ze één voor één door ›</a>` : ""}

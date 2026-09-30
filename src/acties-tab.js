@@ -140,6 +140,7 @@ function renderActiesTab(el, ctx) {
       <input type="search" data-acties-zoek placeholder="Zoek, ook in wat je team schreef" aria-label="Zoek in je acties" value="${esc(actiesZoek)}">
       <button type="button" class="status-chip van-team${actiesArchief ? " actief" : ""}" data-acties-archief aria-pressed="${actiesArchief}">🤝 Klaargezet door je team</button>
       <a class="detail-link" href="#/data/acties">Tabel en bord →</a>
+      ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("wie-aan-zet", "Wie is aan zet?") : ""}
     </div>
     ${typeof vjNaamRegelHtml === "function" ? vjNaamRegelHtml(ctx) : ""}
     <div data-acties-banen>${actiesBanenHtml(ctx, { alles })}</div>`;
