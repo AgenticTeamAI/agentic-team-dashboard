@@ -66,6 +66,17 @@ def main():
     # header van staging en productie niet uiteen kan lopen met de vlag.
     oauth = "--oauth" in sys.argv
 
+    # Losse link (dashboard v2): hetzelfde artefact onder een pad op dezelfde
+    # origin, bv. dashboard.agentic-team.ai/v2/. Zelfde origin = zelfde CORS op
+    # de instanties en de router (die geven precies één origin toegang); alleen
+    # de OAuth-terugkeer-URL verschilt, en die leest oauth-client.js uit deze
+    # meta. Zonder vlag: "/" — precies zoals het was.
+    basis = "/"
+    if "--basis" in sys.argv:
+        basis = sys.argv[sys.argv.index("--basis") + 1]
+        if not re.fullmatch(r"/[a-z0-9-]+/", basis):
+            raise SystemExit(f"FOUT: --basis moet de vorm /naam/ hebben, niet {basis!r}.")
+
     schema_js = (ROOT / "schema" / "schema.generated.js").read_text(encoding="utf-8")
     styles = (SRC / "styles.css").read_text(encoding="utf-8")
     shell = (SRC / "shell.html").read_text(encoding="utf-8")
@@ -108,6 +119,7 @@ def main():
         .replace("__CSP_META__", csp_meta)
         .replace("__ROBOTS_META__", '<meta name="robots" content="noindex">' if noindex else "")
         .replace("__OAUTH_META__", '<meta name="at-oauth" content="1">' if oauth else "")
+        .replace("__BASIS_META__", f'<meta name="at-basis" content="{basis}">' if basis != "/" else "")
         .replace("__STYLES__", styles)
         .replace("__SCHEMA__", schema_js)
         .replace("__APP__", app_js)
@@ -117,7 +129,7 @@ def main():
 
     out_path = ROOT / "dashboard.html"
     out_path.write_text(out, encoding="utf-8")
-    vlaggen = "".join(f" — met {naam}" for naam, aan in (("noindex", noindex), ("oauth-login", oauth)) if aan)
+    vlaggen = "".join(f" — met {naam}" for naam, aan in (("noindex", noindex), ("oauth-login", oauth), (f"basis {basis}", basis != "/")) if aan)
     print(f"OK: {out_path} geschreven ({len(out)} bytes){vlaggen}.")
 
     # Dezelfde hashes in de header-CSP (vercel.json), zodat de meta-tag niet

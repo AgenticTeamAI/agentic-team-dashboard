@@ -12,3 +12,4 @@ out/
 # naar ~/.impeccable/bin); per-ontwikkelaar-instellingen blijven lokaal.
 .claude/skills/impeccable/scripts/bin/
 .impeccable/config.local.json
+uitrol-v2/
