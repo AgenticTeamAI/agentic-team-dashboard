@@ -51,6 +51,7 @@ const JS_MODULES = [
   "homepage.js",
   "databrowser.js",
   "data-bewerken.js",
+  "item-blad.js",
   "modules-beheer.js",
   "team-beheer.js",
   "app.js",

@@ -305,7 +305,8 @@ function dataDetailHtml(ctx, key, rij) {
 
   return `<div class="detail-kaart" data-detail-kaart data-detail-id="${esc(rij.__entryId || "")}">
     <div class="detail-kop">
-      <p><strong>${esc(domein.emoji || "🗂️")} ${esc(detailTitel(domein, rij))}</strong></p>
+      <p><strong>${esc(domein.emoji || "🗂️")} ${esc(detailTitel(domein, rij))}</strong>
+        ${key === "acties" && rij.__entryId ? `<a class="relatie-link blad-link" href="#/acties/${encodeURIComponent(rij.__entryId)}">Open als blad →</a>` : ""}</p>
       <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
     </div>
     ${bedienHtml(ctx, key, domein, rij)}
@@ -1146,32 +1147,8 @@ function renderDataDomein(el, key, ctx) {
    * voorgevuld met wat de site over deze seat weet en blijft een vraag — stil
    * invullen zou een persoonsgegeven in de werkdata van de klant zetten zonder
    * dat iemand het zag. Geeft de gekozen naam, of null als je afziet. */
-  function vraagNaam(plek, { overslaan = false } = {}) {
-    return haalNaamvoorstel(ctx.bron).then(({ voorstel }) => new Promise((klaar) => {
-      const slot = el.querySelector(`[data-naam-slot="${plek}"]`);
-      if (!slot) { klaar(null); return; }
-      slot.innerHTML = `<div class="naam-vraag" role="group" aria-label="Je naam">
-        <label class="bedien-veld"><span>Onder welke naam werk je?</span>
-          <input type="text" data-naam-invoer maxlength="80" autocomplete="name" value="${esc(voorstel || "")}"></label>
-        <button type="button" class="knop" data-naam-ok>Opslaan</button>
-        <button type="button" class="knop knop-secundair" data-naam-niet>${overslaan ? "Zonder naam" : "Annuleren"}</button>
-        <p class="footnote">Je collega's zien deze naam bij wat je aan jezelf toewijst en bij je notities. Je kiest hem één keer; wijzigen kan altijd.</p>
-      </div>`;
-      const invoer = slot.querySelector("[data-naam-invoer]");
-      const klaarMet = (naam) => { slot.innerHTML = ""; klaar(naam); };
-      const bevestig = () => {
-        const naam = zetMijnNaam(ctx.bron, invoer.value);
-        if (naam) klaarMet(naam); else invoer.focus();
-      };
-      slot.querySelector("[data-naam-ok]").addEventListener("click", bevestig);
-      slot.querySelector("[data-naam-niet]").addEventListener("click", () => klaarMet(null));
-      invoer.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") { e.preventDefault(); bevestig(); }
-        if (e.key === "Escape") { e.preventDefault(); klaarMet(null); }
-      });
-      invoer.focus();
-      if (invoer.select) invoer.select();
-    }));
+  function vraagNaam(plek, opties) {
+    return vraagNaamIn(el.querySelector(`[data-naam-slot="${plek}"]`), ctx.bron, opties);
   }
 
   /* Alleen een GEKOZEN naam mag zonder vragen de werkdata in — dat is wat

@@ -151,6 +151,45 @@ function haalNaamvoorstel(bron) {
   return naamvoorstelBelofte;
 }
 
+/* i77 + i81: de naamvraag, in de pagina en niet in window.prompt. Eén keer
+ * hier, zodat de Data-tab en het item-blad (f47) dezelfde vraag stellen. Hij
+ * komt voorgevuld met wat de site over deze seat weet en blijft een vraag:
+ * stil invullen zou een persoonsgegeven in de werkdata van de klant zetten
+ * zonder dat iemand het zag. Geeft de gekozen naam, of null als je afziet. */
+function vraagNaamIn(slot, bron, { overslaan = false } = {}) {
+  return haalNaamvoorstel(bron).then(({ voorstel }) => new Promise((klaar) => {
+    if (!slot) { klaar(null); return; }
+    slot.innerHTML = `<div class="naam-vraag" role="group" aria-label="Je naam">
+      <label class="bedien-veld"><span>Onder welke naam werk je?</span>
+        <input type="text" data-naam-invoer maxlength="80" autocomplete="name" value="${esc(voorstel || "")}"></label>
+      <button type="button" class="knop" data-naam-ok>Opslaan</button>
+      <button type="button" class="knop knop-secundair" data-naam-niet>${overslaan ? "Zonder naam" : "Annuleren"}</button>
+      <p class="footnote">Je collega's zien deze naam bij wat je aan jezelf toewijst en bij je notities. Je kiest hem één keer; wijzigen kan altijd.</p>
+    </div>`;
+    const invoer = slot.querySelector("[data-naam-invoer]");
+    const klaarMet = (naam) => { slot.innerHTML = ""; klaar(naam); };
+    const bevestig = () => {
+      const naam = zetMijnNaam(bron, invoer.value);
+      if (naam) klaarMet(naam); else invoer.focus();
+    };
+    slot.querySelector("[data-naam-ok]").addEventListener("click", bevestig);
+    slot.querySelector("[data-naam-niet]").addEventListener("click", () => klaarMet(null));
+    invoer.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); bevestig(); }
+      if (e.key === "Escape") { e.preventDefault(); klaarMet(null); }
+    });
+    invoer.focus();
+    if (invoer.select) invoer.select();
+  }));
+}
+
+/* Alleen een GEKOZEN naam mag zonder vragen de werkdata in — dat is wat
+ * `gezet` betekent. Een afleiding uit je adres vult de vraag voor maar
+ * vervangt hem niet. */
+function naamVoorSchrijfactieIn(slot, bron, opties) {
+  return haalNaamvoorstel(bron).then((r) => (r.gezet ? r.voorstel : vraagNaamIn(slot, bron, opties)));
+}
+
 /* f33: één veld wijzigen zonder het formulier — de kanbansleep en de
  * toewijsknoppen. PATCH mengt bij de instantie over de bestaande rij heen, dus
  * velden die dit dashboard niet kent blijven staan. Met PUT zouden die stil
@@ -727,6 +766,6 @@ if (typeof module !== "undefined") {
     mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
     agentOpties, veldOpties, wijzigingenVan, formulierPatch, vorigeWaarden, verwerkAntwoord,
     meld, ongedaanPatch, wijzigingTekst, cssWaarde, focusSelector,
-    specialistVan, toewijsPatch, toewijsTekst,
+    specialistVan, toewijsPatch, toewijsTekst, vraagNaamIn, naamVoorSchrijfactieIn,
   };
 }
