@@ -239,7 +239,7 @@ function toegangsBalkHtml(ctx) {
   return "";
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken", klaar: "tab-vaste-taken" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -424,6 +424,7 @@ const TAB_TITELS = {
   acties: "Acties — Agentic Team Dashboard",
   ronde: "Eén voor één — Agentic Team Dashboard",
   "vaste-taken": "Vaste taken — Agentic Team Dashboard",
+  klaar: "Is je team klaar? — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -493,13 +494,18 @@ function route() {
     return;
   }
   // f48: Team heeft twee delen, "Wat ze deden" en "Resultaat" (het oude Prestaties).
+  const deel = view.tab === "klaar" ? "vaste-taken" : view.tab;
   for (const a of document.querySelectorAll("[data-team-deel]")) {
-    const hier = a.getAttribute("data-team-deel") === view.tab;
+    const hier = a.getAttribute("data-team-deel") === deel;
     a.classList.toggle("actief", hier);
     if (hier) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   if (view.tab === "acties") renderActiesTab(versContainer("tab-acties-body"), ctx);
   if (view.tab === "vaste-taken") renderVasteTaken(versContainer("tab-vaste-taken-body"), ctx);
+  if (view.tab === "klaar") {
+    renderKlaar(versContainer("tab-vaste-taken-body"), ctx);
+    if (!zelfde) { const k = document.querySelector("#tab-vaste-taken-body .kc-kop"); if (k) k.focus({ preventScroll: true }); }
+  }
   if (view.tab === "ronde") {
     renderRonde(versContainer("tab-ronde-body"), ctx);
     if (!zelfde) { const t = document.querySelector("#tab-ronde-body .blad-titel"); if (t) t.focus({ preventScroll: true }); }

@@ -1065,3 +1065,29 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   .vt-taak { flex-wrap: wrap; }
   .vt-ritme { flex-basis: 100%; }
 }
+
+/* ── f52 · Is je team klaar? ─────────────────────────────────────────── */
+.kc-samenvatting { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; margin: 0 0 16px; border: 1px solid var(--line); border-left: 4px solid var(--klaar); border-radius: 10px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.kc-samenvatting span { font-size: 0.85rem; color: var(--muted); }
+.kc-samenvatting.kc-let { border-left-color: var(--jij); }
+.kc-samenvatting.kc-nee { border-left-color: var(--rood); }
+.kc-samenvatting:hover strong { text-decoration: underline; }
+.kc-kop { font-size: 1.1rem; }
+.kc-kop:focus { outline: none; }
+.kc-regels { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.kc-regel { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.kc-regel p { margin: 2px 0 0; font-size: 0.9rem; color: var(--muted); }
+.kc-vorm { flex: 0 0 auto; width: 1.8em; height: 1.8em; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+.kc-ok .kc-vorm { background: var(--klaar-zacht); color: var(--klaar); }
+.kc-let .kc-vorm { background: var(--jij-zacht); color: var(--jij-tekst); }
+.kc-nee .kc-vorm { background: var(--rood-zacht); color: var(--rood); }
+.kc-onbekend .kc-vorm { background: var(--surface-2); color: var(--muted); }
+.kc-actie { display: inline-block; margin-top: 4px; color: var(--team-tekst); font-weight: 600; text-decoration: none; }
+.kc-stappenlijst { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; }
+.kc-velden { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 8px 0; align-items: center; }
+.kc-velden dt { color: var(--muted); font-size: 0.85rem; }
+.kc-velden dd { margin: 0; }
+.vj-stil { border: 1px solid var(--rood); border-left-width: 4px; background: var(--rood-zacht); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; color: var(--ink); }
+.vj-stil .kc-actie { display: block; }
+.kc-stappenlijst .footnote { display: block; margin-top: 4px; }
+.kc-stappen h2:focus { outline: none; }

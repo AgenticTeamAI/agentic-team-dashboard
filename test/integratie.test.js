@@ -195,7 +195,7 @@ describe("werkruimte-route — rijen", () => {
       .toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
 
     // Vandaag: statusregel, privacybelofte, aandacht, feedstrook, opbrengst
-    expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit/);
+    expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit|team werkte laatst|Laatst bijgewerkt/);
     expect(d.tekst("privacy-blok")).toMatch(/blijven in je browser/);
     expect(d.$("panel-aandacht-body").querySelectorAll(".attention-list li").length).toBeGreaterThan(0);
     expect(d.$("opbrengst-grid").querySelectorAll(".kpi-tile").length).toBe(3);

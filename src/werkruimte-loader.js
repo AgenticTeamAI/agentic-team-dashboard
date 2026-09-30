@@ -491,6 +491,8 @@ async function loadWerkruimteBundle(bron) {
   const overzicht = await fetchWerkruimte(bron, "/dashboard/overzicht");
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
+  // f52: de bedrijfsnaam, voor de naam van het werkmoment in het stappenblad.
+  bundle.klant = typeof overzicht.klant === "string" ? overzicht.klant : null;
   // Interne omgeving (DASHBOARD_INTERN=1 op de instantie): alleen dan toont
   // het dashboard de interne tegels (correctievrij / f19-gate).
   bundle.intern = overzicht.intern === true;
