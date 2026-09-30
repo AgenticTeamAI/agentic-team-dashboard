@@ -24,6 +24,7 @@ const MODULES = [
   "src/schema-helpers.js",
   "src/werkruimte-loader.js",
   "src/zones.js",
+  "src/voor-jou.js",
   "src/metrics-sanitize.js",
   "src/metrics.js",
   "src/render.js",
@@ -32,6 +33,7 @@ const MODULES = [
   "src/homepage.js",
   "src/databrowser.js",
   "src/data-bewerken.js",
+  "src/acties-tab.js",
 ];
 
 const VANDAAG = new Date("2026-09-10T12:00:00Z");
@@ -260,18 +262,19 @@ describe("tijdslimiet op de werkruimte-aanroep", () => {
 // ══ 4 · Data-tab en de volgorde van de opbrengst ══════════════════════
 
 describe("Data-tab alleen als er iets te tonen is", () => {
-  const rijenBundel = { kind: "werkruimte", domains: { acties: { rows: [] } } };
+  const rijenBundel = { kind: "rows", domains: { acties: { rows: [] } } };
 
+  // f48: vier tabs, nooit een vijfde — Prestaties is "Resultaat" binnen Team.
   it("blijft staan op de rijenroute", () => {
     expect(g.dataTabBeschikbaar({ bundle: rijenBundel })).toBe(true);
     expect(g.zichtbareTabs({ bundle: rijenBundel }).map((t) => t.key))
-      .toEqual(["vandaag", "team", "data", "prestaties"]);
+      .toEqual(["vandaag", "acties", "team", "data"]);
   });
 
-  it("verdwijnt bij een metricsbestand zonder relaties", () => {
+  it("verdwijnt bij een metricsbestand zonder relaties (en Acties dan ook)", () => {
     const ctx = { bundle: { kind: "metrics", domains: {} }, relaties: null };
     expect(g.dataTabBeschikbaar(ctx)).toBe(false);
-    expect(g.zichtbareTabs(ctx).map((t) => t.key)).toEqual(["vandaag", "team", "prestaties"]);
+    expect(g.zichtbareTabs(ctx).map((t) => t.key)).toEqual(["vandaag", "team"]);
   });
 
   /* f29: uit een metricsbestand komen géén rijen maar wél relatiekaarten.

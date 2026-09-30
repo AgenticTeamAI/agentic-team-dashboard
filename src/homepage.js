@@ -16,10 +16,15 @@
  * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
   { key: "vandaag", titel: "Voor jou", emoji: "📌", route: "#/", uitleg: "Wat je team deed en wat er op jou wacht" },
-  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
-  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
-  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
+  { key: "acties", titel: "Acties", emoji: "✅", route: "#/acties", uitleg: "Wie is aan zet: jij, je team, wacht of afgerond" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je team deed, en wat het opleverde" },
+  { key: "data", titel: "Gegevens", emoji: "🗂️", route: "#/data", uitleg: "Je organisaties, deals, lessen en de rest" },
 ];
+/* f48: vier tabs, nooit een vijfde. Prestaties is een deel van Team
+ * geworden ("Resultaat"); het adres #/prestaties blijft werken en licht de
+ * Team-tab op. */
+const TAB_DEEL_VAN = { prestaties: "team" };
+const TAB_ROUTES = TABS.map(t => t.key).concat(Object.keys(TAB_DEEL_VAN));
 
 const DETAIL_VOLGORDE = [
   { key: "feed", titel: "Teamfeed", emoji: "📣" },
@@ -74,12 +79,14 @@ function dataTabBeschikbaar(ctx) {
 }
 
 function zichtbareTabs(ctx) {
-  return TABS.filter(t => t.key !== "data" || dataTabBeschikbaar(ctx));
+  return TABS.filter(t => (t.key !== "data" || dataTabBeschikbaar(ctx))
+    && (t.key !== "acties" || (typeof actiesTabBeschikbaar === "function" && actiesTabBeschikbaar(ctx))));
 }
 
 function renderTabbar(el, activeTab, ctx) {
   // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
   // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
+  activeTab = TAB_DEEL_VAN[activeTab] || activeTab;
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
@@ -730,12 +737,11 @@ function bepaalActieveView() {
   if (item) {
     let id = item[1];
     try { id = decodeURIComponent(id); } catch (e) { /* laat hem zoals hij is */ }
-    return { soort: "item", domein: "acties", id, tab: "data" };
+    return { soort: "item", domein: "acties", id, tab: "acties" };
   }
-  if (/^#\/acties\/?$/.test(hash)) return { soort: "data", domein: "acties", tab: "data" };
 
   const tab = hash.match(/^#\/([a-z]+)/);
-  if (tab && TABS.some(t => t.key === tab[1])) return { soort: "tab", tab: tab[1] };
+  if (tab && TAB_ROUTES.indexOf(tab[1]) !== -1) return { soort: "tab", tab: tab[1] };
 
   return { soort: "tab", tab: "vandaag" };
 }

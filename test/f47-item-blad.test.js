@@ -272,9 +272,9 @@ describe("f47 — het blad", () => {
 
   it("#/acties/<id> is een eigen adres; kale #/acties is de lijst", () => {
     window.location.hash = "#/acties/act%201";
-    expect(g.bepaalActieveView()).toEqual({ soort: "item", domein: "acties", id: "act 1", tab: "data" });
+    expect(g.bepaalActieveView()).toEqual({ soort: "item", domein: "acties", id: "act 1", tab: "acties" });
     window.location.hash = "#/acties";
-    expect(g.bepaalActieveView()).toEqual({ soort: "data", domein: "acties", tab: "data" });
+    expect(g.bepaalActieveView()).toEqual({ soort: "tab", tab: "acties" });
     window.location.hash = "";
   });
 });
