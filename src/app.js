@@ -154,6 +154,9 @@ function buildContext() {
       bundelWaarschuwingen: (bundle.waarschuwingen || []).slice(),
       veldWaarschuwingen: (m.waarschuwingen || []).slice(),
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
+      // b62: ook naast een metricsbestand komen de rijen uit je werkruimte, en
+      // wie ingelogd is mag die bijwerken (per domein, zie magDomeinBewerken).
+      ...schrijfHaken(),
     };
   }
 
@@ -181,6 +184,14 @@ function buildContext() {
     // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
     // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
     // bundel zodat de tabel de waarheid van de instantie toont.
+    ...schrijfHaken(),
+  };
+}
+
+/* Wat een scherm nodig heeft om te schrijven: de bron, of die mag schrijven,
+ * en de drie manieren om daarna bij te tekenen. Op beide routes hetzelfde. */
+function schrijfHaken() {
+  return {
     bron: huidigeBron,
     kanSchrijven: bronKanSchrijven(huidigeBron),
     // Na een schrijfactie blijf je waar je was — zie handleBundle().
@@ -191,6 +202,41 @@ function buildContext() {
     // f46/f48: na het kiezen van je naam telt "per persoon" opnieuw.
     hertekenAlles: () => renderAll(),
   };
+}
+
+/* b62: wie ben je? Met een ingelogde sessie één keer bij het laden (zie de
+ * uitleg bij haalNaamvoorstel). Alleen een GEKOZEN naam telt: die bewaart
+ * haalNaamvoorstel als kopie, en dan tellen Voor jou en Acties per persoon.
+ * Een afleiding uit je adres blijft een voorzet in de naamvraag. */
+let naamBijLadenGedaan = null;
+function naamBijLaden(ctx) {
+  const bron = ctx.bron;
+  if (!bron || !bron.oauth || mijnNaam(bron)) return;
+  if (naamBijLadenGedaan === bron.token) return;
+  naamBijLadenGedaan = bron.token;
+  void haalNaamvoorstel(bron).then((r) => {
+    if (r && r.gezet && mijnNaam(bron)) renderAll();
+  }).catch(() => { /* geen naam: dan telt alles, met "Zeg wie je bent" */ });
+}
+
+/* b62: één eerlijke regel bovenaan over wat je hier kunt.
+ * - Daglink: je kijkt mee; inloggen brengt je terug op precies deze plek
+ *   (de bedoelde route reist mee in de PKCE-record, f44).
+ * - Acties die in Notion (of een ander systeem) wonen: afhandelen doe je daar
+ *   of via Claude; hier staan de cijfers.
+ * Ingelogd met je werkruimte: geen balk. */
+function toegangsBalkHtml(ctx) {
+  const bron = ctx.bron;
+  if (bron && !bron.oauth && oauthMogelijk()) {
+    return `<span>Je kijkt mee met je daglink: alleen lezen.</span>
+      <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen om af te handelen</button>
+      <span class="footnote">Je komt daarna precies hier terug.</span>`;
+  }
+  const acties = bronVan(ctx, "acties");
+  if (acties && acties.toestand === "elders") {
+    return `<span>Je acties staan in ${esc(acties.naam)}. Afhandelen doe je daar, of via Claude; hier zie je wat je team doet en oplevert.</span>`;
+  }
+  return "";
 }
 
 const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
@@ -224,6 +270,7 @@ function renderAll() {
     verbergAlles();
     versionErrorEl.style.display = "none";
     document.getElementById("kop-acties").style.display = "none";
+    document.getElementById("toegang-balk").hidden = true;
     return;
   }
   emptyStateEl.style.display = "none";
@@ -261,6 +308,10 @@ function renderAll() {
   // ── Tab 1 · Vandaag ──
   renderStatusregel(document.getElementById("statusregel"), ctx);
   renderPrivacyBlok(document.getElementById("privacy-blok"));
+  // b62: wat kun je hier — meekijken, afhandelen, of woont het elders?
+  const balk = document.getElementById("toegang-balk");
+  if (balk) { balk.innerHTML = toegangsBalkHtml(ctx); balk.hidden = !balk.innerHTML.trim(); }
+
   // f46: de werkbak Voor jou. Staat hij er, dan zit "je team zette N ding(en)
   // voor je klaar" er al volledig in — die melding hoort dan niet nóg eens in
   // het aandachtspaneel. De rest van de meldingen blijft staan.
@@ -295,6 +346,8 @@ function renderAll() {
   void laadTeam(huidigeBron).then(() => {
     renderTeamPanel(document.getElementById("panel-team-namen"));
   });
+
+  naamBijLaden(ctx);
 
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);

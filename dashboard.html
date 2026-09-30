@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-rQie5TFYRu5qsz5xGXioa4bXjrbjk+xiT6si42EzkeM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-boZvysy2de9nmDHt4aCH/wTGvBLFg5sNLd0Y2tQVeYo='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -1022,6 +1022,11 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   .banen[data-baan-actief="wacht"] .baan-wacht, .banen[data-baan-actief="afgerond"] .baan-afgerond { display: block; }
 }
 
+/* ── b62 · wat kun je hier ───────────────────────────────────────────── */
+.toegang-balk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--jij); border-left-width: 4px; border-radius: 10px; background: var(--jij-zacht); color: var(--ink); font-size: 0.92rem; }
+.toegang-balk[hidden] { display: none; }
+.toegang-balk .footnote { margin: 0; }
+
 </style>
 </head>
 <body>
@@ -1037,6 +1042,9 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
       <span class="kop-tijd" id="kop-tijd"></span>
     </p>
   </header>
+
+  <!-- b62: meekijken met een daglink, of acties die elders wonen. -->
+  <div class="toegang-balk" id="toegang-balk" role="status" hidden></div>
 
   <!-- ══ Vier tabs, dezelfde volgorde op desktop en mobiel (f25) ══ -->
   <nav class="tabbar" id="tabbar" aria-label="Hoofdnavigatie" style="display:none;"></nav>
@@ -4552,9 +4560,45 @@ async function laadRijen(bron, bundle, gevuld, opslagDomeinen, schema) {
  * een expliciete actie van de gebruiker en wint altijd; daarna telt een
  * lopende inlogsessie (het JWT), en pas daarna een eerder opgeslagen daglink.
  * Zonder alle drie blijft de lege staat staan. */
+/* b62: voor welke licentie is een token? Een daglink is `body.handtekening`
+ * met de payload in het eerste deel (daglink.ts in de werkruimte: `licentie`);
+ * een access-token is een JWT met de payload in het tweede deel (`lic`). Alleen
+ * lezen om te vergelijken — de instantie controleert de handtekeningen zelf. */
+function tokenPayloadDeel(token, deel) {
+  try {
+    const stuk = String(token || "").split(".")[deel];
+    return JSON.parse(atob(stuk.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch (e) { return null; }
+}
+function daglinkLicentie(token) {
+  const p = tokenPayloadDeel(token, 0);
+  return p && typeof p.licentie === "string" ? p.licentie : null;
+}
+function sessieLicentie(token) {
+  const p = tokenPayloadDeel(token, 1);
+  return p && typeof p.lic === "string" ? p.lic : null;
+}
+
+/* Welke bron gebruikt deze pagina?
+ * - Een verse daglink in het fragment is een expliciete actie van de
+ *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
+ *   dezelfde licentie: dan kun je met die sessie ook afhandelen, en er is
+ *   geen reden om je terug te zetten op alleen-lezen. De daglink wordt dan
+ *   wel uit de adresbalk gehaald en bewaard, als terugval.
+ * - Is de licentie anders (iemand met meer licenties, of een gedeelde link),
+ *   dan wint de daglink: stil een andere werkruimte tonen is erger.
+ * - Daarna de sessie, en pas daarna een eerder opgeslagen daglink. */
 function restoreBron() {
-  if (parseDaglinkFragment(window.location.hash)) return restoreDaglink();
+  const vers = parseDaglinkFragment(window.location.hash);
   const sessie = leesOauthSessie();
+  if (vers) {
+    const lic = daglinkLicentie(vers.token);
+    if (sessie && lic && lic === sessieLicentie(sessie.access_token)) {
+      restoreDaglink();
+      return oauthBron(sessie);
+    }
+    return restoreDaglink();
+  }
   if (sessie) return oauthBron(sessie);
   return restoreDaglink();
 }
@@ -4565,7 +4609,7 @@ if (typeof module !== "undefined") {
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
-    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing,
+    fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader,
   };
 }
@@ -9174,9 +9218,13 @@ function renderDataOverzicht(el, ctx) {
     .map(([k, waarom]) => `${esc(ctx.schema.datadomeinen[k].naam || k)} (${esc(waarom)})`)
     .join(" · ");
 
+  // b62: zeg waaróm het alleen-lezen is. "Opgehaald met je daglink" stond er
+  // ook bij wie gewoon ingelogd was.
   const leesregel = ctx.kanSchrijven
-    ? `Je bent ingelogd: open een domein om rijen toe te voegen, te bewerken of te verwijderen.`
-    : `Opgehaald met je daglink. Alleen lezen: dit dashboard kan niets aanmaken, wijzigen of verwijderen.`;
+    ? `Je bent ingelogd: open een soort gegevens om iets toe te voegen, te bewerken of te verwijderen.`
+    : ctx.bron && ctx.bron.oauth
+      ? `Je sessie mag alleen lezen. Log opnieuw in om ook te kunnen bijwerken.`
+      : `Opgehaald met je daglink: alleen lezen. Log in om ook te kunnen bijwerken.`;
 
   el.innerHTML = `<p class="footnote data-telregel">In gebruik: ${inGebruik.length} van de ${domeinen.length} soorten gegevens die je team kan bijhouden.</p>
     ${groepenHtml}${eldersHtml}${nogNietHtml}
@@ -9992,8 +10040,13 @@ function zetMijnNaam(bron, naam) {
  * Drie dingen die hier bewust zo zijn:
  * - het loopt door `modulesFetch`, de enige plek die de site aanroept, zodat de
  *   inventaris van de telemetriecontrole op vier aanroepen blijft staan;
- * - het gebeurt pas bij de eerste schrijfactie zonder opgeslagen naam, niet bij
- *   het laden — wie nooit schrijft, laat ons nooit een adres opzoeken;
+ * - b62 (30-09): met een ingelogde sessie gebeurt het één keer bij het laden
+ *   (naamBijLaden in app.js), niet pas bij de eerste schrijfactie. "Voor jou"
+ *   telt per persoon, en dat kan alleen als het dashboard weet wie je bent; de
+ *   naam is bij het inloggen ook gewoon bekend. Het is dezelfde site die bij
+ *   het laden al het moduleoverzicht levert, en de privacytekst belooft
+ *   "hoogstens één keer per sessie" — dat blijft zo (de belofte hieronder
+ *   cachet per seat). Met een daglink gaat er niets naar de site;
  * - het antwoord is een suggestie in een prompt, geen stille invulling. Een
  *   persoonsgegeven in de werkdata van de klant hoort langs de gebruiker.
  *
@@ -10196,7 +10249,10 @@ function bronKanSchrijven(bron) {
  * kan uitleggen in plaats van stil een knop weg te laten. */
 function magDomeinBewerken(ctx, key) {
   if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
-  if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
+  // b62: ook op de metricsroute. Daar komen de cijfers uit een metricsbestand,
+  // maar de rijen zelf komen gewoon uit je werkruimte — en die mag je dan ook
+  // bijwerken. Wat elders woont, blijft lezen (bronVan hieronder).
+  if (!ctx.bundle || (ctx.bundle.kind !== "rows" && ctx.bundle.source !== "werkruimte")) return { ok: false, reden: null };
   if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
   // i72: één afleiding voor "waar woont dit" — bronVan() in databrowser.js.
   // Daarvóór stond hier een eigen vergelijking op de ruwe klantwaarde, en die
@@ -11016,7 +11072,8 @@ function vjIk(ctx) {
 }
 
 function voorJouLijst(ctx) {
-  if (!ctx || !ctx.bundle || ctx.bundle.kind !== "rows") return null;
+  // b62: ook op de metricsroute, zolang de acties-rijen er zijn.
+  if (!ctx || !ctx.bundle || !rows(ctx.bundle, "acties")) return null;
   return aanJouZet(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
 }
 
@@ -11125,13 +11182,14 @@ function renderVoorJou(paneel, ctx) {
   const nu = ctx.today || new Date();
   const oudste = lijst.reduce((min, r) => { const s = sindsVan(r); return s && (!min || s < min) ? s : min; }, null);
   const oudsteDagen = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
-  const inlogRegel = !kanAfhandelen && !(ctx.bron && ctx.bron.oauth) && typeof oauthMogelijk === "function" && oauthMogelijk()
-    ? `<p class="vj-inlog">Je kijkt mee met je daglink. <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen en afhandelen</button></p>` : "";
+  // Op de daglink staat de inlogknop in de balk bovenaan (b62), niet ook nog hier.
+  const inlogRegel = "";
 
   body.innerHTML = `
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${vjIk(ctx) ? `<span class="footnote">als ${esc(vjIk(ctx))} · <button type="button" class="filter-wis" data-vj-naam-wijzig>wijzig</button></span>` : ""}
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
@@ -11184,6 +11242,18 @@ function vjNaamRegelHtml(ctx) {
 }
 
 function wireVjNaam(el, ctx) {
+  const wijzig = el.querySelector("[data-vj-naam-wijzig]");
+  if (wijzig) {
+    wijzig.addEventListener("click", () => {
+      let slot = el.querySelector('[data-naam-slot="vj"]');
+      if (!slot) { slot = document.createElement("div"); slot.setAttribute("data-naam-slot", "vj"); wijzig.closest(".vj-kop").after(slot); }
+      vraagNaamIn(slot, ctx.bron).then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        meld(`Je werkt nu als ${naam}.`);
+        if (ctx.hertekenAlles) ctx.hertekenAlles();
+      });
+    });
+  }
   const knop = el.querySelector("[data-vj-naam]");
   if (!knop) return;
   knop.addEventListener("click", () => {
@@ -11239,7 +11309,7 @@ const BAAN_KOP = {
 const AFGEROND_TONEN = 15;
 
 function actiesTabBeschikbaar(ctx) {
-  return !!(ctx && ctx.bundle && ctx.bundle.kind === "rows" && rows(ctx.bundle, "acties"));
+  return !!(ctx && ctx.bundle && rows(ctx.bundle, "acties"));
 }
 
 function actieZoekTekst(rij) {
@@ -12295,6 +12365,9 @@ function buildContext() {
       bundelWaarschuwingen: (bundle.waarschuwingen || []).slice(),
       veldWaarschuwingen: (m.waarschuwingen || []).slice(),
       waarschuwingen: (bundle.waarschuwingen || []).concat(m.waarschuwingen || []),
+      // b62: ook naast een metricsbestand komen de rijen uit je werkruimte, en
+      // wie ingelogd is mag die bijwerken (per domein, zie magDomeinBewerken).
+      ...schrijfHaken(),
     };
   }
 
@@ -12322,6 +12395,14 @@ function buildContext() {
     // f23 fase D: bewerken kan alleen met een ingelogde sessie waarvan het
     // token dashboard:schrijf draagt; na een geslaagde write herlaadt de
     // bundel zodat de tabel de waarheid van de instantie toont.
+    ...schrijfHaken(),
+  };
+}
+
+/* Wat een scherm nodig heeft om te schrijven: de bron, of die mag schrijven,
+ * en de drie manieren om daarna bij te tekenen. Op beide routes hetzelfde. */
+function schrijfHaken() {
+  return {
     bron: huidigeBron,
     kanSchrijven: bronKanSchrijven(huidigeBron),
     // Na een schrijfactie blijf je waar je was — zie handleBundle().
@@ -12332,6 +12413,41 @@ function buildContext() {
     // f46/f48: na het kiezen van je naam telt "per persoon" opnieuw.
     hertekenAlles: () => renderAll(),
   };
+}
+
+/* b62: wie ben je? Met een ingelogde sessie één keer bij het laden (zie de
+ * uitleg bij haalNaamvoorstel). Alleen een GEKOZEN naam telt: die bewaart
+ * haalNaamvoorstel als kopie, en dan tellen Voor jou en Acties per persoon.
+ * Een afleiding uit je adres blijft een voorzet in de naamvraag. */
+let naamBijLadenGedaan = null;
+function naamBijLaden(ctx) {
+  const bron = ctx.bron;
+  if (!bron || !bron.oauth || mijnNaam(bron)) return;
+  if (naamBijLadenGedaan === bron.token) return;
+  naamBijLadenGedaan = bron.token;
+  void haalNaamvoorstel(bron).then((r) => {
+    if (r && r.gezet && mijnNaam(bron)) renderAll();
+  }).catch(() => { /* geen naam: dan telt alles, met "Zeg wie je bent" */ });
+}
+
+/* b62: één eerlijke regel bovenaan over wat je hier kunt.
+ * - Daglink: je kijkt mee; inloggen brengt je terug op precies deze plek
+ *   (de bedoelde route reist mee in de PKCE-record, f44).
+ * - Acties die in Notion (of een ander systeem) wonen: afhandelen doe je daar
+ *   of via Claude; hier staan de cijfers.
+ * Ingelogd met je werkruimte: geen balk. */
+function toegangsBalkHtml(ctx) {
+  const bron = ctx.bron;
+  if (bron && !bron.oauth && oauthMogelijk()) {
+    return `<span>Je kijkt mee met je daglink: alleen lezen.</span>
+      <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen om af te handelen</button>
+      <span class="footnote">Je komt daarna precies hier terug.</span>`;
+  }
+  const acties = bronVan(ctx, "acties");
+  if (acties && acties.toestand === "elders") {
+    return `<span>Je acties staan in ${esc(acties.naam)}. Afhandelen doe je daar, of via Claude; hier zie je wat je team doet en oplevert.</span>`;
+  }
+  return "";
 }
 
 const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
@@ -12365,6 +12481,7 @@ function renderAll() {
     verbergAlles();
     versionErrorEl.style.display = "none";
     document.getElementById("kop-acties").style.display = "none";
+    document.getElementById("toegang-balk").hidden = true;
     return;
   }
   emptyStateEl.style.display = "none";
@@ -12402,6 +12519,10 @@ function renderAll() {
   // ── Tab 1 · Vandaag ──
   renderStatusregel(document.getElementById("statusregel"), ctx);
   renderPrivacyBlok(document.getElementById("privacy-blok"));
+  // b62: wat kun je hier — meekijken, afhandelen, of woont het elders?
+  const balk = document.getElementById("toegang-balk");
+  if (balk) { balk.innerHTML = toegangsBalkHtml(ctx); balk.hidden = !balk.innerHTML.trim(); }
+
   // f46: de werkbak Voor jou. Staat hij er, dan zit "je team zette N ding(en)
   // voor je klaar" er al volledig in — die melding hoort dan niet nóg eens in
   // het aandachtspaneel. De rest van de meldingen blijft staan.
@@ -12436,6 +12557,8 @@ function renderAll() {
   void laadTeam(huidigeBron).then(() => {
     renderTeamPanel(document.getElementById("panel-team-namen"));
   });
+
+  naamBijLaden(ctx);
 
   // ── Tab 4 · Prestaties ──
   renderPrestatieKpis(document.getElementById("kpi-grid"), ctx);

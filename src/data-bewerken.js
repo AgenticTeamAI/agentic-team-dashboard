@@ -81,8 +81,13 @@ function zetMijnNaam(bron, naam) {
  * Drie dingen die hier bewust zo zijn:
  * - het loopt door `modulesFetch`, de enige plek die de site aanroept, zodat de
  *   inventaris van de telemetriecontrole op vier aanroepen blijft staan;
- * - het gebeurt pas bij de eerste schrijfactie zonder opgeslagen naam, niet bij
- *   het laden — wie nooit schrijft, laat ons nooit een adres opzoeken;
+ * - b62 (30-09): met een ingelogde sessie gebeurt het één keer bij het laden
+ *   (naamBijLaden in app.js), niet pas bij de eerste schrijfactie. "Voor jou"
+ *   telt per persoon, en dat kan alleen als het dashboard weet wie je bent; de
+ *   naam is bij het inloggen ook gewoon bekend. Het is dezelfde site die bij
+ *   het laden al het moduleoverzicht levert, en de privacytekst belooft
+ *   "hoogstens één keer per sessie" — dat blijft zo (de belofte hieronder
+ *   cachet per seat). Met een daglink gaat er niets naar de site;
  * - het antwoord is een suggestie in een prompt, geen stille invulling. Een
  *   persoonsgegeven in de werkdata van de klant hoort langs de gebruiker.
  *
@@ -285,7 +290,10 @@ function bronKanSchrijven(bron) {
  * kan uitleggen in plaats van stil een knop weg te laten. */
 function magDomeinBewerken(ctx, key) {
   if (!ctx.kanSchrijven) return { ok: false, reden: null }; // daglink of oude sessie: gewoon stil lezen
-  if (!ctx.bundle || ctx.bundle.kind !== "rows") return { ok: false, reden: null };
+  // b62: ook op de metricsroute. Daar komen de cijfers uit een metricsbestand,
+  // maar de rijen zelf komen gewoon uit je werkruimte — en die mag je dan ook
+  // bijwerken. Wat elders woont, blijft lezen (bronVan hieronder).
+  if (!ctx.bundle || (ctx.bundle.kind !== "rows" && ctx.bundle.source !== "werkruimte")) return { ok: false, reden: null };
   if (DATA_NIET_IN_BUNDEL[key]) return { ok: false, reden: null };
   // i72: één afleiding voor "waar woont dit" — bronVan() in databrowser.js.
   // Daarvóór stond hier een eigen vergelijking op de ruwe klantwaarde, en die

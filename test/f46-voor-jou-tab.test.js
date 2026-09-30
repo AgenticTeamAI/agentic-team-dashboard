@@ -156,10 +156,15 @@ describe("f46 — de werkbak", () => {
     expect(p.querySelectorAll(".vj-kaart").length).toBeGreaterThan(0);
   });
 
-  it("zonder acties-rijen (metricsroute) blijft het paneel weg", () => {
+  it("zonder acties-rijen blijft het paneel weg; op de metricsroute mét rijen staat het er wel (b62)", () => {
     const p = paneel();
-    g.renderVoorJou(p, ctxMet(standaard(), { kind: "metrics" }));
+    const zonder = ctxMet([], { kind: "metrics" });
+    delete zonder.bundle.domains.acties;
+    g.renderVoorJou(p, zonder);
     expect(p.style.display).toBe("none");
+    g.renderVoorJou(p, ctxMet(standaard(), { kind: "metrics" }));
+    expect(p.style.display).toBe("");
+    expect(p.querySelectorAll(".vj-kaart").length).toBe(3);
   });
 
   it("leeg is een rustige zin, geen lege lijst", () => {

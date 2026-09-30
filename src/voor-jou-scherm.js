@@ -34,7 +34,8 @@ function vjIk(ctx) {
 }
 
 function voorJouLijst(ctx) {
-  if (!ctx || !ctx.bundle || ctx.bundle.kind !== "rows") return null;
+  // b62: ook op de metricsroute, zolang de acties-rijen er zijn.
+  if (!ctx || !ctx.bundle || !rows(ctx.bundle, "acties")) return null;
   return aanJouZet(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
 }
 
@@ -143,13 +144,14 @@ function renderVoorJou(paneel, ctx) {
   const nu = ctx.today || new Date();
   const oudste = lijst.reduce((min, r) => { const s = sindsVan(r); return s && (!min || s < min) ? s : min; }, null);
   const oudsteDagen = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
-  const inlogRegel = !kanAfhandelen && !(ctx.bron && ctx.bron.oauth) && typeof oauthMogelijk === "function" && oauthMogelijk()
-    ? `<p class="vj-inlog">Je kijkt mee met je daglink. <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen en afhandelen</button></p>` : "";
+  // Op de daglink staat de inlogknop in de balk bovenaan (b62), niet ook nog hier.
+  const inlogRegel = "";
 
   body.innerHTML = `
     ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
       ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${vjIk(ctx) ? `<span class="footnote">als ${esc(vjIk(ctx))} · <button type="button" class="filter-wis" data-vj-naam-wijzig>wijzig</button></span>` : ""}
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
@@ -202,6 +204,18 @@ function vjNaamRegelHtml(ctx) {
 }
 
 function wireVjNaam(el, ctx) {
+  const wijzig = el.querySelector("[data-vj-naam-wijzig]");
+  if (wijzig) {
+    wijzig.addEventListener("click", () => {
+      let slot = el.querySelector('[data-naam-slot="vj"]');
+      if (!slot) { slot = document.createElement("div"); slot.setAttribute("data-naam-slot", "vj"); wijzig.closest(".vj-kop").after(slot); }
+      vraagNaamIn(slot, ctx.bron).then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        meld(`Je werkt nu als ${naam}.`);
+        if (ctx.hertekenAlles) ctx.hertekenAlles();
+      });
+    });
+  }
   const knop = el.querySelector("[data-vj-naam]");
   if (!knop) return;
   knop.addEventListener("click", () => {
