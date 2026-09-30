@@ -196,13 +196,17 @@ describe("f33 — bedienen", () => {
   it("'Aan mij' zet de opgegeven naam als eigenaar en onthoudt hem per seat", async () => {
     const ctx = ctxMet();
     window.localStorage.removeItem("agentic-team-dashboard:naam:at_test#seat1");
-    vi.spyOn(window, "prompt").mockReturnValue("Yoram");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true, status: 200, json: async () => ({ entry: {} }),
     });
     const c = openRij(ctx);
     c.querySelector("[data-snel-mij]").click();
-    await new Promise(r => setTimeout(r, 0));
+    // i81: de vraag staat in de pagina, niet in window.prompt.
+    await vi.waitFor(() => expect(c.querySelector("[data-naam-invoer]")).not.toBeNull());
+    expect(fetchSpy).not.toHaveBeenCalled();
+    c.querySelector("[data-naam-invoer]").value = "Yoram";
+    c.querySelector("[data-naam-ok]").click();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalled());
 
     expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Yoram" });
     expect(g.mijnNaam(ctx.bron)).toBe("Yoram");
@@ -216,17 +220,19 @@ describe("f33 — bedienen", () => {
     const ctx = ctxMet();
     window.localStorage.removeItem("agentic-team-dashboard:naam:at_test#seat1");
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "jan.jansen", gezet: false } }));
-    const prompt = vi.spyOn(window, "prompt").mockReturnValue("Jan Jansen");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true, status: 200, json: async () => ({ entry: {} }),
     });
     const c = openRij(ctx);
     c.querySelector("[data-snel-mij]").click();
-    await new Promise(r => setTimeout(r, 0));
-    await new Promise(r => setTimeout(r, 0));
+    await vi.waitFor(() => expect(c.querySelector("[data-naam-invoer]")).not.toBeNull());
 
-    expect(prompt).toHaveBeenCalled();
-    expect(prompt.mock.calls[0][1]).toBe("jan.jansen"); // voorgevuld, niet ingevuld
+    const invoer = c.querySelector("[data-naam-invoer]");
+    expect(invoer.value).toBe("jan.jansen"); // voorgevuld, niet ingevuld
+    expect(fetchSpy).not.toHaveBeenCalled();
+    invoer.value = "Jan Jansen";
+    c.querySelector("[data-naam-ok]").click();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Jan Jansen" });
     delete g.modulesFetch;
   });
@@ -235,7 +241,6 @@ describe("f33 — bedienen", () => {
     const ctx = ctxMet();
     window.localStorage.removeItem("agentic-team-dashboard:naam:at_test#seat1");
     g.modulesFetch = vi.fn(async () => ({ status: 200, body: { voorstel: "Janine Bakker", gezet: true } }));
-    const prompt = vi.spyOn(window, "prompt");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true, status: 200, json: async () => ({ entry: {} }),
     });
@@ -244,7 +249,7 @@ describe("f33 — bedienen", () => {
     await new Promise(r => setTimeout(r, 0));
     await new Promise(r => setTimeout(r, 0));
 
-    expect(prompt).not.toHaveBeenCalled();
+    expect(c.querySelector("[data-naam-invoer]")).toBeNull();
     expect(JSON.parse(fetchSpy.mock.calls[0][1].body).data).toEqual({ Eigenaar: "Janine Bakker" });
     delete g.modulesFetch;
   });

@@ -309,6 +309,7 @@ function dataDetailHtml(ctx, key, rij) {
       <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
     </div>
     ${bedienHtml(ctx, key, domein, rij)}
+    <p class="bewerk-fout" data-snel-fout></p>
     ${regels}
     ${langeRegels}
     ${leeg.length ? `<p class="footnote">Niet ingevuld: ${esc(leeg.join(", "))}.</p>` : ""}
@@ -316,7 +317,7 @@ function dataDetailHtml(ctx, key, rij) {
     <p class="detail-kop-terug"><strong>Wat hieraan hangt</strong></p>
     ${terugHtml}
     <div class="bewerk-knoppen">${knoppen}</div>
-    <p class="bewerk-fout" data-snel-fout role="alert"></p>
+    <div data-kaart-paneel></div>
   </div>`;
 }
 
@@ -339,7 +340,8 @@ function bedienHtml(ctx, key, domein, rij) {
 
   const huidig = statusVeld ? dataCelTekst(getField(rij, statusVeld.naam)) : "";
   const naam = mijnNaam(ctx.bron);
-  const agenten = (ctx.schema.agents || []).map(a => a.displayName || a.naam || a.slug).filter(Boolean);
+  // Zelfde lijst als waartegen de instantie valideert (b60).
+  const agenten = agentOpties(ctx.schema);
 
   return `<div class="bedien-balk">
     ${statusVeld ? `<label class="bedien-veld"><span>Status</span>
@@ -355,7 +357,8 @@ function bedienHtml(ctx, key, domein, rij) {
         ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
       </select></label>` : ""}
     ${naam ? `<span class="footnote">Je werkt als ${esc(naam)} · <button type="button" class="filter-wis" data-naam-wijzig>wijzig</button></span>` : ""}
-  </div>`;
+  </div>
+  <div data-naam-slot="bedien"></div>`;
 }
 
 /* ── f33 fase E: de notitiedraad ──────────────────────────────────────
@@ -413,7 +416,9 @@ function notitiedraadHtml(ctx, key, rij) {
     ? `<form class="notitie-nieuw" data-notitie-form>
         <input type="text" data-notitie-onderwerp placeholder="Onderwerp" maxlength="120">
         <textarea data-notitie-tekst rows="2" placeholder="Wat is er gebeurd of afgesproken?"></textarea>
-        <button type="submit" class="knop">Notitie toevoegen</button>
+        <div data-naam-slot="notitie"></div>
+        <p class="bewerk-fout" data-notitie-fout></p>
+        <button type="submit" class="knop" data-notitie-knop>Notitie toevoegen</button>
       </form>`
     : uitleg;
 
@@ -759,7 +764,7 @@ function renderDataDomein(el, key, ctx) {
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
   // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
   const bewerk = magDomeinBewerken(ctx, key);
-  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuwe rij</button>` : "";
+  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuw</button>` : "";
   const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     // De oude tekst hedgede ("leeg, óf het woont ergens anders") terwijl het
@@ -1003,21 +1008,64 @@ function renderDataDomein(el, key, ctx) {
   });
 
   /* f33 fase F — bedienen. Elke schrijfactie loopt via PATCH (of, voor een
-   * notitie, POST) en daarna een herlaadde bundel: het dashboard verzint nooit
-   * zelf hoe de rij er na afloop uitziet, want de instantie kan er meer mee
-   * gedaan hebben (relatietitels verversen, velden normaliseren). */
-  function foutmelder() { return el.querySelector("[data-snel-fout]"); }
+   * notitie, POST). i81: het antwoord van de instantie vervangt daarna de rij
+   * ter plekke (verwerkAntwoord) — geen herlaad, geen sprong naar boven. Het
+   * dashboard verzint nog steeds niet zelf hoe de rij er na afloop uitziet: het
+   * neemt over wat de instantie terugstuurt.
+   *
+   * `bediening` is het element dat de actie startte. Dat staat uit zolang de
+   * actie loopt, zodat een tweede klik geen tweede schrijfactie wordt. Mislukt
+   * het, dan tekent de kaart opnieuw vanuit de rijen — de kiezer staat dan weer
+   * op wat er écht is opgeslagen — en de fout staat ernaast, met de knop om het
+   * nog eens te proberen. */
+  function foutmelder(o) { return el.querySelector((o && o.foutPlek) || "[data-snel-fout]"); }
 
-  async function pasToe(actie) {
-    const fout = foutmelder();
+  async function pasToe(actie, opties) {
+    const o = opties || {};
+    const fout = foutmelder(o);
     if (fout) fout.textContent = "";
+    const kaart = el.querySelector("[data-detail-kaart]");
+    if (o.bediening) o.bediening.disabled = true;
+    if (kaart) kaart.setAttribute("aria-busy", "true");
     try {
-      await actie();
-      await (ctx.herlaad ? ctx.herlaad() : Promise.resolve());
+      const antwoord = await actie();
+      await verwerkAntwoord(ctx, o.domein || key, antwoord, { focus: o.focus });
+      if (o.melding) meld(o.melding, o.ongedaan ? { actie: o.ongedaan } : {});
+      return true;
     } catch (f) {
-      if (fout) fout.textContent = f.message || "Dat is niet gelukt.";
-      else window.alert(f.message || "Dat is niet gelukt.");
+      const tekst = (f && f.message) || "Dat is niet gelukt.";
+      if (o.bediening) o.bediening.disabled = false;
+      if (kaart) kaart.removeAttribute("aria-busy");
+      if (o.herstel !== false) {
+        herteken();
+        const terug = o.focus ? el.querySelector(o.focus) : null;
+        if (terug && terug.focus) terug.focus();
+      }
+      const plek = foutmelder(o);
+      if (plek) plek.textContent = tekst;
+      meld("Niet gelukt: " + tekst, { fout: true, actie: { label: "Opnieuw", doe: () => pasToe(actie, o) } });
+      return false;
     }
+  }
+
+  /* Eén veldwijziging op een rij, met "ongedaan maken" in de meldingsregel.
+   * Wat al zo stond, gaat niet nog eens naar de instantie: een kaart naar zijn
+   * eigen kolom slepen of een naam ongewijzigd bevestigen is geen wijziging,
+   * en hoort ook geen melding op te leveren. */
+  function wijzigRij(rij, patch, bediening) {
+    const leeg = (v) => (v === undefined || v === "" ? null : v);
+    if ("Status" in patch && leeg(rij.Status) === leeg(patch.Status)) return Promise.resolve(false);
+    for (const k of Object.keys(patch)) {
+      if (JSON.stringify(leeg(rij[k])) === JSON.stringify(leeg(patch[k]))) delete patch[k];
+    }
+    if (!Object.keys(patch).length) return Promise.resolve(false);
+    const vorige = vorigeWaarden(rij, patch);
+    return pasToe(() => snelWijzig(ctx, key, rij.__entryId, patch), {
+      bediening,
+      focus: bediening ? focusSelector(bediening) : null,
+      melding: wijzigingTekst(patch),
+      ongedaan: ongedaanPatch(ctx, key, rij.__entryId, vorige),
+    });
   }
 
   function huidigeRij() {
@@ -1025,50 +1073,81 @@ function renderDataDomein(el, key, ctx) {
     return rows.find(r => r.__entryId === dataDetail.entryId) || null;
   }
 
-  /* i77: de prompt komt voorgevuld met wat de site over deze seat weet, en
-   * blijft een prompt — stil invullen zou een persoonsgegeven in de werkdata
-   * van de klant zetten zonder dat iemand het zag. Async omdat het voorstel van
-   * de site komt; zonder antwoord gedraagt hij zich precies als voorheen. */
-  async function vraagNaam() {
-    const { voorstel } = await haalNaamvoorstel(ctx.bron);
-    const ingevuld = window.prompt("Onder welke naam werk je? Die komt in Eigenaar en Afgerond door te staan.", voorstel || "");
-    if (ingevuld === null) return voorstel || "";
-    return zetMijnNaam(ctx.bron, ingevuld);
+  /* i77 + i81: de naamvraag staat in de pagina, niet in window.prompt. Hij komt
+   * voorgevuld met wat de site over deze seat weet en blijft een vraag — stil
+   * invullen zou een persoonsgegeven in de werkdata van de klant zetten zonder
+   * dat iemand het zag. Geeft de gekozen naam, of null als je afziet. */
+  function vraagNaam(plek, { overslaan = false } = {}) {
+    return haalNaamvoorstel(ctx.bron).then(({ voorstel }) => new Promise((klaar) => {
+      const slot = el.querySelector(`[data-naam-slot="${plek}"]`);
+      if (!slot) { klaar(null); return; }
+      slot.innerHTML = `<div class="naam-vraag" role="group" aria-label="Je naam">
+        <label class="bedien-veld"><span>Onder welke naam werk je?</span>
+          <input type="text" data-naam-invoer maxlength="80" autocomplete="name" value="${esc(voorstel || "")}"></label>
+        <button type="button" class="knop" data-naam-ok>Opslaan</button>
+        <button type="button" class="knop knop-secundair" data-naam-niet>${overslaan ? "Zonder naam" : "Annuleren"}</button>
+        <p class="footnote">Je collega's zien deze naam bij wat je aan jezelf toewijst en bij je notities. Je kiest hem één keer; wijzigen kan altijd.</p>
+      </div>`;
+      const invoer = slot.querySelector("[data-naam-invoer]");
+      const klaarMet = (naam) => { slot.innerHTML = ""; klaar(naam); };
+      const bevestig = () => {
+        const naam = zetMijnNaam(ctx.bron, invoer.value);
+        if (naam) klaarMet(naam); else invoer.focus();
+      };
+      slot.querySelector("[data-naam-ok]").addEventListener("click", bevestig);
+      slot.querySelector("[data-naam-niet]").addEventListener("click", () => klaarMet(null));
+      invoer.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); bevestig(); }
+        if (e.key === "Escape") { e.preventDefault(); klaarMet(null); }
+      });
+      invoer.focus();
+      if (invoer.select) invoer.select();
+    }));
   }
 
   /* Alleen een GEKOZEN naam mag zonder vragen de werkdata in — dat is wat
    * `gezet` betekent. Een afleiding uit je adres (het deel vóór de @) vult de
-   * prompt voor maar vervangt hem niet: stil invullen zou een persoonsgegeven
-   * in de werkdata van de klant zetten zonder dat iemand het zag. */
-  function naamVoorSchrijfactie() {
-    return haalNaamvoorstel(ctx.bron).then((r) => (r.gezet ? r.voorstel : vraagNaam()));
+   * vraag voor maar vervangt hem niet. */
+  function naamVoorSchrijfactie(plek, opties) {
+    return haalNaamvoorstel(ctx.bron).then((r) => (r.gezet ? r.voorstel : vraagNaam(plek, opties)));
   }
 
   function bedienKlik(e) {
     const rij = huidigeRij();
     const mij = e.target.closest && e.target.closest("[data-snel-mij]");
     if (mij && rij) {
-      naamVoorSchrijfactie().then((naam) => {
-        if (naam) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: naam })).then(herteken);
+      naamVoorSchrijfactie("bedien").then((naam) => {
+        if (!naam) { mij.focus(); return; }
+        const actueel = huidigeRij() || rij;
+        wijzigRij(actueel, { Eigenaar: naam }, mij);
       });
       return true;
     }
     const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
-    if (wijzig) { vraagNaam().then(herteken); return true; }
+    if (wijzig) {
+      vraagNaam("bedien").then((naam) => {
+        if (!naam) { wijzig.focus(); return; }
+        herteken();
+        meld(`Je werkt nu als ${naam}.`);
+      });
+      return true;
+    }
     return false;
   }
 
   /* i71: één plek waar een statuswissel gebeurt, of hij nu uit de kiezer op
    * de kaart komt of uit een sleepbeweging. */
-  function verplaatsNaar(entryId, status) {
+  function verplaatsNaar(entryId, status, bediening) {
     if (!entryId || !status) return;
-    pasToe(() => snelWijzig(ctx, key, entryId, statusPatch(domein, status))).then(herteken);
+    const rij = rows.find(r => r.__entryId === entryId);
+    if (!rij) return;
+    wijzigRij(rij, statusPatch(domein, status), bediening);
   }
 
   el.addEventListener("change", (e) => {
     // Op het bord staat er geen rij open: de kaart draagt zijn eigen id.
     const bord = e.target.closest && e.target.closest("[data-bord-status]");
-    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value); return; }
+    if (bord) { verplaatsNaar(bord.getAttribute("data-bord-status"), bord.value, bord); return; }
 
     const rij = huidigeRij();
     if (!rij) return;
@@ -1076,13 +1155,13 @@ function renderDataDomein(el, key, ctx) {
     if (status) {
       const gekozen = status.value;
       if (!gekozen) return;
-      pasToe(() => snelWijzig(ctx, key, rij.__entryId, statusPatch(domein, gekozen)));
+      wijzigRij(rij, statusPatch(domein, gekozen), status);
       return;
     }
     const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
-    if (eigenaar) { pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Eigenaar: eigenaar.value.trim() || null })); return; }
+    if (eigenaar) { wijzigRij(rij, { Eigenaar: eigenaar.value.trim() || null }, eigenaar); return; }
     const agent = e.target.closest && e.target.closest("[data-snel-agent]");
-    if (agent) pasToe(() => snelWijzig(ctx, key, rij.__entryId, { Agent: agent.value || null }));
+    if (agent) wijzigRij(rij, { Agent: agent.value || null }, agent);
   });
 
   /* Slepen tussen kolommen. Bewust bovenop de kiezer op de kaart en niet
@@ -1139,7 +1218,8 @@ function renderDataDomein(el, key, ctx) {
     const tekst = form.querySelector("[data-notitie-tekst]").value.trim();
     if (!onderwerp && !tekst) return;
     const info = notitieVeldVan(ctx);
-    naamVoorSchrijfactie().then((naam) => {
+    const knop = form.querySelector("[data-notitie-knop]");
+    naamVoorSchrijfactie("notitie", { overslaan: true }).then((naam) => {
       const data = {
         Onderwerp: onderwerp || tekst.slice(0, 60),
         Datum: new Date().toISOString().slice(0, 10),
@@ -1148,7 +1228,11 @@ function renderDataDomein(el, key, ctx) {
       };
       if (tekst) data.Notitie = tekst;
       if (naam) data.Auteur = naam;
-      pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }));
+      // Mislukt het, dan blijft je tekst staan: niet opnieuw tekenen.
+      pasToe(() => schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: "notities", data }), {
+        domein: "notities", bediening: knop, herstel: false, melding: "Notitie toegevoegd.", foutPlek: "[data-notitie-fout]",
+        focus: "[data-notitie-onderwerp]",
+      });
     });
   });
 

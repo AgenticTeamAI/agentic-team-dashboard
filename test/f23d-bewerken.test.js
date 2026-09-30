@@ -192,23 +192,46 @@ describe("het formulier", () => {
 });
 
 describe("verwijderen", () => {
-  it("vraagt bevestiging; annuleren doet niets, bevestigen stuurt DELETE", async () => {
+  it("vraagt bevestiging in de pagina; nee doet niets, ja stuurt DELETE", async () => {
     const ctx = ctxMet();
     const fetchMock = vi.spyOn(g, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    const confirmMock = vi.spyOn(window, "confirm").mockReturnValue(false);
+    // i81: geen window.confirm meer — die blokkeert en verschijnt niet in elke in-app browser.
+    const confirmMock = vi.spyOn(window, "confirm");
     const c = el();
     g.renderDataDomein(c, "interacties", ctx);
 
     c.querySelector('[data-verwijder-rij="e1"]').click();
+    const vraag = c.querySelector("[data-verwijder-bevestiging]");
+    expect(vraag).not.toBeNull();
+    expect(vraag.textContent).toContain("Kennismaking");
+    // De veilige keuze heeft de focus.
+    expect(document.activeElement).toBe(vraag.querySelector("[data-bewerk-annuleer]"));
+    vraag.querySelector("[data-bewerk-annuleer]").click();
+    expect(c.querySelector("[data-verwijder-bevestiging]")).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
 
-    confirmMock.mockReturnValue(true);
     c.querySelector('[data-verwijder-rij="e1"]').click();
+    c.querySelector("[data-verwijder-ja]").click();
     await vi.waitFor(() => expect(ctx.herlaad).toHaveBeenCalled());
     const [url, opties] = fetchMock.mock.calls[0];
     expect(url).toBe("https://connector.example/dashboard/entries/interacties/e1");
     expect(opties.method).toBe("DELETE");
+    expect(confirmMock).not.toHaveBeenCalled();
+  });
+
+  it("een mislukte DELETE laat de vraag staan, met de fout erbij", async () => {
+    const ctx = ctxMet();
+    vi.spyOn(g, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ fout: "Deze entry bestaat niet" }), { status: 404 }));
+    const c = el();
+    g.renderDataDomein(c, "interacties", ctx);
+    c.querySelector('[data-verwijder-rij="e1"]').click();
+    c.querySelector("[data-verwijder-ja]").click();
+    await vi.waitFor(() =>
+      expect(c.querySelector("[data-verwijder-bevestiging] [data-bewerk-fout]").textContent).toContain("bestaat niet"));
+    expect(c.querySelector("[data-verwijder-ja]").disabled).toBe(false);
+    expect(ctx.herlaad).not.toHaveBeenCalled();
   });
 });
 
