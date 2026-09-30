@@ -259,7 +259,14 @@ function renderAll() {
   // ── Tab 1 · Vandaag ──
   renderStatusregel(document.getElementById("statusregel"), ctx);
   renderPrivacyBlok(document.getElementById("privacy-blok"));
-  renderAandachtTop5(document.getElementById("panel-aandacht-body"), ctx.z1);
+  // f46: de werkbak Voor jou. Staat hij er, dan zit "je team zette N ding(en)
+  // voor je klaar" er al volledig in — die melding hoort dan niet nóg eens in
+  // het aandachtspaneel. De rest van de meldingen blijft staan.
+  renderVoorJou(document.getElementById("panel-voor-jou"), ctx);
+  const voorJouActief = voorJouAantal(ctx) !== null;
+  const aandacht = voorJouActief ? (ctx.z1 || []).filter(it => it.type !== TEAM_OOGST_TYPE) : ctx.z1;
+  document.getElementById("panel-aandacht").style.display = voorJouActief && !aandacht.length ? "none" : "";
+  renderAandachtTop5(document.getElementById("panel-aandacht-body"), aandacht);
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
@@ -476,6 +483,15 @@ function wireNavigatie() {
         filterEl.getAttribute("data-filter-label") || "",
         (filterEl.getAttribute("data-filter-ids") || "").split(","),
       );
+      return;
+    }
+    // f46/f47: "Inloggen en afhandelen" op het blad en in Voor jou. Eén plek,
+    // zodat een knop die op twee plekken staat nooit twee keer inlogt.
+    if (e.target.closest("[data-login]")) {
+      startOauthLogin().catch((err) => {
+        console.error(err);
+        meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
+      });
       return;
     }
     // f47: "Bewerken in Gegevens" vanaf het blad — de detailkaart staat dan open.

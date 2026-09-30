@@ -39,6 +39,7 @@ JS_MODULES_IN_ORDER = [
     "databrowser.js",
     "data-bewerken.js",
     "item-blad.js",
+    "voor-jou-scherm.js",
     "modules-beheer.js",
     "team-beheer.js",
     "app.js",
