@@ -45,7 +45,10 @@ def git_commit(repo_path):
 # van een kaart in een tekstveld) wordt zo pas publiek na een bewuste keuze
 # hier, in plaats van stil mee te lopen. Zelfde set als VELDSLEUTELS in
 # agent-architecture/installer/validate_registry.py, min 'kolommen'.
-PUBLIEKE_VELDSLEUTELS = ("naam", "type", "opties", "opties_dynamisch", "format", "naar", "meervoud", "crossModuleBedoeld")
+# i85: 'opties_meta' (per selectoptie een 'rol' en/of 'klantlabel', registry
+# 1.92.0) is wél publiek: het zijn klantteksten en de statusindeling die het
+# dashboard zelf toont — geen playbookinhoud.
+PUBLIEKE_VELDSLEUTELS = ("naam", "type", "opties", "opties_meta", "opties_dynamisch", "format", "naar", "meervoud", "crossModuleBedoeld")
 
 
 def publiek_veld(veld):
