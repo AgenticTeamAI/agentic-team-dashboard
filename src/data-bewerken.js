@@ -178,6 +178,66 @@ function statusPatch(domein, status) {
   return patch;
 }
 
+/* ── b61: wie pakt het op? ─────────────────────────────────────────────
+ *
+ * Het werkmoment routeert op Eigenaar: een actie met Status Open en een
+ * specialist als Eigenaar wordt opgepakt (werkronde.md stap 1; de naam gaat
+ * via de agentlijst naar een slug). De oude agentkiezer zette alleen het veld
+ * Agent. Een actie "aan de Researcher" bleef dus op naam van een mens staan en
+ * werd nooit opgepakt.
+ *
+ * Eén keuze, twee soorten:
+ * - een specialist zet Eigenaar én Agent, allebei op de weergavenaam (de
+ *   instantie valideert Agent tegen displayName ?? naam). Staat de actie op
+ *   een status die het werkmoment niet oppakt, dan gaat hij terug naar Open —
+ *   "Wacht op review" op naam van een agent is volgens het statuscontract zelfs
+ *   een fout-toestand. Een Voorstel blijft een voorstel: dat wacht op een mens,
+ *   ook als een specialist het straks uitvoert;
+ * - een mens zet alleen Eigenaar. Agent blijft staan: dat is de specialist die
+ *   het voorwerk deed, en "gebruik per agent" en de agentpagina tellen daarop.
+ *   Leegmaken zou dat spoor stil wissen. */
+function specialistVan(ctx, waarde) {
+  if (!waarde) return null;
+  const lookup = (ctx && ctx.agentLookup) || buildAgentLookup();
+  const slug = matchAgentValue(String(waarde), lookup);
+  if (!slug) return null;
+  const agent = (((ctx && ctx.schema) || getSchema()).agents || []).find(a => a.slug === slug);
+  return agent ? (agent.displayName || agent.naam || null) : null;
+}
+
+const STATUS_NIET_OPGEPAKT = ["Wacht op review", "Klaar"];
+
+function toewijsPatch(domein, rij, keuze) {
+  const velden = ((domein && domein.velden) || []).map(v => v.naam);
+  if (!keuze || keuze.soort === "niemand") return { Eigenaar: null };
+  const patch = { Eigenaar: keuze.naam };
+  if (keuze.soort !== "specialist") return patch;
+  if (velden.indexOf("Agent") !== -1) patch.Agent = keuze.naam;
+  const status = rij ? rij.Status : undefined;
+  const wachtZonderDatum = status === "Wacht" && !(rij && rij["Wachten tot"]);
+  if (velden.indexOf("Status") !== -1 && (STATUS_NIET_OPGEPAKT.indexOf(status) !== -1 || wachtZonderDatum)) {
+    patch.Status = "Open";
+  }
+  return patch;
+}
+
+/* Wat gebeurt er nu? De melding zegt het gevolg, niet alleen het veld. */
+function toewijsTekst(rij, patch, keuze, ikNaam) {
+  if (!keuze || keuze.soort === "niemand") return "Staat nu zonder eigenaar.";
+  if (keuze.soort !== "specialist") {
+    return keuze.naam === ikNaam ? "Staat nu op jouw naam." : `${keuze.naam} is nu eigenaar.`;
+  }
+  const status = patch.Status || (rij && rij.Status);
+  if (status === "Voorstel") return `${keuze.naam} is eigenaar. Het blijft een voorstel tot iemand het goedkeurt.`;
+  if (status === "Wacht" && rij && rij["Wachten tot"]) {
+    return `${keuze.naam} pakt dit op vanaf ${String(rij["Wachten tot"]).slice(0, 10)}.`;
+  }
+  if (status === "Open") {
+    return `${keuze.naam} pakt dit op bij het volgende werkmoment.${patch.Status ? " Status staat weer op Open." : ""}`;
+  }
+  return `${keuze.naam} is nu eigenaar.`;
+}
+
 function bronKanSchrijven(bron) {
   return !!(bron && bron.oauth && tokenScopes(bron.token).indexOf("dashboard:schrijf") !== -1);
 }
@@ -667,5 +727,6 @@ if (typeof module !== "undefined") {
     mijnNaam, zetMijnNaam, snelWijzig, statusPatch, tokenSeat,
     agentOpties, veldOpties, wijzigingenVan, formulierPatch, vorigeWaarden, verwerkAntwoord,
     meld, ongedaanPatch, wijzigingTekst, cssWaarde, focusSelector,
+    specialistVan, toewijsPatch, toewijsTekst,
   };
 }
