@@ -145,15 +145,22 @@ function teamTabelHtml(beheer) {
     </div>`;
 }
 
+/* Dashboard v2 (besluit 30-09): uitnodigen vraagt ook de naam. Die wordt de
+ * naam van je collega in de werkdata (Eigenaar) en in "Voor jou", op elk
+ * apparaat en hoe hij ook inlogt — één bron, gekozen door een mens. */
 function teamUitnodigHtml() {
   return `<form class="team-uitnodigen" data-team-uitnodigen novalidate>
-      <label for="team-uitnodig-adres">Iemand uitnodigen</label>
+      <p class="team-uitnodigen-kop"><strong>Iemand uitnodigen</strong></p>
       <div class="team-uitnodigen-rij">
-        <input id="team-uitnodig-adres" type="email" autocomplete="off" maxlength="254"
-          placeholder="naam@bedrijf.nl" data-team-uitnodig-adres>
+        <label class="bedien-veld"><span>Naam</span>
+          <input id="team-uitnodig-naam" type="text" autocomplete="off" maxlength="80"
+            placeholder="Voornaam Achternaam" data-team-uitnodig-naam></label>
+        <label class="bedien-veld"><span>E-mailadres</span>
+          <input id="team-uitnodig-adres" type="email" autocomplete="off" maxlength="254"
+            placeholder="naam@bedrijf.nl" data-team-uitnodig-adres></label>
         <button type="submit">Uitnodigen</button>
       </div>
-      <p class="footnote">Diegene krijgt een mail met uitleg en kan daarna inloggen met dit adres.</p>
+      <p class="footnote">Diegene krijgt een mail met uitleg en kan daarna inloggen met dit adres. De naam zie je terug bij wat je collega oppakt.</p>
     </form>`;
 }
 
@@ -206,9 +213,16 @@ function teamFoutTekst(uit, standaard) {
 }
 
 async function nodigTeamlidUit(sectieEl, form) {
+  const naamVeld = form.querySelector("[data-team-uitnodig-naam]");
   const veld = form.querySelector("[data-team-uitnodig-adres]");
   const knop = form.querySelector('button[type="submit"]');
+  const naam = naamVeld ? (naamVeld.value || "").trim() : "";
   const adres = (veld.value || "").trim();
+  if (naamVeld && !naam) {
+    teamFout(sectieEl, "Vul eerst de naam in waaronder je collega werkt.");
+    naamVeld.focus();
+    return;
+  }
   if (!adres) {
     teamFout(sectieEl, "Vul eerst een e-mailadres in.");
     veld.focus();
@@ -221,9 +235,11 @@ async function nodigTeamlidUit(sectieEl, form) {
   }
   teamMeld(sectieEl, "Uitnodigen…");
   veld.disabled = true;
+  if (naamVeld) naamVeld.disabled = true;
   if (knop) knop.disabled = true;
+  const wie = naam ? `${naam} (${adres})` : adres;
   try {
-    const uit = await modulesFetch("/api/dashboard/team/uitnodigen", { adres }, token);
+    const uit = await modulesFetch("/api/dashboard/team/uitnodigen", { adres, naam }, token);
     if (uit && uit.status === 200 && uit.body && Array.isArray(uit.body.team)) {
       // Intussen naar een daglink gewisseld? Dan hoort het paneel niet terug.
       if (!teamSessieToken()) {
@@ -233,11 +249,12 @@ async function nodigTeamlidUit(sectieEl, form) {
       teamLijst = uit.body.team;
       const u = uit.body.uitgenodigd || {};
       let tekst;
-      if (!u.nieuw) tekst = `${adres} stond al op de lijst — er is geen nieuwe mail verstuurd.`;
-      else if (u.mailVerstuurd) tekst = `Uitnodiging verstuurd naar ${adres}.`;
-      else tekst = `${adres} staat op de lijst, maar de uitnodigingsmail kwam niet weg. Laat het diegene zelf even weten.`;
+      if (!u.nieuw) tekst = `${wie} stond al op de lijst — er is geen nieuwe mail verstuurd.`;
+      else if (u.mailVerstuurd) tekst = `Uitnodiging verstuurd naar ${wie}.`;
+      else tekst = `${wie} staat op de lijst, maar de uitnodigingsmail kwam niet weg. Laat het diegene zelf even weten.`;
       const letOp = typeof uit.body.letOp === "string" ? uit.body.letOp : "";
       veld.value = "";
+      if (naamVeld) naamVeld.value = "";
       renderTeamPanel(sectieEl);
       teamMeld(sectieEl, tekst, letOp);
     } else if (uit && uit.status === 404 && !(uit.body && typeof uit.body.fout === "string")) {
@@ -252,11 +269,13 @@ async function nodigTeamlidUit(sectieEl, form) {
     teamFout(sectieEl, "Uitnodigen lukte niet — geen verbinding.");
   } finally {
     veld.disabled = false;
+    if (naamVeld) naamVeld.disabled = false;
     if (knop) knop.disabled = false;
     // Een uitgeschakeld veld verliest in de browser zijn focus, die dan op
-    // <body> belandt. Terug naar het veld: bij een fout wil je het adres
-    // verbeteren, na succes meteen de volgende uitnodigen.
-    if (veld.isConnected && sectieEl.style.display !== "none") veld.focus();
+    // <body> belandt. Terug naar het formulier: bij een fout wil je verbeteren,
+    // na succes meteen de volgende uitnodigen (dan begint het bij de naam).
+    const terug = naamVeld && !naamVeld.value ? naamVeld : veld;
+    if (terug.isConnected && sectieEl.style.display !== "none") terug.focus();
   }
 }
 

@@ -73,6 +73,10 @@ async function paneelMet(team) {
   await g.laadTeam({ oauth: true, token: "jwt" });
   g.renderTeamPanel(el);
   g.modulesFetch = vi.fn();
+  // Dashboard v2 (besluit 30-09): uitnodigen vraagt ook een naam. De meeste
+  // tests hieronder gaan over het adres; die krijgen alvast een naam.
+  const naam = el.querySelector("[data-team-uitnodig-naam]");
+  if (naam) naam.value = "Piet Jansen";
   return el;
 }
 
@@ -87,7 +91,12 @@ describe("het beheerpaneel", () => {
     expect(form).toBeTruthy();
     const veld = form.querySelector("[data-team-uitnodig-adres]");
     expect(veld.type).toBe("email");
-    expect(form.querySelector(`label[for="${veld.id}"]`).textContent).toContain("uitnodigen");
+    expect(veld.closest("label").textContent).toContain("E-mailadres");
+    // Eerst de naam: die wordt de naam van je collega in de werkdata.
+    const naam = form.querySelector("[data-team-uitnodig-naam]");
+    expect(naam.closest("label").textContent).toContain("Naam");
+    expect(naam.compareDocumentPosition(veld) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(form.textContent).toContain("Iemand uitnodigen");
     expect(form.querySelector('button[type="submit"]').textContent).toBe("Uitnodigen");
     // Formulier vóór de lijst.
     const body = el.querySelector("#panel-team-namen-body");
@@ -127,7 +136,7 @@ describe("het beheerpaneel", () => {
     expect(mobiel).toMatch(/\.team-tabel thead \{ display: none; \}/);
     expect(mobiel).toMatch(/\.team-tabel tr[^{]*\{[^}]*display: block/);
     // Naamvelden in dezelfde donkere stijl als het uitnodigveld.
-    expect(css).toMatch(/\.team-uitnodigen input\[type="email"\],\s*input\.team-naam \{/);
+    expect(css).toMatch(/\.team-uitnodigen input\[type="email"\],\s*\.team-uitnodigen input\[type="text"\],\s*input\.team-naam \{/);
   });
 
   it("verschijnt ook met een lege lijst — dan wil je juist iemand uitnodigen", async () => {
@@ -172,11 +181,11 @@ describe("uitnodigen", () => {
 
     expect(g.modulesFetch).toHaveBeenCalledTimes(1);
     expect(g.modulesFetch.mock.calls[0][0]).toBe("/api/dashboard/team/uitnodigen");
-    expect(g.modulesFetch.mock.calls[0][1]).toEqual({ adres: "piet@klant.nl" });
+    expect(g.modulesFetch.mock.calls[0][1]).toEqual({ adres: "piet@klant.nl", naam: "Piet Jansen" });
     // Het token van de ingelogde sessie gaat expliciet mee.
     expect(g.modulesFetch.mock.calls[0][2]).toBe("jwt");
     expect(el.querySelector('[data-team-seat="seat-c"]')).toBeTruthy();
-    expect(el.querySelector("[data-team-melding]").textContent).toBe("Uitnodiging verstuurd naar piet@klant.nl.");
+    expect(el.querySelector("[data-team-melding]").textContent).toBe("Uitnodiging verstuurd naar Piet Jansen (piet@klant.nl).");
     expect(el.querySelector("[data-team-fout]").textContent).toBe("");
     // Het formulier is hetzelfde element gebleven en het veld is leeg.
     expect(el.querySelector("[data-team-uitnodig-adres]")).toBe(veld);
@@ -238,7 +247,20 @@ describe("uitnodigen", () => {
     zoalsDeBrowserBijUitschakelen();
     tweede.los({ status: 200, body: { team: [...TEAM, PIET], uitgenodigd: { nieuw: true, mailVerstuurd: true } } });
     await tick();
-    expect(document.activeElement).toBe(veld);
+    // Na succes begint de volgende uitnodiging bij de naam.
+    expect(document.activeElement).toBe(el.querySelector("[data-team-uitnodig-naam]"));
+  });
+
+  it("vraagt eerst de naam, en stuurt zonder naam niets naar de site", async () => {
+    const el = await paneelMet(TEAM);
+    const naam = el.querySelector("[data-team-uitnodig-naam]");
+    naam.value = "  ";
+    el.querySelector("[data-team-uitnodig-adres]").value = "piet@klant.nl";
+    el.querySelector('[data-team-uitnodigen] button[type="submit"]').click();
+    await tick();
+    expect(g.modulesFetch).not.toHaveBeenCalled();
+    expect(el.querySelector("[data-team-fout]").textContent).toContain("naam");
+    expect(document.activeElement).toBe(naam);
   });
 
   it("zegt wat wél kan als de site de route nog niet kent (kale 404)", async () => {
