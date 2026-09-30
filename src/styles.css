@@ -1235,3 +1235,15 @@ a.opdracht-knop:focus-visible { outline: 2px solid var(--focus); outline-offset:
 [data-rp-slot] { flex-basis: 100%; }
 @media (max-width: 760px) { .rp-raster { grid-template-columns: 1fr; } }
 .rp-toevoeg .bewerk-fout:empty { display: none; }
+/* ── f48 · Verplaatsen tussen banen ──────────────────────────────────── */
+.baan-rij[draggable="true"] { cursor: grab; }
+.baan-rij.sleept { opacity: 0.45; }
+section[data-baan].sleep-over { outline: 2px dashed var(--team); outline-offset: 3px; background: var(--team-zacht); }
+.verplaats-knop { margin-left: auto; font-size: 0.78rem; color: var(--team-tekst); }
+.verplaats-paneel { margin-top: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.verplaats-paneel .footnote { margin: 0 0 6px; }
+.verplaats-keuzes { display: flex; flex-wrap: wrap; gap: 6px; }
+.verplaats-keuzes .knop-mini { min-height: 36px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); color: var(--team-tekst); }
+.verplaats-keuzes .knop-mini:hover, .verplaats-keuzes .knop-mini:focus-visible { transform: none; border-color: var(--team); background: var(--team-zacht); color: var(--ink); }
+[data-verplaats-slot]:empty { display: none; }
+.verplaats-keuzes select { font: inherit; font-size: 0.85rem; min-height: 36px; padding: 4px 8px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); max-width: 100%; }
