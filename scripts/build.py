@@ -44,6 +44,7 @@ JS_MODULES_IN_ORDER = [
     "vaste-taken.js",
     "hulp.js",
     "opdracht.js",
+    "rijpagina.js",
     "modules-beheer.js",
     "team-beheer.js",
     "app.js",

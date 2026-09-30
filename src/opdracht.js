@@ -107,6 +107,14 @@ function opdrachtKnopHtml(ctx, { tekst = "Geef je team een opdracht", voor = nul
  * zijn tekst niet kwijt. Alleen in het geheugen, geen opslag. */
 let opdrachtStaat = null;
 
+/* Een opdracht vooraf invullen en erheen gaan (f49: "Laat je team de gegevens
+ * aanvullen", "Opdracht voor je team" op een organisatiepagina). */
+function startOpdracht({ wat = "", uitleg = "", voor = null, hoortBij = "" } = {}, ctx) {
+  const agent = voor && ctx ? ctx.schema.agents.find(a => a.slug === voor) : null;
+  opdrachtStaat = { wat, uitleg, wie: agent ? { agent: agent.displayName } : {}, deadline: "", hoortBij, voorSlug: agent ? voor : null };
+  window.location.hash = agent ? `#/opdracht/${voor}` : "#/opdracht";
+}
+
 function renderOpdracht(el, ctx, doel) {
   const bewerk = magDomeinBewerken(ctx, "acties");
   const kop = `<p><a class="detail-link" href="#/acties">← Acties</a></p><h2 class="opdracht-titel" tabindex="-1">Geef je team een opdracht</h2>`;
@@ -233,5 +241,5 @@ function wireOpdracht(el, ctx, doel) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderOpdracht, opdrachtData, opdrachtDoel, opdrachtVerwachting, beschikbareSpecialisten, opdrachtCollegas, opdrachtKnopHtml };
+  module.exports = { renderOpdracht, opdrachtData, opdrachtDoel, opdrachtVerwachting, beschikbareSpecialisten, opdrachtCollegas, opdrachtKnopHtml, startOpdracht };
 }

@@ -514,6 +514,12 @@ function route() {
   document.getElementById(TAB_CONTAINERS[view.tab]).style.display = "";
   document.title = TAB_TITELS[view.tab] || TAB_TITELS.vandaag;
 
+  if (view.soort === "rij") {
+    renderRijPagina(versContainer("tab-data-body"), view.domein, view.id, ctx);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
+    if (!zelfde) { const t = document.querySelector("#tab-data-body .rp-titel"); if (t) t.focus({ preventScroll: true }); }
+    return;
+  }
   if (view.soort === "data") {
     renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
     blijfOfNaarBoven(zelfde, scrollY, focus);

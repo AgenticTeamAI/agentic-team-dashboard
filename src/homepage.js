@@ -739,6 +739,14 @@ function bepaalActieveView() {
     return { soort: "detail", key: m[1], tab: DETAIL_TAB[m[1]] || "vandaag" };
   }
 
+  // f49: één rij als pagina.
+  const rp = hash.match(/^#\/data\/([a-z0-9_]+)\/([^/?#]+)/);
+  if (rp) {
+    let id = rp[2];
+    try { id = decodeURIComponent(id); } catch (e) { /* laat hem zoals hij is */ }
+    return { soort: "rij", domein: rp[1], id, tab: "data" };
+  }
+
   const dom = hash.match(/^#\/data\/([a-z0-9_]+)/);
   if (dom) return { soort: "data", domein: dom[1], tab: "data" };
 

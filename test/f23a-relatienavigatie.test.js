@@ -54,11 +54,17 @@ function ctxMet(domains, kind = "rows") {
 describe("dataCelHtml — de verwijzingscel", () => {
   const veld = { naam: "Organisatie", type: "relatie", naar: "organisaties" };
 
-  it("{id, titel} wordt een link naar het doeldomein met de titel als zoekterm", () => {
+  it("{id, titel} wordt een link naar de pagina van die rij (f49)", () => {
     const html = g.dataCelHtml({ id: "abc", titel: "Acme B.V." }, veld);
+    expect(html).toContain('href="#/data/organisaties/abc"');
+    expect(html).not.toContain("data-relatie-zoek");
+    expect(html).toContain(">Acme B.V.</a>");
+  });
+
+  it("zonder id blijft het de sprong naar het domein met de titel als zoekterm", () => {
+    const html = g.dataCelHtml({ titel: "Acme B.V." }, veld);
     expect(html).toContain('href="#/data/organisaties"');
     expect(html).toContain('data-relatie-zoek="Acme B.V."');
-    expect(html).toContain(">Acme B.V.</a>");
   });
 
   it("meervoud rendert als losse links", () => {
@@ -102,16 +108,16 @@ describe("renderDataDomein — relatiekolommen en de sprong", () => {
     }));
     const koppen = [...c.querySelectorAll("th")].map(n => n.textContent);
     expect(koppen).toContain("Organisatie");
-    const link = c.querySelector('a.relatie-link[data-relatie-zoek="Acme B.V."]');
+    const link = c.querySelector('a.relatie-link[href="#/data/organisaties/o1"]');
     expect(link).not.toBeNull();
-    expect(link.getAttribute("href")).toBe("#/data/organisaties");
+    expect(link.getAttribute("href")).toMatch(/^#\/data\/organisaties(\/|$)/);
   });
 
-  it("klik op de verwijzing zet de zoekterm, zodat het doeldomein de rij toont", () => {
+  it("een verwijzing zonder id: klik zet de zoekterm, zodat het doeldomein de rij toont", () => {
     const c = el();
     g.resetDataZoek();
     g.renderDataDomein(c, "interacties", ctxMet({
-      interacties: { rows: [{ Onderwerp: "Kennismaking", Organisatie: { id: "o1", titel: "Acme B.V." } }] },
+      interacties: { rows: [{ Onderwerp: "Kennismaking", Organisatie: { titel: "Acme B.V." } }] },
     }));
     c.querySelector("a.relatie-link").dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
 

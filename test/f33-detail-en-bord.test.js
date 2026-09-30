@@ -86,7 +86,8 @@ describe("f33 — rij openklappen", () => {
     const kaart = c.querySelector("[data-detail-kaart]");
     expect(kaart.textContent).toContain("Wat hieraan hangt");
     expect(kaart.textContent).toContain("Offerte nabellen");
-    expect(kaart.querySelector('[data-open-rij="acties|act-1"]')).not.toBeNull();
+    // f49: een actie opent als blad, de rest als eigen pagina.
+    expect(kaart.querySelector('a[href="#/acties/act-1"]')).not.toBeNull();
   });
 
   it("zonder inkomende verwijzingen zegt de kaart dat expliciet", () => {
