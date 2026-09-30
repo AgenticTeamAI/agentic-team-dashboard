@@ -36,6 +36,7 @@ const MODULES = [
   "src/voor-jou-scherm.js",
   "src/acties-tab.js",
   "src/vaste-taken.js",
+  "src/catalogus.js",
   "src/hulp.js",
   "src/opdracht.js",
   "src/rijpagina.js",
