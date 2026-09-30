@@ -218,9 +218,10 @@ describe("i81 — snel bedienen: ter plekke, ongedaan maken, fouten in beeld", (
     return c;
   }
 
-  it("de Agent-kiezer op de kaart gebruikt dezelfde lijst als de instantie", () => {
+  it("de specialisten op de kaart zijn dezelfde lijst als waartegen de instantie valideert", () => {
     const c = openKaart(ctxMet());
-    const opties = [...c.querySelectorAll("[data-snel-agent] option")].map(o => o.value).filter(Boolean);
+    const opties = [...c.querySelectorAll('[data-snel-wie] optgroup[label="Je team"] option')]
+      .map(o => o.value.replace(/^specialist:/, ""));
     expect(opties).toEqual(g.agentOpties(g.AGENTIC_TEAM_SCHEMA));
   });
 

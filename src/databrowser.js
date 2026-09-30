@@ -343,22 +343,64 @@ function bedienHtml(ctx, key, domein, rij) {
   // Zelfde lijst als waartegen de instantie valideert (b60).
   const agenten = agentOpties(ctx.schema);
 
+  // b61: met een Eigenaar-veld is er één kiezer voor mensen én specialisten
+  // (zie toewijsPatch). Alleen een domein zónder Eigenaar houdt de losse
+  // agentkiezer.
+  const losseAgent = !eigenaarVeld && agentVeld && agenten.length
+    ? `<label class="bedien-veld"><span>Agent</span>
+      <select data-snel-agent><option value=""></option>
+        ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
+      </select></label>`
+    : "";
+
   return `<div class="bedien-balk">
     ${statusVeld ? `<label class="bedien-veld"><span>Status</span>
       <select data-snel-status>
         <option value=""></option>
         ${statusVeld.opties.map(o => `<option value="${esc(o)}"${o === huidig ? " selected" : ""}>${esc(o)}</option>`).join("")}
       </select></label>` : ""}
+    ${eigenaarVeld ? wieKiezerHtml(ctx, key, rij, naam, agentVeld ? agenten : []) : ""}
     ${eigenaarVeld ? `<button type="button" class="knop-mini bedien-knop" data-snel-mij title="Aan mijzelf toewijzen">🙋 Aan mij</button>` : ""}
-    ${eigenaarVeld ? `<label class="bedien-veld"><span>Eigenaar</span>
-      <input type="text" data-snel-eigenaar value="${esc(dataCelTekst(getField(rij, "Eigenaar")))}" placeholder="naam"></label>` : ""}
-    ${agentVeld && agenten.length ? `<label class="bedien-veld"><span>Agent</span>
-      <select data-snel-agent><option value=""></option>
-        ${agenten.map(a => `<option value="${esc(a)}"${a === dataCelTekst(getField(rij, "Agent")) ? " selected" : ""}>${esc(a)}</option>`).join("")}
-      </select></label>` : ""}
+    ${losseAgent}
     ${naam ? `<span class="footnote">Je werkt als ${esc(naam)} · <button type="button" class="filter-wis" data-naam-wijzig>wijzig</button></span>` : ""}
   </div>
+  <div class="naam-vraag" data-snel-anders hidden>
+    <label class="bedien-veld"><span>Wie pakt het op?</span>
+      <input type="text" data-snel-anders-naam maxlength="80" placeholder="naam"></label>
+    <button type="button" class="knop" data-snel-anders-ok>Toewijzen</button>
+    <button type="button" class="knop knop-secundair" data-snel-anders-niet>Annuleren</button>
+  </div>
   <div data-naam-slot="bedien"></div>`;
+}
+
+/* b61: "Wie pakt het op?" — mensen en specialisten in één lijst. De mensen
+ * zijn wie er nu al eigenaar is in dit domein (geen aparte ledenlijst: die is
+ * er alleen voor de beheerder), plus jij. Wat er nu staat, staat altijd in de
+ * lijst, ook als het nergens anders voorkomt. */
+function wieKiezerHtml(ctx, key, rij, ikNaam, agenten) {
+  const nu = dataCelTekst(getField(rij, "Eigenaar"));
+  const nuSpecialist = specialistVan(ctx, nu);
+  const mensen = new Set();
+  for (const r of dataRijenVan(ctx, key) || []) {
+    const e = dataCelTekst(getField(r, "Eigenaar")).trim();
+    if (e && !specialistVan(ctx, e)) mensen.add(e);
+  }
+  if (ikNaam) mensen.delete(ikNaam);
+  const gekozen = !nu ? "" : nuSpecialist ? "specialist:" + nuSpecialist : "mens:" + nu;
+  const optie = (waarde, label) =>
+    `<option value="${esc(waarde)}"${waarde === gekozen ? " selected" : ""}>${esc(label)}</option>`;
+  const mensOpties = (ikNaam ? optie("mens:" + ikNaam, `${ikNaam} (jij)`) : optie("ik:", "Ik"))
+    + Array.from(mensen).sort((a, b) => a.localeCompare(b, "nl")).slice(0, 25).map(m => optie("mens:" + m, m)).join("")
+    + optie("anders:", "Iemand anders…");
+  // Een specialist die niet (meer) in de registry staat, blijft zichtbaar.
+  const namen = nuSpecialist && agenten.indexOf(nuSpecialist) === -1 ? [nuSpecialist].concat(agenten) : agenten;
+  const teamOpties = namen.map(a => optie("specialist:" + a, a)).join("");
+  return `<label class="bedien-veld"><span>Wie pakt het op?</span>
+      <select data-snel-wie>
+        ${optie("", "Niemand")}
+        <optgroup label="Mensen">${mensOpties}</optgroup>
+        ${teamOpties ? `<optgroup label="Je team">${teamOpties}</optgroup>` : ""}
+      </select></label>`;
 }
 
 /* ── f33 fase E: de notitiedraad ──────────────────────────────────────
@@ -1052,7 +1094,7 @@ function renderDataDomein(el, key, ctx) {
    * Wat al zo stond, gaat niet nog eens naar de instantie: een kaart naar zijn
    * eigen kolom slepen of een naam ongewijzigd bevestigen is geen wijziging,
    * en hoort ook geen melding op te leveren. */
-  function wijzigRij(rij, patch, bediening) {
+  function wijzigRij(rij, patch, bediening, melding) {
     const leeg = (v) => (v === undefined || v === "" ? null : v);
     if ("Status" in patch && leeg(rij.Status) === leeg(patch.Status)) return Promise.resolve(false);
     for (const k of Object.keys(patch)) {
@@ -1063,9 +1105,36 @@ function renderDataDomein(el, key, ctx) {
     return pasToe(() => snelWijzig(ctx, key, rij.__entryId, patch), {
       bediening,
       focus: bediening ? focusSelector(bediening) : null,
-      melding: wijzigingTekst(patch),
+      melding: melding || wijzigingTekst(patch),
       ongedaan: ongedaanPatch(ctx, key, rij.__entryId, vorige),
     });
+  }
+
+  /* b61: toewijzen aan een mens of een specialist — altijd via toewijsPatch,
+   * zodat Eigenaar, Agent en (zo nodig) Status samen kloppen. */
+  function wijsToe(keuze, bediening) {
+    const rij = huidigeRij();
+    if (!rij) return Promise.resolve(false);
+    const patch = toewijsPatch(domein, rij, keuze);
+    return wijzigRij(rij, patch, bediening, toewijsTekst(rij, patch, keuze, mijnNaam(ctx.bron)));
+  }
+
+  function toonAnders(tonen) {
+    const vak = el.querySelector("[data-snel-anders]");
+    if (!vak) return;
+    vak.hidden = !tonen;
+    const invoer = vak.querySelector("[data-snel-anders-naam]");
+    if (tonen && invoer) { invoer.value = ""; invoer.focus(); }
+  }
+
+  function bevestigAnders() {
+    const invoer = el.querySelector("[data-snel-anders-naam]");
+    const naam = invoer ? invoer.value.trim().slice(0, 80) : "";
+    if (!naam) { if (invoer) invoer.focus(); return; }
+    const soort = specialistVan(ctx, naam) ? "specialist" : "mens";
+    toonAnders(false);
+    wijsToe({ soort, naam: soort === "specialist" ? specialistVan(ctx, naam) : naam },
+      el.querySelector("[data-snel-wie]"));
   }
 
   function huidigeRij() {
@@ -1118,9 +1187,16 @@ function renderDataDomein(el, key, ctx) {
     if (mij && rij) {
       naamVoorSchrijfactie("bedien").then((naam) => {
         if (!naam) { mij.focus(); return; }
-        const actueel = huidigeRij() || rij;
-        wijzigRij(actueel, { Eigenaar: naam }, mij);
+        wijsToe({ soort: "mens", naam }, mij);
       });
+      return true;
+    }
+    if (e.target.closest && e.target.closest("[data-snel-anders-ok]")) { bevestigAnders(); return true; }
+    if (e.target.closest && e.target.closest("[data-snel-anders-niet]")) {
+      toonAnders(false);
+      herteken(); // de kiezer weer op wat er echt staat
+      const wie = el.querySelector("[data-snel-wie]");
+      if (wie) wie.focus();
       return true;
     }
     const wijzig = e.target.closest && e.target.closest("[data-naam-wijzig]");
@@ -1158,8 +1234,24 @@ function renderDataDomein(el, key, ctx) {
       wijzigRij(rij, statusPatch(domein, gekozen), status);
       return;
     }
-    const eigenaar = e.target.closest && e.target.closest("[data-snel-eigenaar]");
-    if (eigenaar) { wijzigRij(rij, { Eigenaar: eigenaar.value.trim() || null }, eigenaar); return; }
+    const wie = e.target.closest && e.target.closest("[data-snel-wie]");
+    if (wie) {
+      const waarde = wie.value;
+      const scheiding = waarde.indexOf(":");
+      const soort = scheiding === -1 ? "" : waarde.slice(0, scheiding);
+      const naam = scheiding === -1 ? "" : waarde.slice(scheiding + 1);
+      if (!waarde) { wijsToe({ soort: "niemand" }, wie); return; }
+      if (soort === "anders") { toonAnders(true); return; }
+      if (soort === "ik") {
+        naamVoorSchrijfactie("bedien").then((mijn) => {
+          if (mijn) wijsToe({ soort: "mens", naam: mijn }, wie);
+          else { herteken(); const w = el.querySelector("[data-snel-wie]"); if (w) w.focus(); }
+        });
+        return;
+      }
+      wijsToe({ soort, naam }, wie);
+      return;
+    }
     const agent = e.target.closest && e.target.closest("[data-snel-agent]");
     if (agent) wijzigRij(rij, { Agent: agent.value || null }, agent);
   });
@@ -1237,6 +1329,19 @@ function renderDataDomein(el, key, ctx) {
   });
 
   // Een kaart is klikbaar, dus hij hoort ook met Enter/spatie te openen.
+  el.addEventListener("keydown", (e) => {
+    if (e.target.closest && e.target.closest("[data-snel-anders-naam]")) {
+      if (e.key === "Enter") { e.preventDefault(); bevestigAnders(); }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        toonAnders(false);
+        herteken();
+        const wie = el.querySelector("[data-snel-wie]");
+        if (wie) wie.focus();
+      }
+    }
+  });
+
   el.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
     const kaart = e.target.closest && e.target.closest(".bord-kaart[data-open-rij]");
