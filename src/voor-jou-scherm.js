@@ -1,0 +1,190 @@
+/* f46 deel 2 — de tab Voor jou.
+ *
+ * "De klanten moeten ervaren hoe het team ze helpt." Bovenaan staat daarom
+ * eerst wat je team deed (de verhaalkop), en dan wat er op jou wacht: een
+ * genummerde werkbak die je met één tik afhandelt. Wat er in de werkbak staat
+ * komt uit aanJouZet() (voor-jou.js) — dezelfde functie als de badge op de
+ * tab, zodat die twee nooit verschillend tellen. De knoppen zijn die van het
+ * item-blad (voerAfhandelingUit); wat een vraag nodig heeft (een opmerking, een
+ * dag) opent het blad.
+ *
+ * De verhaalkop gaat over "sinds gisteren", niet over "sinds je laatste
+ * bezoek": dat zou het onthouden tijdstip van je vorige bezoek hergebruiken,
+ * en dat is een eigen juridisch restpunt (i87).
+ *
+ * Nummers blijven staan tot je ververst: wie in de chat "nummer 3" hoort, moet
+ * op het scherm hetzelfde nummer 3 vinden, ook nadat je 1 en 2 afhandelde. */
+
+let vjNummering = { bundle: null, map: new Map(), volgende: 1 };
+
+function vjGenummerd(bundle, lijst) {
+  if (vjNummering.bundle !== bundle) vjNummering = { bundle, map: new Map(), volgende: 1 };
+  for (const r of lijst) {
+    if (r.__entryId && !vjNummering.map.has(r.__entryId)) vjNummering.map.set(r.__entryId, vjNummering.volgende++);
+  }
+  return lijst.slice().sort((a, b) => (vjNummering.map.get(a.__entryId) || 0) - (vjNummering.map.get(b.__entryId) || 0));
+}
+
+function _resetVoorJouNummers() { vjNummering = { bundle: null, map: new Map(), volgende: 1 }; }
+
+/* Wie ben ik, voor "per persoon"? Alleen een gekozen naam; op de daglink of
+ * zonder naam is dat onbekend, en dan verstopt aanJouZet niets. */
+function vjIk(ctx) {
+  return (ctx.bron && ctx.bron.oauth && mijnNaam(ctx.bron)) || undefined;
+}
+
+function voorJouLijst(ctx) {
+  if (!ctx || !ctx.bundle || ctx.bundle.kind !== "rows") return null;
+  return aanJouZet(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
+}
+
+function vjTelwoord(n, enkel, meer) { return `${n} ${n === 1 ? enkel : meer}`; }
+
+function vjVerhaal(ctx, lijst) {
+  const acties = rows(ctx.bundle, "acties") || [];
+  const namen = agentNamen(ctx.schema);
+  if (!namen) return null;
+  const nu = ctx.today || new Date();
+  const van = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
+  const sinds = (v) => { const d = parseDateField(v); return !!d && d >= van; };
+  const stempel = (r, k) => r.__stempels && r.__stempels[k];
+  const zelf = acties.filter(r => getField(r, "Status") === "Klaar"
+    && isAgentNaam(getField(r, "Afgerond door"), namen) && sinds(getField(r, "Afgerond op")));
+  const klaar = lijst.filter(r => isAgentNaam(getField(r, "Aangemaakt door"), namen) && sinds(stempel(r, "aangemaakt")));
+  const begon = acties.filter(r => getField(r, "Status") === "Bezig"
+    && isAgentNaam(getField(r, "Eigenaar"), namen) && sinds(stempel(r, "bijgewerkt")));
+  const wie = new Set();
+  for (const r of zelf) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Afgerond door")));
+  for (const r of klaar) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Aangemaakt door")));
+  for (const r of begon) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Eigenaar")));
+  wie.delete(null);
+
+  const delen = [];
+  if (zelf.length) delen.push(`rondde ${vjTelwoord(zelf.length, "ding", "dingen")} zelf af`);
+  if (klaar.length) delen.push(`zette er ${klaar.length} voor je klaar`);
+  if (begon.length) delen.push(`begon aan ${begon.length}`);
+  const zin = delen.length
+    ? "Sinds gisteren " + delen[0].replace(/^(\S+)/, "$1 je team")
+      + (delen.length > 1 ? (delen.length > 2 ? ", " + delen.slice(1, -1).join(", ") : "") + " en " + delen[delen.length - 1] : "") + "."
+    : "Sinds gisteren zette je team niets nieuws voor je klaar.";
+  return { zin, wie: Array.from(wie) };
+}
+
+function vjSindsTekst(rij, namen, nu) {
+  if (isTeLaat(rij, namen, nu)) {
+    const dl = parseDateField(getField(rij, "Deadline"));
+    const dagen = dl ? Math.max(1, Math.round((new Date(nu.getFullYear(), nu.getMonth(), nu.getDate()) - new Date(dl.getFullYear(), dl.getMonth(), dl.getDate())) / 86400000)) : 0;
+    return { tekst: dagen ? `${dagen} ${dagen === 1 ? "dag" : "dgn"} te laat` : "te laat", laat: true };
+  }
+  if (soortVan(rij, namen, nu) === "weer") return { tekst: "weer aan de beurt", laat: false };
+  const s = sindsVan(rij);
+  return { tekst: s ? "sinds " + vjDatumKort(s) : "", laat: false };
+}
+
+function vjVoorproef(rij) {
+  const tekst = dataCelTekst(getField(rij, "Toelichting")).replace(OPMERKING_KOP, "").replace(/\s+/g, " ").trim();
+  return tekst.length > 160 ? tekst.slice(0, 157) + "…" : tekst;
+}
+
+function vjKaartHtml(ctx, rij, nr, kanAfhandelen) {
+  const nu = ctx.today || new Date();
+  const namen = agentNamen(ctx.schema);
+  const k = afhandelKnoppen(rij, ctx.schema, nu);
+  const id = rij.__entryId;
+  const href = `#/acties/${encodeURIComponent(id)}`;
+  const titel = detailTitel(ctx.schema.datadomeinen.acties, rij);
+  const sinds = vjSindsTekst(rij, namen, nu);
+  const van = agentWeergaveNaam(ctx.schema, getField(rij, "Aangemaakt door"));
+  const voorproef = vjVoorproef(rij);
+  let hoofd = "";
+  if (kanAfhandelen && k.hoofd) {
+    hoofd = AFHANDEL_VRAAGT[k.hoofd.f]
+      ? `<a class="knop blad-knop blad-knop-${esc(k.hoofd.stijl)}" href="${href}">${esc(k.hoofd.label)}</a>`
+      : `<button type="button" class="knop blad-knop blad-knop-${esc(k.hoofd.stijl)}" data-vj-afhandel="${esc(k.hoofd.f)}">${esc(k.hoofd.label)}</button>`;
+  }
+  return `<li class="vj-kaart" data-vj-id="${esc(id)}">
+    <span class="vj-nr" aria-hidden="true">${nr}</span>
+    <div class="vj-inhoud">
+      <a class="vj-titel" href="${href}"><span class="visueel-verborgen">Nummer ${nr}: </span>${esc(titel)}</a>
+      <p class="vj-meta"><span class="soort-pil">${esc(SOORT_LABEL[k.soort] || "")}</span>
+        ${sinds.tekst ? `<span class="${sinds.laat ? "pil-laat" : "vj-sinds"}">${esc(sinds.tekst)}</span>` : ""}
+        ${van ? `<span class="vj-van">van ${esc(van)}</span>` : ""}</p>
+      ${voorproef ? `<p class="vj-voorproef">${esc(voorproef)}</p>` : ""}
+      <div class="vj-knoppen">${hoofd}<a class="knop blad-knop" href="${href}">Bekijk</a></div>
+      <div data-naam-slot="kaart"></div>
+      <p class="bewerk-fout" data-kaart-fout></p>
+    </div>
+  </li>`;
+}
+
+function vjOnderregelsHtml(ctx) {
+  const o = { ik: vjIk(ctx), nu: ctx.today || new Date() };
+  const team = bijTeam(ctx.bundle, ctx.schema, o);
+  const bezig = team.filter(r => getField(r, "Status") === "Bezig").length;
+  const collegas = bijCollegas(ctx.bundle, ctx.schema, o).length;
+  const regels = [];
+  if (team.length) {
+    const delen = [bezig ? `${bezig} bezig` : "", team.length - bezig ? `${team.length - bezig} bij het volgende werkmoment` : ""].filter(Boolean);
+    regels.push(`<a class="vj-onder" href="#/acties">◐ Bij je team: ${esc(delen.join(" · "))} →</a>`);
+  }
+  if (collegas) regels.push(`<a class="vj-onder" href="#/acties">Bij collega's: ${collegas} →</a>`);
+  return regels.length ? `<div class="vj-onderregels">${regels.join("")}</div>` : "";
+}
+
+function renderVoorJou(paneel, ctx) {
+  if (!paneel) return;
+  const body = paneel.querySelector("#panel-voor-jou-body") || paneel;
+  const lijst = voorJouLijst(ctx);
+  if (!lijst) { paneel.style.display = "none"; body.innerHTML = ""; return; }
+  paneel.style.display = "";
+  const genummerd = vjGenummerd(ctx.bundle, lijst);
+  const kanAfhandelen = magDomeinBewerken(ctx, "acties").ok;
+  const verhaal = vjVerhaal(ctx, lijst);
+  const nu = ctx.today || new Date();
+  const oudste = lijst.reduce((min, r) => { const s = sindsVan(r); return s && (!min || s < min) ? s : min; }, null);
+  const oudsteDagen = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
+  const inlogRegel = !kanAfhandelen && !(ctx.bron && ctx.bron.oauth) && typeof oauthMogelijk === "function" && oauthMogelijk()
+    ? `<p class="vj-inlog">Je kijkt mee met je daglink. <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen en afhandelen</button></p>` : "";
+
+  body.innerHTML = `
+    ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
+      ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
+    <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
+    ${inlogRegel}
+    ${lijst.length
+      ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
+      : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
+    ${vjOnderregelsHtml(ctx)}`;
+
+  // Eén handler per paneel, vervangen bij elke render (renderAll tekent dit
+  // paneel na elke schrijfactie opnieuw).
+  body.onclick = (e) => {
+    const knop = e.target.closest && e.target.closest("[data-vj-afhandel]");
+    if (!knop) return;
+    const kaart = knop.closest("[data-vj-id]");
+    const id = kaart.getAttribute("data-vj-id");
+    const rij = (dataRijenVan(ctx, "acties") || []).find(r => r.__entryId === id);
+    if (!rij) return;
+    // Na afloop de focus op de volgende kaart, zodat je met het toetsenbord
+    // gewoon doorwerkt; zonder volgende op de kop.
+    const volgende = kaart.nextElementSibling && kaart.nextElementSibling.getAttribute("data-vj-id");
+    voerAfhandelingUit(ctx, "acties", rij, knop.getAttribute("data-vj-afhandel"), {}, {
+      naamSlot: kaart.querySelector("[data-naam-slot]"),
+      foutEl: kaart.querySelector("[data-kaart-fout]"),
+      bezig: kaart,
+      knoppen: Array.from(kaart.querySelectorAll("button")),
+      focus: volgende ? `[data-vj-id="${cssWaarde(volgende)}"] .vj-titel` : ".vj-kop h2",
+    });
+  };
+}
+
+/* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
+function voorJouAantal(ctx) {
+  const lijst = voorJouLijst(ctx);
+  return lijst ? lijst.length : null;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { renderVoorJou, voorJouLijst, voorJouAantal, vjVerhaal, vjGenummerd, _resetVoorJouNummers };
+}

@@ -192,7 +192,7 @@ describe("werkruimte-route — rijen", () => {
     expect(d.w.location.hash).toBe("");
     expect(d.w.sessionStorage.getItem("agentic-team-dashboard:daglink")).toMatch(/testtoken/);
     expect([...d.$("tabbar").querySelectorAll("a.tab")].map((a) => a.querySelector(".tab-titel").textContent))
-      .toEqual(["Vandaag", "Team", "Data", "Prestaties"]);
+      .toEqual(["Voor jou", "Team", "Data", "Prestaties"]);
 
     // Vandaag: statusregel, privacybelofte, aandacht, feedstrook, opbrengst
     expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit/);

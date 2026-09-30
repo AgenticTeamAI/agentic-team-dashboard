@@ -178,54 +178,72 @@ function renderItemBlad(el, key, id, ctx) {
   wireItemBlad(el, key, rij, ctx);
 }
 
-function wireItemBlad(el, key, rij, ctx) {
-  const fout = (tekst) => { const f = el.querySelector("[data-blad-fout]"); if (f) f.textContent = tekst || ""; };
-  const knoppenUit = (uit) => { for (const b of el.querySelectorAll("[data-afhandel], [data-vraag-ok]")) b.disabled = uit; };
-
-  async function metNaam(f) {
-    if (AFHANDEL_MET_NAAM.indexOf(f) === -1) return mijnNaam(ctx.bron) || null;
-    return naamVoorSchrijfactieIn(el.querySelector('[data-naam-slot="blad"]'), ctx.bron,
-      { overslaan: f === "terug" || f === "ja" });
-  }
-
-  async function voerUit(f, invoer) {
-    const i = invoer || {};
-    fout("");
-    const ik = await metNaam(f);
-    if (AFHANDEL_MET_NAAM.indexOf(f) !== -1 && !ik && f !== "terug" && f !== "ja") return;
-    const c = { ik, schema: ctx.schema, nu: ctx.today || new Date(), tekst: i.tekst, datum: i.datum, specialist: i.specialist };
-    knoppenUit(true);
-    el.querySelector("[data-blad]").setAttribute("aria-busy", "true");
-    try {
-      if (f === "opvolgen") {
-        const plan = opvolgActie(rij, c);
-        const nieuw = await schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data: plan.data });
-        const nieuwId = nieuw && nieuw.entry && nieuw.entry.entryId;
-        const vorige = vorigeWaarden(rij, plan.ouder);
-        const antwoord = await snelWijzig(ctx, key, rij.__entryId, plan.ouder);
-        if (nieuwId && ctx.werkBij) ctx.werkBij(key, { entry: nieuw.entry });
-        await verwerkAntwoord(ctx, key, antwoord, { focus: ".blad-titel" });
-        meld(plan.melding, { actie: { label: "Ongedaan maken", doe: async () => {
-          if (nieuwId) { await schrijfWerkruimte(ctx.bron, "DELETE", "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(nieuwId)); if (ctx.werkBij) ctx.werkBij(key, { weg: nieuwId }); }
-          await verwerkAntwoord(ctx, key, await snelWijzig(ctx, key, rij.__entryId, vorige));
-          meld("Teruggezet.");
-        } } });
-        return;
-      }
-      const { patch, melding } = afhandelPatch(f, rij, c);
-      const vorige = vorigeWaarden(rij, patch);
-      const antwoord = await snelWijzig(ctx, key, rij.__entryId, patch);
-      await verwerkAntwoord(ctx, key, antwoord, { focus: ".blad-titel" });
-      meld(melding, { actie: ongedaanPatch(ctx, key, rij.__entryId, vorige) });
-    } catch (e) {
-      knoppenUit(false);
-      const blad = el.querySelector("[data-blad]");
-      if (blad) blad.removeAttribute("aria-busy");
-      const tekst = (e && e.message) || "Dat is niet gelukt.";
-      const plek = el.querySelector("[data-vraag-fout]") || el.querySelector("[data-blad-fout]");
-      if (plek) plek.textContent = tekst + " Probeer het opnieuw.";
-      meld("Niet gelukt: " + tekst, { fout: true });
+/* Eén afhandeling uitvoeren: naam vragen als dat moet, PATCH (of voor een
+ * opvolging POST + PATCH), de rij ter plekke bijwerken en de meldingsregel
+ * met ongedaan maken. Gedeeld door het blad en de kaarten in Voor jou (f46),
+ * zodat een knop overal precies hetzelfde doet.
+ *
+ * `plek` zegt waar het in de pagina gebeurt: {naamSlot, foutEl, bezig (het
+ * element dat aria-busy krijgt), knoppen (die uit gaan zolang het loopt),
+ * focus (selector voor na afloop)}. */
+async function voerAfhandelingUit(ctx, key, rij, f, invoer, plek) {
+  const i = invoer || {};
+  const p = plek || {};
+  const zetFout = (t) => { if (p.foutEl) p.foutEl.textContent = t || ""; };
+  zetFout("");
+  const metNaam = AFHANDEL_MET_NAAM.indexOf(f) !== -1;
+  const ik = metNaam
+    ? await naamVoorSchrijfactieIn(p.naamSlot, ctx.bron, { overslaan: f === "terug" || f === "ja" })
+    : (mijnNaam(ctx.bron) || null);
+  if (metNaam && !ik && f !== "terug" && f !== "ja") return false;
+  const c = { ik, schema: ctx.schema, nu: ctx.today || new Date(), tekst: i.tekst, datum: i.datum, specialist: i.specialist };
+  const knoppen = p.knoppen || [];
+  knoppen.forEach((b) => { b.disabled = true; });
+  if (p.bezig) p.bezig.setAttribute("aria-busy", "true");
+  try {
+    if (f === "opvolgen") {
+      const plan = opvolgActie(rij, c);
+      const nieuw = await schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data: plan.data });
+      const nieuwId = nieuw && nieuw.entry && nieuw.entry.entryId;
+      const vorige = vorigeWaarden(rij, plan.ouder);
+      const antwoord = await snelWijzig(ctx, key, rij.__entryId, plan.ouder);
+      if (nieuwId && ctx.werkBij) ctx.werkBij(key, { entry: nieuw.entry });
+      await verwerkAntwoord(ctx, key, antwoord, { focus: p.focus });
+      meld(plan.melding, { actie: { label: "Ongedaan maken", doe: async () => {
+        if (nieuwId) {
+          await schrijfWerkruimte(ctx.bron, "DELETE", "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(nieuwId));
+          if (ctx.werkBij) ctx.werkBij(key, { weg: nieuwId });
+        }
+        await verwerkAntwoord(ctx, key, await snelWijzig(ctx, key, rij.__entryId, vorige));
+        meld("Teruggezet.");
+      } } });
+      return true;
     }
+    const { patch, melding } = afhandelPatch(f, rij, c);
+    const vorige = vorigeWaarden(rij, patch);
+    const antwoord = await snelWijzig(ctx, key, rij.__entryId, patch);
+    await verwerkAntwoord(ctx, key, antwoord, { focus: p.focus });
+    meld(melding, { actie: ongedaanPatch(ctx, key, rij.__entryId, vorige) });
+    return true;
+  } catch (e) {
+    knoppen.forEach((b) => { b.disabled = false; });
+    if (p.bezig) p.bezig.removeAttribute("aria-busy");
+    const tekst = (e && e.message) || "Dat is niet gelukt.";
+    zetFout(tekst + " Probeer het opnieuw.");
+    meld("Niet gelukt: " + tekst, { fout: true });
+    return false;
+  }
+}
+
+function wireItemBlad(el, key, rij, ctx) {
+  function voerUit(f, invoer) {
+    return voerAfhandelingUit(ctx, key, rij, f, invoer, {
+      naamSlot: el.querySelector('[data-naam-slot="blad"]'),
+      foutEl: el.querySelector("[data-vraag-fout]") || el.querySelector("[data-blad-fout]"),
+      bezig: el.querySelector("[data-blad]"),
+      knoppen: Array.from(el.querySelectorAll("[data-afhandel], [data-vraag-ok]")),
+      focus: ".blad-titel",
+    });
   }
 
   function toonVraag(f) {
@@ -270,12 +288,9 @@ function wireItemBlad(el, key, rij, ctx) {
       meld((await kopieerTekst(werk)) ? "Gekopieerd." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.", {});
       return;
     }
-    if (e.target.closest && e.target.closest("[data-login]") && typeof startOauthLogin === "function") {
-      startOauthLogin().catch((f) => meld((f && f.message) || "Inloggen kon niet starten.", { fout: true }));
-    }
   });
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderItemBlad, itemBladHtml, itemVraagHtml, kopieerTekst, BEURT_TEKST };
+  module.exports = { renderItemBlad, itemBladHtml, itemVraagHtml, kopieerTekst, voerAfhandelingUit, BEURT_TEKST };
 }

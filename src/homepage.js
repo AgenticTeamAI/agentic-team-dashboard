@@ -15,7 +15,7 @@
  * of in data?"). De panelen op de tabs zelf zeggen het al; wat ontbrak was
  * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
-  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/", uitleg: "Wat vraagt nu je aandacht" },
+  { key: "vandaag", titel: "Voor jou", emoji: "📌", route: "#/", uitleg: "Wat je team deed en wat er op jou wacht" },
   { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
   { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
   { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
@@ -83,10 +83,14 @@ function renderTabbar(el, activeTab, ctx) {
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
-  el.innerHTML = zichtbareTabs(ctx).map(t =>
-    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
-      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
-    </a>`).join("");
+  // f46: de badge telt met dezelfde functie als de werkbak zelf.
+  const aantal = typeof voorJouAantal === "function" && ctx ? voorJouAantal(ctx) : null;
+  el.innerHTML = zichtbareTabs(ctx).map(t => {
+    const badge = t.key === "vandaag" && aantal ? `<span class="tab-badge" aria-label="${aantal} voor jou">${aantal}</span>` : "";
+    return `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
+      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>${badge}
+    </a>`;
+  }).join("");
 }
 
 // ── Vandaag · statusregel ─────────────────────────────────────────────

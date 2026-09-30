@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-1bBgUbzbeXi0I18pZgw/ljt9ilmxgeJtdbuTIBXtaZ4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-eFLfsHnHF+0e1rjoqBEjFtYLNxLikQg2IlfY66WO0D4='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -958,6 +958,33 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   .blad-velden dd { margin-bottom: 6px; }
 }
 
+/* ── f46 · Voor jou ──────────────────────────────────────────────────── */
+.tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4em; height: 1.4em; padding: 0 0.35em; margin-left: 0.35em; border-radius: 999px; background: var(--jij); color: var(--op-jij); font-size: 0.72rem; font-weight: 700; }
+.tabbar .tab.actief .tab-badge { background: var(--surface); color: var(--jij-tekst); }
+.vj-verhaal { border-left: 3px solid var(--team); padding: 2px 0 2px 12px; margin: 0 0 16px; }
+.vj-verhaal-zin { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.vj-verhaal .footnote { margin-top: 4px; }
+.vj-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
+.vj-kop h2 { margin: 0; font-size: 1.1rem; color: var(--ink); }
+.vj-kop h2:focus { outline: none; }
+.vj-teller { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; padding: 0 0.4em; border-radius: 999px; background: var(--jij-zacht); color: var(--jij-tekst); font-size: 0.85rem; }
+.vj-inlog { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; }
+.vj-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.vj-kaart { display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--jij); border-radius: 10px; padding: 12px 14px; }
+.vj-kaart[aria-busy="true"] { opacity: 0.7; }
+.vj-nr { flex: 0 0 auto; width: 1.8em; height: 1.8em; border-radius: 50%; background: var(--jij-zacht); color: var(--jij-tekst); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.vj-inhoud { flex: 1 1 auto; min-width: 0; }
+.vj-titel { font-weight: 600; color: var(--ink); text-decoration: none; font-size: 1rem; }
+.vj-titel:hover { text-decoration: underline; }
+.vj-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.8rem; color: var(--muted); }
+.vj-voorproef { margin: 4px 0 8px; color: var(--muted); font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.vj-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+.vj-knoppen .blad-knop { min-height: 40px; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; }
+.vj-leeg { color: var(--muted); margin: 8px 0; }
+.vj-onderregels { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vj-onder { color: var(--team-tekst); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+.vj-inhoud > :empty { display: none; }
+
 </style>
 </head>
 <body>
@@ -999,6 +1026,12 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   <div id="tab-vandaag" style="display:none;">
     <p class="statusregel" id="statusregel"></p>
     <div class="privacy-blok" id="privacy-blok"></div>
+
+    <!-- f46: de werkbak. Verborgen zolang er geen acties-rijen zijn (de
+         metricsroute zonder rijen, of een registry zonder agentlijst). -->
+    <section class="panel voor-jou" id="panel-voor-jou" style="display:none;">
+      <div id="panel-voor-jou-body"></div>
+    </section>
 
     <section class="panel" id="panel-aandacht">
       <div class="panel-header">
@@ -7669,7 +7702,7 @@ if (typeof module !== "undefined") {
  * of in data?"). De panelen op de tabs zelf zeggen het al; wat ontbrak was
  * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
-  { key: "vandaag", titel: "Vandaag", emoji: "📌", route: "#/", uitleg: "Wat vraagt nu je aandacht" },
+  { key: "vandaag", titel: "Voor jou", emoji: "📌", route: "#/", uitleg: "Wat je team deed en wat er op jou wacht" },
   { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
   { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
   { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
@@ -7737,10 +7770,14 @@ function renderTabbar(el, activeTab, ctx) {
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
-  el.innerHTML = zichtbareTabs(ctx).map(t =>
-    `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
-      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>
-    </a>`).join("");
+  // f46: de badge telt met dezelfde functie als de werkbak zelf.
+  const aantal = typeof voorJouAantal === "function" && ctx ? voorJouAantal(ctx) : null;
+  el.innerHTML = zichtbareTabs(ctx).map(t => {
+    const badge = t.key === "vandaag" && aantal ? `<span class="tab-badge" aria-label="${aantal} voor jou">${aantal}</span>` : "";
+    return `<a href="${t.route}" class="tab${t.key === activeTab ? " actief" : ""}"${t.key === activeTab ? ' aria-current="page"' : ""} title="${esc(t.uitleg)}">
+      <span class="tab-emoji" aria-hidden="true">${t.emoji}</span><span class="tab-titel">${esc(t.titel)}</span>${badge}
+    </a>`;
+  }).join("");
 }
 
 // ── Vandaag · statusregel ─────────────────────────────────────────────
@@ -10711,54 +10748,72 @@ function renderItemBlad(el, key, id, ctx) {
   wireItemBlad(el, key, rij, ctx);
 }
 
-function wireItemBlad(el, key, rij, ctx) {
-  const fout = (tekst) => { const f = el.querySelector("[data-blad-fout]"); if (f) f.textContent = tekst || ""; };
-  const knoppenUit = (uit) => { for (const b of el.querySelectorAll("[data-afhandel], [data-vraag-ok]")) b.disabled = uit; };
-
-  async function metNaam(f) {
-    if (AFHANDEL_MET_NAAM.indexOf(f) === -1) return mijnNaam(ctx.bron) || null;
-    return naamVoorSchrijfactieIn(el.querySelector('[data-naam-slot="blad"]'), ctx.bron,
-      { overslaan: f === "terug" || f === "ja" });
-  }
-
-  async function voerUit(f, invoer) {
-    const i = invoer || {};
-    fout("");
-    const ik = await metNaam(f);
-    if (AFHANDEL_MET_NAAM.indexOf(f) !== -1 && !ik && f !== "terug" && f !== "ja") return;
-    const c = { ik, schema: ctx.schema, nu: ctx.today || new Date(), tekst: i.tekst, datum: i.datum, specialist: i.specialist };
-    knoppenUit(true);
-    el.querySelector("[data-blad]").setAttribute("aria-busy", "true");
-    try {
-      if (f === "opvolgen") {
-        const plan = opvolgActie(rij, c);
-        const nieuw = await schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data: plan.data });
-        const nieuwId = nieuw && nieuw.entry && nieuw.entry.entryId;
-        const vorige = vorigeWaarden(rij, plan.ouder);
-        const antwoord = await snelWijzig(ctx, key, rij.__entryId, plan.ouder);
-        if (nieuwId && ctx.werkBij) ctx.werkBij(key, { entry: nieuw.entry });
-        await verwerkAntwoord(ctx, key, antwoord, { focus: ".blad-titel" });
-        meld(plan.melding, { actie: { label: "Ongedaan maken", doe: async () => {
-          if (nieuwId) { await schrijfWerkruimte(ctx.bron, "DELETE", "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(nieuwId)); if (ctx.werkBij) ctx.werkBij(key, { weg: nieuwId }); }
-          await verwerkAntwoord(ctx, key, await snelWijzig(ctx, key, rij.__entryId, vorige));
-          meld("Teruggezet.");
-        } } });
-        return;
-      }
-      const { patch, melding } = afhandelPatch(f, rij, c);
-      const vorige = vorigeWaarden(rij, patch);
-      const antwoord = await snelWijzig(ctx, key, rij.__entryId, patch);
-      await verwerkAntwoord(ctx, key, antwoord, { focus: ".blad-titel" });
-      meld(melding, { actie: ongedaanPatch(ctx, key, rij.__entryId, vorige) });
-    } catch (e) {
-      knoppenUit(false);
-      const blad = el.querySelector("[data-blad]");
-      if (blad) blad.removeAttribute("aria-busy");
-      const tekst = (e && e.message) || "Dat is niet gelukt.";
-      const plek = el.querySelector("[data-vraag-fout]") || el.querySelector("[data-blad-fout]");
-      if (plek) plek.textContent = tekst + " Probeer het opnieuw.";
-      meld("Niet gelukt: " + tekst, { fout: true });
+/* Eén afhandeling uitvoeren: naam vragen als dat moet, PATCH (of voor een
+ * opvolging POST + PATCH), de rij ter plekke bijwerken en de meldingsregel
+ * met ongedaan maken. Gedeeld door het blad en de kaarten in Voor jou (f46),
+ * zodat een knop overal precies hetzelfde doet.
+ *
+ * `plek` zegt waar het in de pagina gebeurt: {naamSlot, foutEl, bezig (het
+ * element dat aria-busy krijgt), knoppen (die uit gaan zolang het loopt),
+ * focus (selector voor na afloop)}. */
+async function voerAfhandelingUit(ctx, key, rij, f, invoer, plek) {
+  const i = invoer || {};
+  const p = plek || {};
+  const zetFout = (t) => { if (p.foutEl) p.foutEl.textContent = t || ""; };
+  zetFout("");
+  const metNaam = AFHANDEL_MET_NAAM.indexOf(f) !== -1;
+  const ik = metNaam
+    ? await naamVoorSchrijfactieIn(p.naamSlot, ctx.bron, { overslaan: f === "terug" || f === "ja" })
+    : (mijnNaam(ctx.bron) || null);
+  if (metNaam && !ik && f !== "terug" && f !== "ja") return false;
+  const c = { ik, schema: ctx.schema, nu: ctx.today || new Date(), tekst: i.tekst, datum: i.datum, specialist: i.specialist };
+  const knoppen = p.knoppen || [];
+  knoppen.forEach((b) => { b.disabled = true; });
+  if (p.bezig) p.bezig.setAttribute("aria-busy", "true");
+  try {
+    if (f === "opvolgen") {
+      const plan = opvolgActie(rij, c);
+      const nieuw = await schrijfWerkruimte(ctx.bron, "POST", "/dashboard/entries", { domein: key, data: plan.data });
+      const nieuwId = nieuw && nieuw.entry && nieuw.entry.entryId;
+      const vorige = vorigeWaarden(rij, plan.ouder);
+      const antwoord = await snelWijzig(ctx, key, rij.__entryId, plan.ouder);
+      if (nieuwId && ctx.werkBij) ctx.werkBij(key, { entry: nieuw.entry });
+      await verwerkAntwoord(ctx, key, antwoord, { focus: p.focus });
+      meld(plan.melding, { actie: { label: "Ongedaan maken", doe: async () => {
+        if (nieuwId) {
+          await schrijfWerkruimte(ctx.bron, "DELETE", "/dashboard/entries/" + encodeURIComponent(key) + "/" + encodeURIComponent(nieuwId));
+          if (ctx.werkBij) ctx.werkBij(key, { weg: nieuwId });
+        }
+        await verwerkAntwoord(ctx, key, await snelWijzig(ctx, key, rij.__entryId, vorige));
+        meld("Teruggezet.");
+      } } });
+      return true;
     }
+    const { patch, melding } = afhandelPatch(f, rij, c);
+    const vorige = vorigeWaarden(rij, patch);
+    const antwoord = await snelWijzig(ctx, key, rij.__entryId, patch);
+    await verwerkAntwoord(ctx, key, antwoord, { focus: p.focus });
+    meld(melding, { actie: ongedaanPatch(ctx, key, rij.__entryId, vorige) });
+    return true;
+  } catch (e) {
+    knoppen.forEach((b) => { b.disabled = false; });
+    if (p.bezig) p.bezig.removeAttribute("aria-busy");
+    const tekst = (e && e.message) || "Dat is niet gelukt.";
+    zetFout(tekst + " Probeer het opnieuw.");
+    meld("Niet gelukt: " + tekst, { fout: true });
+    return false;
+  }
+}
+
+function wireItemBlad(el, key, rij, ctx) {
+  function voerUit(f, invoer) {
+    return voerAfhandelingUit(ctx, key, rij, f, invoer, {
+      naamSlot: el.querySelector('[data-naam-slot="blad"]'),
+      foutEl: el.querySelector("[data-vraag-fout]") || el.querySelector("[data-blad-fout]"),
+      bezig: el.querySelector("[data-blad]"),
+      knoppen: Array.from(el.querySelectorAll("[data-afhandel], [data-vraag-ok]")),
+      focus: ".blad-titel",
+    });
   }
 
   function toonVraag(f) {
@@ -10803,14 +10858,203 @@ function wireItemBlad(el, key, rij, ctx) {
       meld((await kopieerTekst(werk)) ? "Gekopieerd." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.", {});
       return;
     }
-    if (e.target.closest && e.target.closest("[data-login]") && typeof startOauthLogin === "function") {
-      startOauthLogin().catch((f) => meld((f && f.message) || "Inloggen kon niet starten.", { fout: true }));
-    }
   });
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderItemBlad, itemBladHtml, itemVraagHtml, kopieerTekst, BEURT_TEKST };
+  module.exports = { renderItemBlad, itemBladHtml, itemVraagHtml, kopieerTekst, voerAfhandelingUit, BEURT_TEKST };
+}
+
+
+/* f46 deel 2 — de tab Voor jou.
+ *
+ * "De klanten moeten ervaren hoe het team ze helpt." Bovenaan staat daarom
+ * eerst wat je team deed (de verhaalkop), en dan wat er op jou wacht: een
+ * genummerde werkbak die je met één tik afhandelt. Wat er in de werkbak staat
+ * komt uit aanJouZet() (voor-jou.js) — dezelfde functie als de badge op de
+ * tab, zodat die twee nooit verschillend tellen. De knoppen zijn die van het
+ * item-blad (voerAfhandelingUit); wat een vraag nodig heeft (een opmerking, een
+ * dag) opent het blad.
+ *
+ * De verhaalkop gaat over "sinds gisteren", niet over "sinds je laatste
+ * bezoek": dat zou het onthouden tijdstip van je vorige bezoek hergebruiken,
+ * en dat is een eigen juridisch restpunt (i87).
+ *
+ * Nummers blijven staan tot je ververst: wie in de chat "nummer 3" hoort, moet
+ * op het scherm hetzelfde nummer 3 vinden, ook nadat je 1 en 2 afhandelde. */
+
+let vjNummering = { bundle: null, map: new Map(), volgende: 1 };
+
+function vjGenummerd(bundle, lijst) {
+  if (vjNummering.bundle !== bundle) vjNummering = { bundle, map: new Map(), volgende: 1 };
+  for (const r of lijst) {
+    if (r.__entryId && !vjNummering.map.has(r.__entryId)) vjNummering.map.set(r.__entryId, vjNummering.volgende++);
+  }
+  return lijst.slice().sort((a, b) => (vjNummering.map.get(a.__entryId) || 0) - (vjNummering.map.get(b.__entryId) || 0));
+}
+
+function _resetVoorJouNummers() { vjNummering = { bundle: null, map: new Map(), volgende: 1 }; }
+
+/* Wie ben ik, voor "per persoon"? Alleen een gekozen naam; op de daglink of
+ * zonder naam is dat onbekend, en dan verstopt aanJouZet niets. */
+function vjIk(ctx) {
+  return (ctx.bron && ctx.bron.oauth && mijnNaam(ctx.bron)) || undefined;
+}
+
+function voorJouLijst(ctx) {
+  if (!ctx || !ctx.bundle || ctx.bundle.kind !== "rows") return null;
+  return aanJouZet(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
+}
+
+function vjTelwoord(n, enkel, meer) { return `${n} ${n === 1 ? enkel : meer}`; }
+
+function vjVerhaal(ctx, lijst) {
+  const acties = rows(ctx.bundle, "acties") || [];
+  const namen = agentNamen(ctx.schema);
+  if (!namen) return null;
+  const nu = ctx.today || new Date();
+  const van = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - 1);
+  const sinds = (v) => { const d = parseDateField(v); return !!d && d >= van; };
+  const stempel = (r, k) => r.__stempels && r.__stempels[k];
+  const zelf = acties.filter(r => getField(r, "Status") === "Klaar"
+    && isAgentNaam(getField(r, "Afgerond door"), namen) && sinds(getField(r, "Afgerond op")));
+  const klaar = lijst.filter(r => isAgentNaam(getField(r, "Aangemaakt door"), namen) && sinds(stempel(r, "aangemaakt")));
+  const begon = acties.filter(r => getField(r, "Status") === "Bezig"
+    && isAgentNaam(getField(r, "Eigenaar"), namen) && sinds(stempel(r, "bijgewerkt")));
+  const wie = new Set();
+  for (const r of zelf) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Afgerond door")));
+  for (const r of klaar) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Aangemaakt door")));
+  for (const r of begon) wie.add(agentWeergaveNaam(ctx.schema, getField(r, "Eigenaar")));
+  wie.delete(null);
+
+  const delen = [];
+  if (zelf.length) delen.push(`rondde ${vjTelwoord(zelf.length, "ding", "dingen")} zelf af`);
+  if (klaar.length) delen.push(`zette er ${klaar.length} voor je klaar`);
+  if (begon.length) delen.push(`begon aan ${begon.length}`);
+  const zin = delen.length
+    ? "Sinds gisteren " + delen[0].replace(/^(\S+)/, "$1 je team")
+      + (delen.length > 1 ? (delen.length > 2 ? ", " + delen.slice(1, -1).join(", ") : "") + " en " + delen[delen.length - 1] : "") + "."
+    : "Sinds gisteren zette je team niets nieuws voor je klaar.";
+  return { zin, wie: Array.from(wie) };
+}
+
+function vjSindsTekst(rij, namen, nu) {
+  if (isTeLaat(rij, namen, nu)) {
+    const dl = parseDateField(getField(rij, "Deadline"));
+    const dagen = dl ? Math.max(1, Math.round((new Date(nu.getFullYear(), nu.getMonth(), nu.getDate()) - new Date(dl.getFullYear(), dl.getMonth(), dl.getDate())) / 86400000)) : 0;
+    return { tekst: dagen ? `${dagen} ${dagen === 1 ? "dag" : "dgn"} te laat` : "te laat", laat: true };
+  }
+  if (soortVan(rij, namen, nu) === "weer") return { tekst: "weer aan de beurt", laat: false };
+  const s = sindsVan(rij);
+  return { tekst: s ? "sinds " + vjDatumKort(s) : "", laat: false };
+}
+
+function vjVoorproef(rij) {
+  const tekst = dataCelTekst(getField(rij, "Toelichting")).replace(OPMERKING_KOP, "").replace(/\s+/g, " ").trim();
+  return tekst.length > 160 ? tekst.slice(0, 157) + "…" : tekst;
+}
+
+function vjKaartHtml(ctx, rij, nr, kanAfhandelen) {
+  const nu = ctx.today || new Date();
+  const namen = agentNamen(ctx.schema);
+  const k = afhandelKnoppen(rij, ctx.schema, nu);
+  const id = rij.__entryId;
+  const href = `#/acties/${encodeURIComponent(id)}`;
+  const titel = detailTitel(ctx.schema.datadomeinen.acties, rij);
+  const sinds = vjSindsTekst(rij, namen, nu);
+  const van = agentWeergaveNaam(ctx.schema, getField(rij, "Aangemaakt door"));
+  const voorproef = vjVoorproef(rij);
+  let hoofd = "";
+  if (kanAfhandelen && k.hoofd) {
+    hoofd = AFHANDEL_VRAAGT[k.hoofd.f]
+      ? `<a class="knop blad-knop blad-knop-${esc(k.hoofd.stijl)}" href="${href}">${esc(k.hoofd.label)}</a>`
+      : `<button type="button" class="knop blad-knop blad-knop-${esc(k.hoofd.stijl)}" data-vj-afhandel="${esc(k.hoofd.f)}">${esc(k.hoofd.label)}</button>`;
+  }
+  return `<li class="vj-kaart" data-vj-id="${esc(id)}">
+    <span class="vj-nr" aria-hidden="true">${nr}</span>
+    <div class="vj-inhoud">
+      <a class="vj-titel" href="${href}"><span class="visueel-verborgen">Nummer ${nr}: </span>${esc(titel)}</a>
+      <p class="vj-meta"><span class="soort-pil">${esc(SOORT_LABEL[k.soort] || "")}</span>
+        ${sinds.tekst ? `<span class="${sinds.laat ? "pil-laat" : "vj-sinds"}">${esc(sinds.tekst)}</span>` : ""}
+        ${van ? `<span class="vj-van">van ${esc(van)}</span>` : ""}</p>
+      ${voorproef ? `<p class="vj-voorproef">${esc(voorproef)}</p>` : ""}
+      <div class="vj-knoppen">${hoofd}<a class="knop blad-knop" href="${href}">Bekijk</a></div>
+      <div data-naam-slot="kaart"></div>
+      <p class="bewerk-fout" data-kaart-fout></p>
+    </div>
+  </li>`;
+}
+
+function vjOnderregelsHtml(ctx) {
+  const o = { ik: vjIk(ctx), nu: ctx.today || new Date() };
+  const team = bijTeam(ctx.bundle, ctx.schema, o);
+  const bezig = team.filter(r => getField(r, "Status") === "Bezig").length;
+  const collegas = bijCollegas(ctx.bundle, ctx.schema, o).length;
+  const regels = [];
+  if (team.length) {
+    const delen = [bezig ? `${bezig} bezig` : "", team.length - bezig ? `${team.length - bezig} bij het volgende werkmoment` : ""].filter(Boolean);
+    regels.push(`<a class="vj-onder" href="#/acties">◐ Bij je team: ${esc(delen.join(" · "))} →</a>`);
+  }
+  if (collegas) regels.push(`<a class="vj-onder" href="#/acties">Bij collega's: ${collegas} →</a>`);
+  return regels.length ? `<div class="vj-onderregels">${regels.join("")}</div>` : "";
+}
+
+function renderVoorJou(paneel, ctx) {
+  if (!paneel) return;
+  const body = paneel.querySelector("#panel-voor-jou-body") || paneel;
+  const lijst = voorJouLijst(ctx);
+  if (!lijst) { paneel.style.display = "none"; body.innerHTML = ""; return; }
+  paneel.style.display = "";
+  const genummerd = vjGenummerd(ctx.bundle, lijst);
+  const kanAfhandelen = magDomeinBewerken(ctx, "acties").ok;
+  const verhaal = vjVerhaal(ctx, lijst);
+  const nu = ctx.today || new Date();
+  const oudste = lijst.reduce((min, r) => { const s = sindsVan(r); return s && (!min || s < min) ? s : min; }, null);
+  const oudsteDagen = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
+  const inlogRegel = !kanAfhandelen && !(ctx.bron && ctx.bron.oauth) && typeof oauthMogelijk === "function" && oauthMogelijk()
+    ? `<p class="vj-inlog">Je kijkt mee met je daglink. <button type="button" class="knop blad-knop blad-knop-prim" data-login>Inloggen en afhandelen</button></p>` : "";
+
+  body.innerHTML = `
+    ${verhaal ? `<div class="vj-verhaal"><p class="vj-verhaal-zin">${esc(verhaal.zin)}</p>
+      ${verhaal.wie.length ? `<p class="footnote">${esc(verhaal.wie.join(" · "))} · <a href="#/team">Wat deden ze? →</a></p>` : ""}</div>` : ""}
+    <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
+      ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
+    ${inlogRegel}
+    ${lijst.length
+      ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
+      : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
+    ${vjOnderregelsHtml(ctx)}`;
+
+  // Eén handler per paneel, vervangen bij elke render (renderAll tekent dit
+  // paneel na elke schrijfactie opnieuw).
+  body.onclick = (e) => {
+    const knop = e.target.closest && e.target.closest("[data-vj-afhandel]");
+    if (!knop) return;
+    const kaart = knop.closest("[data-vj-id]");
+    const id = kaart.getAttribute("data-vj-id");
+    const rij = (dataRijenVan(ctx, "acties") || []).find(r => r.__entryId === id);
+    if (!rij) return;
+    // Na afloop de focus op de volgende kaart, zodat je met het toetsenbord
+    // gewoon doorwerkt; zonder volgende op de kop.
+    const volgende = kaart.nextElementSibling && kaart.nextElementSibling.getAttribute("data-vj-id");
+    voerAfhandelingUit(ctx, "acties", rij, knop.getAttribute("data-vj-afhandel"), {}, {
+      naamSlot: kaart.querySelector("[data-naam-slot]"),
+      foutEl: kaart.querySelector("[data-kaart-fout]"),
+      bezig: kaart,
+      knoppen: Array.from(kaart.querySelectorAll("button")),
+      focus: volgende ? `[data-vj-id="${cssWaarde(volgende)}"] .vj-titel` : ".vj-kop h2",
+    });
+  };
+}
+
+/* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
+function voorJouAantal(ctx) {
+  const lijst = voorJouLijst(ctx);
+  return lijst ? lijst.length : null;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { renderVoorJou, voorJouLijst, voorJouAantal, vjVerhaal, vjGenummerd, _resetVoorJouNummers };
 }
 
 
@@ -11821,7 +12065,14 @@ function renderAll() {
   // ── Tab 1 · Vandaag ──
   renderStatusregel(document.getElementById("statusregel"), ctx);
   renderPrivacyBlok(document.getElementById("privacy-blok"));
-  renderAandachtTop5(document.getElementById("panel-aandacht-body"), ctx.z1);
+  // f46: de werkbak Voor jou. Staat hij er, dan zit "je team zette N ding(en)
+  // voor je klaar" er al volledig in — die melding hoort dan niet nóg eens in
+  // het aandachtspaneel. De rest van de meldingen blijft staan.
+  renderVoorJou(document.getElementById("panel-voor-jou"), ctx);
+  const voorJouActief = voorJouAantal(ctx) !== null;
+  const aandacht = voorJouActief ? (ctx.z1 || []).filter(it => it.type !== TEAM_OOGST_TYPE) : ctx.z1;
+  document.getElementById("panel-aandacht").style.display = voorJouActief && !aandacht.length ? "none" : "";
+  renderAandachtTop5(document.getElementById("panel-aandacht-body"), aandacht);
   renderFeedPanel(document.getElementById("panel-feed-body"), ctx);
   renderOpbrengstKpis(document.getElementById("opbrengst-grid"), ctx);
 
@@ -12038,6 +12289,15 @@ function wireNavigatie() {
         filterEl.getAttribute("data-filter-label") || "",
         (filterEl.getAttribute("data-filter-ids") || "").split(","),
       );
+      return;
+    }
+    // f46/f47: "Inloggen en afhandelen" op het blad en in Voor jou. Eén plek,
+    // zodat een knop die op twee plekken staat nooit twee keer inlogt.
+    if (e.target.closest("[data-login]")) {
+      startOauthLogin().catch((err) => {
+        console.error(err);
+        meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
+      });
       return;
     }
     // f47: "Bewerken in Gegevens" vanaf het blad — de detailkaart staat dan open.
