@@ -143,6 +143,7 @@ function buildContext() {
       agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
+      metricsWerk: m.werk || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // Twee soorten waarschuwingen, bewust apart gehouden. Over de bundel

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-2NWzD9PuJ05kMgiD7YeYctmvakMWUN0mJNuGnto1RfM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-NZWcsUiyDXD2k3RTMQVS9CtYJCTlYzOMXPW3fhfNM4g='">
 
 
 
@@ -6869,6 +6869,51 @@ function saneerTekstLijst(v, max) {
 /* Hoofdingang. `schema` = window.AGENTIC_TEAM_SCHEMA (datadomeinen + agents);
  * domein- en agentsleutels die niet in het schema staan worden weggelaten.
  * Geeft altijd een object terug; de versiecontrole blijft in metrics.js. */
+/* f54 — metrics v3: de werkbak en de vaste taken voor klanten wier acties en
+ * ritmetaken niet in de werkruimte staan (Notion/CRM). Zelfde contract als
+ * werkruimte src/domeinen/metrics.ts en de dagstart (orchestrator-prompt). */
+const VJ_METRICS_SOORTEN = ["check", "voorstel", "signaal", "taak", "weer"];
+function saneerDatumOfNull(v, ctx, pad) { return v === undefined || v === null || v === "" ? null : saneerDatum(v, ctx, pad); }
+function saneerVoorJouBlok(v, ctx) {
+  if (!isObject(v) || !Array.isArray(v.items)) return null;
+  const items = [];
+  for (const [i, it] of v.items.slice(0, METRICS_MAX.lijst).entries()) {
+    if (!isObject(it)) continue;
+    const soort = typeof it.soort === "string" ? it.soort.trim().toLowerCase() : "";
+    if (VJ_METRICS_SOORTEN.indexOf(soort) === -1) { waarschuw(ctx, `voor_jou.items.${i}.soort`, it.soort); continue; }
+    const titel = saneerTekst(it.titel, METRICS_MAX.tekstKort).trim();
+    if (!titel) continue;
+    const nr = saneerGetalOfNull(it.nr, ctx, `voor_jou.items.${i}.nr`);
+    items.push({
+      nr: nr !== null && nr >= 1 && nr <= 999 ? Math.round(nr) : items.length + 1,
+      titel, soort, te_laat: it.te_laat === true,
+      specialist: saneerTekstOfNull(it.specialist, 60),
+      sinds: saneerDatumOfNull(it.sinds, ctx, `voor_jou.items.${i}.sinds`),
+      deadline: saneerDatumOfNull(it.deadline, ctx, `voor_jou.items.${i}.deadline`),
+      url: saneerHttpsUrl(it.url),
+    });
+  }
+  return { items };
+}
+function saneerRitmeBlok(v, ctx) {
+  if (!isObject(v) || !Array.isArray(v.items)) return null;
+  const items = [];
+  for (const [i, it] of v.items.slice(0, METRICS_MAX.lijst).entries()) {
+    if (!isObject(it)) continue;
+    const taak = saneerTekst(it.taak, METRICS_MAX.tekstKort).trim();
+    if (!taak) continue;
+    const volgorde = saneerGetalOfNull(it.volgorde, ctx, `ritmetaken.items.${i}.volgorde`);
+    items.push({
+      taak, agent: saneerTekstOfNull(it.agent, 60),
+      ritme: saneerCode(it.ritme, ""),
+      actief: it.actief === true,
+      laatst_gedraaid: saneerDatumOfNull(it.laatst_gedraaid, ctx, `ritmetaken.items.${i}.laatst_gedraaid`),
+      volgorde, url: saneerHttpsUrl(it.url),
+    });
+  }
+  return { items };
+}
+
 function saneerMetricsPayload(raw, schema) {
   if (!isObject(raw)) return null;
   const domeinSlugs = schema && schema.datadomeinen ? Object.keys(schema.datadomeinen) : [];
@@ -7063,6 +7108,9 @@ function saneerMetricsPayload(raw, schema) {
     };
   }
 
+  if ("voor_jou" in raw) uit.voor_jou = saneerVoorJouBlok(raw.voor_jou, ctx);
+  if ("ritmetaken" in raw) uit.ritmetaken = saneerRitmeBlok(raw.ritmetaken, ctx);
+
   uit.waarschuwingen = saneerTekstLijst(raw.waarschuwingen, METRICS_MAX.tekst).concat(ctx.waarschuwingen).slice(0, METRICS_MAX.lijst);
   return uit;
 }
@@ -7074,7 +7122,7 @@ function agentVoorSleutel(agents, sleutel) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN };
+  module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN, saneerVoorJouBlok, saneerRitmeBlok };
 }
 
 
@@ -7204,6 +7252,12 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
       bron: "notion",
       // f29: relatie-aggregaten (v2) — al gesaneerd; de Data-tab tekent ze.
       relaties: Array.isArray(raw.relaties) ? raw.relaties : null,
+      // f54: het werk zelf, voor wie het niet in de werkruimte heeft.
+      werk: {
+        voorJou: raw.voor_jou ? raw.voor_jou.items : null,
+        ritmetaken: raw.ritmetaken ? raw.ritmetaken.items : null,
+        gegenereerdOp: raw.gegenereerd_op || null,
+      },
       z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,
@@ -11489,7 +11543,12 @@ function renderVoorJou(paneel, ctx) {
   if (!paneel) return;
   const body = paneel.querySelector("#panel-voor-jou-body") || paneel;
   const lijst = voorJouLijst(ctx);
-  if (!lijst) { paneel.style.display = "none"; body.innerHTML = ""; return; }
+  if (!lijst) {
+    // f54: Notion-klanten krijgen de werkbak uit hun dagstart, alleen lezen.
+    const uitDagstart = typeof metricsVoorJou === "function" ? metricsVoorJou(ctx) : null;
+    if (uitDagstart) { paneel.style.display = ""; body.innerHTML = notionVoorJouHtml(ctx, uitDagstart); return; }
+    paneel.style.display = "none"; body.innerHTML = ""; return;
+  }
   paneel.style.display = "";
   const genummerd = vjGenummerd(ctx.bundle, lijst);
   const kanAfhandelen = magDomeinBewerken(ctx, "acties").ok;
@@ -11722,7 +11781,9 @@ function zetSneltoetsenAan() {
 /* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
 function voorJouAantal(ctx) {
   const lijst = voorJouLijst(ctx);
-  return lijst ? lijst.length : null;
+  if (lijst) return lijst.length;
+  const uitDagstart = typeof metricsVoorJou === "function" ? metricsVoorJou(ctx) : null;
+  return uitDagstart ? uitDagstart.length : null;
 }
 
 if (typeof module !== "undefined") {
@@ -12267,6 +12328,16 @@ function vasteTakenHtml(ctx) {
   const rijen = dataRijenVan(ctx, "ritmetaken");
   if (bron.toestand === "elders" || (!rijen && ctx.bundle && ctx.bundle.kind === "metrics")) {
     const waar = bron.toestand === "elders" ? bron.naam : "Notion";
+    // f54: levert je dagstart de vaste taken mee, dan zie je ze hier — alleen lezen.
+    const uitDagstart = typeof metricsRitmeRijen === "function" ? metricsRitmeRijen(ctx) : null;
+    if (uitDagstart) {
+      return `${klaarRegelHtml(ctx)}
+    ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
+    <section class="vt-vak"><h2>Wanneer werkt je team · werkdagen</h2>${weekHtml(ctx, weekTelling(uitDagstart, ctx.today || new Date()))}</section>
+    ${notionTakenHtml(ctx, uitDagstart)}
+    <section class="vt-vak"><p>Iets aanpassen? Zeg het je team in Claude, bijvoorbeeld:</p>
+      ${vtKopieerHtml("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
+    }
     return `${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
     <section class="vt-vak"><h2>Je vaste taken staan in ${esc(waar)}</h2>
       <p>Aanpassen doe je daar, of vraag het je team in Claude. Bijvoorbeeld:</p>
@@ -12365,10 +12436,16 @@ function kcSinds(d, nu) { return nu - d < 6 * 86400000 ? DAGNAMEN[d.getDay()] : 
 
 function kcStempel(r, k) { return parseDateField(r && r.__stempels && r.__stempels[k]); }
 
+/* De vaste taken: uit de werkruimte, of (f54, Notion-klanten) uit het
+ * metricsbestand van de dagstart. */
+function vtTaakRijen(ctx) {
+  return dataRijenVan(ctx, "ritmetaken") || (typeof metricsRitmeRijen === "function" ? metricsRitmeRijen(ctx) : null);
+}
+
 function werkmomentSporen(ctx) {
   const namen = agentNamen(ctx.schema);
   const sporen = [];
-  for (const t of (dataRijenVan(ctx, "ritmetaken") || []).filter(vtActief)) { const l = vtLaatst(t); if (l) sporen.push(l); }
+  for (const t of (vtTaakRijen(ctx) || []).filter(vtActief)) { const l = vtLaatst(t); if (l) sporen.push(l); }
   for (const a of rows(ctx.bundle, "acties") || []) {
     if (namen && isAgentNaam(getField(a, "Afgerond door"), namen)) { const d = parseDateField(getField(a, "Afgerond op")); if (d) sporen.push(d); }
     if (namen && isAgentNaam(getField(a, "Aangemaakt door"), namen)) { const d = kcStempel(a, "aangemaakt"); if (d && d.getHours() < 6) sporen.push(d); }
@@ -12417,7 +12494,9 @@ function klaarCheck(ctx) {
     : { id: "verbonden", k: act > 0 ? "ok" : "let", titel: "Verbonden met Claude",
       tekst: act > 0 ? `Je vroeg je team deze week ${act} keer iets.` : "Je vroeg je team deze week nog niets." });
 
-  if (notion) {
+  // f54: levert de dagstart de vaste taken mee, dan oordelen we er gewoon over.
+  const metricsTaken = notion && typeof metricsRitmeRijen === "function" ? metricsRitmeRijen(ctx) : null;
+  if (notion && !metricsTaken) {
     const fs = feedSporen(ctx);
     const lp = fs && fs.length ? new Date(Math.max(...fs)) : null;
     const nf = lp ? werkdagenNa(lp, nu) : 99;
@@ -12431,7 +12510,7 @@ function klaarCheck(ctx) {
     r.push({ id: "wacht", k: "onbekend", titel: "Niets ligt te lang op je te wachten", tekst: "Je acties staan in Notion." });
     r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in Notion", tekst: "Hier zie je wat je team deed." });
   } else {
-    const taken = dataRijenVan(ctx, "ritmetaken") || [];
+    const taken = vtTaakRijen(ctx) || [];
     const actief = taken.filter(vtActief);
     const uit = taken.length - actief.length;
     r.push(actief.length
@@ -12467,17 +12546,20 @@ function klaarCheck(ctx) {
         : achter.length ? { id: "beurt", k: "let", titel: "Niet alles komt aan de beurt", actie: "vaker",
           tekst: achter.map(t => `‘${vtTekst(t, "Taak")}’ ${taakStatus(t, nu).tekst}`).join(". ") + ". Je team doet één vaste taak per werkmoment." }
           : { id: "beurt", k: "ok", titel: "Alle vaste taken komen aan de beurt", tekst: "Geen enkele taak loopt achter op zijn eigen ritme." });
-    const lijst = voorJouLijst(ctx) || [];
-    const oudste = lijst.reduce((m, x) => { const s = sindsVan(x); return s && (!m || s < m) ? s : m; }, null);
+    const mv = notion && typeof metricsVoorJou === "function" ? metricsVoorJou(ctx) : null;
+    const lijst = mv ? mv.map(x => ({ __sinds: parseDateField(x.sinds) })) : (voorJouLijst(ctx) || []);
+    const oudste = lijst.reduce((m, x) => { const s = mv ? x.__sinds : sindsVan(x); return s && (!m || s < m) ? s : m; }, null);
     const wd = oudste ? werkdagenNa(oudste, nu) : 0;
     const kd = oudste ? Math.floor((nu - oudste) / 86400000) : 0;
     r.push(wd < 5
       ? { id: "wacht", k: "ok", titel: "Niets ligt te lang op je te wachten",
         tekst: !oudste ? "Er wacht niets op je." : kd === 0 ? "Er wacht niets langer dan vandaag." : `Het oudste wacht ${kd === 1 ? "1 dag" : kd + " dagen"}.` }
-      : { id: "wacht", k: "let", titel: "Er ligt werk te lang op je te wachten", actie: "ronde",
-        tekst: `Het oudste wacht al ${kd} dagen. Het staat bovenaan in Voor jou.` });
+      : { id: "wacht", k: "let", titel: "Er ligt werk te lang op je te wachten", actie: notion ? undefined : "ronde",
+        tekst: `Het oudste wacht al ${kd} dagen. ${notion ? "Je vindt het bij Voor jou, met een link naar Notion." : "Het staat bovenaan in Voor jou."}` });
     // Geen oordeel over je team, dus telt niet mee — en alleen in beeld als er iets te doen is.
-    if (!magDomeinBewerken(ctx, "acties").ok) {
+    if (notion) {
+      r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in Notion", tekst: "Hier zie je de stand van je dagstart." });
+    } else if (!magDomeinBewerken(ctx, "acties").ok) {
       r.push({ id: "afhandelen", k: "let", telt: false, titel: "Je kijkt alleen mee", actie: "login", tekst: "Met je daglink kun je lezen, niet afhandelen." });
     }
   }
@@ -12490,7 +12572,7 @@ function klaarCheck(ctx) {
 
 function klaarSamenvatting(kc) {
   const letop = kc.totaal - kc.ok;
-  if (kc.notion) return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} te controleren`, sub: `${kc.onbekend} punten staan in Notion en kunnen we hier niet zien.` };
+  if (kc.notion && kc.onbekend) return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} te controleren`, sub: `${kc.onbekend} ${kc.onbekend === 1 ? "punt staat" : "punten staan"} in Notion en kunnen we hier niet zien.` };
   if (!letop && kc.wachten) return { kop: "Is je team klaar? Bijna — nog even wachten", sub: "Na de eerste nacht weten we of je team vanzelf werkt." };
   if (!letop) return { kop: "Is je team klaar? Ja, alles in orde", sub: "Je team werkt vanzelf." };
   return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} · ${letop} ${letop === 1 ? "punt vraagt" : "punten vragen"} aandacht`, sub: "Kijk wat er nodig is." };
@@ -12533,7 +12615,7 @@ function stappenbladHtml(ctx, vaker, { volledig = false } = {}) {
   // ritmetaken aan" maakt de starter-set opnieuw aan (orchestrator-prompt,
   // Activeren stap 3) — dan heb je elke taak dubbel.
   // De Hulp toont altijd de hele installatie (volledig): daar leest ook wie nog niets heeft.
-  if (!volledig && dataRijenVan(ctx, "ritmetaken") && dataRijenVan(ctx, "ritmetaken").some(vtActief)) {
+  if (!volledig && vtTaakRijen(ctx) && vtTaakRijen(ctx).some(vtActief)) {
     return `<section class="vt-vak kc-stappen" id="stappen"><h2>Zet je werkmoment (weer) aan</h2>
       <p>Je vaste taken staan klaar. Wat ontbreekt, is het moment waarop je team ze oppakt.</p>
       <ol class="kc-stappenlijst">
@@ -13409,6 +13491,83 @@ function wireRijPagina(el, key, rij, ctx) {
 
 if (typeof module !== "undefined") {
   module.exports = { renderRijPagina, rpToevoegDomeinen };
+}
+
+
+/* f54 — metrics v3: de werkbak en de vaste taken voor Notion-klanten.
+ *
+ * Staan je acties en vaste taken in Notion (of een ander CRM), dan ziet het
+ * dashboard ze niet rechtstreeks. De dagstart schrijft ze daarom mee in het
+ * metricsbestand: een voor_jou-blok (in de volgorde en nummering van "Ter
+ * goedkeuring", dus nummer 3 is overal hetzelfde) en een ritmetaken-blok. Dat
+ * is een momentopname van de dagstart: lezen, en afhandelen in Notion.
+ *
+ * Alleen als het werk níet in de werkruimte staat; zijn er rijen, dan winnen
+ * die altijd (die zijn live). */
+
+function metricsVoorJou(ctx) {
+  if (!ctx || !ctx.bundle || rows(ctx.bundle, "acties")) return null;
+  const w = ctx.metricsWerk;
+  return w && Array.isArray(w.voorJou) ? w.voorJou : null;
+}
+
+/* De ritmetaken uit het metricsbestand, in de vorm van rijen — zodat de
+ * week, de statusregels en de klaar-check er gewoon mee rekenen. */
+function metricsRitmeRijen(ctx) {
+  if (!ctx || !ctx.bundle || dataRijenVan(ctx, "ritmetaken")) return null;
+  const w = ctx.metricsWerk;
+  if (!w || !Array.isArray(w.ritmetaken)) return null;
+  return w.ritmetaken.map((t, i) => ({
+    __entryId: `metrics-${i}`, __url: t.url || null,
+    Taak: t.taak, Agent: t.agent || "", Ritme: t.ritme, Actief: t.actief === true,
+    "Laatst gedraaid": t.laatst_gedraaid || null, Volgorde: t.volgorde,
+  }));
+}
+
+function notionVoorJouHtml(ctx, items) {
+  const nu = ctx.today || new Date();
+  const w = ctx.metricsWerk || {};
+  const stand = w.gegenereerdOp ? vtWanneer(parseDateField(w.gegenereerdOp), nu) : null;
+  const kaart = (it) => {
+    const sinds = it.sinds ? parseDateField(it.sinds) : null;
+    const dagen = sinds ? Math.floor((nu - sinds) / 86400000) : null;
+    const meta = [`<span class="soort-pil">${esc(SOORT_LABEL[it.soort] || "")}</span>`];
+    if (it.te_laat) meta.push(`<span class="pil-laat">te laat</span>`);
+    if (it.specialist) meta.push(`<span>van ${esc(it.specialist)}</span>`);
+    if (dagen !== null && dagen >= 1) meta.push(`<span>${dagen === 1 ? "1 dag" : dagen + " dagen"}</span>`);
+    if (it.deadline) meta.push(`<span>deadline ${esc(vjDatumKort(it.deadline))}</span>`);
+    return `<li class="vj-kaart"><span class="vj-nr" aria-hidden="true">${it.nr}</span>
+      <div class="vj-kaart-inhoud"><p class="vj-titel"><span class="visueel-verborgen">Nummer ${it.nr}: </span>${esc(it.titel)}</p>
+        <p class="baan-meta">${meta.join("")}</p>
+        ${it.url ? `<p><a class="detail-link" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a></p>` : ""}</div></li>`;
+  };
+  return `${typeof stilKaartHtml === "function" ? stilKaartHtml(ctx) : ""}
+    <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${items.length}</span></h2>
+      ${stand ? `<span class="footnote">stand van je dagstart, ${esc(stand)}</span>` : ""}
+      ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("notion", "Waarom staat dit in Notion?") : ""}</div>
+    <p class="footnote">Je acties staan in Notion: afhandelen doe je daar, of vraag het je team in Claude. De nummers zijn dezelfde als in je dagstart.</p>
+    ${items.length ? `<ol class="vj-lijst notion-werkbak">${items.map(kaart).join("")}</ol>`
+      : `<p class="vj-leeg">Niets voor jou in je dagstart van vanochtend.</p>`}`;
+}
+
+/* De vaste taken uit het metricsbestand, alleen lezen: dezelfde statusregels
+ * als in de werkruimte, met een link naar Notion. */
+function notionTakenHtml(ctx, rijen) {
+  const nu = ctx.today || new Date();
+  const rij = (t) => {
+    const s = taakStatus(t, nu);
+    return `<li class="vt-rij${t.Actief ? "" : " uit"}"><div class="vt-rij-kop"><span class="vt-titel">${esc(t.Taak)}</span>
+      <span class="footnote">${esc([agentWeergaveNaam(ctx.schema, t.Agent) || t.Agent, RITME_KLANTTAAL[t.Ritme] || t.Ritme, t.Actief ? "" : "uit"].filter(Boolean).join(" · "))}</span></div>
+      <p class="vt-status vt-${s.k}">${esc(s.tekst)}</p>
+      ${t.__url ? `<a class="detail-link" href="${esc(t.__url)}" target="_blank" rel="noopener noreferrer">Open in Notion ↗</a>` : ""}</li>`;
+  };
+  return `<section class="vt-vak"><h2>Je vaste taken · ${rijen.filter(t => t.Actief).length} aan</h2>
+    <p class="footnote">Stand van je dagstart. Aanpassen doe je in Notion, of zeg het je team in Claude.</p>
+    <ul class="vt-lijst">${rijen.map(rij).join("")}</ul></section>`;
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { metricsVoorJou, metricsRitmeRijen, notionVoorJouHtml, notionTakenHtml };
 }
 
 
@@ -14322,6 +14481,7 @@ function buildContext() {
       agentUsage: kiesAgentGebruik(m.agentUsage, feedItemsVoorTelling(bundle, schema, agentLookup), schema, today, m.periodDays, bundle.activaties),
       sporenTotaal: m.sporenTotaal, metricsMeta: m.meta, correctievrij: m.correctievrij,
       relaties: m.relaties || null,
+      metricsWerk: m.werk || null,
       minutenPerActie: currentMinutenPerActie,
       intern: bundle.intern === true,
       // Twee soorten waarschuwingen, bewust apart gehouden. Over de bundel

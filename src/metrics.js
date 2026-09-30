@@ -124,6 +124,12 @@ function parseNotionMetricsFile(rawOnbetrouwbaar, schema, today, minutenPerActie
       bron: "notion",
       // f29: relatie-aggregaten (v2) — al gesaneerd; de Data-tab tekent ze.
       relaties: Array.isArray(raw.relaties) ? raw.relaties : null,
+      // f54: het werk zelf, voor wie het niet in de werkruimte heeft.
+      werk: {
+        voorJou: raw.voor_jou ? raw.voor_jou.items : null,
+        ritmetaken: raw.ritmetaken ? raw.ritmetaken.items : null,
+        gegenereerdOp: raw.gegenereerd_op || null,
+      },
       z1: z1Compleet, z2, z3, z4, z5, activiteit, adopt, tijdwinst, agentUsage, sporenTotaal, correctievrij,
       periodWeeks: raw.periode ? raw.periode.weken : activiteit.weeks,
       periodDays: (raw.periode ? raw.periode.weken : activiteit.weeks) * 7,

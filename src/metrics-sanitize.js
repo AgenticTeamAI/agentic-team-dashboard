@@ -116,6 +116,51 @@ function saneerTekstLijst(v, max) {
 /* Hoofdingang. `schema` = window.AGENTIC_TEAM_SCHEMA (datadomeinen + agents);
  * domein- en agentsleutels die niet in het schema staan worden weggelaten.
  * Geeft altijd een object terug; de versiecontrole blijft in metrics.js. */
+/* f54 — metrics v3: de werkbak en de vaste taken voor klanten wier acties en
+ * ritmetaken niet in de werkruimte staan (Notion/CRM). Zelfde contract als
+ * werkruimte src/domeinen/metrics.ts en de dagstart (orchestrator-prompt). */
+const VJ_METRICS_SOORTEN = ["check", "voorstel", "signaal", "taak", "weer"];
+function saneerDatumOfNull(v, ctx, pad) { return v === undefined || v === null || v === "" ? null : saneerDatum(v, ctx, pad); }
+function saneerVoorJouBlok(v, ctx) {
+  if (!isObject(v) || !Array.isArray(v.items)) return null;
+  const items = [];
+  for (const [i, it] of v.items.slice(0, METRICS_MAX.lijst).entries()) {
+    if (!isObject(it)) continue;
+    const soort = typeof it.soort === "string" ? it.soort.trim().toLowerCase() : "";
+    if (VJ_METRICS_SOORTEN.indexOf(soort) === -1) { waarschuw(ctx, `voor_jou.items.${i}.soort`, it.soort); continue; }
+    const titel = saneerTekst(it.titel, METRICS_MAX.tekstKort).trim();
+    if (!titel) continue;
+    const nr = saneerGetalOfNull(it.nr, ctx, `voor_jou.items.${i}.nr`);
+    items.push({
+      nr: nr !== null && nr >= 1 && nr <= 999 ? Math.round(nr) : items.length + 1,
+      titel, soort, te_laat: it.te_laat === true,
+      specialist: saneerTekstOfNull(it.specialist, 60),
+      sinds: saneerDatumOfNull(it.sinds, ctx, `voor_jou.items.${i}.sinds`),
+      deadline: saneerDatumOfNull(it.deadline, ctx, `voor_jou.items.${i}.deadline`),
+      url: saneerHttpsUrl(it.url),
+    });
+  }
+  return { items };
+}
+function saneerRitmeBlok(v, ctx) {
+  if (!isObject(v) || !Array.isArray(v.items)) return null;
+  const items = [];
+  for (const [i, it] of v.items.slice(0, METRICS_MAX.lijst).entries()) {
+    if (!isObject(it)) continue;
+    const taak = saneerTekst(it.taak, METRICS_MAX.tekstKort).trim();
+    if (!taak) continue;
+    const volgorde = saneerGetalOfNull(it.volgorde, ctx, `ritmetaken.items.${i}.volgorde`);
+    items.push({
+      taak, agent: saneerTekstOfNull(it.agent, 60),
+      ritme: saneerCode(it.ritme, ""),
+      actief: it.actief === true,
+      laatst_gedraaid: saneerDatumOfNull(it.laatst_gedraaid, ctx, `ritmetaken.items.${i}.laatst_gedraaid`),
+      volgorde, url: saneerHttpsUrl(it.url),
+    });
+  }
+  return { items };
+}
+
 function saneerMetricsPayload(raw, schema) {
   if (!isObject(raw)) return null;
   const domeinSlugs = schema && schema.datadomeinen ? Object.keys(schema.datadomeinen) : [];
@@ -310,6 +355,9 @@ function saneerMetricsPayload(raw, schema) {
     };
   }
 
+  if ("voor_jou" in raw) uit.voor_jou = saneerVoorJouBlok(raw.voor_jou, ctx);
+  if ("ritmetaken" in raw) uit.ritmetaken = saneerRitmeBlok(raw.ritmetaken, ctx);
+
   uit.waarschuwingen = saneerTekstLijst(raw.waarschuwingen, METRICS_MAX.tekst).concat(ctx.waarschuwingen).slice(0, METRICS_MAX.lijst);
   return uit;
 }
@@ -321,5 +369,5 @@ function agentVoorSleutel(agents, sleutel) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN };
+  module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN, saneerVoorJouBlok, saneerRitmeBlok };
 }
