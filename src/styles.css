@@ -1028,3 +1028,40 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .ronde-knoppen { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .ronde-knoppen .bedien-knop { min-height: 40px; display: inline-flex; align-items: center; text-decoration: none; color: var(--ink); }
 .ronde-slot p { margin: 8px 0; }
+
+/* ── f51 · vaste taken ───────────────────────────────────────────────── */
+.vt-vak { margin: 0 0 18px; }
+.vt-vak h2 { font-size: 1rem; margin: 0 0 8px; color: var(--ink); }
+.vt-week { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 6px 0 8px; }
+.vt-dag { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vt-druk { border-color: var(--jij); background: var(--jij-zacht); }
+.vt-dagnaam { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
+.vt-aantal { font-size: 1.4rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.vt-dagtaken { font-size: 0.75rem; color: var(--muted); overflow-wrap: anywhere; }
+.vt-noot { font-size: 0.72rem; color: var(--muted); font-style: italic; }
+.vt-drukte { border-left: 3px solid var(--jij); padding: 4px 0 4px 12px; margin: 8px 0; font-size: 0.9rem; }
+.vt-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vt-taak { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.vt-taak[aria-busy="true"] { opacity: 0.7; }
+.vt-uit .vt-titel { color: var(--muted); }
+.vt-inhoud { flex: 1 1 auto; min-width: 0; }
+.vt-titel { margin: 0; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.vt-meta { margin: 2px 0 0; font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.vt-status-achter { color: var(--jij-tekst); font-weight: 600; }
+.vt-ritme select { min-height: 40px; padding: 4px 8px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.vt-schakel { position: relative; display: inline-flex; width: 44px; height: 26px; flex: 0 0 auto; cursor: pointer; }
+.vt-schakel input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.vt-schakel span { position: absolute; inset: 0; border-radius: 999px; background: var(--line-2); transition: background 0.15s; }
+.vt-schakel span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); transition: transform 0.15s; }
+.vt-schakel input:checked + span { background: var(--team); }
+.vt-schakel input:checked + span::after { transform: translateX(18px); }
+.vt-schakel input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.vt-schakel input:disabled + span { opacity: 0.5; }
+.vt-kopieer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 6px 0; }
+.vt-kopieer code { flex: 1 1 auto; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.88rem; color: var(--ink); }
+@media (max-width: 640px) {
+  .vt-week { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .vt-dagtaken { display: none; }
+  .vt-taak { flex-wrap: wrap; }
+  .vt-ritme { flex-basis: 100%; }
+}
