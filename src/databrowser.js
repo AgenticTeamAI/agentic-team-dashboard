@@ -179,6 +179,18 @@ function dataCelTekst(waarde) {
  * de titel is server-side gezet en dus betrouwbaar genoeg als zoekterm.
  * Zonder titel (of naar een domein dat niet in de bundel zit) blijft het
  * gewoon tekst — een dode link is erger dan geen link. */
+/* f49: waar een rij woont — een actie als blad, de rest als eigen pagina. */
+function rijPaginaPad(domein, id) {
+  return domein === "acties" ? `#/acties/${encodeURIComponent(id)}` : `#/data/${domein}/${encodeURIComponent(id)}`;
+}
+
+function rpHuidigeTitel(domein, id) {
+  const ctx = typeof window !== "undefined" ? window.__dashboardCtx : null;
+  const dom = ctx && ctx.schema && ctx.schema.datadomeinen[domein];
+  const rij = dom && (dataRijenVan(ctx, domein) || []).find(r => r.__entryId === id);
+  return rij ? detailTitel(dom, rij) : null;
+}
+
 function dataCelHtml(waarde, veld) {
   if (veld && veld.type === "relatie" && veld.naar) {
     const lijst = Array.isArray(waarde) ? waarde : (waarde === null || waarde === undefined || waarde === "" ? [] : [waarde]);
@@ -190,8 +202,12 @@ function dataCelHtml(waarde, veld) {
       const doel = veld.naar === "*" ? (w && typeof w === "object" ? w.domein : "") : veld.naar;
       if (!titel || !doel || (doel in DATA_NIET_IN_BUNDEL)) return esc(dataCelTekst(w));
       const id = w && typeof w === "object" && typeof w.id === "string" ? w.id : "";
-      return `<a href="#/data/${esc(doel)}" class="relatie-link" data-relatie-zoek="${esc(titel)}"` +
-        (id ? ` data-open-rij="${esc(doel)}|${esc(id)}"` : "") + `>${esc(titel)}</a>`;
+      // f49: de koppeling loopt via het id; de titel in de verwijzing is die van
+      // toen hij gelegd werd. Staat de rij in de bundel, dan zijn naam van nu.
+      const nu = id ? rpHuidigeTitel(doel, id) : null;
+      const naam = nu || titel;
+      if (!id) return `<a href="#/data/${esc(doel)}" class="relatie-link" data-relatie-zoek="${esc(titel)}">${esc(naam)}</a>`;
+      return `<a href="${esc(rijPaginaPad(doel, id))}" class="relatie-link">${esc(naam)}</a>`;
     }).filter(Boolean);
     if (stukken.length) return stukken.join(", ");
   }
@@ -288,8 +304,8 @@ function dataDetailHtml(ctx, key, rij) {
     ? terug.map(t => {
         const items = t.treffers.slice(0, 25).map(r => {
           const titel = detailTitel(t.dom, r);
-          return `<li><a href="#/data/${esc(t.slug)}" class="relatie-link" data-relatie-zoek="${esc(titel)}"` +
-            (r.__entryId ? ` data-open-rij="${esc(t.slug)}|${esc(r.__entryId)}"` : "") + `>${esc(titel)}</a></li>`;
+          return r.__entryId ? `<li><a href="${esc(rijPaginaPad(t.slug, r.__entryId))}" class="relatie-link">${esc(titel)}</a></li>`
+            : `<li><a href="#/data/${esc(t.slug)}" class="relatie-link" data-relatie-zoek="${esc(titel)}">${esc(titel)}</a></li>`;
         }).join("");
         const rest = t.treffers.length > 25 ? `<li class="footnote">… en nog ${t.treffers.length - 25}</li>` : "";
         return `<div class="detail-terug"><p><strong>${esc(t.dom.emoji || "🗂️")} ${esc(t.dom.naam || t.slug)}</strong>
@@ -306,7 +322,8 @@ function dataDetailHtml(ctx, key, rij) {
   return `<div class="detail-kaart" data-detail-kaart data-detail-id="${esc(rij.__entryId || "")}">
     <div class="detail-kop">
       <p><strong>${esc(domein.emoji || "🗂️")} ${esc(detailTitel(domein, rij))}</strong>
-        ${key === "acties" && rij.__entryId ? `<a class="relatie-link blad-link" href="#/acties/${encodeURIComponent(rij.__entryId)}">Open als blad →</a>` : ""}</p>
+        ${key === "acties" && rij.__entryId ? `<a class="relatie-link blad-link" href="#/acties/${encodeURIComponent(rij.__entryId)}">Open als blad →</a>` : ""}
+        ${key !== "acties" && rij.__entryId ? `<a class="relatie-link blad-link" href="${esc(rijPaginaPad(key, rij.__entryId))}">Open als pagina →</a>` : ""}</p>
       <button type="button" class="filter-wis" data-detail-sluit aria-label="Sluiten">✕</button>
     </div>
     ${bedienHtml(ctx, key, domein, rij)}

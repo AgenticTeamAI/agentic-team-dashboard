@@ -38,6 +38,7 @@ const MODULES = [
   "src/vaste-taken.js",
   "src/hulp.js",
   "src/opdracht.js",
+  "src/rijpagina.js",
   "src/modules-beheer.js",
   "src/team-beheer.js",
   "src/app.js",
