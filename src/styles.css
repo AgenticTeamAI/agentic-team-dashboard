@@ -1020,3 +1020,11 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .toegang-balk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--jij); border-left-width: 4px; border-radius: 10px; background: var(--jij-zacht); color: var(--ink); font-size: 0.92rem; }
 .toegang-balk[hidden] { display: none; }
 .toegang-balk .footnote { margin: 0; }
+
+/* ── f46 · één voor één ──────────────────────────────────────────────── */
+.vj-ronde-start { display: inline-flex; align-items: center; margin: 0 0 12px; text-decoration: none; }
+.ronde-kop { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.ronde-voortgang { font-weight: 700; color: var(--jij-tekst); font-variant-numeric: tabular-nums; }
+.ronde-knoppen { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.ronde-knoppen .bedien-knop { min-height: 40px; display: inline-flex; align-items: center; text-decoration: none; color: var(--ink); }
+.ronde-slot p { margin: 8px 0; }

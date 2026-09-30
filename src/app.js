@@ -239,7 +239,7 @@ function toegangsBalkHtml(ctx) {
   return "";
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -422,6 +422,7 @@ function renderDetail(key) {
 const TAB_TITELS = {
   vandaag: "Agentic Team Dashboard",
   acties: "Acties — Agentic Team Dashboard",
+  ronde: "Eén voor één — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -497,6 +498,10 @@ function route() {
     if (hier) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   if (view.tab === "acties") renderActiesTab(versContainer("tab-acties-body"), ctx);
+  if (view.tab === "ronde") {
+    renderRonde(versContainer("tab-ronde-body"), ctx);
+    if (!zelfde) { const t = document.querySelector("#tab-ronde-body .blad-titel"); if (t) t.focus({ preventScroll: true }); }
+  }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
   if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
   // Een tab begon nooit bovenaan; die blijft staan, alleen de focus komt terug.
@@ -733,6 +738,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireNavigatie();
   wireKopInklappen();
   wireLoginknop();
+  zetSneltoetsenAan();
   document.getElementById("empty-state-privacy").textContent = PRIVACY_LEGE_STAAT;
   renderAll();
   toonLoginknop(true);

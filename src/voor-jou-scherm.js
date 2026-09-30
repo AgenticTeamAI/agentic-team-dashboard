@@ -155,6 +155,7 @@ function renderVoorJou(paneel, ctx) {
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
     ${vjNaamRegelHtml(ctx)}
+    ${lijst.length >= 2 ? `<a class="knop blad-knop vj-ronde-start" href="#/ronde">Loop ze één voor één door ›</a>` : ""}
     ${lijst.length
       ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
       : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
@@ -227,6 +228,141 @@ function wireVjNaam(el, ctx) {
   });
 }
 
+/* ── f46: één voor één ─────────────────────────────────────────────────
+ *
+ * "Loop ze één voor één door": het item-blad van elk stuk in de werkbak,
+ * in dezelfde volgorde en met dezelfde nummers. Handel je er een af, dan
+ * verdwijnt het uit de werkbak (aanJouZet) en staat vanzelf het volgende er;
+ * de ronde zelf onthoudt alleen welke stukken erin zaten, waar je bent en wat
+ * je oversloeg. Aan het eind een slotkaart: wat je deed, en wat nu bij je team
+ * ligt. De ronde leeft per bundel, net als de nummers: Ververs begint opnieuw. */
+let vjRonde = null;
+
+function _resetRonde() { vjRonde = null; }
+
+function rondeVoor(ctx) {
+  const lijst = voorJouLijst(ctx);
+  if (!lijst) return null;
+  if (!vjRonde || vjRonde.bundle !== ctx.bundle) {
+    vjRonde = { bundle: ctx.bundle, ids: vjGenummerd(ctx.bundle, lijst).map(r => r.__entryId), pos: 0, over: new Set() };
+  }
+  const nog = new Set(lijst.map(r => r.__entryId));
+  let i = vjRonde.pos;
+  while (i < vjRonde.ids.length && (!nog.has(vjRonde.ids[i]) || vjRonde.over.has(vjRonde.ids[i]))) i++;
+  vjRonde.pos = i;
+  const afgehandeld = vjRonde.ids.filter(id => !nog.has(id)).length;
+  return { ronde: vjRonde, huidig: vjRonde.ids[i] || null, nog, afgehandeld, totaal: vjRonde.ids.length };
+}
+
+function rondeKopHtml(nr, positie, totaal, heeftVorige) {
+  return `<div class="ronde-kop">
+      <span class="ronde-voortgang">Nr ${nr} · ${positie} van ${totaal}</span>
+      <span class="ronde-knoppen">
+        <button type="button" class="knop-mini bedien-knop" data-ronde="vorige" aria-keyshortcuts="K"${heeftVorige ? "" : " disabled"}>‹ Vorige</button>
+        <button type="button" class="knop-mini bedien-knop" data-ronde="over" aria-keyshortcuts="J">Sla over ›</button>
+        <a class="knop-mini bedien-knop" href="#/" data-ronde="stop" aria-keyshortcuts="Escape">Stoppen</a>
+      </span>
+    </div>`;
+}
+
+function renderRonde(buiten, ctx) {
+  // Elke tekening in een vers vak: zo nemen de klik-handlers van het vorige
+  // blad niet mee naar het volgende (anders deed een knop het twee keer).
+  const el = document.createElement("div");
+  buiten.replaceChildren(el);
+  const opnieuw = () => {
+    renderRonde(buiten, ctx);
+    const t = buiten.querySelector(".blad-titel"); if (t) t.focus();
+  };
+  const stand = rondeVoor(ctx);
+  if (!stand) { el.innerHTML = `<p>Er is niets om door te lopen.</p><a class="detail-link" href="#/">← Voor jou</a>`; return; }
+  const { ronde, huidig, totaal, afgehandeld } = stand;
+  if (!huidig) {
+    const over = ronde.over.size;
+    const team = bijTeam(ctx.bundle, ctx.schema, { nu: ctx.today || new Date() }).length;
+    el.innerHTML = `<div class="blad ronde-slot">
+      <h2 class="blad-titel" tabindex="-1">Klaar voor nu</h2>
+      <p>Je handelde er ${afgehandeld} af${over ? `, ${over} sloeg je over` : ""}.</p>
+      ${team ? `<p class="footnote">Bij je team: ${team}. Wat het oppakt, zie je terug in Voor jou.</p>` : ""}
+      <p><a class="knop blad-knop blad-knop-prim" href="#/">Terug naar Voor jou</a>
+        ${over ? `<button type="button" class="knop blad-knop" data-ronde="opnieuw">Loop de overgeslagen nog eens door</button>` : ""}</p>
+    </div>`;
+    el.addEventListener("click", (e) => {
+      if (e.target.closest && e.target.closest('[data-ronde="opnieuw"]')) {
+        ronde.over.clear();
+        ronde.pos = 0;
+        opnieuw();
+      }
+    });
+    return;
+  }
+  const rij = (dataRijenVan(ctx, "acties") || []).find(r => r.__entryId === huidig);
+  const nr = vjNummering.map.get(huidig);
+  const heeftVorige = ronde.ids.slice(0, ronde.pos).some(id => stand.nog.has(id));
+  el.innerHTML = itemBladHtml(ctx, "acties", rij, { kop: rondeKopHtml(nr, ronde.pos + 1, totaal, heeftVorige) });
+  wireItemBlad(el, "acties", rij, ctx);
+  el.addEventListener("click", (e) => {
+    const knop = e.target.closest && e.target.closest("[data-ronde]");
+    if (!knop) return;
+    const wat = knop.getAttribute("data-ronde");
+    if (wat === "over") { ronde.over.add(huidig); ronde.pos += 1; }
+    else if (wat === "vorige") {
+      // Terug naar het vorige stuk dat nog openstaat, ook als je het oversloeg.
+      let i = ronde.pos - 1;
+      while (i >= 0 && !stand.nog.has(ronde.ids[i])) i--;
+      if (i < 0) return;
+      ronde.over.delete(ronde.ids[i]);
+      ronde.pos = i;
+    } else return;
+    opnieuw();
+  });
+}
+
+/* ── f46: sneltoetsen op een toetsenbord ────────────────────────────────
+ * Nooit terwijl je typt, en nooit met Ctrl/Cmd/Alt erbij (die zijn van de
+ * browser). Op Voor jou opent 1–9 dat nummer; in de ronde bladeren J/K (of de
+ * pijltjes), doet G de hoofdknop en stopt Esc. Op een los blad gaat Esc terug
+ * naar Acties. Alleen toetsen die nu ergens heen kunnen, doen iets. */
+function vjToetsIsTypen(doel) {
+  if (!doel || !doel.tagName) return false;
+  const t = doel.tagName.toLowerCase();
+  return t === "input" || t === "textarea" || t === "select" || doel.isContentEditable;
+}
+
+function vjSneltoets(e) {
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || vjToetsIsTypen(e.target)) return;
+  const hash = window.location.hash || "";
+  const klik = (sel) => { const k = document.querySelector(sel); if (k) { e.preventDefault(); k.click(); } return !!k; };
+  if (hash === "#/ronde") {
+    if (e.key === "j" || e.key === "ArrowRight") return void klik('[data-ronde="over"]');
+    if (e.key === "k" || e.key === "ArrowLeft") return void klik('[data-ronde="vorige"]');
+    if (e.key === "g") return void klik("[data-afhandel].blad-knop-prim, [data-afhandel].blad-knop-teamvol");
+    if (e.key === "Escape") { e.preventDefault(); window.location.hash = "#/"; }
+    return;
+  }
+  if (/^#\/acties\/./.test(hash)) {
+    if (e.key === "Escape" && !document.querySelector("[data-vraag], .naam-vraag")) { e.preventDefault(); window.location.hash = "#/acties"; }
+    return;
+  }
+  if ((hash === "" || hash === "#" || hash === "#/") && /^[1-9]$/.test(e.key)) {
+    const nr = Number(e.key);
+    for (const [id, n] of vjNummering.map) {
+      if (n === nr && document.querySelector(`[data-vj-id="${cssWaarde(id)}"]`)) {
+        e.preventDefault();
+        window.location.hash = `#/acties/${encodeURIComponent(id)}`;
+        return;
+      }
+    }
+  }
+}
+
+let vjToetsenAan = false;
+function zetSneltoetsenAan() {
+  if (vjToetsenAan || typeof document === "undefined") return;
+  vjToetsenAan = true;
+  document.addEventListener("keydown", vjSneltoets);
+}
+
 /* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
 function voorJouAantal(ctx) {
   const lijst = voorJouLijst(ctx);
@@ -234,5 +370,6 @@ function voorJouAantal(ctx) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderVoorJou, voorJouLijst, voorJouAantal, vjVerhaal, vjGenummerd, _resetVoorJouNummers };
+  module.exports = { renderVoorJou, voorJouLijst, voorJouAantal, vjVerhaal, vjGenummerd, _resetVoorJouNummers,
+    renderRonde, rondeVoor, _resetRonde, vjSneltoets, zetSneltoetsenAan };
 }
