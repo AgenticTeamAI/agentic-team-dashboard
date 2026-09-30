@@ -3,11 +3,14 @@
  * functie geeft een HTML-string terug (SVG + eventueel een HTML-legenda)
  * op basis van pure data + opties, zodat dit ook zonder DOM te testen is.
  *
- * Kleuren volgen het ontwerp: mint + licht mint + twee neutrale tinten voor
- * series, NOOIT statuskleuren (rood/oranje/groen) — dit zijn hoeveelheden,
- * geen signalen. */
+ * Kleuren volgen het ontwerp: teal (je team) in twee sterktes plus twee
+ * neutrale tinten voor series, NOOIT statuskleuren (rood/oranje/groen) — dit
+ * zijn hoeveelheden, geen signalen. Oranje is in v2 bovendien "jij" (i86).
+ * Alles loopt via de CSS-tokens, zodat licht en donker vanzelf kloppen. Dat
+ * kan alleen via het style-attribuut: een SVG-presentatieattribuut als
+ * fill="var(--team)" lost geen CSS-variabele op. */
 
-const CHART_SERIE_KLEUREN = ["#4ADE80", "#86EFAC", "#8189A8", "#5B6178"];
+const CHART_SERIE_KLEUREN = ["var(--team)", "color-mix(in srgb, var(--team) 50%, var(--surface))", "var(--muted)", "var(--line-2)"];
 
 function svgEsc(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -35,8 +38,8 @@ function buildStackedBarChart({ buckets, seriesKeys, seriesLabels, width = 760, 
     const x = padLeft + i * (barW + gap);
     if (b.leeg) {
       const y = padTop + plotH - 8;
-      bars += `<rect x="${x.toFixed(1)}" y="${y}" width="${barW.toFixed(1)}" height="8" fill="none" stroke="#6B7280" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7" rx="2"><title>Week van ${svgEsc(b.label)}: geen activiteit</title></rect>`;
-      axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${padTop + plotH - 14}" text-anchor="middle" font-size="8.5" fill="#9CA3AF" font-style="italic">geen</text>`;
+      bars += `<rect x="${x.toFixed(1)}" y="${y}" width="${barW.toFixed(1)}" height="8" fill="none" style="stroke:var(--line-2)" stroke-width="1.2" stroke-dasharray="3,2" opacity="0.7" rx="2"><title>Week van ${svgEsc(b.label)}: geen activiteit</title></rect>`;
+      axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${padTop + plotH - 14}" text-anchor="middle" font-size="8.5" style="fill:var(--muted)" font-style="italic">geen</text>`;
     } else {
       let yCursor = padTop + plotH;
       seriesKeys.forEach((k, si) => {
@@ -44,16 +47,16 @@ function buildStackedBarChart({ buckets, seriesKeys, seriesLabels, width = 760, 
         if (!v) return;
         const h = (v / maxTotal) * plotH;
         yCursor -= h;
-        bars += `<rect x="${x.toFixed(1)}" y="${yCursor.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${CHART_SERIE_KLEUREN[si]}"><title>Week van ${svgEsc(b.label)} — ${svgEsc(seriesLabels[si])}: ${v}</title></rect>`;
+        bars += `<rect x="${x.toFixed(1)}" y="${yCursor.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" style="fill:${CHART_SERIE_KLEUREN[si]}"><title>Week van ${svgEsc(b.label)} — ${svgEsc(seriesLabels[si])}: ${v}</title></rect>`;
       });
     }
-    axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${height - padBottom + 14}" text-anchor="middle" font-size="8.5" fill="#9CA3AF">${svgEsc(b.label)}</text>`;
+    axisLabels += `<text x="${(x + barW / 2).toFixed(1)}" y="${height - padBottom + 14}" text-anchor="middle" font-size="8.5" style="fill:var(--muted)">${svgEsc(b.label)}</text>`;
   });
 
-  const axis = `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${padTop + plotH}" stroke="#3f3f5c" stroke-width="1"></line>
-    <line x1="${padLeft}" y1="${(padTop + plotH).toFixed(1)}" x2="${width - padRight}" y2="${(padTop + plotH).toFixed(1)}" stroke="#3f3f5c" stroke-width="1"></line>
-    <text x="${padLeft - 5}" y="${padTop + 4}" text-anchor="end" font-size="9" fill="#9CA3AF">${maxTotal}</text>
-    <text x="${padLeft - 5}" y="${(padTop + plotH).toFixed(1)}" text-anchor="end" font-size="9" fill="#9CA3AF">0</text>`;
+  const axis = `<line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${padTop + plotH}" style="stroke:var(--line-2)" stroke-width="1"></line>
+    <line x1="${padLeft}" y1="${(padTop + plotH).toFixed(1)}" x2="${width - padRight}" y2="${(padTop + plotH).toFixed(1)}" style="stroke:var(--line-2)" stroke-width="1"></line>
+    <text x="${padLeft - 5}" y="${padTop + 4}" text-anchor="end" font-size="9" style="fill:var(--muted)">${maxTotal}</text>
+    <text x="${padLeft - 5}" y="${(padTop + plotH).toFixed(1)}" text-anchor="end" font-size="9" style="fill:var(--muted)">0</text>`;
 
   const legend = seriesKeys.map((k, i) =>
     `<span class="chart-legend-item"><span class="dot" style="background:${CHART_SERIE_KLEUREN[i]}"></span>${svgEsc(seriesLabels[i])}</span>`
@@ -79,13 +82,13 @@ function buildHorizontalBarChart({ items, width = 680, barHeight = 20, gap = 7 }
     const titel = it.totaal !== undefined && it.totaal !== it.value
       ? `${svgEsc(it.label)}: ${it.value} in de gekozen periode (${it.totaal} totaal in de bundel)`
       : `${svgEsc(it.label)}: ${it.value}`;
-    rowsHtml += `<text x="${labelW - 8}" y="${(y + barHeight / 2 + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#FFFFFF">${svgEsc(it.emoji || "")} ${svgEsc(it.label)}</text>`;
+    rowsHtml += `<text x="${labelW - 8}" y="${(y + barHeight / 2 + 4).toFixed(1)}" text-anchor="end" font-size="11" style="fill:var(--ink)">${svgEsc(it.emoji || "")} ${svgEsc(it.label)}</text>`;
     if (w > 0) {
-      rowsHtml += `<rect x="${labelW}" y="${y}" width="${w.toFixed(1)}" height="${barHeight}" rx="4" fill="#4ADE80"><title>${titel}</title></rect>`;
+      rowsHtml += `<rect x="${labelW}" y="${y}" width="${w.toFixed(1)}" height="${barHeight}" rx="4" style="fill:var(--team)"><title>${titel}</title></rect>`;
     } else {
-      rowsHtml += `<rect x="${labelW}" y="${y + barHeight / 2 - 1}" width="10" height="2" fill="#6B7280" opacity="0.6"><title>${titel}</title></rect>`;
+      rowsHtml += `<rect x="${labelW}" y="${y + barHeight / 2 - 1}" width="10" height="2" style="fill:var(--line-2)" opacity="0.6"><title>${titel}</title></rect>`;
     }
-    rowsHtml += `<text x="${labelW + w + 6}" y="${(y + barHeight / 2 + 4).toFixed(1)}" font-size="10.5" fill="#9CA3AF">${it.value}</text>`;
+    rowsHtml += `<text x="${labelW + w + 6}" y="${(y + barHeight / 2 + 4).toFixed(1)}" font-size="10.5" style="fill:var(--muted)">${it.value}</text>`;
   });
   return `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gebruik per agent, gerangschikt">${rowsHtml}</svg>`;
 }
