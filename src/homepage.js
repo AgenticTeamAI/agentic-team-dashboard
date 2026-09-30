@@ -720,6 +720,16 @@ function bepaalActieveView() {
   const dom = hash.match(/^#\/data\/([a-z0-9_]+)/);
   if (dom) return { soort: "data", domein: dom[1], tab: "data" };
 
+  // f47: één actie als blad, met een eigen adres. Kale #/acties is de lijst
+  // (tot de Acties-tab er is, f48, woont die onder Gegevens).
+  const item = hash.match(/^#\/acties\/([^/?#]+)/);
+  if (item) {
+    let id = item[1];
+    try { id = decodeURIComponent(id); } catch (e) { /* laat hem zoals hij is */ }
+    return { soort: "item", domein: "acties", id, tab: "data" };
+  }
+  if (/^#\/acties\/?$/.test(hash)) return { soort: "data", domein: "acties", tab: "data" };
+
   const tab = hash.match(/^#\/([a-z]+)/);
   if (tab && TABS.some(t => t.key === tab[1])) return { soort: "tab", tab: tab[1] };
 

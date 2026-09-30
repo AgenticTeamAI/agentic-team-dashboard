@@ -396,7 +396,7 @@ function route() {
   // Is de Data-tab er niet (een metricsbestand zonder relatiekaarten), dan mag
   // een onthouden of getypte #/data-link niet op een lege tab uitkomen.
   if (view.tab === "data" && !dataTabBeschikbaar(ctx)) view = { soort: "tab", tab: "vandaag" };
-  const sleutel = [view.soort, view.tab, view.key || "", view.domein || ""].join("|");
+  const sleutel = [view.soort, view.tab, view.key || "", view.domein || "", view.id || ""].join("|");
   const zelfde = sleutel === vorigeWeergave;
   vorigeWeergave = sleutel;
   const scrollY = window.scrollY;
@@ -418,6 +418,13 @@ function route() {
   if (view.soort === "data") {
     renderDataDomein(versContainer("tab-data-body"), view.domein, ctx);
     blijfOfNaarBoven(zelfde, scrollY, focus);
+    return;
+  }
+  if (view.soort === "item") {
+    renderItemBlad(versContainer("tab-data-body"), view.domein, view.id, ctx);
+    blijfOfNaarBoven(zelfde, scrollY, focus);
+    // Een nieuw blad: de focus op de titel, zodat een schermlezer weet waar je bent.
+    if (!zelfde) { const t = document.querySelector(".blad-titel"); if (t) t.focus({ preventScroll: true }); }
     return;
   }
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
@@ -469,6 +476,14 @@ function wireNavigatie() {
         filterEl.getAttribute("data-filter-label") || "",
         (filterEl.getAttribute("data-filter-ids") || "").split(","),
       );
+      return;
+    }
+    // f47: "Bewerken in Gegevens" vanaf het blad — de detailkaart staat dan open.
+    const detailOpen = e.target.closest("[data-detail-open]");
+    if (detailOpen) {
+      const ruw = detailOpen.getAttribute("data-detail-open") || "";
+      const scheiding = ruw.indexOf("|");
+      if (scheiding !== -1) { resetDataZoek(); zetDataDetail(ruw.slice(0, scheiding), ruw.slice(scheiding + 1)); }
       return;
     }
     const zoekEl = e.target.closest("[data-relatie-zoek]");

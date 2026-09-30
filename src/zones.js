@@ -214,6 +214,19 @@ function computeZone3(bundle, agentLookup, schema, today, periodDays) {
 // nooit uit vergelijking met een vorige keer openen (dat zou een cache
 // vereisen, en dat mag dit dashboard niet hebben). Waar geen datumveld
 // bestaat, tonen we de huidige stand — expliciet gelabeld als zodanig.
+/* f47: een voorstel dat je afwijst ("Nee, niet doen") gaat op Klaar met
+ * Correctie "Niet doen…" — zo weet je team waarom, en verdwijnt het uit je
+ * lijst. Maar het is geen gedaan werk: het telt niet mee in wat je team
+ * opleverde of in de tijdwinst. In de opvolging (adoptie) telt het wél: ook een
+ * bewust "nee" is een actie die is afgehandeld. */
+function isNietDoen(r) {
+  return /^\s*niet doen\b/i.test(String(getField(r, "Correctie") || ""));
+}
+
+function isAfgerondWerk(r) {
+  return getField(r, "Status") === "Klaar" && !isNietDoen(r);
+}
+
 function computeZone4(bundle, today, periodDays) {
   const out = {};
 
@@ -221,7 +234,7 @@ function computeZone4(bundle, today, periodDays) {
   if (acties) {
     out.acties = {
       totaal: acties.length,
-      afgerond: acties.filter(r => getField(r, "Status") === "Klaar").length,
+      afgerond: acties.filter(isAfgerondWerk).length,
       opmerking: "Totaal = alle acties in de bundel (geen aanmaakdatum beschikbaar in dit domein om op periode te filteren).",
     };
   }
@@ -617,7 +630,7 @@ function computeAdoptiescore(bundle, schema, today, weeks = 12) {
 // -- Geschatte tijdwinst - nooit een meting, altijd een zichtbare som -----
 function computeTijdwinst(bundle, minutenPerActie = 25) {
   const acties = rows(bundle, "acties");
-  const afgerond = acties ? acties.filter(r => getField(r, "Status") === "Klaar").length : 0;
+  const afgerond = acties ? acties.filter(isAfgerondWerk).length : 0;
   const totaal = acties ? acties.length : 0;
   const minuten = afgerond * minutenPerActie;
   return { berekenbaar: !!acties, afgerond, totaal, minutenPerActie, minuten, uren: minuten / 60 };
@@ -971,6 +984,7 @@ function computeCorrectievrij(bundle, today, vensterDagen = CORRECTIEVRIJ_VENSTE
 
 if (typeof module !== "undefined") {
   module.exports = {
+    isNietDoen, isAfgerondWerk,
     STALE_DAYS, CONTEXT_ROOD_DAYS, CONTEXT_ORANJE_DAYS,
     RITME_BRONNEN, RITME_DATUMVELD, RITME_SERIE_LABEL,
     kalenderDag, dagVanIndex, daysBetween, parseDateField, isStale, meetbareDomeinen, NIET_MEETBARE_DOMEINEN,

@@ -902,3 +902,48 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   .team-actie { white-space: normal; }
   .team-bevestig { max-width: none; }
 }
+
+/* ── f47 · het item-blad ─────────────────────────────────────────────── */
+.blad { max-width: 720px; margin: 0 auto; padding: 4px 0 24px; }
+.blad-titel { font-size: 1.35rem; line-height: 1.25; margin: 10px 0 6px; color: var(--ink); }
+/* De titel krijgt programmatisch de focus bij een nieuw blad (voor een
+   schermlezer); een ring om een kop is dan alleen ruis. */
+.blad-titel:focus, .blad-titel:focus-visible { outline: none; }
+.blad-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 0.85rem; }
+.soort-pil { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+.beurt { font-weight: 600; color: var(--jij-tekst); }
+.beurt-team { color: var(--team-tekst); }
+.beurt-wacht, .beurt-klaar, .beurt-klopt-niet { color: var(--muted); }
+.pil-laat { background: var(--rood-zacht); color: var(--rood); border-radius: 999px; padding: 1px 8px; font-weight: 600; font-size: 0.78rem; }
+.blad-herkomst { color: var(--muted); font-size: 0.9rem; margin: 0 0 8px; }
+.blad-hoortbij { font-size: 0.88rem; color: var(--muted); margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.relatie-pil { background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; color: var(--ink); }
+.blad-citaat { border-left: 3px solid var(--team); padding: 4px 0 4px 12px; margin: 8px 0; color: var(--ink); font-size: 0.92rem; }
+.papier { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.papier-kop { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+.papier-kop h3 { margin: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.beslisbalk { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.blad-regel { margin: 0; font-size: 0.9rem; color: var(--ink); }
+.beslisbalk > :empty, .blad-vraag > :empty { display: none; }
+.blad-knop { min-height: 44px; font-size: 0.95rem; }
+.blad-knop-prim { background: var(--jij); border-color: var(--jij); color: var(--op-jij); }
+.blad-knop-prim:hover { background: var(--jij); color: var(--op-jij); filter: brightness(1.05); }
+.blad-knop-team { border-color: var(--team); color: var(--team-tekst); background: var(--surface); }
+.blad-knop-teamvol { background: var(--team); border-color: var(--team); color: var(--op-team); }
+.blad-knoprij { display: flex; flex-wrap: wrap; gap: 8px; }
+.blad-knoprij .blad-knop { flex: 1 1 auto; }
+.blad-vraag { flex-direction: column; align-items: stretch; }
+.blad-vraag textarea, .blad-vraag select, .blad-vraag input[type="date"] { width: 100%; padding: 8px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.blad-datums { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.blad-datums .bedien-knop { min-height: 40px; }
+.blad-uitklap { border-top: 1px solid var(--line); padding: 10px 0; }
+.blad-uitklap > summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 32px; display: flex; align-items: center; }
+.blad-velden { display: grid; grid-template-columns: minmax(120px, 30%) 1fr; gap: 6px 12px; margin: 10px 0; font-size: 0.9rem; }
+.blad-velden dt { color: var(--muted); }
+.blad-velden dd { margin: 0; overflow-wrap: anywhere; }
+.blad-subs { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+.blad-link { margin-left: 10px; font-size: 0.85rem; font-weight: 600; }
+@media (max-width: 640px) {
+  .blad-velden { grid-template-columns: 1fr; }
+  .blad-velden dd { margin-bottom: 6px; }
+}

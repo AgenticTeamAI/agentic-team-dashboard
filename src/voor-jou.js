@@ -106,10 +106,19 @@ function soortVan(rij, namen, nu) {
   return regel ? regel(rij, namen, nu) : "klopt-niet";
 }
 
+/* f47 "Later": een datum in "Wachten tot" haalt een item tot die dag uit je
+ * lijst, zonder de status te veranderen. Voor Status Wacht is dat de gewone
+ * wektijd (zie hieronder); voor elke andere status betekent het: nu even niet. */
+function wachtInToekomst(rij, nu) {
+  const tot = vjDag(getField(rij, "Wachten tot"));
+  return !!tot && tot > vjVandaag(nu);
+}
+
 function hoortBijMens(rij, namen, nu) {
   const status = vjTekst(rij, "Status");
   const eigenaar = vjTekst(rij, "Eigenaar");
   if (status === VJ_KLAAR) return false;
+  if (status !== VJ_WACHT && wachtInToekomst(rij, nu)) return false;
   if (status === VJ_REVIEW) return vjMensOfLeeg(eigenaar, namen);
   if (status === VJ_VOORSTEL) return true;
   if (status === VJ_WACHT) return vjVerlopen(rij, nu) && vjMensOfLeeg(eigenaar, namen);
@@ -198,9 +207,222 @@ function kloptNiet(bundle, schema, opties) {
   return acties.filter(r => soortVan(r, namen, nu) === "klopt-niet");
 }
 
+/* ── f47: afhandelen ────────────────────────────────────────────────────
+ *
+ * Welke knoppen horen bij een item, en wat schrijft elke knop? Alles hier is
+ * puur: een patch en een zin voor de meldingsregel. Het item-blad (en straks
+ * de kaarten in Voor jou) voeren het uit via PATCH, met ongedaan maken.
+ *
+ * i25 loopt hier dwars doorheen en is daarom per knop uitgeschreven:
+ * - een mens die afrondt laat "Afgerond door" leeg (dat is de markering voor
+ *   werk dat een agent zelf afrondde);
+ * - "Nee, niet doen" zet Gecorrigeerd níet: afwijzen is geen correctie van
+ *   het werk. De reden gaat in Correctie als "Niet doen: …", en isNietDoen()
+ *   houdt het buiten opbrengst en tijdwinst;
+ * - "Toch weer openen" laat Afgerond door en Afgerond op staan: juist daaraan
+ *   ziet de correctievrij-meting dat een autonoom afgeronde actie heropend is. */
+
+const OPMERKING_KOP = /^— Opmerking van[^\n]*—\n\n/;
+
+function vjIsoDag(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function vjDatumKort(d) {
+  const dag = d instanceof Date ? d : vjDag(d);
+  return dag ? dag.toLocaleDateString("nl-NL", { weekday: "short", day: "numeric", month: "short" }) : "";
+}
+
+/* De weergavenaam van een agent, of null als de waarde geen agent is. */
+function agentWeergaveNaam(schema, waarde) {
+  const n = normAgentNaam(waarde);
+  if (!n) return null;
+  const lijst = (schema && schema.agents) || [];
+  const a = lijst.find(x => normAgentNaam(x.displayName) === n || normAgentNaam(x.slug) === n || normAgentNaam(x.naam) === n);
+  return a ? (a.displayName || a.naam) : null;
+}
+
+/* Welke specialist hoort bij dit item? Wie het uitvoert (Agent), anders wie
+ * het klaarzette, anders de eigenaar — zolang dat een agent is. */
+function specialistVanRij(rij, schema) {
+  for (const veld of ["Agent", "Aangemaakt door", "Eigenaar"]) {
+    const naam = agentWeergaveNaam(schema, vjTekst(rij, veld));
+    if (naam) return naam;
+  }
+  return null;
+}
+
+/* Morgen (of de eerstvolgende werkdag), vrijdag, maandag, over een week. */
+function datumKeuzes(nu) {
+  const vandaag = vjVandaag(nu);
+  const plus = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const volgende = (dagNr) => { let d = plus(vandaag, 1); while (d.getDay() !== dagNr) d = plus(d, 1); return d; };
+  let werkdag = plus(vandaag, 1);
+  while (werkdag.getDay() === 0 || werkdag.getDay() === 6) werkdag = plus(werkdag, 1);
+  const morgenLabel = werkdag.getTime() === plus(vandaag, 1).getTime()
+    ? "Morgen" : werkdag.toLocaleDateString("nl-NL", { weekday: "long" }).replace(/^./, c => c.toUpperCase());
+  const lijst = [[morgenLabel, werkdag], ["Vrijdag", volgende(5)], ["Maandag", volgende(1)], ["Over een week", plus(vandaag, 7)]];
+  const gezien = new Set();
+  return lijst.filter(([, d]) => { const k = vjIsoDag(d); if (gezien.has(k)) return false; gezien.add(k); return true; })
+    .map(([label, d]) => ({ label, datum: vjIsoDag(d) }));
+}
+
+function afgerondPatch(rij, nu) {
+  const patch = { Status: VJ_KLAAR, "Afgerond op": vjIsoDag(vjVandaag(nu)) };
+  if (vjTekst(rij, "Afgerond door")) patch["Afgerond door"] = null; // i25: een mens rondt af
+  if (getField(rij, "Wachten tot")) patch["Wachten tot"] = null;
+  return patch;
+}
+
+/* De acties. Elke functie krijgt de rij en c = {ik, schema, nu, tekst, datum,
+ * specialist} en geeft {patch, melding}. */
+const AFHANDEL = {
+  goedkeuren: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Goedgekeurd." }),
+  klaar: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Afgerond." }),
+  gezien: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Gezien." }),
+  terug: (rij, c) => {
+    const sp = c.specialist || specialistVanRij(rij, c.schema);
+    const oud = vjTekst(rij, "Toelichting").replace(OPMERKING_KOP, "");
+    const kop = `— Opmerking van ${c.ik || "je opdrachtgever"} (mens), ${vjDatumKort(vjVandaag(c.nu))}: ${c.tekst} —`;
+    return {
+      patch: { Status: VJ_OPEN, Eigenaar: sp, Agent: sp, Gecorrigeerd: true, Correctie: c.tekst, Toelichting: oud ? `${kop}\n\n${oud}` : kop },
+      melding: `Teruggestuurd naar ${sp}. Die pakt het op bij het volgende werkmoment.`,
+    };
+  },
+  ja: (rij, c) => {
+    const sp = c.specialist || specialistVanRij(rij, c.schema);
+    if (!sp) return { patch: { Status: VJ_OPEN, Eigenaar: c.ik || null }, melding: "Akkoord. Het staat nu op je lijst." };
+    return { patch: { Status: VJ_OPEN, Eigenaar: sp, Agent: sp }, melding: `Akkoord. ${sp} gaat ermee aan de slag bij het volgende werkmoment.` };
+  },
+  nee: (rij, c) => ({
+    patch: Object.assign(afgerondPatch(rij, c.nu), { Correctie: "Niet doen" + (c.tekst ? ": " + c.tekst : "") }),
+    melding: c.tekst ? "Niet gedaan. Je team weet waarom." : "Niet gedaan.",
+  }),
+  zelf: (rij, c) => ({
+    patch: Object.assign(afgerondPatch(rij, c.nu), { Gecorrigeerd: true, Correctie: c.tekst || "Zelf aangepast" }),
+    melding: "Afgerond, met jouw aanpassing.",
+  }),
+  later: (rij, c) => {
+    const patch = { "Wachten tot": c.datum };
+    const eigenaar = vjTekst(rij, "Eigenaar");
+    if ((!eigenaar || agentWeergaveNaam(c.schema, eigenaar)) && vjTekst(rij, "Status") !== VJ_VOORSTEL && c.ik) patch.Eigenaar = c.ik;
+    return { patch, melding: `Uit je lijst tot ${vjDatumKort(c.datum)}.` };
+  },
+  nieuweDatum: (rij, c) => ({ patch: { Deadline: c.datum }, melding: `Nieuwe datum: ${vjDatumKort(c.datum)}.` }),
+  zelfOppakken: (rij, c) => {
+    const patch = { Eigenaar: c.ik, Status: VJ_OPEN, Deadline: c.datum };
+    if (vjTekst(rij, "Type") === "Alert") patch.Type = "Taak";
+    return { patch, melding: `Op je eigen lijst gezet, voor ${vjDatumKort(c.datum)}.` };
+  },
+  geefAan: (rij, c) => {
+    const patch = { Status: VJ_OPEN, Eigenaar: c.specialist, Agent: c.specialist };
+    if (getField(rij, "Wachten tot")) patch["Wachten tot"] = null;
+    return { patch, melding: `Doorgegeven aan ${c.specialist}. Die pakt het op bij het volgende werkmoment.` };
+  },
+  tochZelf: (rij, c) => ({ patch: { Eigenaar: c.ik, Status: VJ_OPEN }, melding: "Je doet dit zelf. Het staat op je lijst." }),
+  nuOppakken: (rij, c) => {
+    const bijAgent = agentWeergaveNaam(c.schema, vjTekst(rij, "Eigenaar"));
+    return {
+      patch: { Status: VJ_OPEN, "Wachten tot": null },
+      melding: bijAgent ? `${bijAgent} pakt dit op bij het volgende werkmoment.` : "Weer op je lijst.",
+    };
+  },
+  heropen: (rij, c) => ({ patch: { Status: VJ_OPEN, Eigenaar: c.ik }, melding: "Weer open, op je lijst." }),
+  zetBijMij: (rij, c) => {
+    const patch = { Eigenaar: c.ik };
+    if (!SOORT_PER_STATUS[vjTekst(rij, "Status")]) patch.Status = VJ_OPEN;
+    return { patch, melding: "Staat nu bij jou." };
+  },
+};
+
+/* Welke acties hebben een naam nodig, een tekst, een datum of een specialist?
+ * Het blad vraagt die eerst, in de pagina zelf. */
+const AFHANDEL_VRAAGT = {
+  terug: { tekst: "verplicht", label: "Wat moet er anders?", plaats: "Bijvoorbeeld: korter, en noem de offerte van vorige week." },
+  nee: { tekst: "mag-leeg", label: "Waarom niet? (mag leeg blijven)", plaats: "Je team leest dit terug." },
+  zelf: { tekst: "mag-leeg", label: "Wat heb je aangepast? (mag leeg blijven)", plaats: "Bijvoorbeeld: toon wat formeler gemaakt." },
+  opvolgen: { tekst: "verplicht", label: "Wat moet je team doen?", specialist: true },
+  later: { datum: true },
+  nieuweDatum: { datum: true },
+  zelfOppakken: { datum: true, vandaag: true },
+  geefAan: { specialist: true },
+};
+const AFHANDEL_MET_NAAM = ["terug", "later", "zelfOppakken", "tochZelf", "heropen", "zetBijMij", "ja"];
+
+function afhandelPatch(f, rij, c) {
+  const regel = AFHANDEL[f];
+  if (!regel) throw new Error("Onbekende afhandeling: " + f);
+  return regel(rij, Object.assign({ nu: new Date() }, c));
+}
+
+/* De knoppen per soort: één hoofdknop, een paar andere, en soms een regel
+ * die zegt waar het ligt. Zonder specialist valt "terug" weg — terugsturen
+ * naar niemand bestaat niet. */
+function afhandelKnoppen(rij, schema, nu) {
+  const namen = agentNamen(schema);
+  const soort = soortVan(rij, namen, nu);
+  const sp = specialistVanRij(rij, schema);
+  const k = (f, label, stijl) => ({ f, label, stijl: stijl || "" });
+  switch (soort) {
+    case "check": return {
+      soort, hoofd: k("goedkeuren", "Goedkeuren", "prim"),
+      rest: [sp ? k("terug", `Terug naar ${sp}`, "team") : null, k("zelf", "Zelf aangepast"), k("later", "Later")].filter(Boolean),
+      regel: "Je team verstuurt niets zelf. Moet dit naar buiten, kopieer het dan en verstuur het zelf.",
+    };
+    case "voorstel": return {
+      soort, hoofd: k("ja", sp ? "Ja, doe maar" : "Ja, ik pak het op", "prim"),
+      rest: [k("nee", "Nee, niet doen"), k("later", "Later")],
+      regel: sp ? `Bij "ja" gaat ${sp} ermee aan de slag bij het volgende werkmoment.` : "",
+    };
+    case "signaal": return {
+      soort, hoofd: k("opvolgen", "Laat je team opvolgen", "teamvol"),
+      rest: [k("zelfOppakken", "Ik pak het zelf op"), k("gezien", "Gezien, niets doen"), k("later", "Later")], regel: "",
+    };
+    case "taak": case "weer": return {
+      soort, hoofd: k("klaar", "Klaar", "prim"),
+      rest: [k("nieuweDatum", "Nieuwe datum"), k("geefAan", "Geef aan je team", "team"), k("later", "Later")], regel: "",
+    };
+    case "team": return {
+      soort, hoofd: null, rest: [k("tochZelf", "Toch zelf doen")],
+      regel: `${agentWeergaveNaam(schema, vjTekst(rij, "Eigenaar")) || "Je team"} ${vjTekst(rij, "Status") === VJ_BEZIG ? "werkt hier nu aan" : "pakt dit op bij het volgende werkmoment"}.`,
+    };
+    case "wacht": return {
+      soort, hoofd: k("nuOppakken", "Nu oppakken", "prim"), rest: [k("later", "Datum verzetten")],
+      regel: `Wacht tot ${vjDatumKort(getField(rij, "Wachten tot"))}.`,
+    };
+    case "klaar": {
+      const door = agentWeergaveNaam(schema, vjTekst(rij, "Afgerond door"));
+      const op = vjDatumKort(getField(rij, "Afgerond op"));
+      return { soort, hoofd: null, rest: [k("heropen", "Toch weer openen")],
+        regel: `Afgerond${op ? " op " + op : ""}${door ? " door " + door : ""}.` };
+    }
+    default: return {
+      soort: "klopt-niet", hoofd: k("zetBijMij", "Zet bij mij", "prim"), rest: [],
+      regel: "Dit item heeft geen duidelijke eigenaar of status. Zet het bij jou, dan kun je het afhandelen.",
+    };
+  }
+}
+
+/* "Laat je team opvolgen": een subactie voor de specialist, met de
+ * verbanden van het origineel, en het origineel zelf op Klaar. */
+function opvolgActie(rij, c) {
+  const data = {
+    Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
+    Status: VJ_OPEN, Type: "Taak", Eigenaar: c.specialist, Agent: c.specialist,
+    Toelichting: c.tekst, "Bovenliggende actie": rij.__entryId,
+  };
+  for (const veld of ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
+    const w = getField(rij, veld);
+    if (w && (typeof w !== "object" || w.id)) data[veld] = w;
+  }
+  return { data, ouder: afgerondPatch(rij, c.nu), melding: `Doorgegeven aan ${c.specialist}. Die pakt het op bij het volgende werkmoment.` };
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     aanJouZet, hoortBijMens, vanMij, soortVan, isTeLaat, sindsVan, sorteerVoorJou, naamGelijk,
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
+    wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
+    opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
   };
 }

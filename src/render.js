@@ -36,11 +36,16 @@ function prosaInline(tekst) {
     .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
 }
 
-function langeTekstHtml(tekst) {
+/* `regeleinden`: een werkstuk als een conceptmail (f47, het item-blad) houdt
+ * zijn enkele regeleinden — "Hartelijke groet," en de naam eronder horen op
+ * twee regels. Elders blijft een enkel regeleinde een spatie, omdat agents
+ * lopende tekst soms hard afbreken. */
+function langeTekstHtml(tekst, opties) {
   const regels = String(tekst ?? "").replace(/\r\n?/g, "\n").split("\n");
   let html = "", lijst = null, citaat = [], alinea = [];
+  const lijm = opties && opties.regeleinden ? "<br>" : " ";
 
-  const sluitAlinea = () => { if (alinea.length) html += `<p>${alinea.join(" ")}</p>`; alinea = []; };
+  const sluitAlinea = () => { if (alinea.length) html += `<p>${alinea.join(lijm)}</p>`; alinea = []; };
   const sluitLijst = () => {
     if (!lijst) return;
     const start = lijst.tag === "ol" && lijst.start > 1 ? ` start="${lijst.start}"` : "";
