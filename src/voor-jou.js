@@ -207,6 +207,61 @@ function kloptNiet(bundle, schema, opties) {
   return acties.filter(r => soortVan(r, namen, nu) === "klopt-niet");
 }
 
+/* ── f48: de banen van Acties ──────────────────────────────────────────
+ *
+ * Elke actie staat in precies één baan — nooit in twee, nooit in geen. De
+ * volgorde van de regels hieronder is de voorrang:
+ *   afgerond   Status Klaar
+ *   klopt-niet niemand is echt aan zet (soortVan)
+ *   wacht      een wektijd in de toekomst ("Later"), of Wacht die nog loopt
+ *   jij        precies de werkbak van Voor jou (hoortBijMens + vanMij)
+ *   team       een agent is aan zet
+ *   zonder     niemands naam, en het wacht (nog) niet op een mens
+ *   jij-later  je eigen taken zonder haast ("Later op je lijst")
+ *   collega    op naam van een collega
+ * Weet het dashboard niet wie je bent, dan is alles van een mens "jij" of
+ * "jij-later" — zelfde regel als aanJouZet: niets verstoppen. */
+const BANEN = ["jij", "jij-later", "team", "wacht", "afgerond", "collega", "zonder", "klopt-niet"];
+
+function baanVan(rij, o) {
+  const status = vjTekst(rij, "Status");
+  if (status === VJ_KLAAR) return "afgerond";
+  const soort = soortVan(rij, o.namen, o.nu);
+  if (soort === "klopt-niet") return "klopt-niet";
+  if (soort === "wacht" || (status !== VJ_WACHT && wachtInToekomst(rij, o.nu))) return "wacht";
+  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen)) return "jij";
+  if (soort === "team") return "team";
+  const eigenaar = vjTekst(rij, "Eigenaar");
+  if (!eigenaar) return "zonder";
+  if (!o.ik || naamGelijk(eigenaar, o.ik)) return "jij-later";
+  return "collega";
+}
+
+/* Alle banen in één keer, elk in werkvolgorde. Null zonder acties of zonder
+ * agentlijst (zelfde regel als aanJouZet). */
+function banenVan(bundle, schema, opties) {
+  const o = opties || {};
+  const acties = rows(bundle, "acties");
+  if (!acties) return null;
+  const namen = agentNamen(schema);
+  if (!namen) return null;
+  const nu = o.nu || new Date();
+  const ctx = { ik: o.ik, namen, nu };
+  const banen = {};
+  for (const b of BANEN) banen[b] = [];
+  for (const r of acties) banen[baanVan(r, ctx)].push(r);
+  banen.jij = sorteerVoorJou(banen.jij, namen, nu);
+  const opDatum = (veld, richting) => (a, b) => richting * (vjTijd(vjDag(getField(a, veld))) - vjTijd(vjDag(getField(b, veld))));
+  banen["jij-later"].sort(opDatum("Deadline", 1));
+  banen.wacht.sort(opDatum("Wachten tot", 1));
+  // Afgerond: nieuwste boven. Zonder datum onderaan.
+  banen.afgerond.sort((a, b) => {
+    const x = vjDag(getField(a, "Afgerond op")), y = vjDag(getField(b, "Afgerond op"));
+    return (y ? y.getTime() : 0) - (x ? x.getTime() : 0);
+  });
+  return banen;
+}
+
 /* ── f47: afhandelen ────────────────────────────────────────────────────
  *
  * Welke knoppen horen bij een item, en wat schrijft elke knop? Alles hier is
@@ -422,6 +477,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     aanJouZet, hoortBijMens, vanMij, soortVan, isTeLaat, sindsVan, sorteerVoorJou, naamGelijk,
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
+    BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
     opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
   };

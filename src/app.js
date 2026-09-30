@@ -188,10 +188,12 @@ function buildContext() {
     // i81: normaal hoeft dat niet eens: de instantie stuurt de opgeslagen rij
     // terug, en die vervangt de rij hier ter plekke.
     werkBij: (key, wijziging) => werkRijBij(key, wijziging),
+    // f46/f48: na het kiezen van je naam telt "per persoon" opnieuw.
+    hertekenAlles: () => renderAll(),
   };
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -366,6 +368,7 @@ function renderDetail(key) {
 
 const TAB_TITELS = {
   vandaag: "Agentic Team Dashboard",
+  acties: "Acties — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -428,12 +431,19 @@ function route() {
     return;
   }
   if (view.soort === "item") {
-    renderItemBlad(versContainer("tab-data-body"), view.domein, view.id, ctx);
+    renderItemBlad(versContainer("tab-acties-body"), view.domein, view.id, ctx);
     blijfOfNaarBoven(zelfde, scrollY, focus);
     // Een nieuw blad: de focus op de titel, zodat een schermlezer weet waar je bent.
     if (!zelfde) { const t = document.querySelector(".blad-titel"); if (t) t.focus({ preventScroll: true }); }
     return;
   }
+  // f48: Team heeft twee delen, "Wat ze deden" en "Resultaat" (het oude Prestaties).
+  for (const a of document.querySelectorAll("[data-team-deel]")) {
+    const hier = a.getAttribute("data-team-deel") === view.tab;
+    a.classList.toggle("actief", hier);
+    if (hier) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }
+  if (view.tab === "acties") renderActiesTab(versContainer("tab-acties-body"), ctx);
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
   if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
   // Een tab begon nooit bovenaan; die blijft staan, alleen de focus komt terug.
@@ -677,7 +687,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const bron = uitRedirect || restoreBron();
   // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
   // keren; bij een gewone daglink staat de route al in de adresbalk.
-  const naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  // f48: de kale link uit het slotbericht van de werkronde wees naar de
+  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
+  if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
   // f44: je kunt hier ook binnenkomen via een gewone deeplink uit een bericht
   // van je team — een URL zonder token, die je met je eigen licentie opent.

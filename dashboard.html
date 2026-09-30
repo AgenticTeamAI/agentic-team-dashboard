@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-eFLfsHnHF+0e1rjoqBEjFtYLNxLikQg2IlfY66WO0D4='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-LGRFnplncl27YYtesE4USZytIFG67lSrPCn7gl1Qkgk=' 'sha256-rQie5TFYRu5qsz5xGXioa4bXjrbjk+xiT6si42EzkeM='">
 
 
 <title>Agentic Team Dashboard</title>
@@ -985,6 +985,43 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .vj-onder { color: var(--team-tekst); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
 .vj-inhoud > :empty { display: none; }
 
+/* ── f48 · Acties: wie is aan zet ────────────────────────────────────── */
+.team-delen { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; }
+.team-delen a { padding: 6px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.88rem; min-height: 36px; display: inline-flex; align-items: center; }
+.team-delen a.actief { background: var(--team); color: var(--op-team); }
+.acties-kop { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.acties-kop input[type="search"] { flex: 1 1 260px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.baan-keuze { display: none; }
+.banen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.baan { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.baan h3 { margin: 0 0 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.baan-jij h3 { color: var(--jij-tekst); }
+.baan-team h3 { color: var(--team-tekst); }
+.baan-telling { font-size: 0.78rem; font-weight: 700; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--muted); }
+.baan-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.baan-rij { display: flex; gap: 8px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--jij); border-radius: 8px; padding: 8px 10px; }
+.baan-rij-team { border-left-color: var(--team); }
+.baan-wacht .baan-rij, .baan-afgerond .baan-rij, .acties-vak .baan-rij { border-left-color: var(--line-2); }
+.baan-rij .vj-nr { width: 1.6em; height: 1.6em; font-size: 0.8rem; }
+.baan-rij-inhoud { min-width: 0; flex: 1 1 auto; }
+.baan-titel { color: var(--ink); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.baan-titel:hover { text-decoration: underline; }
+.baan-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 3px 0 0; font-size: 0.78rem; color: var(--muted); }
+.baan-wie { color: var(--ink); }
+.baan-later { margin-top: 8px; }
+.acties-vakken { margin-top: 16px; }
+.acties-vak .baan-rij { align-items: center; }
+@media (max-width: 900px) {
+  .baan-keuze { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 10px; }
+  .baan-keuze button { flex: 1 0 auto; min-height: 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 600; }
+  .baan-keuze button[aria-selected="true"] { background: var(--team); border-color: var(--team); color: var(--op-team); }
+  .baan-keuze button[aria-selected="true"] .baan-telling { background: var(--surface); color: var(--team-tekst); }
+  .banen { display: block; }
+  .banen .baan { display: none; }
+  .banen[data-baan-actief="jij"] .baan-jij, .banen[data-baan-actief="team"] .baan-team,
+  .banen[data-baan-actief="wacht"] .baan-wacht, .banen[data-baan-actief="afgerond"] .baan-afgerond { display: block; }
+}
+
 </style>
 </head>
 <body>
@@ -1082,7 +1119,18 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
   </div>
 
   <!-- ══ Tab 2 · Team — de volledige feed (f22) ════════════════════════ -->
+  <!-- ══ Tab 2 · Acties — wie is aan zet (f48) ═══════════════════════════ -->
+  <div id="tab-acties" style="display:none;">
+    <section class="panel">
+      <div id="tab-acties-body"></div>
+    </section>
+  </div>
+
   <div id="tab-team" style="display:none;">
+    <nav class="team-delen" aria-label="Team">
+      <a href="#/team" data-team-deel="team">Wat ze deden</a>
+      <a href="#/prestaties" data-team-deel="prestaties">Resultaat</a>
+    </nav>
     <section class="panel">
       <div class="panel-header">
         <h2>📣 Je team</h2>
@@ -1105,6 +1153,10 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 
   <!-- ══ Tab 4 · Prestaties — "hoe staat mijn team ervoor?" ════════════ -->
   <div id="tab-prestaties" style="display:none;">
+    <nav class="team-delen" aria-label="Team">
+      <a href="#/team" data-team-deel="team">Wat ze deden</a>
+      <a href="#/prestaties" data-team-deel="prestaties">Resultaat</a>
+    </nav>
     <div class="controls-row">
       <div class="bundle-picker">
         <span class="label">Periode:</span>
@@ -6104,6 +6156,61 @@ function kloptNiet(bundle, schema, opties) {
   return acties.filter(r => soortVan(r, namen, nu) === "klopt-niet");
 }
 
+/* ── f48: de banen van Acties ──────────────────────────────────────────
+ *
+ * Elke actie staat in precies één baan — nooit in twee, nooit in geen. De
+ * volgorde van de regels hieronder is de voorrang:
+ *   afgerond   Status Klaar
+ *   klopt-niet niemand is echt aan zet (soortVan)
+ *   wacht      een wektijd in de toekomst ("Later"), of Wacht die nog loopt
+ *   jij        precies de werkbak van Voor jou (hoortBijMens + vanMij)
+ *   team       een agent is aan zet
+ *   zonder     niemands naam, en het wacht (nog) niet op een mens
+ *   jij-later  je eigen taken zonder haast ("Later op je lijst")
+ *   collega    op naam van een collega
+ * Weet het dashboard niet wie je bent, dan is alles van een mens "jij" of
+ * "jij-later" — zelfde regel als aanJouZet: niets verstoppen. */
+const BANEN = ["jij", "jij-later", "team", "wacht", "afgerond", "collega", "zonder", "klopt-niet"];
+
+function baanVan(rij, o) {
+  const status = vjTekst(rij, "Status");
+  if (status === VJ_KLAAR) return "afgerond";
+  const soort = soortVan(rij, o.namen, o.nu);
+  if (soort === "klopt-niet") return "klopt-niet";
+  if (soort === "wacht" || (status !== VJ_WACHT && wachtInToekomst(rij, o.nu))) return "wacht";
+  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen)) return "jij";
+  if (soort === "team") return "team";
+  const eigenaar = vjTekst(rij, "Eigenaar");
+  if (!eigenaar) return "zonder";
+  if (!o.ik || naamGelijk(eigenaar, o.ik)) return "jij-later";
+  return "collega";
+}
+
+/* Alle banen in één keer, elk in werkvolgorde. Null zonder acties of zonder
+ * agentlijst (zelfde regel als aanJouZet). */
+function banenVan(bundle, schema, opties) {
+  const o = opties || {};
+  const acties = rows(bundle, "acties");
+  if (!acties) return null;
+  const namen = agentNamen(schema);
+  if (!namen) return null;
+  const nu = o.nu || new Date();
+  const ctx = { ik: o.ik, namen, nu };
+  const banen = {};
+  for (const b of BANEN) banen[b] = [];
+  for (const r of acties) banen[baanVan(r, ctx)].push(r);
+  banen.jij = sorteerVoorJou(banen.jij, namen, nu);
+  const opDatum = (veld, richting) => (a, b) => richting * (vjTijd(vjDag(getField(a, veld))) - vjTijd(vjDag(getField(b, veld))));
+  banen["jij-later"].sort(opDatum("Deadline", 1));
+  banen.wacht.sort(opDatum("Wachten tot", 1));
+  // Afgerond: nieuwste boven. Zonder datum onderaan.
+  banen.afgerond.sort((a, b) => {
+    const x = vjDag(getField(a, "Afgerond op")), y = vjDag(getField(b, "Afgerond op"));
+    return (y ? y.getTime() : 0) - (x ? x.getTime() : 0);
+  });
+  return banen;
+}
+
 /* ── f47: afhandelen ────────────────────────────────────────────────────
  *
  * Welke knoppen horen bij een item, en wat schrijft elke knop? Alles hier is
@@ -6319,6 +6426,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     aanJouZet, hoortBijMens, vanMij, soortVan, isTeLaat, sindsVan, sorteerVoorJou, naamGelijk,
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
+    BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
     opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
   };
@@ -7703,10 +7811,15 @@ if (typeof module !== "undefined") {
  * het antwoord op het moment dat je moet kiezen. */
 const TABS = [
   { key: "vandaag", titel: "Voor jou", emoji: "📌", route: "#/", uitleg: "Wat je team deed en wat er op jou wacht" },
-  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je agents deden en aan elkaar doorgaven" },
-  { key: "data", titel: "Data", emoji: "🗂️", route: "#/data", uitleg: "Je acties, deals en lessen zelf" },
-  { key: "prestaties", titel: "Prestaties", emoji: "📊", route: "#/prestaties", uitleg: "Ritme, activiteit en gebruik per agent" },
+  { key: "acties", titel: "Acties", emoji: "✅", route: "#/acties", uitleg: "Wie is aan zet: jij, je team, wacht of afgerond" },
+  { key: "team", titel: "Team", emoji: "📣", route: "#/team", uitleg: "Wat je team deed, en wat het opleverde" },
+  { key: "data", titel: "Gegevens", emoji: "🗂️", route: "#/data", uitleg: "Je organisaties, deals, lessen en de rest" },
 ];
+/* f48: vier tabs, nooit een vijfde. Prestaties is een deel van Team
+ * geworden ("Resultaat"); het adres #/prestaties blijft werken en licht de
+ * Team-tab op. */
+const TAB_DEEL_VAN = { prestaties: "team" };
+const TAB_ROUTES = TABS.map(t => t.key).concat(Object.keys(TAB_DEEL_VAN));
 
 const DETAIL_VOLGORDE = [
   { key: "feed", titel: "Teamfeed", emoji: "📣" },
@@ -7761,12 +7874,14 @@ function dataTabBeschikbaar(ctx) {
 }
 
 function zichtbareTabs(ctx) {
-  return TABS.filter(t => t.key !== "data" || dataTabBeschikbaar(ctx));
+  return TABS.filter(t => (t.key !== "data" || dataTabBeschikbaar(ctx))
+    && (t.key !== "acties" || (typeof actiesTabBeschikbaar === "function" && actiesTabBeschikbaar(ctx))));
 }
 
 function renderTabbar(el, activeTab, ctx) {
   // De korte kop (zichtbaar op mobiel en bij scroll) noemt waar je bent —
   // "Agentic Team · vandaag" leest raar boven de Prestaties-tab.
+  activeTab = TAB_DEEL_VAN[activeTab] || activeTab;
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
   if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
@@ -8417,12 +8532,11 @@ function bepaalActieveView() {
   if (item) {
     let id = item[1];
     try { id = decodeURIComponent(id); } catch (e) { /* laat hem zoals hij is */ }
-    return { soort: "item", domein: "acties", id, tab: "data" };
+    return { soort: "item", domein: "acties", id, tab: "acties" };
   }
-  if (/^#\/acties\/?$/.test(hash)) return { soort: "data", domein: "acties", tab: "data" };
 
   const tab = hash.match(/^#\/([a-z]+)/);
-  if (tab && TABS.some(t => t.key === tab[1])) return { soort: "tab", tab: tab[1] };
+  if (tab && TAB_ROUTES.indexOf(tab[1]) !== -1) return { soort: "tab", tab: tab[1] };
 
   return { soort: "tab", tab: "vandaag" };
 }
@@ -10656,7 +10770,7 @@ function itemBladHtml(ctx, key, rij) {
   }
 
   return `<article class="blad" data-blad data-blad-id="${esc(rij.__entryId)}">
-    <a class="detail-link" href="#/data/${esc(key)}">← Alle ${esc((ctx.schema.datadomeinen[key].naam || key).toLowerCase())}</a>
+    <a class="detail-link" href="#/acties">← Alle acties</a>
     <h2 class="blad-titel" tabindex="-1">${esc(titel)}</h2>
     <p class="blad-meta"><span class="soort-pil">${esc(SOORT_LABEL[knoppen.soort] || "")}</span>
       <span class="beurt beurt-${esc(knoppen.soort)}">${esc(BEURT_TEKST[knoppen.soort] || "")}</span>
@@ -10738,7 +10852,7 @@ function renderItemBlad(el, key, id, ctx) {
   const rijen = dataRijenVan(ctx, key) || [];
   const rij = rijen.find(r => r.__entryId === id);
   if (!rij) {
-    el.innerHTML = `<div class="blad"><a class="detail-link" href="#/data/${esc(key)}">← Alle acties</a>
+    el.innerHTML = `<div class="blad"><a class="detail-link" href="#/acties">← Alle acties</a>
       <h2 class="blad-titel">Dit item is er niet (meer)</h2>
       <p>Misschien is het verwijderd, of hoort de link bij een andere werkruimte.</p></div>`;
     return;
@@ -11020,11 +11134,13 @@ function renderVoorJou(paneel, ctx) {
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
+    ${vjNaamRegelHtml(ctx)}
     ${lijst.length
       ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
       : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
     ${vjOnderregelsHtml(ctx)}`;
 
+  wireVjNaam(body, ctx);
   // Eén handler per paneel, vervangen bij elke render (renderAll tekent dit
   // paneel na elke schrijfactie opnieuw).
   body.onclick = (e) => {
@@ -11047,6 +11163,38 @@ function renderVoorJou(paneel, ctx) {
   };
 }
 
+/* Weet het dashboard niet wie je bent, dan telt alles van een mens mee —
+ * ook wat op naam van een collega staat. Werken er meerdere mensen aan de
+ * acties, dan zeggen we dat, met een knop om je naam te kiezen. Bewust pas
+ * op een klik: de naam opzoeken bij de site gebeurt alleen als jij erom vraagt
+ * (i77 — wie nooit iets doet, laat ons nooit een adres opzoeken). */
+function vjNaamRegelHtml(ctx) {
+  if (vjIk(ctx) || !magDomeinBewerken(ctx, "acties").ok) return "";
+  const namen = agentNamen(ctx.schema);
+  const mensen = new Set();
+  for (const r of rows(ctx.bundle, "acties") || []) {
+    const e = dataCelTekst(getField(r, "Eigenaar")).trim();
+    if (e && !isAgentNaam(e, namen) && getField(r, "Status") !== "Klaar") mensen.add(normAgentNaam(e));
+  }
+  if (mensen.size < 2) return "";
+  return `<p class="vj-inlog">Werk je met meer mensen aan deze acties?
+      <button type="button" class="knop blad-knop" data-vj-naam>Zeg wie je bent</button>
+      dan zie je hier alleen wat van jou is.</p>
+    <div data-naam-slot="vj"></div>`;
+}
+
+function wireVjNaam(el, ctx) {
+  const knop = el.querySelector("[data-vj-naam]");
+  if (!knop) return;
+  knop.addEventListener("click", () => {
+    vraagNaamIn(el.querySelector('[data-naam-slot="vj"]'), ctx.bron).then((naam) => {
+      if (!naam) { knop.focus(); return; }
+      meld(`Je werkt nu als ${naam}.`);
+      if (ctx.hertekenAlles) ctx.hertekenAlles();
+    });
+  });
+}
+
 /* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */
 function voorJouAantal(ctx) {
   const lijst = voorJouLijst(ctx);
@@ -11055,6 +11203,193 @@ function voorJouAantal(ctx) {
 
 if (typeof module !== "undefined") {
   module.exports = { renderVoorJou, voorJouLijst, voorJouAantal, vjVerhaal, vjGenummerd, _resetVoorJouNummers };
+}
+
+
+/* f48 — de Acties-tab: wie is aan zet?
+ *
+ * Acties zaten tussen zevenentwintig domeinen in de Data-tab, als tabel of
+ * statusbord. Maar de vraag die een klant stelt is niet "welke status", het is
+ * "ligt dit bij mij of bij mijn team?". Daarom vier banen — Jij · Je team ·
+ * Wacht · Afgerond — met daaronder wat bij een collega ligt, wat van niemand
+ * is, en wat niet helemaal klopt. De indeling komt uit baanVan() (voor-jou.js):
+ * elke actie staat in precies één baan, en de baan Jij is exact de werkbak van
+ * Voor jou, met dezelfde nummers.
+ *
+ * Elke rij opent het item-blad (#/acties/<id>). Zoeken gaat ook door wat je
+ * team schreef (de Toelichting); de chip "Klaargezet door je team" is het
+ * archief van alles wat een agent voor je klaarzette (f44, terugvindbaar). De
+ * gewone tabel met alle velden en het statusbord staan nog steeds onder
+ * Gegevens › Acties.
+ *
+ * Op de telefoon zie je één baan tegelijk, met een keuze erboven; op een breed
+ * scherm staan ze naast elkaar. Slepen tussen banen komt later: dat vraagt
+ * altijd een vervolgvraag ("aan wie?"). */
+
+let actiesZoek = "";
+let actiesArchief = false;
+let actiesBaan = "jij";
+
+const BAAN_KOP = {
+  jij: { teken: "●", titel: "Jij", leeg: "Niets dat op jou wacht." },
+  team: { teken: "◐", titel: "Je team", leeg: "Je team heeft nu niets onder handen." },
+  wacht: { teken: "○", titel: "Wacht", leeg: "Er wacht niets." },
+  afgerond: { teken: "✓", titel: "Afgerond", leeg: "Nog niets afgerond." },
+};
+const AFGEROND_TONEN = 15;
+
+function actiesTabBeschikbaar(ctx) {
+  return !!(ctx && ctx.bundle && ctx.bundle.kind === "rows" && rows(ctx.bundle, "acties"));
+}
+
+function actieZoekTekst(rij) {
+  return ["Actie", "Toelichting", "Eigenaar", "Agent", "Aangemaakt door", "Correctie"]
+    .map(v => dataCelTekst(getField(rij, v))).join(" ").toLowerCase();
+}
+
+function actiesFilter(ctx) {
+  const q = actiesZoek.trim().toLowerCase();
+  return (rij) => {
+    if (actiesArchief && !agentWeergaveNaam(ctx.schema, getField(rij, "Aangemaakt door"))) return false;
+    return !q || actieZoekTekst(rij).includes(q);
+  };
+}
+
+function baanRijHtml(ctx, rij, nr) {
+  const nu = ctx.today || new Date();
+  const namen = agentNamen(ctx.schema);
+  const soort = soortVan(rij, namen, nu);
+  const titel = detailTitel(ctx.schema.datadomeinen.acties, rij);
+  const eigenaar = dataCelTekst(getField(rij, "Eigenaar"));
+  const meta = [];
+  meta.push(`<span class="soort-pil">${esc(SOORT_LABEL[soort] || "")}</span>`);
+  if (isTeLaat(rij, namen, nu)) meta.push(`<span class="pil-laat">te laat</span>`);
+  if (soort === "wacht" || (getField(rij, "Wachten tot") && wachtInToekomst(rij, nu))) {
+    meta.push(`<span>tot ${esc(vjDatumKort(getField(rij, "Wachten tot")))}</span>`);
+  } else if (soort === "klaar") {
+    const op = getField(rij, "Afgerond op");
+    if (op) meta.push(`<span>${esc(vjDatumKort(op))}</span>`);
+    if (isNietDoen(rij)) meta.push(`<span>niet gedaan</span>`);
+  } else if (getField(rij, "Deadline")) {
+    meta.push(`<span>deadline ${esc(vjDatumKort(getField(rij, "Deadline")))}</span>`);
+  }
+  if (eigenaar) meta.push(`<span class="baan-wie">${esc(eigenaar)}</span>`);
+  return `<li class="baan-rij${soort === "team" ? " baan-rij-team" : ""}">
+    ${nr ? `<span class="vj-nr" aria-hidden="true">${nr}</span>` : ""}
+    <div class="baan-rij-inhoud"><a class="baan-titel" href="#/acties/${encodeURIComponent(rij.__entryId)}">${nr ? `<span class="visueel-verborgen">Nummer ${nr}: </span>` : ""}${esc(titel)}</a>
+    <p class="baan-meta">${meta.join("")}</p></div>
+  </li>`;
+}
+
+function baanHtml(ctx, sleutel, lijst, extra) {
+  const kop = BAAN_KOP[sleutel];
+  const nummers = sleutel === "jij" && typeof vjGenummerd === "function";
+  const volgorde = nummers ? vjGenummerd(ctx.bundle, lijst) : lijst;
+  const tonen = sleutel === "afgerond" && !extra.alles ? volgorde.slice(0, AFGEROND_TONEN) : volgorde;
+  const nr = (r) => (nummers && typeof vjNummering !== "undefined" ? vjNummering.map.get(r.__entryId) : null);
+  return `<section class="baan baan-${sleutel}" data-baan="${sleutel}" aria-labelledby="baan-kop-${sleutel}">
+    <h3 id="baan-kop-${sleutel}"><span aria-hidden="true">${kop.teken}</span> ${kop.titel} <span class="baan-telling">${lijst.length}</span></h3>
+    ${tonen.length ? `<ol class="baan-lijst">${tonen.map(r => baanRijHtml(ctx, r, nr(r))).join("")}</ol>` : `<p class="footnote">${kop.leeg}</p>`}
+    ${sleutel === "afgerond" && volgorde.length > tonen.length ? `<button type="button" class="knop-mini bedien-knop" data-afgerond-alles>Toon alle ${volgorde.length}</button>` : ""}
+    ${extra.onder || ""}
+  </section>`;
+}
+
+function vakHtml(ctx, titel, lijst, uitleg, metKnop) {
+  if (!lijst.length) return "";
+  const rijen = lijst.map(r => {
+    const rij = baanRijHtml(ctx, r, null);
+    return metKnop ? rij.replace("</li>", `<button type="button" class="knop-mini bedien-knop" data-zet-bij-mij="${esc(r.__entryId)}">Zet bij mij</button></li>`) : rij;
+  }).join("");
+  return `<details class="blad-uitklap acties-vak"><summary>${esc(titel)} (${lijst.length})</summary>
+    <p class="footnote">${esc(uitleg)}</p><ol class="baan-lijst">${rijen}</ol></details>`;
+}
+
+function actiesBanenHtml(ctx, opties) {
+  const banen = banenVan(ctx.bundle, ctx.schema, { ik: vjIk(ctx), nu: ctx.today || new Date() });
+  if (!banen) return `<p class="footnote">Je acties zijn hier niet te tonen: de agentlijst ontbreekt in deze versie.</p>`;
+  const f = actiesFilter(ctx);
+  const b = {};
+  for (const k of BANEN) b[k] = banen[k].filter(f);
+  const later = b["jij-later"].length
+    ? `<details class="blad-uitklap baan-later"><summary>Later op je lijst (${b["jij-later"].length})</summary>
+        <ol class="baan-lijst">${b["jij-later"].map(r => baanRijHtml(ctx, r, null)).join("")}</ol></details>` : "";
+  const afgerondDezeWeek = (() => {
+    const nu = ctx.today || new Date();
+    const maandag = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate() - ((nu.getDay() + 6) % 7));
+    return b.afgerond.filter(r => { const d = parseDateField(getField(r, "Afgerond op")); return d && d >= maandag; }).length;
+  })();
+  const keuze = ["jij", "team", "wacht", "afgerond"].map(k =>
+    `<button type="button" role="tab" aria-selected="${actiesBaan === k}" data-baan-kies="${k}">${BAAN_KOP[k].titel} <span class="baan-telling">${b[k].length}</span></button>`).join("");
+  return `
+    <div class="baan-keuze" role="tablist" aria-label="Kies een baan">${keuze}</div>
+    <div class="banen" data-baan-actief="${actiesBaan}">
+      ${baanHtml(ctx, "jij", b.jij, { onder: later })}
+      ${baanHtml(ctx, "team", b.team, {})}
+      ${baanHtml(ctx, "wacht", b.wacht, {})}
+      ${baanHtml(ctx, "afgerond", b.afgerond, { alles: opties.alles,
+        onder: afgerondDezeWeek ? `<p class="footnote">${afgerondDezeWeek} deze week</p>` : "" })}
+    </div>
+    <div class="acties-vakken">
+      ${vakHtml(ctx, "Bij collega's", b.collega, "Op naam van een collega. Open er een om hem over te nemen of terug te geven.")}
+      ${vakHtml(ctx, "Zonder eigenaar", b.zonder, "Van niemand. Geef het aan jezelf, een collega of je team via het blad.")}
+      ${vakHtml(ctx, "Klopt niet helemaal", b["klopt-niet"], "Er is niemand echt aan zet, bijvoorbeeld een check op naam van een agent.", magDomeinBewerken(ctx, "acties").ok)}
+    </div>`;
+}
+
+function renderActiesTab(el, ctx) {
+  if (!actiesTabBeschikbaar(ctx)) {
+    el.innerHTML = `<p>Je acties wonen niet in je werkruimte, of er zijn er nog geen.</p>
+      <a class="detail-link" href="#/data">Naar je gegevens →</a>`;
+    return;
+  }
+  let alles = false;
+  el.innerHTML = `<div class="acties-kop">
+      <input type="search" data-acties-zoek placeholder="Zoek, ook in wat je team schreef" aria-label="Zoek in je acties" value="${esc(actiesZoek)}">
+      <button type="button" class="status-chip van-team${actiesArchief ? " actief" : ""}" data-acties-archief aria-pressed="${actiesArchief}">🤝 Klaargezet door je team</button>
+      <a class="detail-link" href="#/data/acties">Tabel en bord →</a>
+    </div>
+    ${typeof vjNaamRegelHtml === "function" ? vjNaamRegelHtml(ctx) : ""}
+    <div data-acties-banen>${actiesBanenHtml(ctx, { alles })}</div>`;
+  if (typeof wireVjNaam === "function") wireVjNaam(el, ctx);
+  const banenEl = el.querySelector("[data-acties-banen]");
+  const herteken = () => { banenEl.innerHTML = actiesBanenHtml(ctx, { alles }); };
+
+  el.querySelector("[data-acties-zoek]").addEventListener("input", (e) => { actiesZoek = e.target.value; herteken(); });
+  el.addEventListener("click", (e) => {
+    const archief = e.target.closest("[data-acties-archief]");
+    if (archief) {
+      actiesArchief = !actiesArchief;
+      archief.classList.toggle("actief", actiesArchief);
+      archief.setAttribute("aria-pressed", String(actiesArchief));
+      herteken();
+      return;
+    }
+    const kies = e.target.closest("[data-baan-kies]");
+    if (kies) {
+      actiesBaan = kies.getAttribute("data-baan-kies");
+      herteken();
+      const knop = el.querySelector(`[data-baan-kies="${actiesBaan}"]`);
+      if (knop) knop.focus();
+      return;
+    }
+    if (e.target.closest("[data-afgerond-alles]")) { alles = true; herteken(); return; }
+    const zet = e.target.closest("[data-zet-bij-mij]");
+    if (zet) {
+      const rij = (dataRijenVan(ctx, "acties") || []).find(r => r.__entryId === zet.getAttribute("data-zet-bij-mij"));
+      if (!rij) return;
+      const li = zet.closest("li");
+      let slot = li.querySelector("[data-naam-slot]");
+      if (!slot) { slot = document.createElement("div"); slot.setAttribute("data-naam-slot", "vak"); li.appendChild(slot); }
+      voerAfhandelingUit(ctx, "acties", rij, "zetBijMij", {}, { naamSlot: slot, bezig: li, knoppen: [zet], focus: "[data-acties-zoek]" });
+    }
+  });
+}
+
+function _resetActiesTab() { actiesZoek = ""; actiesArchief = false; actiesBaan = "jij"; }
+
+if (typeof module !== "undefined") {
+  module.exports = { renderActiesTab, actiesTabBeschikbaar, actiesBanenHtml, _resetActiesTab };
 }
 
 
@@ -11994,10 +12329,12 @@ function buildContext() {
     // i81: normaal hoeft dat niet eens: de instantie stuurt de opgeslagen rij
     // terug, en die vervangt de rij hier ter plekke.
     werkBij: (key, wijziging) => werkRijBij(key, wijziging),
+    // f46/f48: na het kiezen van je naam telt "per persoon" opnieuw.
+    hertekenAlles: () => renderAll(),
   };
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -12172,6 +12509,7 @@ function renderDetail(key) {
 
 const TAB_TITELS = {
   vandaag: "Agentic Team Dashboard",
+  acties: "Acties — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -12234,12 +12572,19 @@ function route() {
     return;
   }
   if (view.soort === "item") {
-    renderItemBlad(versContainer("tab-data-body"), view.domein, view.id, ctx);
+    renderItemBlad(versContainer("tab-acties-body"), view.domein, view.id, ctx);
     blijfOfNaarBoven(zelfde, scrollY, focus);
     // Een nieuw blad: de focus op de titel, zodat een schermlezer weet waar je bent.
     if (!zelfde) { const t = document.querySelector(".blad-titel"); if (t) t.focus({ preventScroll: true }); }
     return;
   }
+  // f48: Team heeft twee delen, "Wat ze deden" en "Resultaat" (het oude Prestaties).
+  for (const a of document.querySelectorAll("[data-team-deel]")) {
+    const hier = a.getAttribute("data-team-deel") === view.tab;
+    a.classList.toggle("actief", hier);
+    if (hier) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }
+  if (view.tab === "acties") renderActiesTab(versContainer("tab-acties-body"), ctx);
   if (view.tab === "team") renderDetailFeed(versContainer("tab-team-body"), ctx);
   if (view.tab === "data") { resetDataZoek(); wisDataVoorselectie(); renderDataOverzicht(versContainer("tab-data-body"), ctx); }
   // Een tab begon nooit bovenaan; die blijft staan, alleen de focus komt terug.
@@ -12483,7 +12828,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const bron = uitRedirect || restoreBron();
   // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
   // keren; bij een gewone daglink staat de route al in de adresbalk.
-  const naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  // f48: de kale link uit het slotbericht van de werkronde wees naar de
+  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
+  if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
   // f44: je kunt hier ook binnenkomen via een gewone deeplink uit een bericht
   // van je team — een URL zonder token, die je met je eigen licentie opent.

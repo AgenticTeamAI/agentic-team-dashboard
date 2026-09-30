@@ -86,7 +86,7 @@ function itemBladHtml(ctx, key, rij) {
   }
 
   return `<article class="blad" data-blad data-blad-id="${esc(rij.__entryId)}">
-    <a class="detail-link" href="#/data/${esc(key)}">← Alle ${esc((ctx.schema.datadomeinen[key].naam || key).toLowerCase())}</a>
+    <a class="detail-link" href="#/acties">← Alle acties</a>
     <h2 class="blad-titel" tabindex="-1">${esc(titel)}</h2>
     <p class="blad-meta"><span class="soort-pil">${esc(SOORT_LABEL[knoppen.soort] || "")}</span>
       <span class="beurt beurt-${esc(knoppen.soort)}">${esc(BEURT_TEKST[knoppen.soort] || "")}</span>
@@ -168,7 +168,7 @@ function renderItemBlad(el, key, id, ctx) {
   const rijen = dataRijenVan(ctx, key) || [];
   const rij = rijen.find(r => r.__entryId === id);
   if (!rij) {
-    el.innerHTML = `<div class="blad"><a class="detail-link" href="#/data/${esc(key)}">← Alle acties</a>
+    el.innerHTML = `<div class="blad"><a class="detail-link" href="#/acties">← Alle acties</a>
       <h2 class="blad-titel">Dit item is er niet (meer)</h2>
       <p>Misschien is het verwijderd, of hoort de link bij een andere werkruimte.</p></div>`;
     return;

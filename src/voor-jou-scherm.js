@@ -152,11 +152,13 @@ function renderVoorJou(paneel, ctx) {
     <div class="vj-kop"><h2>Voor jou <span class="vj-teller">${lijst.length}</span></h2>
       ${oudsteDagen >= 1 ? `<span class="footnote">oudste ligt er ${oudsteDagen} ${oudsteDagen === 1 ? "dag" : "dagen"}</span>` : ""}</div>
     ${inlogRegel}
+    ${vjNaamRegelHtml(ctx)}
     ${lijst.length
       ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
       : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
     ${vjOnderregelsHtml(ctx)}`;
 
+  wireVjNaam(body, ctx);
   // Eén handler per paneel, vervangen bij elke render (renderAll tekent dit
   // paneel na elke schrijfactie opnieuw).
   body.onclick = (e) => {
@@ -177,6 +179,38 @@ function renderVoorJou(paneel, ctx) {
       focus: volgende ? `[data-vj-id="${cssWaarde(volgende)}"] .vj-titel` : ".vj-kop h2",
     });
   };
+}
+
+/* Weet het dashboard niet wie je bent, dan telt alles van een mens mee —
+ * ook wat op naam van een collega staat. Werken er meerdere mensen aan de
+ * acties, dan zeggen we dat, met een knop om je naam te kiezen. Bewust pas
+ * op een klik: de naam opzoeken bij de site gebeurt alleen als jij erom vraagt
+ * (i77 — wie nooit iets doet, laat ons nooit een adres opzoeken). */
+function vjNaamRegelHtml(ctx) {
+  if (vjIk(ctx) || !magDomeinBewerken(ctx, "acties").ok) return "";
+  const namen = agentNamen(ctx.schema);
+  const mensen = new Set();
+  for (const r of rows(ctx.bundle, "acties") || []) {
+    const e = dataCelTekst(getField(r, "Eigenaar")).trim();
+    if (e && !isAgentNaam(e, namen) && getField(r, "Status") !== "Klaar") mensen.add(normAgentNaam(e));
+  }
+  if (mensen.size < 2) return "";
+  return `<p class="vj-inlog">Werk je met meer mensen aan deze acties?
+      <button type="button" class="knop blad-knop" data-vj-naam>Zeg wie je bent</button>
+      dan zie je hier alleen wat van jou is.</p>
+    <div data-naam-slot="vj"></div>`;
+}
+
+function wireVjNaam(el, ctx) {
+  const knop = el.querySelector("[data-vj-naam]");
+  if (!knop) return;
+  knop.addEventListener("click", () => {
+    vraagNaamIn(el.querySelector('[data-naam-slot="vj"]'), ctx.bron).then((naam) => {
+      if (!naam) { knop.focus(); return; }
+      meld(`Je werkt nu als ${naam}.`);
+      if (ctx.hertekenAlles) ctx.hertekenAlles();
+    });
+  });
 }
 
 /* Voor de badge op de tab: hetzelfde getal als de kop van de werkbak. */

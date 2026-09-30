@@ -974,3 +974,40 @@ input.team-naam { width: 100%; min-width: 9rem; box-sizing: border-box; }
 .vj-onderregels { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
 .vj-onder { color: var(--team-tekst); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
 .vj-inhoud > :empty { display: none; }
+
+/* ── f48 · Acties: wie is aan zet ────────────────────────────────────── */
+.team-delen { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; }
+.team-delen a { padding: 6px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.88rem; min-height: 36px; display: inline-flex; align-items: center; }
+.team-delen a.actief { background: var(--team); color: var(--op-team); }
+.acties-kop { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+.acties-kop input[type="search"] { flex: 1 1 260px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--veldrand); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+.baan-keuze { display: none; }
+.banen { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.baan { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.baan h3 { margin: 0 0 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.baan-jij h3 { color: var(--jij-tekst); }
+.baan-team h3 { color: var(--team-tekst); }
+.baan-telling { font-size: 0.78rem; font-weight: 700; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--muted); }
+.baan-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.baan-rij { display: flex; gap: 8px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--jij); border-radius: 8px; padding: 8px 10px; }
+.baan-rij-team { border-left-color: var(--team); }
+.baan-wacht .baan-rij, .baan-afgerond .baan-rij, .acties-vak .baan-rij { border-left-color: var(--line-2); }
+.baan-rij .vj-nr { width: 1.6em; height: 1.6em; font-size: 0.8rem; }
+.baan-rij-inhoud { min-width: 0; flex: 1 1 auto; }
+.baan-titel { color: var(--ink); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.baan-titel:hover { text-decoration: underline; }
+.baan-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 3px 0 0; font-size: 0.78rem; color: var(--muted); }
+.baan-wie { color: var(--ink); }
+.baan-later { margin-top: 8px; }
+.acties-vakken { margin-top: 16px; }
+.acties-vak .baan-rij { align-items: center; }
+@media (max-width: 900px) {
+  .baan-keuze { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 10px; }
+  .baan-keuze button { flex: 1 0 auto; min-height: 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 600; }
+  .baan-keuze button[aria-selected="true"] { background: var(--team); border-color: var(--team); color: var(--op-team); }
+  .baan-keuze button[aria-selected="true"] .baan-telling { background: var(--surface); color: var(--team-tekst); }
+  .banen { display: block; }
+  .banen .baan { display: none; }
+  .banen[data-baan-actief="jij"] .baan-jij, .banen[data-baan-actief="team"] .baan-team,
+  .banen[data-baan-actief="wacht"] .baan-wacht, .banen[data-baan-actief="afgerond"] .baan-afgerond { display: block; }
+}

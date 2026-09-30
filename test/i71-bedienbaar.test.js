@@ -417,7 +417,7 @@ describe("wegwijzers", () => {
     g.renderTabbar(c, "vandaag", { bundle: { kind: "rows", domains: { acties: { rows: [] } } } });
     const titels = [...c.querySelectorAll("a.tab")].map((a) => a.getAttribute("title"));
     expect(titels.every((t) => t && t.length > 5)).toBe(true);
-    expect(titels.join(" | ")).toMatch(/agents deden/);
+    expect(titels.join(" | ")).toMatch(/team deed/);
   });
 
   it("noemt de schemaversie als schemaversie, niet als de versie van je connector", () => {
