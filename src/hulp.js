@@ -127,6 +127,7 @@ function hulpSecties(ctx) {
         <dt class="team">◐ Je team</dt><dd>Staat klaar voor het volgende werkmoment, of een specialist werkt eraan.<small>In Claude of Notion: Open of Bezig, met een specialist als eigenaar.</small></dd>
         <dt>○ Wacht</dt><dd>Op iets of iemand, soms tot een datum. Daarna komt het vanzelf terug.<small>In Claude of Notion: Wacht.</small></dd>
         <dt>✓ Afgerond</dt><dd><small>In Claude of Notion: Klaar.</small></dd></dl>
+      <p>Iets naar een andere baan? Sleep het erheen, of kies <strong>Verplaats</strong> op de rij. Naar je team vraagt het aan wie, naar Wacht tot wanneer.</p>
       <p class="hulp-regel"><strong>De vaste regel:</strong> een mail, bericht, publicatie of iets anders wat niet terug te draaien is, doet je team nooit zelf. Het komt als ‘klaar om te checken’ of als voorstel bij jou.</p>
       ${hulpNaar(ctx, "Naar Acties", "#/acties")}`],
     ["vanzelf-werken", "Je werkmoment: zo werkt je team vanzelf", () => `
