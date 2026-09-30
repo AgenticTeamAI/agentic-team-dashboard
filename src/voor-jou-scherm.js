@@ -161,6 +161,7 @@ function renderVoorJou(paneel, ctx) {
     ${lijst.length
       ? `<ol class="vj-lijst">${genummerd.map(r => vjKaartHtml(ctx, r, vjNummering.map.get(r.__entryId), kanAfhandelen)).join("")}</ol>`
       : `<p class="vj-leeg">Niets voor jou op dit moment. Je team werkt door; wat het voor je klaarzet, verschijnt hier.</p>`}
+    ${typeof opdrachtKnopHtml === "function" ? `<p class="vj-opdracht">${opdrachtKnopHtml(ctx)}</p>` : ""}
     ${vjOnderregelsHtml(ctx)}`;
 
   wireVjNaam(body, ctx);

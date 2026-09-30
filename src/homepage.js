@@ -23,7 +23,7 @@ const TABS = [
 /* f48: vier tabs, nooit een vijfde. Prestaties is een deel van Team
  * geworden ("Resultaat"); het adres #/prestaties blijft werken en licht de
  * Team-tab op. */
-const TAB_DEEL_VAN = { prestaties: "team", "vaste-taken": "team", klaar: "team", ronde: "vandaag" };
+const TAB_DEEL_VAN = { prestaties: "team", "vaste-taken": "team", klaar: "team", ronde: "vandaag", opdracht: "acties" };
 const TAB_ROUTES = TABS.map(t => t.key).concat(Object.keys(TAB_DEEL_VAN));
 
 const DETAIL_VOLGORDE = [
@@ -714,6 +714,7 @@ function renderDetailAgent(el, slug, ctx) {
 
   el.innerHTML = `
     <p><strong>${agent.emoji} ${esc(agent.displayName)}</strong> · module ${esc(modNaam)}</p>
+    ${typeof opdrachtKnopHtml === "function" && beschikbareSpecialisten(ctx).some(s => s.slug === slug) ? `<p>${opdrachtKnopHtml(ctx, { tekst: `Geef ${agent.displayName} een opdracht`, voor: slug })}</p>` : ""}
     ${cards}
     ${lijsten}
     <p class="footnote">Sporen komen uit Acties (veld Agent, tijdstip via Deadline) en Lessen &amp; Inzichten (veld Agent, veld Datum). "Geen spoor" ≠ "nooit ingezet": een agent die wél draaide maar niets wegschreef, is hiermee niet te onderscheiden van een agent die stilstond.</p>

@@ -239,7 +239,7 @@ function toegangsBalkHtml(ctx) {
   return "";
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken", klaar: "tab-vaste-taken", hulp: "tab-hulp" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken", klaar: "tab-vaste-taken", hulp: "tab-hulp", opdracht: "tab-acties" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -427,6 +427,7 @@ const TAB_TITELS = {
   "vaste-taken": "Vaste taken — Agentic Team Dashboard",
   klaar: "Is je team klaar? — Agentic Team Dashboard",
   hulp: "Hulp — Agentic Team Dashboard",
+  opdracht: "Opdracht geven — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -533,6 +534,10 @@ function route() {
     if (hier) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   }
   if (view.tab === "acties") renderActiesTab(versContainer("tab-acties-body"), ctx);
+  if (view.tab === "opdracht") {
+    renderOpdracht(versContainer("tab-acties-body"), ctx, opdrachtDoel(window.location.hash));
+    if (!zelfde) { const t = document.querySelector("#tab-acties-body .opdracht-titel"); if (t) t.focus({ preventScroll: true }); }
+  }
   if (view.tab === "vaste-taken") renderVasteTaken(versContainer("tab-vaste-taken-body"), ctx);
   if (view.tab === "klaar") {
     renderKlaar(versContainer("tab-vaste-taken-body"), ctx);

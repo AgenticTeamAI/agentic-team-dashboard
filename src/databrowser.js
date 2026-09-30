@@ -811,7 +811,9 @@ function renderDataDomein(el, key, ctx) {
   const kop = `<p><strong>${esc(domein.emoji || "🗂️")} ${esc(domein.naam || key)}</strong></p>`;
   // f23 fase D: bewerken alleen bij een schrijfsessie op een werkruimte-domein.
   const bewerk = magDomeinBewerken(ctx, key);
-  const nieuwKnop = bewerk.ok ? `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuw</button>` : "";
+  // f50: een nieuwe actie is een opdracht — drie vragen in plaats van 21 velden.
+  const nieuwKnop = !bewerk.ok ? "" : key === "acties" ? `<a class="knop" href="#/opdracht">➕ Nieuwe opdracht</a>`
+    : `<button type="button" class="knop" data-bewerk-nieuw>➕ Nieuw</button>`;
   const bewerkUitleg = bewerk.reden ? `<p class="footnote">${esc(bewerk.reden)}</p>` : "";
   if (!rows || !rows.length) {
     // De oude tekst hedgede ("leeg, óf het woont ergens anders") terwijl het

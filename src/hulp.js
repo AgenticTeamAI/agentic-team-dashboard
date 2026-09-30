@@ -159,7 +159,8 @@ function hulpSecties(ctx) {
       <p>Zeg in Claude wat er moet gebeuren en voor wie:</p>${k("Zet een actie klaar voor de Researcher: zoek tien installatiebedrijven in Utrecht die groeien.")}
       <p>Je team zet er een actie van klaar. Bij het volgende werkmoment pakt de specialist hem op.</p>
       <p class="hulp-regel"><strong>Vuistregel:</strong> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
-      <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <strong>Geef aan je team</strong>.</p>`],
+      <p>Of doe het hier: <strong>Geef je team een opdracht</strong> vraagt alleen wat, wie en wanneer. Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <strong>Geef aan je team</strong>.</p>
+      ${hulpNaar(ctx, "Geef je team een opdracht", "#/opdracht")}`],
     ["daglink", "Daglink of inloggen?", () => `
       <table class="hulp-tabel"><thead><tr><th></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
         <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>

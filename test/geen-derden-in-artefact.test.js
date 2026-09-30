@@ -56,6 +56,7 @@ const JS_MODULES = [
   "acties-tab.js",
   "vaste-taken.js",
   "hulp.js",
+  "opdracht.js",
   "modules-beheer.js",
   "team-beheer.js",
   "app.js",
