@@ -89,7 +89,7 @@ function renderTabbar(el, activeTab, ctx) {
   activeTab = TAB_DEEL_VAN[activeTab] || activeTab;
   const kort = document.querySelector(".kop-kort");
   const actief = TABS.find(t => t.key === activeTab);
-  if (kort) kort.textContent = `Agentic Team · ${actief ? actief.titel.toLowerCase() : "vandaag"}`;
+  if (kort) kort.textContent = `Agentic Team · ${activeTab === "hulp" ? "hulp" : actief ? actief.titel.toLowerCase() : "vandaag"}`;
   // f46: de badge telt met dezelfde functie als de werkbak zelf.
   const aantal = typeof voorJouAantal === "function" && ctx ? voorJouAantal(ctx) : null;
   el.innerHTML = zichtbareTabs(ctx).map(t => {

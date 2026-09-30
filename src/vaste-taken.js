@@ -193,13 +193,15 @@ function vasteTakenHtml(ctx) {
   const rijen = dataRijenVan(ctx, "ritmetaken");
   if (bron.toestand === "elders" || (!rijen && ctx.bundle && ctx.bundle.kind === "metrics")) {
     const waar = bron.toestand === "elders" ? bron.naam : "Notion";
-    return `<section class="vt-vak"><h2>Je vaste taken staan in ${esc(waar)}</h2>
+    return `${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
+    <section class="vt-vak"><h2>Je vaste taken staan in ${esc(waar)}</h2>
       <p>Aanpassen doe je daar, of vraag het je team in Claude. Bijvoorbeeld:</p>
       ${vtKopieerHtml("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
   }
   const alle = rijen || [];
   if (!alle.length) {
-    return `<section class="vt-vak"><h2>Je team heeft nog geen vaste taken</h2>
+    return `${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
+    <section class="vt-vak"><h2>Je team heeft nog geen vaste taken</h2>
       <p>Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen. Je zet ze aan in Claude:</p>
       ${vtKopieerHtml("Zet mijn ritmetaken aan.")}
       <p class="footnote">Je team zet dan de vaste taken klaar die bij jouw modules horen, en stelt een werkmoment voor.</p></section>`;
@@ -210,6 +212,7 @@ function vasteTakenHtml(ctx) {
   const uit = alle.filter(r => !vtActief(r)).sort(opVolgorde);
   const w = weekTelling(alle, ctx.today || new Date());
   return `${klaarRegelHtml(ctx)}
+    ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
     <section class="vt-vak"><h2>Wanneer werkt je team · werkdagen</h2>${weekHtml(ctx, w)}</section>
     <section class="vt-vak"><h2>Je vaste taken · ${aan.length} aan</h2>
       <p class="footnote">Je team doet per werkmoment één vaste taak; staan er meer klaar, dan eerst de bovenste.${kan ? "" : " Aanpassen kan na inloggen."}</p>
@@ -436,7 +439,7 @@ function klaarRegelsHtml(kc) {
   }).join("")}</ul>`;
 }
 
-function stappenbladHtml(ctx, vaker) {
+function stappenbladHtml(ctx, vaker, { volledig = false } = {}) {
   const naam = `Werkmoment — ${(ctx.bundle && ctx.bundle.klant) || "je bedrijf"}`;
   if (vaker) {
     return `<section class="vt-vak kc-stappen" id="stappen"><h2>Laat je team vaker werken</h2>
@@ -455,7 +458,8 @@ function stappenbladHtml(ctx, vaker) {
   // Staan de vaste taken al aan, dan ontbreekt alleen het werkmoment. "Zet mijn
   // ritmetaken aan" maakt de starter-set opnieuw aan (orchestrator-prompt,
   // Activeren stap 3) — dan heb je elke taak dubbel.
-  if (dataRijenVan(ctx, "ritmetaken") && dataRijenVan(ctx, "ritmetaken").some(vtActief)) {
+  // De Hulp toont altijd de hele installatie (volledig): daar leest ook wie nog niets heeft.
+  if (!volledig && dataRijenVan(ctx, "ritmetaken") && dataRijenVan(ctx, "ritmetaken").some(vtActief)) {
     return `<section class="vt-vak kc-stappen" id="stappen"><h2>Zet je werkmoment (weer) aan</h2>
       <p>Je vaste taken staan klaar. Wat ontbreekt, is het moment waarop je team ze oppakt.</p>
       <ol class="kc-stappenlijst">
@@ -481,6 +485,7 @@ function renderKlaar(el, ctx) {
   const s = klaarSamenvatting(kc);
   const vaker = kc.regels.some(r => r.actie === "vaker");
   el.innerHTML = `<section class="vt-vak"><h2 class="kc-kop" tabindex="-1">${esc(s.kop)}</h2><p class="footnote">${esc(s.sub)}</p>
+      ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vanzelf-werken", "Hoe werkt je werkmoment?") : ""}
       ${klaarRegelsHtml(kc)}</section>
     ${kc.stil || !vaker ? stappenbladHtml(ctx, false) : ""}
     ${vaker ? stappenbladHtml(ctx, true) : ""}

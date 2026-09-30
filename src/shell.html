@@ -19,6 +19,7 @@ __STYLES__
          laat staan (de eerste vraag van de eerste klant die dat deed) heeft
          een knop nodig, geen instructie om F5 te drukken. Bewust géén
          automatische poll: dat is netwerkverkeer dat niemand vroeg. -->
+    <a class="kop-hulp" href="#/hulp" title="Hoe werkt je team?"><span aria-hidden="true">?</span> Hulp</a>
     <p class="kop-acties" id="kop-acties" style="display:none;">
       <button type="button" id="btn-ververs" title="Opnieuw ophalen uit je werkruimte">↻ Ververs</button>
       <span class="kop-tijd" id="kop-tijd"></span>
@@ -44,6 +45,10 @@ __STYLES__
     </p>
     <p class="privacy-regel-tekst" id="empty-state-privacy"></p>
   </div>
+
+  <!-- f53: de Hulp. Werkt zonder login en zonder data; zonder bundel staat
+       hij onder de lege staat, in plaats van alleen "Geen daglink gevonden". -->
+  <div id="tab-hulp" style="display:none;"><div id="tab-hulp-body"></div></div>
 
   <div id="version-error" style="display:none;"></div>
 
@@ -145,6 +150,7 @@ __STYLES__
       <div class="panel-header">
         <h2>📣 Je team</h2>
         <span class="decision">Wat doet mijn team, zonder dat ik erom hoef te vragen?</span>
+        <a class="hoe-werkt-dit" href="#/hulp/in-een-minuut"><span aria-hidden="true">?</span> Hoe werkt je team?</a>
       </div>
       <div id="tab-team-body"></div>
     </section>
@@ -156,6 +162,7 @@ __STYLES__
       <div class="panel-header">
         <h2>🗂️ Je gegevens</h2>
         <span class="decision">Wat staat er precies in mijn werkruimte? Met een daglink alleen lezen; ingelogd kun je ook bijwerken.</span>
+        <a class="hoe-werkt-dit" href="#/hulp/gegevens"><span aria-hidden="true">?</span> Hoe werkt dit?</a>
       </div>
       <div id="tab-data-body"></div>
     </section>

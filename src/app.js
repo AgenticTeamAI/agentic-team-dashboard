@@ -239,7 +239,7 @@ function toegangsBalkHtml(ctx) {
   return "";
 }
 
-const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken", klaar: "tab-vaste-taken" };
+const TAB_CONTAINERS = { vandaag: "tab-vandaag", acties: "tab-acties", team: "tab-team", data: "tab-data", prestaties: "tab-prestaties", ronde: "tab-ronde", "vaste-taken": "tab-vaste-taken", klaar: "tab-vaste-taken", hulp: "tab-hulp" };
 
 /* De Team- en Data-tab hangen hun eigen click/input-listener aan hun
  * container (feedfilter, zoekveld). Die containers blijven bij navigatie
@@ -271,6 +271,7 @@ function renderAll() {
     versionErrorEl.style.display = "none";
     document.getElementById("kop-acties").style.display = "none";
     document.getElementById("toegang-balk").hidden = true;
+    if (hulpDoel(window.location.hash) || hulpInLegeStaat) toonHulp(hulpDoel(window.location.hash));
     return;
   }
   emptyStateEl.style.display = "none";
@@ -425,6 +426,7 @@ const TAB_TITELS = {
   ronde: "Eén voor één — Agentic Team Dashboard",
   "vaste-taken": "Vaste taken — Agentic Team Dashboard",
   klaar: "Is je team klaar? — Agentic Team Dashboard",
+  hulp: "Hulp — Agentic Team Dashboard",
   team: "Je team — Agentic Team Dashboard",
   data: "Je gegevens — Agentic Team Dashboard",
   prestaties: "Prestaties — Agentic Team Dashboard",
@@ -447,9 +449,39 @@ function blijfOfNaarBoven(zelfde, scrollY, focus) {
   if (typeof scrollY === "number" && window.scrollY !== scrollY) window.scrollTo(0, scrollY);
 }
 
+/* f53: de Hulp heeft geen bundel nodig. Zonder bundel staat hij onder de lege
+ * staat (inloggen + privacyregel blijven erboven); met bundel is het gewoon
+ * een weergave, zonder actieve tab. */
+let hulpInLegeStaat = false;
+
+function toonHulp(doel) {
+  const heeft = !!currentBundle && document.getElementById("version-error").style.display === "none";
+  const ctx = heeft ? window.__dashboardCtx : null;
+  const sleutel = `hulp|${(doel && doel.sectie) || ""}`;
+  const zelfde = sleutel === vorigeWeergave;
+  vorigeWeergave = sleutel;
+  verbergAlles();
+  if (heeft) renderTabbar(document.getElementById("tabbar"), "hulp", ctx);
+  document.getElementById("tab-hulp").style.display = "";
+  document.title = TAB_TITELS.hulp;
+  if (zelfde) return; // bv. het moduleoverzicht kwam binnen: niets opnieuw openklappen
+  renderHulp(versContainer("tab-hulp-body"), ctx, { sectie: doel ? doel.sectie : null });
+}
+
 function route() {
   const bundle = currentBundle;
-  if (!bundle) return;
+  const hulp = hulpDoel(window.location.hash);
+  const kopHulp = document.querySelector(".kop-hulp");
+  if (kopHulp) { if (hulp) kopHulp.setAttribute("aria-current", "page"); else kopHulp.removeAttribute("aria-current"); }
+  if (hulp) { toonHulp(hulp); return; }
+  if (!bundle) {
+    // Weg uit de Hulp zonder bundel: terug naar de lege staat (met de Hulp
+    // eronder, als die de lege staat is).
+    document.getElementById("tab-hulp").style.display = "none";
+    vorigeWeergave = null;
+    if (hulpInLegeStaat) toonHulp(null);
+    return;
+  }
   // s31: niets tekenen op een bestand dat dit dashboard niet herkent. Zonder
   // deze guard toont een hashchange (bv. het leegmaken van het fragment na het
   // laden van een daglink) alsnog de lege pagina náást de versiefout.
@@ -662,7 +694,13 @@ function toonLegeStaat(titel, tekst, { login = null } = {}) {
   document.getElementById("empty-state-titel").textContent = titel;
   document.getElementById("empty-state-tekst").textContent = tekst;
   // `login: null` = laat staan wat er stond; true/false zet hem expliciet.
-  if (login !== null) toonLoginknop(login);
+  if (login !== null) {
+    toonLoginknop(login);
+    // f53: een eindtoestand (met inlogknop) krijgt de Hulp eronder; tijdens
+    // laden of doorsturen niet, anders flitst hij even in beeld.
+    hulpInLegeStaat = login;
+    if (!currentBundle) route();
+  }
 }
 
 /* p10: de loginknop is er alleen op een build met OAUTH_DASHBOARD aan én op
@@ -755,6 +793,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
   // keren; bij een gewone daglink staat de route al in de adresbalk.
   let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  // Met een lopende sessie of bewaarde daglink blijft de pagina in de
+  // adresbalk staan (herladen op #/hulp of #/klaar). Een verse daglink staat
+  // zelf in het fragment en is geen route.
+  if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
   // f48: de kale link uit het slotbericht van de werkronde wees naar de
   // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
@@ -765,7 +807,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // loggen er gewoon naast staat. Zeg dus wat er moet gebeuren, niet wat er
   // ontbreekt. Kan er niet ingelogd worden, dan blijft de daglink-uitleg staan:
   // dan is dat wél het enige juiste antwoord.
-  if (bedoeldeRoute(window.location.hash) && oauthMogelijk()) {
+  // f53: de Hulp werkt zonder login — daar hoort geen inlogpoort voor.
+  if (!hulpDoel(window.location.hash) && bedoeldeRoute(window.location.hash) && oauthMogelijk()) {
     toonLegeStaat("Log in om deze pagina te openen",
       "Deze link wijst naar een pagina in je eigen dashboard. Log in met je licentie — je komt daarna precies op die pagina uit.",
       { login: true });
@@ -777,5 +820,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     toonLegeStaat("Deze link is onvolledig",
       "Er staat wel iets achter het #-teken van deze link, maar geen bruikbaar daglink-token — meestal is de link afgekapt bij het kopiëren of doorsturen. Vraag je Coördinator om een nieuwe.",
       { login: true });
+    return;
+  }
+  // f53: geen link en geen sessie. Dan is de Hulp de lege staat: inloggen
+  // bovenaan, daaronder hoe je team werkt. Kan er niet ingelogd worden, dan
+  // blijft de daglink-uitleg de kop. Staat er al een eindtoestand (een
+  // mislukte login bv.), dan blijft die melding staan, met de Hulp eronder.
+  if (hulpInLegeStaat) return;
+  if (oauthMogelijk()) {
+    toonLegeStaat("Log in om je team te zien",
+      "Of open dit dashboard via de daglink in je dagstart. Hieronder lees je hoe je team werkt.",
+      { login: true });
+  } else {
+    hulpInLegeStaat = true;
+    route();
   }
 });
