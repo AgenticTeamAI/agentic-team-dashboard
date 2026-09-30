@@ -376,7 +376,13 @@ async function metPlafond(items, plafond, werk) {
  * (i81) het antwoord op een schrijfactie, dat de rij ter plekke vervangt. Twee
  * eigen vormen zouden na de eerste klik stil uit elkaar gaan lopen. */
 function rijVanEntry(e) {
-  return Object.assign({}, e && e.data, { __entryId: e && e.entryId });
+  // f46: de stempels van de instantie reizen mee onder één sleutel. Niet als
+  // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
+  // een schemaveld "Bijgewerkt" stil de stempel lezen.
+  return Object.assign({}, e && e.data, {
+    __entryId: e && e.entryId,
+    __stempels: { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null },
+  });
 }
 
 function maxBijgewerkt(entries) {
