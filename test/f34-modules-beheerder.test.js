@@ -156,14 +156,20 @@ async function openIngelogd(modulesAntwoord) {
     }
     throw new Error("timeout: " + wat);
   }
-  await tot(() => $("tabbar").style.display !== "none", "dashboard geladen");
+  await tot(() => !!w.document.querySelector(".tabbalk"), "dashboard geladen");
   // Het moduleoverzicht komt ná de eerste render binnen; wachten tot het er is.
   await tot(() => w.actieveModuleKeys() !== null, "moduleoverzicht geladen");
-  async function naarDetailModules() {
-    w.location.hash = "#/detail/modules";
-    await tot(() => $("detail-view").style.display !== "none", "detailroute");
+  const q = (sel) => w.document.querySelector(sel);
+  async function naarBeheer() {
+    w.location.hash = "#/beheer";
+    await tot(() => q("#beheer-modules-body") && q("#beheer-modules-body").textContent.trim(), "beheer");
   }
-  return { w, $, fouten, naarDetailModules };
+  async function account() {
+    q('[data-act="sheet"][data-type="account"]').click();
+    await tot(() => q(".scrim .sheet"), "accountmenu");
+    return q(".scrim .sheet").textContent;
+  }
+  return { w, $, q, fouten, naarBeheer, account };
 }
 
 describe("gewisseld naar een daglink (zelfde tabblad)", () => {
@@ -202,27 +208,25 @@ describe("gewisseld naar een daglink (zelfde tabblad)", () => {
   });
 });
 
-describe("dashboard.html — tegel, nav en detailroute", () => {
-  it("een teamlid ziet geen moduletegel, geen nav-item en geen detailpagina, maar de keys werken", async () => {
-    const { w, $, fouten, naarDetailModules } = await openIngelogd(TEAMLID);
-    expect($("panel-modules").style.display).toBe("none");
+describe("dashboard.html (v2) — Beheer in het accountmenu", () => {
+  it("een teamlid ziet geen Beheer en geen bedragen, maar de keys werken", async () => {
+    const { w, q, fouten, naarBeheer, account } = await openIngelogd(TEAMLID);
     expect(w.actieveModuleKeys()).toEqual(["core", "growth"]);
-    await naarDetailModules();
-    expect($("detail-nav").textContent).not.toContain("Jouw modules");
-    expect($("detail-body").textContent).toContain("Onbekende detailpagina");
+    expect(await account()).not.toContain("Beheer");
+    await naarBeheer();
+    expect(q("#beheer-modules-body").textContent).toContain("ziet alleen de beheerder");
     // Niets over geld in de pagina — het teamlid kreeg het niet eens binnen.
-    expect($("detail-body").textContent).not.toMatch(/€/);
+    expect(q("#root").textContent).not.toMatch(/€/);
     expect(fouten).toEqual([]);
   });
 
-  it("de beheerder ziet tegel, nav-item en detailpagina", async () => {
-    const { w, $, fouten, naarDetailModules } = await openIngelogd(BEHEERDER);
-    expect($("panel-modules").style.display).toBe("");
-    expect($("panel-modules-body").textContent).toContain("128");
+  it("de beheerder ziet Beheer, met zijn modules en bedragen", async () => {
+    const { w, q, fouten, naarBeheer, account } = await openIngelogd(BEHEERDER);
     expect(w.actieveModuleKeys()).toEqual(["core", "growth"]);
-    await naarDetailModules();
-    expect($("detail-nav").textContent).toContain("Jouw modules");
-    expect($("detail-inner").textContent).toContain("Modulair (Core + Growth)");
+    expect(await account()).toContain("Beheer");
+    await naarBeheer();
+    expect(q("#beheer-modules-body").textContent).toContain("Modulair (Core + Growth)");
+    expect(q("#beheer-modules-body").textContent).toContain("128");
     expect(fouten).toEqual([]);
   });
 });

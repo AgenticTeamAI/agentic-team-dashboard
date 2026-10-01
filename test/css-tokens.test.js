@@ -31,11 +31,11 @@ describe("CSS-tokens", () => {
     ).toEqual([]);
   });
 
-  it("houdt de terugkoppeling op een geopende rij zichtbaar", () => {
-    // Deze regel was het concrete slachtoffer; hij mag niet opnieuw naar een
-    // token wijzen dat niet bestaat.
-    expect(css).toMatch(/tr\.rij-open\s*\{[^}]*background:\s*var\(--card\)/);
-    expect(css).toMatch(/--card\s*:/);
+  it("houdt de focus altijd zichtbaar", () => {
+    // Dashboard v2: wie met het toetsenbord werkt (1–9, G, T, J/K) moet zien
+    // waar hij is. Eén regel voor alles, met een eigen token.
+    expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus\)/);
+    expect(css).toMatch(/--focus\s*:/);
   });
 });
 
@@ -93,14 +93,14 @@ describe("i86 — thema's", () => {
 
   // [voorgrond, achtergrond, minimum]
   const PAREN = [
-    ["--ink", "--bg", 4.5], ["--ink", "--surface", 4.5], ["--ink", "--card", 4.5],
-    ["--muted", "--bg", 4.5], ["--muted", "--surface", 4.5], ["--muted", "--card", 4.5],
-    ["--team-tekst", "--surface", 4.5], ["--team-tekst", "--card", 4.5], ["--team-tekst", "--bg", 4.5],
+    ["--ink", "--bg", 4.5], ["--ink", "--surface", 4.5], ["--ink", "--surface-2", 4.5], ["--ink", "--jij-zacht", 4.5],
+    ["--muted", "--bg", 4.5], ["--muted", "--surface", 4.5], ["--muted", "--surface-2", 4.5],
+    ["--team-tekst", "--surface", 4.5], ["--team-tekst", "--team-zacht", 4.5], ["--team-tekst", "--bg", 4.5],
     ["--jij-tekst", "--surface", 4.5], ["--jij-tekst", "--jij-zacht", 4.5],
-    ["--rood", "--surface", 4.5], ["--rood", "--rood-zacht", 4.5], ["--surface", "--rood", 4.5],
+    ["--rood", "--surface", 4.5], ["--rood", "--rood-zacht", 4.5],
     ["--klaar", "--surface", 4.5], ["--klaar", "--klaar-zacht", 4.5],
     ["--op-team", "--team", 4.5], ["--op-jij", "--jij", 4.5],
-    ["--blauw", "--surface", 4.5], ["--paars", "--surface", 4.5],
+    ["--toast-ink", "--toast-bg", 4.5], ["--toast-accent", "--toast-bg", 4.5],
     ["--team", "--surface", 3], ["--veldrand", "--surface", 3], ["--focus", "--surface", 3],
   ];
   for (const [thema, T] of [["licht", () => L], ["donker", () => D]]) {

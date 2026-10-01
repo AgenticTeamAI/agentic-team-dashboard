@@ -193,7 +193,7 @@ function renderAll() {
     const fout = ctx.versionError;
     V2.versieFout({
       titel: "Deze cijfers kan dit dashboard nog niet lezen",
-      tekst: (fout && (fout.melding || fout.reden || fout.message)) ? String(fout.melding || fout.reden || fout.message) + " Vraag je Coördinator om een nieuwe dagstart, of ververs later." : "Het metricsbestand heeft een vorm die dit dashboard niet kent. Vraag je Coördinator om een nieuwe dagstart.",
+      tekst: fout && fout.tekst ? String(fout.tekst) : "Het metricsbestand heeft een vorm die dit dashboard niet kent. Vraag je Coördinator om een nieuwe dagstart.",
     });
     return;
   }
@@ -258,8 +258,10 @@ function wireNavigatie() {
 
 /* Zolang er geen werkruimte is: wat er aan de hand is, met inloggen erbij als
  * dat kan. Daaronder staat de Hulp — die werkt zonder login en zonder data. */
+let eindToestand = false; // er staat al een melding met inlogknop (bv. een mislukte login)
 function toonLegeStaat(titel, tekst, { login = null } = {}) {
   if (currentBundle) return;
+  eindToestand = login === true;
   V2.leeg({ titel, tekst, bezig: login === false, fout: /niet|verlopen|onvolledig/i.test(titel) && login === true });
 }
 
@@ -327,6 +329,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     uitloggen,
     ververs: () => { if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true }); },
     exporteer: (formaat) => startExport(formaat),
+    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
+    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
   });
   wireNavigatie();
   const uitRedirect = await verwerkOauthRedirect();
@@ -339,6 +343,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
+  if (eindToestand) return;
   // f53: de Hulp werkt zonder login — daar hoort geen inlogpoort voor.
   const deeplink = bedoeldeRoute(window.location.hash) && !/^#\/?$/.test(window.location.hash);
   if (!hulpDoel(window.location.hash) && deeplink && oauthMogelijk()) {

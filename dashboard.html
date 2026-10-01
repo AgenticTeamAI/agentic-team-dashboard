@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-1PF9LoIltuiYVxDPQzPr2k61/6NYG+ScFkY0mgz4980='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-b9I7DWvozgdqx7bxeDwWMYUkKWfkXQTabgyOrAXKanw='">
 
 
 
@@ -55,6 +55,8 @@
   --toast-bg: #16191D;
   --toast-ink: #F3F4F1;
   --toast-accent: #F0A548;
+  /* Alleen voor het vervagen van ingekorte tekst (mask-image): de kleur zelf is onzichtbaar. */
+  --masker: #000000;
   --f: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --r-s: 8px;
@@ -92,6 +94,7 @@
     --toast-bg: #ECEEE9;
     --toast-ink: #121513;
     --toast-accent: #8F5409;
+    --masker: #000000;
     --f: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     --r-s: 8px;
@@ -283,8 +286,8 @@ details.privacy .binnen p{font-size:13px;color:var(--muted);max-width:66ch}
 button.relatie{min-height:40px;text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:3px}
 .papier{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--team);border-radius:4px var(--r-m) var(--r-m) 4px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .papier .werk{font-size:15.5px;line-height:1.6;white-space:pre-line;color:var(--ink);max-width:62ch;overflow-wrap:anywhere}
-.papier .werk.ingekort{max-height:14.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
-.werk.kort8{max-height:12em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.papier .werk.ingekort{max-height:14.5em;overflow:hidden;-webkit-mask-image:linear-gradient(var(--masker) 70%,transparent);mask-image:linear-gradient(var(--masker) 70%,transparent)}
+.werk.kort8{max-height:12em;overflow:hidden;-webkit-mask-image:linear-gradient(var(--masker) 70%,transparent);mask-image:linear-gradient(var(--masker) 70%,transparent)}
 .papier .knop.klein-knop{min-height:40px}
 .citaat{border:1px solid var(--jij);background:var(--jij-zacht);border-radius:8px;padding:8px 10px;font-size:13.5px}
 .uitklap{border-top:1px solid var(--line)}
@@ -14135,6 +14138,14 @@ function renderBalk() {
   return "";
 }
 
+/* Wat de werkruimte over de bundel zelf meldt (verouderde cijfers, een
+ * onbekend domein, een onleesbaar metricsbestand): klein, maar nooit weg. */
+function waarschuwingenHtml() {
+  const l = (CTX && CTX.bundelWaarschuwingen) || [];
+  if (!l.length) return "";
+  return `<div class="balk notion" role="status" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
+}
+
 /* ---------- Voor jou ---------- */
 function renderBovenkaart() {
   const kc = klaarCheck();
@@ -14244,11 +14255,11 @@ function renderVoorJou() {
   const l = voorJouLijst();
   if (isDesk() && !gekozen && l[0]) gekozen = l[0].id;
   const links = `${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
-  if (!isDesk()) return `<div class="inhoud">${renderBalk()}${links}</div>`;
+  if (!isDesk()) return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${links}</div>`;
   const a = gekozen && actie(gekozen);
   const rechts = a ? `<div class="vak paneel">${renderBlad(a, "paneel")}</div>`
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
-  return `<div class="inhoud">${renderBalk()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
 function vraagVoorTeam(it) {
   const t = it.titel || "dit item";
@@ -14275,7 +14286,7 @@ function renderVoorJouNotion() {
       <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
       <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in Notion ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
   };
-  return `<div class="inhoud">${renderBalk()}${renderBovenkaart()}
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
     <section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("notion", "Waarom staat dit in Notion?")}</div>
     <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in Notion, of vraag het je team in Claude.</p></section>
@@ -14776,7 +14787,7 @@ function renderResultaat() {
   return `<section class="vak" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">De afgelopen 4 weken · ${telwoord(tot, "ding", "dingen")} afgerond</h2>
     <div class="cijfers"><div class="teller"><b>${som("team")}</b><span>helemaal door je team</span></div><div class="teller"><b>${som("voor")}</b><span>door jou, met voorwerk van je team</span></div><div class="teller"><b>${som("zelf")}</b><span>door jou alleen</span></div></div>
     <div class="grafiekrij">${svg}<div class="legenda2"><span><i class="l-team"></i>helemaal door je team (zelf afgerond)</span><span><i class="l-voor"></i>jij, met voorwerk van je team</span><span><i class="l-zelf"></i>jij alleen</span></div></div>
-    ${uren ? `<p class="klein stil">Rekenhulp: met ± ${min} minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p>` : ""}</section>
+    <p class="klein stil">Rekenhulp: met ± <label class="sr" for="minuten">Minuten per stuk</label><select id="minuten" data-change="minuten" class="mono" style="min-height:32px;border:1px solid var(--veldrand);border-radius:6px;background:var(--surface)">${[10, 15, 25, 45, 60].concat([10, 15, 25, 45, 60].includes(min) ? [] : [min]).map(m => `<option value="${m}" ${m === min ? "selected" : ""}>${m}</option>`).join("")}</select> minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p></section>
     ${cv && cv.aanwezig && typeof cv.pct === "number" ? `<section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Klopte het werk? · alleen intern</h2><p>Van de ${telwoord(cv.autonoom, "actie", "acties")} die je team de afgelopen ${cv.vensterDagen} dagen zelf afrondde, bleef ${Math.round(cv.pct)}% zonder correctie staan.</p></section>` : ""}
     ${gebruik.length ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><h2 class="vakkop">Het meest ingezet · afgelopen ${telwoord(CTX.periodWeeks || 12, "week", "weken")}</h2>
       ${gebruik.map(x => `<div class="tussen">${agKnop(x.slug)}<span class="mono">${x.value}×</span></div>`).join("")}</section>` : ""}`;
@@ -15184,7 +15195,7 @@ function renderHulp() {
   const kc = CTX && toegang() !== "notion" && S.data ? klaarCheck() : null;
   const leeg = S.leeg;
   const kop = !CTX
-    ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px">${esc(leeg.tekst)}</p>` : ""}</div>
+    ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b data-leeg-titel>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px" data-leeg-tekst>${esc(leeg.tekst)}</p>` : ""}</div>
       ${leeg && leeg.bezig ? "" : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator in Claude om een daglink.</span>`}</div>`}
       <p class="klein stil">${esc(PRIVACY_LEGE_STAAT)}</p></div>`
     : `<button class="link" data-act="go" data-r="${S.hist.length ? "__terug" : "/"}">${ic("links", "klein")} Terug</button>`;
@@ -15208,7 +15219,7 @@ function renderHulp() {
  * i81); de pagina blijft staan waar hij stond. Elke wijziging is ongedaan te
  * maken, behalve verwijderen — dat zegt het blad er ook bij. */
 
-function cssEsc(s) { try { if (window.CSS && CSS.escape) return CSS.escape(s); } catch (e) { /* geen CSS-API */ } return String(s).replace(/["\\\]\[]/g, "\\$&"); }
+function cssEsc(s) { try { if (window.CSS && CSS.escape) return CSS.escape(s); } catch (e) { /* geen CSS-API */ } return String(s).replace(/["\\\]\[]/g, (c) => "\\" + c); }
 function det(id) { return `id="${esc(id)}" ${S.ui.det[id] ? "open" : ""}`; }
 function datumKeuzesV2() { return P.datumKeuzes(NU).map(x => [x.label, x.datum]); }
 function specialistenVoor(doel) {
@@ -15860,6 +15871,7 @@ function opWijziging(e) {
     taakSchrijf(t, { Ritme: el.value }, `‘${t.naam}’ draait nu ${ritmeLabel(el.value, CTX.schema).toLowerCase()}.`, { Ritme: oud || null }); return; }
   else if (d.change === "sh-ander" && S.sheet) { if (!el.value) return; const k = el.value.slice(0, el.value.indexOf(":")), v = el.value.slice(el.value.indexOf(":") + 1); if (k === "ag") { S.sheet.ag = v; S.sheet.mens = null; } else { S.sheet.mens = v; S.sheet.ag = null; } }
   else if (d.change === "sh-hoort" && S.sheet) { S.sheet.hoort = el.value; }
+  else if (d.change === "minuten") { S.focusNa = "#minuten"; if (V2_HAKEN.minuten) V2_HAKEN.minuten(Number(el.value)); return; }
   else return;
   render();
 }
@@ -15895,7 +15907,7 @@ function opSleepUit(e) { const c = e.target.closest && e.target.closest("[data-d
 function opLos(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault(); const id = S.drag; S.drag = null; c.classList.remove("over"); naarBaan(id, c.dataset.drop); }
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
-const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null };
+const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;
@@ -16150,7 +16162,7 @@ function renderAll() {
     const fout = ctx.versionError;
     V2.versieFout({
       titel: "Deze cijfers kan dit dashboard nog niet lezen",
-      tekst: (fout && (fout.melding || fout.reden || fout.message)) ? String(fout.melding || fout.reden || fout.message) + " Vraag je Coördinator om een nieuwe dagstart, of ververs later." : "Het metricsbestand heeft een vorm die dit dashboard niet kent. Vraag je Coördinator om een nieuwe dagstart.",
+      tekst: fout && fout.tekst ? String(fout.tekst) : "Het metricsbestand heeft een vorm die dit dashboard niet kent. Vraag je Coördinator om een nieuwe dagstart.",
     });
     return;
   }
@@ -16215,8 +16227,10 @@ function wireNavigatie() {
 
 /* Zolang er geen werkruimte is: wat er aan de hand is, met inloggen erbij als
  * dat kan. Daaronder staat de Hulp — die werkt zonder login en zonder data. */
+let eindToestand = false; // er staat al een melding met inlogknop (bv. een mislukte login)
 function toonLegeStaat(titel, tekst, { login = null } = {}) {
   if (currentBundle) return;
+  eindToestand = login === true;
   V2.leeg({ titel, tekst, bezig: login === false, fout: /niet|verlopen|onvolledig/i.test(titel) && login === true });
 }
 
@@ -16284,6 +16298,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     uitloggen,
     ververs: () => { if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true }); },
     exporteer: (formaat) => startExport(formaat),
+    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
+    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
   });
   wireNavigatie();
   const uitRedirect = await verwerkOauthRedirect();
@@ -16296,6 +16312,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
+  if (eindToestand) return;
   // f53: de Hulp werkt zonder login — daar hoort geen inlogpoort voor.
   const deeplink = bedoeldeRoute(window.location.hash) && !/^#\/?$/.test(window.location.hash);
   if (!hulpDoel(window.location.hash) && deeplink && oauthMogelijk()) {

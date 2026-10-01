@@ -213,51 +213,53 @@ async function dashboard({ html = HTML, hash = "", sessie = null } = {}) {
   await new Promise((r) => w.addEventListener("load", r));
   const tick = () => new Promise((r) => setTimeout(r, 0));
   for (let i = 0; i < 20; i++) await tick();
-  const $ = (id) => w.document.getElementById(id);
-  return { w, $, fouten, tick, zichtbaar: (id) => $(id).style.display !== "none" };
+  const q = (sel) => w.document.querySelector(sel);
+  const titel = () => (q("[data-leeg-titel]") || {}).textContent || "";
+  return { w, q, titel, fouten, tick };
 }
 
 describe("f53 — in het gebouwde dashboard", () => {
   it("zonder daglink of sessie: inloggen bovenaan, de Hulp eronder", async () => {
-    const { $, zichtbaar, fouten } = await dashboard({ html: HTML_MET_LOGIN });
+    const { q, titel, fouten } = await dashboard({ html: HTML_MET_LOGIN });
     expect(fouten).toEqual([]);
-    expect($("empty-state-titel").textContent).toBe("Log in om je team te zien");
-    expect(zichtbaar("empty-state-acties")).toBe(true);
-    expect($("empty-state-privacy").textContent.length).toBeGreaterThan(20);
-    expect(zichtbaar("tab-hulp")).toBe(true);
-    expect($("tab-hulp-body").textContent).toContain("Hoe werkt je team?");
+    expect(titel()).toBe("Log in om je team te zien");
+    expect(q('#root .balk [data-act="login"]')).not.toBeNull();
+    expect(q("#root .balk").textContent).toContain("Je gegevens komen straks rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
+    expect(q("#hulp-titel").textContent).toContain("Hoe werkt je team?");
   });
 
   it("kan er niet ingelogd worden: de daglink-uitleg blijft de kop, de Hulp staat eronder", async () => {
-    const { $, zichtbaar } = await dashboard();
-    expect($("empty-state-titel").textContent).toBe("Geen daglink gevonden");
-    expect(zichtbaar("tab-hulp")).toBe(true);
+    const { q, titel } = await dashboard();
+    expect(titel()).toBe("Open je dashboard via de daglink in je dagstart");
+    expect(q('[data-act="login"]')).toBeNull();
+    expect(q("#hulp-titel")).not.toBeNull();
   });
 
   it("#/hulp/daglink zonder sessie: geen inlogpoort, de sectie staat open", async () => {
-    const { $, w } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/hulp/daglink" });
-    expect($("empty-state-titel").textContent).not.toBe("Log in om deze pagina te openen");
-    expect(w.document.querySelector("#hulp-daglink").open).toBe(true);
-    expect(w.document.title).toBe("Hulp — Agentic Team Dashboard");
+    const { q, titel, w } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/hulp/daglink" });
+    expect(titel()).not.toBe("Log in om deze pagina te openen");
+    expect(q("#h-daglink").open).toBe(true);
+    expect(w.document.title).toBe("Hulp — Je team");
   });
 
   it("een andere deeplink zonder sessie houdt de inlogpoort", async () => {
-    const { $ } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/acties/a-1" });
-    expect($("empty-state-titel").textContent).toBe("Log in om deze pagina te openen");
+    const { titel } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/acties/a-1" });
+    expect(titel()).toBe("Log in om deze pagina te openen");
   });
 
   it("herladen met een sessie blijft op de pagina waar je was", async () => {
-    const { w, zichtbaar } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/hulp/daglink", sessie: SESSIE });
+    const { w, q } = await dashboard({ html: HTML_MET_LOGIN, hash: "#/hulp/daglink", sessie: SESSIE });
     for (let i = 0; i < 200 && !w.__dashboardCtx; i++) await new Promise((r) => setTimeout(r, 0));
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
     expect(w.__dashboardCtx).toBeTruthy();
     expect(w.location.hash).toBe("#/hulp/daglink");
-    expect(zichtbaar("tab-hulp")).toBe(true);
-    expect(zichtbaar("empty-state")).toBe(false);
-    expect(w.document.querySelector("#tab-hulp-body .kc-samenvatting, #tab-hulp-body .hulp-titel")).not.toBeNull();
+    expect(q(".tabbalk")).not.toBeNull();
+    expect(q("#hulp-titel")).not.toBeNull();
+    expect(q("#h-daglink").open).toBe(true);
   });
 
   it("de kop heeft altijd een weg naar de Hulp", async () => {
-    const { w } = await dashboard();
-    expect(w.document.querySelector('header a.kop-hulp[href="#/hulp"]')).not.toBeNull();
+    const { q } = await dashboard();
+    expect(q('header [data-act="go"][data-r="/hulp"]')).not.toBeNull();
   });
 });

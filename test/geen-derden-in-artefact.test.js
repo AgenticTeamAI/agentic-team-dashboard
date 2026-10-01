@@ -193,7 +193,7 @@ describe("signaturen — geen onderdelen van derden in dashboard.html", () => {
  * browser gebruikt wat er op het systeem van de bezoeker staat. Deze test
  * bewaakt dat het bij namen blijft. */
 const TOEGESTANE_FONTFAMILIES = [
-  "var(--font)", // de eigen variabele
+  "var(--font)", "var(--f)", "var(--mono)", // de eigen variabelen (de stack staat in :root)
   "inter", "-apple-system", "blinkmacsystemfont", "segoe ui", "roboto", "sans-serif",
   "sfmono-regular", "consolas", "monospace",
 ];

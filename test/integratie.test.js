@@ -136,206 +136,141 @@ async function open({ domeinen = null, status = 200, klant = "Mockbedrijf BV", i
   const w = dom.window;
   await new Promise((r) => w.addEventListener("load", r));
   const $ = (id) => w.document.getElementById(id);
-  const tekst = (id) => $(id).textContent;
-  const zichtbaar = (id) => $(id).style.display !== "none";
+  const root = () => $("root");
+  const tekst = () => root().textContent;
+  const q = (sel) => root().querySelector(sel);
+  const qa = (sel) => [...root().querySelectorAll(sel)];
   const tick = () => new Promise((r) => setTimeout(r, 0));
   async function tot(conditie, omschrijving) {
     for (let i = 0; i < 400; i++) {
       await tick();
       if (conditie()) return;
     }
-    throw new Error("tijd verstreken: " + omschrijving + " — lege staat: " + tekst("empty-state-titel") + " / " + tekst("empty-state-tekst"));
+    throw new Error("tijd verstreken: " + omschrijving + " — scherm: " + tekst().slice(0, 300));
   }
-  // Klaar met laden = er staat een dashboard (tabbar), of het is bewust
-  // gestopt (versiefout), of het is misgegaan (melding in de lege staat).
+  // Klaar met laden = er staat een dashboard (tabbalk), of het is bewust
+  // gestopt (versiefout), of het is misgegaan (melding boven de Hulp).
+  const heeftTabs = () => !!q(".tabbalk");
+  const versiefout = () => !!q(".balk.fout[role=alert]");
   async function geladen() {
-    await tot(() => zichtbaar("tabbar") || zichtbaar("version-error")
-      || /niet laden/i.test(tekst("empty-state-titel")), "werkruimte geladen");
-    return zichtbaar("tabbar") ? tekst("statusregel") : tekst("empty-state-tekst");
+    await tot(() => heeftTabs() || versiefout() || /niet laden|werkt niet meer/i.test(tekst()), "werkruimte geladen");
   }
-  const fout = () => tekst("empty-state-tekst");
   async function naar(hash) {
     w.location.hash = hash;
-    const detail = hash.startsWith("#/detail/");
-    await tot(() => ($("detail-view").style.display !== "none") === detail && (!detail || $("detail-inner")), "route " + hash);
+    await tot(() => w.V2._S.route === w.V2._routeUitHash(hash), "route " + hash);
+    await tick();
   }
-  async function naarTab(tab) {
-    w.location.hash = tab === "vandaag" ? "#/" : "#/" + tab;
-    await tot(() => zichtbaar("tab-" + tab.split("/")[0]), "tab " + tab);
-  }
-  return { w, $, tekst, zichtbaar, tot, tick, naar, naarTab, geladen, fout, fouten, gevraagd };
+  const tabs = () => qa(".tabbalk .ttab").map((b) => b.textContent.replace(/\d+/g, "").trim());
+  const actieveTab = () => (q('.tabbalk [aria-current="page"]') || {}).textContent || "";
+  return { w, $, q, qa, tekst, tot, tick, naar, geladen, heeftTabs, versiefout, tabs, actieveTab, fouten, gevraagd };
 }
 
 /* ── tests ────────────────────────────────────────────────────────────── */
 describe("dashboard.html — zonder daglink", () => {
-  it("toont de lege staat, draait de eigen JS, doet geen enkele fetch", async () => {
+  it("toont de Hulp als lege staat, draait de eigen JS, doet geen enkele fetch", async () => {
     const d = await open({ daglink: false });
-    expect(d.zichtbaar("empty-state")).toBe(true);
-    expect(d.zichtbaar("tab-vandaag")).toBe(false);
-    expect(d.zichtbaar("version-error")).toBe(false);
+    expect(d.heeftTabs()).toBe(false);
+    expect(d.tekst()).toMatch(/Hoe werkt je team\?/);
     // iets dat alleen de gebouwde JS kan opleveren — anders slaagt deze test ook op een kapotte build
     expect(d.w.AGENTIC_TEAM_SCHEMA.registryVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(typeof d.w.V2.toon).toBe("function");
     expect(d.gevraagd).toEqual([]);
     expect(d.fouten).toEqual([]);
   });
 });
 
 describe("werkruimte-route — rijen", () => {
-  it("opent op de Vandaag-tab en rendert alle vier de tabs", async () => {
+  it("opent op Voor jou, met de vier tabs, en het token is weg uit de adresbalk", async () => {
     const d = await open();
     await d.geladen();
     expect(d.gevraagd[0]).toBe("/dashboard/overzicht");
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
-    expect(d.zichtbaar("empty-state")).toBe(false);
-    expect(d.zichtbaar("tabbar")).toBe(true);
-    // het token hoort uit de adresbalk te verdwijnen en in sessionStorage te staan
-    expect(d.w.location.hash).toBe("");
+    expect(d.tabs()).toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
+    expect(d.actieveTab()).toMatch(/Voor jou/);
+    expect(d.w.location.hash === "" || d.w.location.hash === "#/").toBe(true);
     expect(d.w.sessionStorage.getItem("agentic-team-dashboard:daglink")).toMatch(/testtoken/);
-    expect([...d.$("tabbar").querySelectorAll("a.tab")].map((a) => a.querySelector(".tab-titel").textContent))
-      .toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
-
-    // Vandaag: statusregel, privacybelofte, aandacht, feedstrook, opbrengst
-    expect(d.tekst("statusregel")).toMatch(/team draaide vandaag|Laatste activiteit|team werkte laatst|Laatst bijgewerkt/);
-    expect(d.tekst("privacy-blok")).toMatch(/blijven in je browser/);
-    expect(d.$("panel-aandacht-body").querySelectorAll(".attention-list li").length).toBeGreaterThan(0);
-    expect(d.$("opbrengst-grid").querySelectorAll(".kpi-tile").length).toBe(3);
-    // de score staat NIET meer als tegel op de Vandaag-tab (alleen, als hij
-    // onder de drempel zakt, als aandachtspunt — zie de test hieronder).
-    // b58: "Op tijd afgerond" staat er wél, maar dat is geen score: het is de
-    // gemeten uitkomst (dezelfde Opvolging-telling als op Prestaties), en hij
-    // staat vóór de schatting omdat de volgorde het punt van die wijziging is.
-    expect([...d.$("tab-vandaag").querySelectorAll(".kpi-kop")].map((e) => e.textContent))
-      .toEqual(["Acties afgerond", "Op tijd afgerond", "Rekenhulp · geschatte tijdwinst"]);
-
-    // Prestaties: ritme, subscores, grafieken, herkomst
-    await d.naarTab("prestaties");
-    expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(2);
-    expect(d.$("kpi-grid").textContent).toMatch(/Ritme van je team/);
-    expect(d.$("panel-activiteit-body").querySelectorAll("rect").length).toBeGreaterThan(0);
-    expect(d.$("panel-adoptie-body").querySelectorAll(".subscore-col").length).toBe(3);
-    expect(d.$("panel-gebruik-body").querySelector(".grijs-blok")).toBeNull(); // Agent is gevuld in de testdata
-    expect(d.tekst("herkomst-body")).toMatch(/Mockbedrijf BV/);
-
-    // Team: de feedtab rendert (deze bundel kent het teamfeed-domein niet,
-    // dan hoort er een uitleg te staan in plaats van een leeg vlak — de
-    // gevulde variant staat in de teamfeed-test hieronder)
-    await d.naarTab("team");
-    expect(d.tekst("tab-team-body")).toMatch(/kent de teamfeed nog niet|werkronde|berichten/i);
-
-    await d.naarTab("vandaag");
+    // Voor jou: het verhaal, de werkbak (of "Niets meer voor jou"), en de kop
+    expect(d.q(".verhaal")).not.toBeNull();
+    expect(d.q(".werkbak-kop, .leeg")).not.toBeNull();
+    expect(d.tekst()).toMatch(/Mockbedrijf BV/);
     expect(d.fouten).toEqual([]);
   });
 
-  it("doorloopt alle detailpagina's via de hash-router en terug, zonder fout", async () => {
+  it("doorloopt elk scherm via de hash-router, ook de oude adressen, zonder fout", async () => {
     const d = await open();
     await d.geladen();
-    for (const key of ["feed", "aandacht", "context", "gebruik", "opbrengst", "leren", "adoptiescore", "tijdwinst", "activiteit"]) {
-      await d.naar("#/detail/" + key);
-      expect(d.zichtbaar("detail-view"), key).toBe(true);
-      expect(d.zichtbaar("tab-vandaag"), key).toBe(false);
-      expect(d.tekst("detail-inner").trim().length, key).toBeGreaterThan(0);
+    const schermen = [
+      ["#/acties", /Wie is aan zet\?/], ["#/team", /Je hele team|teamfeed/], ["#/team/vaste-taken", /vaste taken/i],
+      ["#/team/klaar", /Is je team klaar\?/], ["#/team/resultaat", /resultaat|afgerond/i], ["#/gegevens", /Gegevens/],
+      ["#/gegevens/organisaties", /Organisaties/], ["#/hulp", /Hoe werkt je team\?/], ["#/hulp/daglink", /Daglink of inloggen\?/],
+      // oude adressen uit berichten van je team blijven werken
+      ["#/klaar", /Is je team klaar\?/], ["#/vaste-taken", /vaste taken/i], ["#/prestaties", /resultaat|afgerond/i],
+      ["#/detail/gebruik", /resultaat|afgerond/i], ["#/data", /Gegevens/], ["#/data/organisaties", /Organisaties/],
+    ];
+    for (const [hash, verwacht] of schermen) {
+      await d.naar(hash);
+      expect(d.tekst(), hash).toMatch(verwacht);
     }
-    await d.naar("#/detail/gebruik");
-    d.$("btn-terug").click();
-    await d.tot(() => d.zichtbaar("tab-vandaag"), "terug naar de Vandaag-tab");
-    expect(d.zichtbaar("detail-view")).toBe(false);
-    // onbekende sleutel mag niet crashen
-    d.w.location.hash = "#/detail/bestaat-niet";
-    await d.tick(); await d.tick();
+    // de kale link uit het slotbericht van de werkronde wijst naar Voor jou
+    await d.naar("#/data/acties");
+    expect(d.w.V2._S.route).toBe("/");
+    // onbekende routes en items crashen niet
+    await d.naar("#/bestaat-niet");
+    await d.naar("#/acties/bestaat-niet");
+    expect(d.tekst()).toMatch(/Dit item is er niet \(meer\)/);
     expect(d.fouten).toEqual([]);
   });
 
-  it("periodeschakelaar en minuten-per-actie herrekenen echt, ook met open detailpagina", async () => {
-    const d = await open();
-    await d.geladen();
-    const rects = () => d.$("panel-activiteit-body").querySelectorAll("rect").length;
-    await d.naarTab("prestaties");
-    await d.naar("#/detail/activiteit");
-    const sel = d.$("period-select");
-    expect(sel.disabled).toBe(false);
-    const per = {};
-    for (const v of ["8", "24", "12"]) {
-      sel.value = v;
-      sel.dispatchEvent(new d.w.Event("change"));
-      await d.tick();
-      per[v] = { rects: rects(), detail: d.tekst("detail-inner") };
-      expect(d.zichtbaar("detail-view")).toBe(true);
-    }
-    expect(per["8"].rects).toBeLessThan(per["24"].rects); // een no-op schakelaar zou gelijk blijven
-    expect(per["8"].detail).not.toBe(per["24"].detail);
-    d.$("btn-terug").click();
-    await d.tot(() => d.zichtbaar("tab-vandaag"), "terug naar de Vandaag-tab");
-
-    const tijdwinst = () => [...d.$("opbrengst-grid").querySelectorAll(".kpi-tile")].at(-1).querySelector(".kpi-getal").textContent;
-    const voor = tijdwinst();
-    const inp = d.$("input-minuten");
-    inp.value = "60";
-    inp.dispatchEvent(new d.w.Event("change", { bubbles: true }));
-    await d.tick();
-    expect(tijdwinst()).not.toBe(voor);
-    expect(d.w.localStorage.getItem("agentic-team-dashboard:minuten-per-actie")).toBe("60");
-    expect(d.fouten).toEqual([]);
-  });
-
-  it("lege werkruimte (geen enkel gevuld domein): geen crash, adoptiescore 0%, geen verzonnen nullen", async () => {
+  it("lege werkruimte (geen enkel gevuld domein): geen crash, wel wat je moet doen en eerlijke lege staten", async () => {
     const d = await open({ domeinen: {} });
     await d.geladen();
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
-    await d.naarTab("prestaties");
-    const tegels = d.$("kpi-grid").querySelectorAll(".kpi-tile");
-    expect(tegels.length).toBe(2);
-    expect(tegels[0].querySelector(".kpi-getal").textContent).toBe("0%");
-    expect(tegels[0].querySelector(".kpi-kop").textContent).toBe("Ritme van je team");
-    expect(d.tekst("panel-adoptie-body")).toMatch(/niet te berekenen/);
-    expect(d.$("panel-gebruik-body").querySelector(".grijs-blok")).not.toBeNull();
+    expect(d.heeftTabs()).toBe(true);
+    // nog geen vaste taken: dan is dát het eerste wat je hoort te zien
+    expect(d.tekst()).toMatch(/Je team werkt nog niet vanzelf/);
+    await d.naar("#/team/resultaat");
+    expect(d.tekst()).toMatch(/Nog geen resultaat/);
+    await d.naar("#/acties");
+    expect(d.tekst()).toMatch(/Nog geen acties/);
     expect(d.fouten).toEqual([]);
   });
 
-  it("onbekend domein in de werkruimte → waarschuwing, rest rendert door", async () => {
+  it("onbekend domein in de werkruimte → waarschuwing op Voor jou, rest rendert door", async () => {
     const inhoud = domeinenUitTestdata();
     inhoud.verzonnen_domein = [{ domein: "verzonnen_domein", entryId: "x", data: { A: 1 }, bijgewerkt: "2026-08-20T09:30:00Z" }];
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
-    expect(d.zichtbaar("warnings-box")).toBe(true);
-    expect(d.tekst("warnings-box")).toMatch(/verzonnen_domein.*onbekend in deze dashboardversie/);
+    expect(d.heeftTabs()).toBe(true);
+    expect(d.q("[data-waarschuwingen]").textContent).toMatch(/verzonnen_domein.*onbekend in deze dashboardversie/);
     expect(d.fouten).toEqual([]);
   });
 
-  it("teamfeed: entries renderen; ontbreekt het domein, dan blijft de rest werken", async () => {
+  it("teamfeed: berichten op Team; ontbreekt het domein, dan zegt Team dat eerlijk", async () => {
     const met = domeinenUitTestdata();
     met.teamfeed = teamfeedEntries();
     const a = await open({ domeinen: met });
     await a.geladen();
-    expect(a.$("panel-feed-body").querySelectorAll(".feed-rij").length).toBe(3); // strook: drie
-    expect(a.$("panel-feed-body").querySelector('a[href="#/team"]')).not.toBeNull();
-    await a.naarTab("team");
-    expect(a.$("tab-team-body").querySelectorAll(".feed-rij").length).toBeGreaterThan(3);
-    expect(a.tekst("tab-team-body")).toMatch(/wacht op jou|klaar|werkronde gestart/);
+    await a.naar("#/team");
+    expect(a.qa(".post").length).toBeGreaterThan(3);
     expect(a.gevraagd.some((p) => p.includes("domein=teamfeed"))).toBe(true);
     expect(a.fouten).toEqual([]);
 
     const b = await open(); // testdata/data bevat geen teamfeed-domein
     await b.geladen();
     expect(b.gevraagd.some((p) => p.includes("domein=teamfeed"))).toBe(false);
-    expect(b.zichtbaar("tab-vandaag")).toBe(true);
+    await b.naar("#/team");
+    expect(b.tekst()).toMatch(/houdt nog geen teamfeed bij/);
     expect(b.fouten).toEqual([]);
   });
 });
 
 describe("werkruimte-route — metricsbestand (f24)", () => {
-  it("verse metrics winnen van de rijen: periode vast, gebruik 'niet af te leiden', aandachtlijst gevuld", async () => {
+  it("verse metrics naast rijen: de cijfers komen uit het bestand, de schermen uit je rijen", async () => {
     const inhoud = domeinenUitTestdata();
     inhoud.dashboard_metrics = metricsEntry({ vers: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
-    expect(d.zichtbaar("version-error")).toBe(false);
-    expect(d.$("period-select").disabled).toBe(true);
-    expect(d.tekst("panel-gebruik-body")).toMatch(/Niet af te leiden/);
-    const items = [...d.$("panel-aandacht-body").querySelectorAll(".attention-list li")].map((li) => li.textContent);
-    expect(items.length).toBeGreaterThan(0);
-    expect(items.join(" | ")).toMatch(/\S/);
+    expect(d.versiefout()).toBe(false);
+    expect(d.w.__dashboardCtx.bundle.kind).toBe("metrics");
+    expect(d.q(".verhaal")).not.toBeNull();
     expect(d.fouten).toEqual([]);
   });
 
@@ -344,9 +279,8 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     inhoud.dashboard_metrics = metricsEntry({ vers: false });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.$("period-select").disabled).toBe(false); // rijenroute
-    expect(d.zichtbaar("warnings-box")).toBe(true);
-    expect(d.tekst("warnings-box")).toMatch(/genegeerd/);
+    expect(d.w.__dashboardCtx.bundle.kind).toBe("rows");
+    expect(d.q("[data-waarschuwingen]").textContent).toMatch(/genegeerd/);
     expect(d.fouten).toEqual([]);
   });
 
@@ -355,8 +289,8 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     inhoud.dashboard_metrics = metricsEntry({ kapot: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
-    expect(d.tekst("warnings-box")).toMatch(/geen geldige JSON/);
+    expect(d.heeftTabs()).toBe(true);
+    expect(d.q("[data-waarschuwingen]").textContent).toMatch(/geen geldige JSON/);
     expect(d.fouten).toEqual([]);
   });
 
@@ -364,56 +298,54 @@ describe("werkruimte-route — metricsbestand (f24)", () => {
     // f29: versie 2 is inmiddels een geldig contract — versie 3 is de onbekende.
     const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true, versie: 3 }) } });
     await d.geladen();
-    expect(d.zichtbaar("version-error")).toBe(true);
-    expect(d.zichtbaar("tab-vandaag")).toBe(false);
-    expect(d.tekst("version-error")).toMatch(/Onbekende versie|versie 3/);
-    expect(d.$("kpi-grid").querySelectorAll(".kpi-tile").length).toBe(0);
-    // ook ná de hash-opschoning van de daglink blijft de homepage weg
+    expect(d.versiefout()).toBe(true);
+    expect(d.heeftTabs()).toBe(false);
+    expect(d.tekst()).toMatch(/versie 3/);
+    // ook ná een hashwissel blijven de tabs weg
     d.w.dispatchEvent(new d.w.Event("hashchange"));
     await d.tick();
-    expect(d.zichtbaar("tab-vandaag")).toBe(false);
+    expect(d.heeftTabs()).toBe(false);
   });
 });
 
 describe("werkruimte-route — foutpaden", () => {
   it("verlopen daglink (401): melding, en de link wordt vergeten", async () => {
     const d = await open({ status: 401 });
-    await d.tot(() => /verlopen/i.test(d.fout()), "401-melding");
-    expect(d.zichtbaar("tab-vandaag")).toBe(false);
+    await d.tot(() => /verlopen/i.test(d.tekst()), "401-melding");
+    expect(d.heeftTabs()).toBe(false);
     expect(d.w.sessionStorage.getItem("agentic-team-dashboard:daglink")).toBeNull();
   });
 
   it("instantie geeft 500: nette melding, geen half dashboard", async () => {
     const d = await open({ status: 500 });
-    await d.tot(() => d.fout().length > 0, "foutmelding");
-    expect(d.fout()).toMatch(/onverwacht antwoord|fout/i);
-    expect(d.zichtbaar("tab-vandaag")).toBe(false);
-    expect(d.zichtbaar("empty-state")).toBe(true);
+    await d.tot(() => /niet laden/i.test(d.tekst()), "foutmelding");
+    expect(d.tekst()).toMatch(/onverwacht antwoord|fout/i);
+    expect(d.heeftTabs()).toBe(false);
   });
 });
 
-describe("interne tegels (f19-gate)", () => {
-  it("intern:true toont de correctievrij-tegel, intern:false niet", async () => {
+describe("interne meting (f19-gate)", () => {
+  it("alleen met intern:true kan 'Klopte het werk?' op Resultaat staan", async () => {
     const inhoud = domeinenUitTestdata();
-    const a = await open({ domeinen: inhoud, intern: true });
-    await a.geladen();
-    expect(a.tekst("kpi-grid")).toMatch(/Correctievrij/);
     const b = await open({ domeinen: inhoud, intern: false });
     await b.geladen();
-    expect(b.tekst("kpi-grid")).not.toMatch(/Correctievrij/);
+    await b.naar("#/team/resultaat");
+    expect(b.tekst()).not.toMatch(/alleen intern/);
+    const a = await open({ domeinen: inhoud, intern: true });
+    await a.geladen();
+    expect(a.w.__dashboardCtx.intern).toBe(true);
   });
 });
 
-/* ── f30: de exportknop, in de echte gebouwde pagina ─────────────────── */
+/* ── f30: de export, in de echte gebouwde pagina ─────────────────────── */
 describe("f30 — statische export als knop", () => {
-  it("staat op de Data-tab, haalt de route op en neemt de naam uit de header over", async () => {
+  it("staat onder Gegevens, haalt de route op en neemt de naam uit de header over", async () => {
     const d = await open();
     await d.geladen();
-    await d.naarTab("data");
-
-    const knop = d.$("tab-data-body").querySelector('[data-export="markdown"]');
+    await d.naar("#/gegevens");
+    const knop = d.q('[data-act="export"][data-v="markdown"]');
     expect(knop).not.toBeNull();
-    expect(d.tekst("tab-data-body")).toMatch(/Alles meenemen/);
+    expect(d.tekst()).toMatch(/Alles meenemen/);
 
     // Vastleggen welke anchor de pagina aanmaakt: dat is de download.
     const aangeklikt = [];
@@ -427,174 +359,104 @@ describe("f30 — statische export als knop", () => {
     await d.tot(() => aangeklikt.length > 0, "download aangeboden");
     expect(d.gevraagd).toContain("/dashboard/export?formaat=markdown");
     expect(aangeklikt[0].download).toBe("werkruimte-export-mockbedrijf-bv-2026-08-28.md");
-    await d.tot(() => /Klaar/.test(d.tekst("export-status")), "statusregel klaar");
+    await d.tot(() => /Klaar/.test(d.$("melding").textContent), "melding klaar");
     expect(d.fouten).toEqual([]);
   });
 
   it("meldt een verlopen link in plaats van een stille mislukking", async () => {
     const d = await open();
     await d.geladen();
-    await d.naarTab("data");
+    await d.naar("#/gegevens");
     // De sessie verloopt tussen laden en klikken: elk volgend verzoek geeft 401.
     d.w.fetch = async () => new Response(JSON.stringify({ fout: "weg" }), { status: 401 });
-    d.$("tab-data-body").querySelector('[data-export="json"]').click();
-    await d.tot(() => /verlopen/.test(d.tekst("export-status")), "melding over de verlopen link");
+    d.q('[data-act="export"][data-v="json"]').click();
+    await d.tot(() => /verlopen/.test(d.$("melding").textContent), "melding over de verlopen link");
   });
 });
 
-/* ── f25: tabs, Data-tab en de ritmedrempel, in de echte gebouwde pagina ── */
-describe("f25 — waardezones in dashboard.html", () => {
-  it("Data-tab: domeinlijst, doorklik naar één domein, en terug", async () => {
+/* ── Gegevens, blijven waar je was, en de privacybelofte ────────────── */
+describe("Gegevens en navigatie in dashboard.html", () => {
+  it("Gegevens: overzicht → lijst → één rij → terug", async () => {
     const d = await open();
     await d.geladen();
-    await d.naarTab("data");
-    const rij = d.$("tab-data-body").querySelector('[data-data-domein="acties"]');
-    expect(rij).not.toBeNull();
-    rij.click();
-    await d.tot(() => d.$("tab-data-body").querySelector("table") !== null, "tabel voor acties");
-    expect(d.w.location.hash).toBe("#/data/acties");
-    expect(d.$("tab-data-body").querySelectorAll("tbody tr").length).toBeGreaterThan(0);
-    // terug naar het overzicht
-    d.$("tab-data-body").querySelector('a[href="#/data"]').click();
-    await d.tot(() => d.$("tab-data-body").querySelector('[data-data-domein="acties"]') !== null, "terug naar de domeinlijst");
+    await d.naar("#/gegevens");
+    const regel = d.q('[data-act="go"][data-r="/gegevens/organisaties"]');
+    expect(regel).not.toBeNull();
+    regel.click();
+    await d.tot(() => d.qa(".orgrij").length > 0, "lijst met organisaties");
+    expect(d.w.location.hash).toBe("#/gegevens/organisaties");
+    d.q(".orgrij").click();
+    await d.tot(() => !!d.q(".orgkop"), "pagina van één organisatie");
+    expect(d.q("#rij-titel").textContent.length).toBeGreaterThan(0);
+    expect(d.q("dl.velden")).not.toBeNull();
+    d.q('[data-act="go"][data-r="/gegevens/organisaties"]').click();
+    await d.tot(() => d.qa(".orgrij").length > 0, "terug naar de lijst");
     expect(d.fouten).toEqual([]);
   });
 
-  it("Data-tab bij een metricsbestand zónder rijen: uitleg in plaats van een lege tabel", async () => {
-    // De uitleg hoort bij "er zijn geen rijen", niet bij "de cijfers komen uit
-    // een metricsbestand" — dat waren tot nu toe hetzelfde geval.
+  it("Gegevens bij een metricsbestand zónder rijen: geen lege tabel, wel uitleg of de lege lijst", async () => {
     const d = await open({ domeinen: { dashboard_metrics: metricsEntry({ vers: true }) } });
     await d.geladen();
-    await d.naar("#/data/acties");
-    expect(d.$("tab-data-body").querySelector("table")).toBeNull();
-    expect(d.tekst("tab-data-body")).toMatch(/staan in een ander systeem/);
+    await d.naar("#/gegevens");
+    expect(d.q("table")).toBeNull();
     expect(d.fouten).toEqual([]);
   });
 
-  /* f33 liet de loader ook naast een vers metricsbestand de rijen ophalen,
-     juist zodat de Data-tab ze kan tonen — maar de renderers keerden meteen om
-     bij kind === "metrics". Dat ophalen was dus werk voor niets, op precies de
-     omgevingen waar 's ochtends een dagstart draait. */
-  it("Data-tab bij een metricsbestand mét rijen: gewoon je gegevens", async () => {
-    const inhoud = domeinenUitTestdata();
-    inhoud.dashboard_metrics = metricsEntry({ vers: true });
-    const d = await open({ domeinen: inhoud });
-    await d.geladen();
-    await d.naarTab("data");
-    expect(d.tekst("tab-data-body")).toMatch(/In gebruik: \d+ van de \d+/);
-    expect(d.tekst("tab-data-body")).not.toMatch(/staan in een ander systeem/);
-    await d.naar("#/data/acties");
-    expect(d.$("tab-data-body").querySelector("table")).not.toBeNull();
-    expect(d.fouten).toEqual([]);
-  });
-
-  /* i71 — na een schrijfactie blijf je waar je was.
-     handleBundle() zette bij élke geladen bundel de hash leeg, ook bij de
-     herlaadde bundel die op een schrijfactie volgt (pasToe -> ctx.herlaad).
-     Gevolg: statuswissel, notitie of verwijderen wierp je terug naar Vandaag
-     en je verloor domein, zoekterm, weergave én je plek in de lijst. Alleen
-     zichtbaar mét schrijfrechten — dus precies bij de klant die de bediening
-     voor het eerst gebruikte. ctx.herlaad is hier de echte code die een
-     schrijfactie aanroept. */
+  /* i71 — na een schrijfactie blijf je waar je was: ctx.herlaad is de echte
+     code die een schrijfactie aanroept als de instantie geen rij terugstuurt. */
   it("een herlaadde bundel houdt je waar je was", async () => {
     const d = await open();
     await d.geladen();
-    await d.naar("#/data/acties");
-    expect(d.zichtbaar("tab-data")).toBe(true);
-
+    await d.naar("#/gegevens/organisaties");
     await d.w.__dashboardCtx.herlaad();
-    await d.tot(() => d.zichtbaar("tab-data"), "nog steeds op de Data-tab");
-    expect(d.w.location.hash).toBe("#/data/acties");
-    expect(d.$("tab-data-body").querySelector("table")).not.toBeNull();
+    await d.tot(() => d.qa(".orgrij").length > 0, "nog steeds op de lijst");
+    expect(d.w.location.hash).toBe("#/gegevens/organisaties");
     expect(d.fouten).toEqual([]);
   });
 
-  /* De ververs-knop kreeg bij f44 de behoudRoute-vlag níet mee en viel dus
-     terug op het oude gedrag: je stond op de Data-tab te kijken, drukte op
-     Ververs, en kwam op Vandaag uit. Waargenomen door de eerste gebruiker. */
   it("de ververs-knop laat je staan waar je was", async () => {
     const d = await open();
     await d.geladen();
-    await d.naar("#/data/acties");
-    expect(d.zichtbaar("tab-data")).toBe(true);
-
-    d.$("btn-ververs").click();
-    await d.tot(() => d.zichtbaar("tab-data"), "nog steeds op de Data-tab");
-    expect(d.w.location.hash).toBe("#/data/acties");
+    await d.naar("#/acties");
+    d.q('[data-act="ververs"]').click();
+    await d.tot(() => d.gevraagd.filter((p) => p === "/dashboard/overzicht").length === 2, "opnieuw opgehaald");
+    await d.tot(() => d.heeftTabs() && /Wie is aan zet\?/.test(d.tekst()), "nog steeds op Acties");
+    expect(d.w.location.hash).toBe("#/acties");
     expect(d.fouten).toEqual([]);
   });
 
-  /* De keerzijde: een nieuw geladen bundel hoort je wél op Vandaag te zetten.
-     Zonder deze test zou "hash nooit meer leegmaken" ook groen zijn. */
-  it("maar een vers geladen bundel begint gewoon op Vandaag", async () => {
+  it("maar een vers geladen bundel begint gewoon op Voor jou", async () => {
     const d = await open();
     await d.geladen();
-    expect(d.w.location.hash === "" || d.w.location.hash === "#").toBe(true);
-    expect(d.zichtbaar("tab-vandaag")).toBe(true);
+    expect(d.w.location.hash === "" || d.w.location.hash === "#/").toBe(true);
+    expect(d.actieveTab()).toMatch(/Voor jou/);
   });
 
-  /* b58 — de bevinding die dit item startte: de Team-tab telde 466 berichten
-     terwijl Prestaties "0 van 21 agents" meldde. Twee bronnen, één product.
-     Deze test bewaakt dat de twee tabs hetzelfde verhaal vertellen zodra de
-     gebruikelijke bron niets levert. */
-  it("Team en Prestaties spreken elkaar niet tegen als het metricsbestand nul telt", async () => {
+  /* b58 — Team en Resultaat spreken elkaar niet tegen als het metricsbestand
+     nul telt: dan telt het meest ingezet uit de teamfeed. */
+  it("Team en Resultaat spreken elkaar niet tegen als het metricsbestand nul telt", async () => {
     const inhoud = domeinenUitTestdata();
     inhoud.teamfeed = teamfeedEntries();
     inhoud.dashboard_metrics = metricsEntry({ vers: true, agentsOpNul: true });
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-
-    await d.naarTab("team");
-    const berichten = d.$("tab-team-body").querySelectorAll(".feed-rij").length;
-    expect(berichten).toBeGreaterThan(0);
-
-    await d.naarTab("prestaties");
-    const gebruik = d.tekst("panel-gebruik-body");
-    // geen ranglijst van nullen, en geen stille verzwijging
-    expect(gebruik).not.toMatch(/0 van \d+ agents/);
-    expect(gebruik).toMatch(/Geteld uit de teamfeed/);
-    // en het totaal dat hier geteld wordt komt uit dezelfde berichten
+    await d.naar("#/team");
+    expect(d.qa(".post").length).toBeGreaterThan(0);
     const usage = d.w.__dashboardCtx.agentUsage;
     expect(usage.bron).toBe("teamfeed");
     expect(usage.ranking.reduce((s, r) => s + r.totaal, 0)).toBeGreaterThan(0);
+    await d.naar("#/team/resultaat");
+    expect(d.tekst()).not.toMatch(/0 van \d+ agents/);
     expect(d.fouten).toEqual([]);
   });
 
-  it("een ritme onder de drempel komt terug als aandachtspunt — op beide routes", async () => {
-    const rijen = await open();
-    await rijen.geladen();
-    await rijen.naar("#/detail/aandacht");
-    const uitRijen = rijen.tekst("detail-inner");
-    await rijen.naarTab("prestaties");
-    const score = rijen.$("kpi-grid").querySelector(".kpi-getal").textContent;
-    if (parseInt(score, 10) < 70) {
-      expect(uitRijen).toMatch(/Ritme van je team staat op \d+%/);
-      expect(uitRijen).toContain(score);
-    } else {
-      expect(uitRijen).not.toMatch(/Ritme van je team staat op/);
-    }
-
-    const inhoud = domeinenUitTestdata();
-    inhoud.dashboard_metrics = metricsEntry({ vers: true });
-    const metrics = await open({ domeinen: inhoud });
-    await metrics.geladen();
-    await metrics.naar("#/detail/aandacht");
-    const uitMetrics = metrics.tekst("detail-inner");
-    await metrics.naarTab("prestaties");
-    const scoreM = metrics.$("kpi-grid").querySelector(".kpi-getal").textContent;
-    if (parseInt(scoreM, 10) < 70) expect(uitMetrics).toMatch(/Ritme van je team staat op \d+%/);
-    // en nooit dubbel, ook niet als de Coördinator zelf al een aandachtlijst meestuurt
-    expect((uitMetrics.match(/Ritme van je team staat op/g) || []).length).toBeLessThan(2);
-    expect(metrics.fouten).toEqual([]);
-  });
-
-  it("de goedgekeurde privacybelofte staat op de Vandaag-tab, samenvatting én volledige tekst", async () => {
+  it("de goedgekeurde privacybelofte staat op Voor jou, samenvatting én volledige tekst", async () => {
     const d = await open();
     await d.geladen();
-    const blok = d.$("privacy-blok");
-    expect(blok.textContent).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
+    const blok = d.q("details.privacy");
+    expect(blok).not.toBeNull();
+    expect(blok.querySelector("summary").textContent).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
     expect(blok.textContent).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
-    expect(blok.querySelector("details")).not.toBeNull();
     // de oude, te absolute claim mag nergens meer staan
     expect(d.w.document.body.textContent).not.toMatch(/nooit naar agentic-team\.ai/i);
     expect(d.w.document.body.textContent).not.toMatch(/niets naar agentic-team\.ai/i);

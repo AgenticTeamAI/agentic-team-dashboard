@@ -6,7 +6,7 @@
  * i81); de pagina blijft staan waar hij stond. Elke wijziging is ongedaan te
  * maken, behalve verwijderen — dat zegt het blad er ook bij. */
 
-function cssEsc(s) { try { if (window.CSS && CSS.escape) return CSS.escape(s); } catch (e) { /* geen CSS-API */ } return String(s).replace(/["\\\]\[]/g, "\\$&"); }
+function cssEsc(s) { try { if (window.CSS && CSS.escape) return CSS.escape(s); } catch (e) { /* geen CSS-API */ } return String(s).replace(/["\\\]\[]/g, (c) => "\\" + c); }
 function det(id) { return `id="${esc(id)}" ${S.ui.det[id] ? "open" : ""}`; }
 function datumKeuzesV2() { return P.datumKeuzes(NU).map(x => [x.label, x.datum]); }
 function specialistenVoor(doel) {
@@ -658,6 +658,7 @@ function opWijziging(e) {
     taakSchrijf(t, { Ritme: el.value }, `‘${t.naam}’ draait nu ${ritmeLabel(el.value, CTX.schema).toLowerCase()}.`, { Ritme: oud || null }); return; }
   else if (d.change === "sh-ander" && S.sheet) { if (!el.value) return; const k = el.value.slice(0, el.value.indexOf(":")), v = el.value.slice(el.value.indexOf(":") + 1); if (k === "ag") { S.sheet.ag = v; S.sheet.mens = null; } else { S.sheet.mens = v; S.sheet.ag = null; } }
   else if (d.change === "sh-hoort" && S.sheet) { S.sheet.hoort = el.value; }
+  else if (d.change === "minuten") { S.focusNa = "#minuten"; if (V2_HAKEN.minuten) V2_HAKEN.minuten(Number(el.value)); return; }
   else return;
   render();
 }
@@ -693,7 +694,7 @@ function opSleepUit(e) { const c = e.target.closest && e.target.closest("[data-d
 function opLos(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault(); const id = S.drag; S.drag = null; c.classList.remove("over"); naarBaan(id, c.dataset.drop); }
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
-const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null };
+const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;

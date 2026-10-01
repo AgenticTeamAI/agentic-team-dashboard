@@ -132,11 +132,12 @@ describe("het beheerpaneel", () => {
     expect(tabel.classList.contains("detail-table")).toBe(true);
     expect(tabel.classList.contains("team-tabel")).toBe(true);
     const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
-    const mobiel = [...css.matchAll(/@media \(max-width: 640px\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
-    expect(mobiel).toMatch(/\.team-tabel thead \{ display: none; \}/);
-    expect(mobiel).toMatch(/\.team-tabel tr[^{]*\{[^}]*display: block/);
-    // Naamvelden in dezelfde donkere stijl als het uitnodigveld.
-    expect(css).toMatch(/\.team-uitnodigen input\[type="email"\],\s*\.team-uitnodigen input\[type="text"\],\s*input\.team-naam \{/);
+    // Dashboard v2: het paneel staat op Beheer; op een telefoon stapelen de rijen.
+    const mobiel = [...css.matchAll(/@media \(max-width:640px\)\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
+    expect(mobiel).toMatch(/\.team-tabel thead\{display:none\}/);
+    expect(mobiel).toMatch(/\.team-tabel tr[^{]*\{[^}]*display:block/);
+    // Naam- en adresvelden krijgen de gewone veldstijl (rand, vlak, hoogte).
+    expect(css).toMatch(/input\[type=text\],input\[type=email\][^{]*\{[^}]*border:1px solid var\(--veldrand\)/);
   });
 
   it("verschijnt ook met een lege lijst — dan wil je juist iemand uitnodigen", async () => {

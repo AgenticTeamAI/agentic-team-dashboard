@@ -172,7 +172,7 @@ function renderHulp() {
   const kc = CTX && toegang() !== "notion" && S.data ? klaarCheck() : null;
   const leeg = S.leeg;
   const kop = !CTX
-    ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px">${esc(leeg.tekst)}</p>` : ""}</div>
+    ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b data-leeg-titel>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px" data-leeg-tekst>${esc(leeg.tekst)}</p>` : ""}</div>
       ${leeg && leeg.bezig ? "" : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator in Claude om een daglink.</span>`}</div>`}
       <p class="klein stil">${esc(PRIVACY_LEGE_STAAT)}</p></div>`
     : `<button class="link" data-act="go" data-r="${S.hist.length ? "__terug" : "/"}">${ic("links", "klein")} Terug</button>`;

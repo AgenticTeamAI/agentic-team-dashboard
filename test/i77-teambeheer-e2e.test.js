@@ -74,8 +74,11 @@ async function openIngelogd() {
     }
     throw new Error("timeout: " + wat);
   }
-  await tot(() => $("tabbar").style.display !== "none", "dashboard geladen");
-  await tot(() => $("panel-team-namen").style.display === "" && $("panel-team-namen").querySelector("[data-team-uitnodigen]"), "teampaneel geladen");
+  await tot(() => !!w.document.querySelector(".tabbalk"), "dashboard geladen");
+  // Dashboard v2: wie er meewerkt staat onder Beheer (accountmenu).
+  await tot(() => w.teamBeheerMogelijk(), "team geladen");
+  w.location.hash = "#/beheer";
+  await tot(() => $("panel-team-namen") && $("panel-team-namen").querySelector("[data-team-uitnodigen]"), "teampaneel geladen");
   return { w, $, fouten, siteCalls, tot };
 }
 
@@ -101,14 +104,18 @@ describe("dashboard.html — teambeheer", () => {
     const { w, $, fouten, siteCalls, tot } = await openIngelogd();
     const paneel = $("panel-team-namen");
     w.location.hash = `#t=${DAGLINK}`;
-    await tot(() => paneel.style.display === "none", "teampaneel dicht na daglink");
+    await tot(() => !w.document.body.contains(paneel) && !!w.document.querySelector(".tabbalk"), "teampaneel weg na daglink");
 
-    // Ook een formulier dat nog in de DOM staat, stuurt niets.
+    // Ook een formulier dat nog los in het geheugen staat, stuurt niets.
     const voor = siteCalls.length;
     paneel.querySelector("[data-team-uitnodig-adres]").value = "nieuw@voorbeeld.nl";
     paneel.querySelector('[data-team-uitnodigen] button[type="submit"]').click();
     await new Promise((r) => setTimeout(r, 20));
     expect(siteCalls.length).toBe(voor);
+    // En wie toch naar Beheer gaat, krijgt geen beheerpaneel met de daglink.
+    w.location.hash = "#/beheer";
+    await tot(() => $("panel-team-namen") && /beheerder/.test($("panel-team-namen").textContent), "beheer zonder sessie");
+    expect($("panel-team-namen").querySelector("[data-team-uitnodigen]")).toBeNull();
     expect(siteCalls.filter((c) => c.auth === "Bearer " + DAGLINK)).toEqual([]);
     expect(fouten).toEqual([]);
   });

@@ -318,59 +318,51 @@ async function openIngelogd() {
     }
     throw new Error("timeout: " + wat);
   }
-  await tot(() => w.document.getElementById("tabbar").style.display !== "none", "dashboard geladen");
+  await tot(() => !!w.document.querySelector(".tabbalk"), "dashboard geladen");
   return { w, d: w.document, fouten, verzoeken, scrolls, opslag, tot };
 }
 
-describe("i81 end-to-end — de rij wordt ter plekke bijgewerkt", () => {
-  it("statuswissel: één PATCH, geen herlaad, geen sprong naar boven, kaart blijft open; ongedaan maken werkt", async () => {
-    const { w, d, fouten, verzoeken, scrolls, opslag, tot } = await openIngelogd();
-    w.location.hash = "#/data/acties";
-    await tot(() => d.querySelector('[data-open-rij="acties|a-1"]'), "acties-tabel");
-    d.querySelector('[data-open-rij="acties|a-1"]').click();
-    await tot(() => d.querySelector("[data-snel-status]"), "detailkaart");
+describe("i81 end-to-end (dashboard v2) — de rij wordt ter plekke bijgewerkt", () => {
+  it("afronden op het item-blad: één PATCH, geen herlaad, terug naar de lijst; ongedaan maken werkt", async () => {
+    const { w, d, fouten, verzoeken, opslag, tot } = await openIngelogd();
+    w.location.hash = "#/acties/a-1";
+    await tot(() => d.querySelector("#blad-titel"), "item-blad");
+    expect(d.querySelector("#blad-titel").textContent).toBe("Offerte nabellen");
 
     const verzoekenVoor = verzoeken.length;
-    const scrollsVoor = scrolls.length;
-    const select = d.querySelector("[data-snel-status]");
-    select.focus();
-    select.value = "Wacht";
-    select.dispatchEvent(new w.Event("change", { bubbles: true }));
-    await tot(() => opslag["a-1"].Status === "Wacht" && d.querySelector("[data-snel-status]") !== select, "bijgewerkt");
+    d.querySelector('.beslisbalk [data-act="doe"][data-f="klaar"]').click();
+    await tot(() => opslag["a-1"].Status === "Klaar" && !d.querySelector("#blad-titel"), "afgerond en terug");
 
     expect(verzoeken.slice(verzoekenVoor)).toEqual(["PATCH /dashboard/entries/acties/a-1"]);
-    expect(scrolls.slice(scrollsVoor)).not.toContain(0);
-    const kaart = d.querySelector("[data-detail-kaart]");
-    expect(kaart.getAttribute("data-detail-id")).toBe("a-1");
-    expect(d.querySelector("[data-snel-status]").value).toBe("Wacht");
-    // De bediening die je gebruikte, houdt de focus.
-    expect(d.activeElement).toBe(d.querySelector("[data-snel-status]"));
+    // i25: een mens die afrondt, laat Afgerond door leeg
+    expect(opslag["a-1"]["Afgerond door"]).toBeUndefined();
+    expect(opslag["a-1"]["Afgerond op"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(w.location.hash).toBe("#/acties");
     // De laadtekst van een volledige herlaad is nooit verschenen.
-    expect(d.getElementById("empty-state").style.display).toBe("none");
+    expect(d.querySelector(".laden")).toBeNull();
 
-    const melding = d.getElementById("melding");
-    expect(melding.hidden).toBe(false);
-    melding.querySelector("[data-melding-actie]").click();
-    await tot(() => opslag["a-1"].Status === "Open" && d.querySelector("[data-snel-status]").value === "Open", "teruggezet");
+    const toast = d.querySelector("[data-toast]");
+    expect(toast.textContent).toContain("Afgerond.");
+    toast.querySelector('[data-act="undo"]').click();
+    await tot(() => opslag["a-1"].Status === "Open", "teruggezet");
+    expect(opslag["a-1"]["Afgerond op"]).toBeUndefined();
     expect(verzoeken.filter(v => v.startsWith("GET /dashboard/entries")).length).toBe(1);
     expect(fouten).toEqual([]);
   });
 
-  it("✏️-formulier: alleen het gewijzigde veld gaat mee, de rest van de rij blijft intact", async () => {
+  it("één veld wijzigen (Belang): alleen dat veld gaat mee, de rest van de rij blijft intact", async () => {
     const { w, d, fouten, verzoeken, opslag, tot } = await openIngelogd();
-    w.location.hash = "#/data/acties";
-    await tot(() => d.querySelector('[data-open-rij="acties|a-1"]'), "acties-tabel");
-    d.querySelector('[data-open-rij="acties|a-1"]').click();
-    await tot(() => d.querySelector('[data-detail-kaart] [data-bewerk-rij="a-1"]'), "detailkaart");
-    d.querySelector('[data-detail-kaart] [data-bewerk-rij="a-1"]').click();
-    const form = d.querySelector("[data-bewerk-formulier]");
-    form.querySelector('[name="Prioriteit"]').value = "Hoog";
-    form.dispatchEvent(new w.Event("submit", { bubbles: true, cancelable: true }));
-    await tot(() => opslag["a-1"].Prioriteit === "Hoog" && !d.querySelector("[data-bewerk-formulier]"), "opgeslagen");
+    w.location.hash = "#/acties/a-1";
+    await tot(() => d.querySelector("#blad-titel"), "item-blad");
+    d.querySelector('[data-act="sheet"][data-type="prio"]').click();
+    await tot(() => d.querySelector('[data-act="sh-kies"][data-v="prio:Hoog"]'), "keuze belang");
+    d.querySelector('[data-act="sh-kies"][data-v="prio:Hoog"]').click();
+    await tot(() => opslag["a-1"].Prioriteit === "Hoog" && !d.querySelector('[data-act="sh-kies"]'), "opgeslagen");
 
     expect(verzoeken.filter(v => v.startsWith("PUT"))).toEqual([]);
     expect(opslag["a-1"]).toEqual({ Actie: "Offerte nabellen", Status: "Open", Agent: "Coördinator", Toelichting: "Regel 1\nRegel 2", Prioriteit: "Hoog" });
-    expect(d.querySelector("[data-detail-kaart]").textContent).toContain("Hoog");
+    // het blad blijft open en toont de nieuwe waarde
+    await tot(() => /Hoog/.test(d.querySelector(".blad").textContent), "nieuwe waarde zichtbaar");
     expect(fouten).toEqual([]);
   });
 });

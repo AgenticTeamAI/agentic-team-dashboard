@@ -57,6 +57,14 @@ function renderBalk() {
   return "";
 }
 
+/* Wat de werkruimte over de bundel zelf meldt (verouderde cijfers, een
+ * onbekend domein, een onleesbaar metricsbestand): klein, maar nooit weg. */
+function waarschuwingenHtml() {
+  const l = (CTX && CTX.bundelWaarschuwingen) || [];
+  if (!l.length) return "";
+  return `<div class="balk notion" role="status" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
+}
+
 /* ---------- Voor jou ---------- */
 function renderBovenkaart() {
   const kc = klaarCheck();
@@ -166,11 +174,11 @@ function renderVoorJou() {
   const l = voorJouLijst();
   if (isDesk() && !gekozen && l[0]) gekozen = l[0].id;
   const links = `${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
-  if (!isDesk()) return `<div class="inhoud">${renderBalk()}${links}</div>`;
+  if (!isDesk()) return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${links}</div>`;
   const a = gekozen && actie(gekozen);
   const rechts = a ? `<div class="vak paneel">${renderBlad(a, "paneel")}</div>`
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
-  return `<div class="inhoud">${renderBalk()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
 function vraagVoorTeam(it) {
   const t = it.titel || "dit item";
@@ -197,7 +205,7 @@ function renderVoorJouNotion() {
       <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
       <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in Notion ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
   };
-  return `<div class="inhoud">${renderBalk()}${renderBovenkaart()}
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
     <section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("notion", "Waarom staat dit in Notion?")}</div>
     <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in Notion, of vraag het je team in Claude.</p></section>
