@@ -102,7 +102,7 @@ describe("wie mag bewerken", () => {
     expect(c.querySelector("[data-bewerk-nieuw]")).toBeNull();
     // i72: het systeem krijgt zijn eigen naam en het woord "bronkoppeling"
     // verdwijnt uit klanttekst — dat is ons woord, geen klantwoord.
-    expect(c.textContent).toContain("woont in Notion");
+    expect(c.textContent).toContain("woont in je eigen systeem");
     expect(c.textContent).not.toContain("bronkoppeling");
   });
 
@@ -116,7 +116,7 @@ describe("wie mag bewerken", () => {
     const spaties = el();
     g.renderDataDomein(spaties, "interacties", ctxMet({ systeemPerDomein: { interacties: " NOTION " } }));
     expect(spaties.querySelector("[data-bewerk-nieuw]")).toBeNull();
-    expect(spaties.textContent).toContain("Notion");
+    expect(spaties.textContent).toContain("je eigen systeem");
   });
 
   it("laat domeinen die per definitie hier wonen altijd bewerkbaar", () => {

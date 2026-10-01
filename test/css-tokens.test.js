@@ -31,11 +31,11 @@ describe("CSS-tokens", () => {
     ).toEqual([]);
   });
 
-  it("houdt de terugkoppeling op een geopende rij zichtbaar", () => {
-    // Deze regel was het concrete slachtoffer; hij mag niet opnieuw naar een
-    // token wijzen dat niet bestaat.
-    expect(css).toMatch(/tr\.rij-open\s*\{[^}]*background:\s*var\(--card\)/);
-    expect(css).toMatch(/--card\s*:/);
+  it("houdt de focus altijd zichtbaar", () => {
+    // Dashboard v2: wie met het toetsenbord werkt (1–9, G, T, J/K) moet zien
+    // waar hij is. Eén regel voor alles, met een eigen token.
+    expect(css).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus\)/);
+    expect(css).toMatch(/--focus\s*:/);
   });
 });
 
@@ -52,8 +52,11 @@ describe("i86 — thema's", () => {
   const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
   const licht = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")) + 1);
   const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
-  const donkerStart = css.indexOf(":root {", mediaStart);
+  const donkerStart = css.indexOf(':root:not([data-thema="licht"]) {', mediaStart);
   const donker = css.slice(donkerStart, css.indexOf("}", donkerStart) + 1);
+  // Een eigen keuze (knop in de kop) zet data-thema="donker" op <html>.
+  const keuzeStart = css.indexOf(':root[data-thema="donker"] {');
+  const keuze = css.slice(keuzeStart, css.indexOf("}", keuzeStart) + 1);
   const tokens = (blok) => Object.fromEntries([...blok.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
   const L = tokens(licht);
   const D = tokens(donker);
@@ -65,13 +68,19 @@ describe("i86 — thema's", () => {
     expect(donker).toMatch(/color-scheme:\s*dark/);
   });
 
+  it("een eigen keuze voor donker gebruikt precies dezelfde waarden als het systeemthema", () => {
+    expect(keuzeStart).toBeGreaterThan(donkerStart);
+    expect(keuze).toMatch(/color-scheme:\s*dark/);
+    expect(tokens(keuze)).toEqual(D);
+  });
+
   it("donker definieert dezelfde kleurtokens als licht", () => {
     const kleuren = (t) => Object.keys(t).filter((k) => !["--font", "--mono"].includes(k)).sort();
     expect(kleuren(D)).toEqual(kleuren(L));
   });
 
   it("gebruikt buiten de tokenblokken geen losse kleuren", () => {
-    const rest = css.replace(licht, "").replace(donker, "");
+    const rest = css.replace(licht, "").replace(donker, "").replace(keuze, "");
     const los = [...rest.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)].map((m) => m[0]);
     expect(los, "losse kleuren in styles.css — maak er een token van").toEqual([]);
     for (const bestand of ["src/charts.js", "src/render.js", "src/homepage.js", "src/databrowser.js", "src/shell.html"]) {
@@ -93,14 +102,14 @@ describe("i86 — thema's", () => {
 
   // [voorgrond, achtergrond, minimum]
   const PAREN = [
-    ["--ink", "--bg", 4.5], ["--ink", "--surface", 4.5], ["--ink", "--card", 4.5],
-    ["--muted", "--bg", 4.5], ["--muted", "--surface", 4.5], ["--muted", "--card", 4.5],
-    ["--team-tekst", "--surface", 4.5], ["--team-tekst", "--card", 4.5], ["--team-tekst", "--bg", 4.5],
+    ["--ink", "--bg", 4.5], ["--ink", "--surface", 4.5], ["--ink", "--surface-2", 4.5], ["--ink", "--jij-zacht", 4.5],
+    ["--muted", "--bg", 4.5], ["--muted", "--surface", 4.5], ["--muted", "--surface-2", 4.5],
+    ["--team-tekst", "--surface", 4.5], ["--team-tekst", "--team-zacht", 4.5], ["--team-tekst", "--bg", 4.5],
     ["--jij-tekst", "--surface", 4.5], ["--jij-tekst", "--jij-zacht", 4.5],
-    ["--rood", "--surface", 4.5], ["--rood", "--rood-zacht", 4.5], ["--surface", "--rood", 4.5],
+    ["--rood", "--surface", 4.5], ["--rood", "--rood-zacht", 4.5],
     ["--klaar", "--surface", 4.5], ["--klaar", "--klaar-zacht", 4.5],
     ["--op-team", "--team", 4.5], ["--op-jij", "--jij", 4.5],
-    ["--blauw", "--surface", 4.5], ["--paars", "--surface", 4.5],
+    ["--toast-ink", "--toast-bg", 4.5], ["--toast-accent", "--toast-bg", 4.5],
     ["--team", "--surface", 3], ["--veldrand", "--surface", 3], ["--focus", "--surface", 3],
   ];
   for (const [thema, T] of [["licht", () => L], ["donker", () => D]]) {

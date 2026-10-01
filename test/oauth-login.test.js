@@ -92,7 +92,13 @@ async function open({
   const w = dom.window;
   await new Promise((r) => w.addEventListener("load", r));
   const $ = (id) => w.document.getElementById(id);
-  const zichtbaar = (id) => $(id) && $(id).style.display !== "none";
+  const q = (sel) => w.document.querySelector(sel);
+  // Dashboard v2: geen vaste lege-staat-elementen meer, maar een kop boven de
+  // Hulp (titel, tekst, inlogknop) en de tabbalk zodra er een werkruimte is.
+  const titel = () => (q("[data-leeg-titel]") || {}).textContent || "";
+  const uitleg = () => (q("[data-leeg-tekst]") || {}).textContent || "";
+  const loginknop = () => q('#root .balk [data-act="login"]');
+  const heeftTabs = () => !!q(".tabbalk");
   const tick = () => new Promise((r) => setTimeout(r, 0));
   async function tot(conditie, wat) {
     for (let i = 0; i < 400; i++) {
@@ -101,7 +107,7 @@ async function open({
     }
     throw new Error("timeout: " + wat);
   }
-  return { w, $, zichtbaar, gevraagd, fouten, tot, tick };
+  return { w, $, q, titel, uitleg, loginknop, heeftTabs, gevraagd, fouten, tot, tick };
 }
 
 /* ── de vlag ──────────────────────────────────────────────────────────── */
@@ -127,29 +133,28 @@ describe("de build-vlag OAUTH_DASHBOARD", () => {
 
 describe("de loginknop in de lege staat", () => {
   it("staat er náást de daglink-uitleg zodra de vlag aan is", async () => {
-    const { $, zichtbaar, gevraagd } = await open({ html: HTML_MET_LOGIN });
-    expect(zichtbaar("empty-state")).toBe(true);
-    expect($("empty-state-tekst").textContent).toContain("daglink");
-    expect(zichtbaar("empty-state-acties")).toBe(true);
-    expect($("btn-oauth-login").textContent).toContain("Inloggen");
+    const { titel, uitleg, loginknop, heeftTabs, gevraagd } = await open({ html: HTML_MET_LOGIN });
+    expect(heeftTabs()).toBe(false);
+    expect(titel() + " " + uitleg()).toContain("daglink");
+    expect(loginknop()).not.toBeNull();
+    expect(loginknop().textContent).toContain("Inloggen");
     // De lege staat doet nog steeds geen enkele netwerkaanroep.
     expect(gevraagd).toEqual([]);
   });
 
   it("blijft weg zonder de vlag", async () => {
-    const { zichtbaar, gevraagd } = await open();
-    expect(zichtbaar("empty-state")).toBe(true);
-    expect(zichtbaar("empty-state-acties")).toBe(false);
+    const { q, heeftTabs, gevraagd } = await open();
+    expect(heeftTabs()).toBe(false);
+    expect(q('[data-act="login"]')).toBeNull();
     expect(gevraagd).toEqual([]);
   });
 
   it("blijft weg via file://, ook mét de vlag — en die pagina doet nul netwerkcalls", async () => {
-    const { zichtbaar, gevraagd, fouten } = await open({
+    const { q, gevraagd, fouten } = await open({
       html: HTML_MET_LOGIN,
       url: "file:///Users/iemand/Downloads/dashboard.html",
     });
-    expect(zichtbaar("empty-state")).toBe(true);
-    expect(zichtbaar("empty-state-acties")).toBe(false);
+    expect(q('[data-act="login"]')).toBeNull();
     expect(gevraagd).toEqual([]);
     expect(fouten).toEqual([]);
   });
@@ -161,13 +166,13 @@ describe("terug van /oauth/authorize", () => {
   const PKCE = { verifier: "V".repeat(43), state: "ST-123" };
 
   it("wisselt de code in, laadt de werkruimte en haalt de code uit de adresbalk", async () => {
-    const { $, w, zichtbaar, gevraagd, tot } = await open({
+    const { w, heeftTabs, gevraagd, tot } = await open({
       html: HTML_MET_LOGIN,
       url: "http://localhost/dashboard.html#code=atc_test&state=ST-123&iss=https%3A%2F%2Fwww.agentic-team.ai",
       pkce: PKCE,
       tokenAntwoord: { body: { access_token: DASHBOARD_JWT, token_type: "Bearer", expires_in: 3600, refresh_token: "atr_1", scope: "dashboard:lees" } },
     });
-    await tot(() => zichtbaar("tabbar"), "dashboard geladen na inloggen");
+    await tot(() => heeftTabs(), "dashboard geladen na inloggen");
 
     // 1. de code is ingewisseld, form-urlencoded, met verifier en redirect_uri
     const token = gevraagd.find((g) => g.url === TOKEN_URL);
@@ -201,15 +206,15 @@ describe("terug van /oauth/authorize", () => {
   });
 
   it("weigert een state die niet klopt, en zet de loginknop terug", async () => {
-    const { $, zichtbaar, gevraagd, tot } = await open({
+    const { titel, uitleg, loginknop, gevraagd, tot } = await open({
       html: HTML_MET_LOGIN,
       url: "http://localhost/dashboard.html#code=atc_test&state=VERVALST&iss=https%3A%2F%2Fwww.agentic-team.ai",
       pkce: PKCE,
       tokenAntwoord: { body: { access_token: DASHBOARD_JWT } },
     });
-    await tot(() => $("empty-state-titel").textContent === "Inloggen is niet gelukt", "foutmelding");
-    expect($("empty-state-tekst").textContent).toContain("hoorde niet bij deze inlogpoging");
-    expect(zichtbaar("empty-state-acties")).toBe(true);
+    await tot(() => titel() === "Inloggen is niet gelukt", "foutmelding");
+    expect(uitleg()).toContain("hoorde niet bij deze inlogpoging");
+    expect(loginknop()).not.toBeNull();
     expect(gevraagd).toEqual([]);
   });
 });
@@ -220,27 +225,27 @@ describe("een verlopen sessie", () => {
   const OUDE_SESSIE = { access_token: "oud.jwt.verlopen", token_type: "Bearer", refresh_token: "atr_oud", scope: "dashboard:lees" };
 
   it("vernieuwt één keer en laadt daarna gewoon door", async () => {
-    const { w, zichtbaar, gevraagd, tot } = await open({
+    const { w, heeftTabs, gevraagd, tot } = await open({
       html: HTML_MET_LOGIN,
       sessie: OUDE_SESSIE,
       geldigToken: DASHBOARD_JWT, // alleen het vernieuwde token wordt geaccepteerd
       tokenAntwoord: { body: { access_token: DASHBOARD_JWT, token_type: "Bearer", refresh_token: "atr_nieuw", scope: "dashboard:lees" } },
     });
-    await tot(() => zichtbaar("tabbar"), "dashboard geladen na refresh");
+    await tot(() => heeftTabs(), "dashboard geladen na refresh");
     expect(gevraagd.filter((g) => g.url === TOKEN_URL)).toHaveLength(1);
     expect(w.__dashboardCtx.bundle.sourceLabel).toBe("werkruimte van Testbedrijf BV");
   });
 
   it("valt na een mislukte refresh terug op de loginknop, met een leesbare melding", async () => {
-    const { $, zichtbaar, gevraagd, w, tot } = await open({
+    const { titel, uitleg, loginknop, heeftTabs, gevraagd, w, tot } = await open({
       html: HTML_MET_LOGIN,
       sessie: OUDE_SESSIE,
       tokenAntwoord: { status: 400, body: { error: "invalid_grant" } },
     });
-    await tot(() => $("empty-state-titel").textContent === "Kon je werkruimte niet laden", "terug naar de lege staat");
-    expect($("empty-state-tekst").textContent).toBe("Je sessie is verlopen. Log opnieuw in met je licentie.");
-    expect(zichtbaar("empty-state-acties")).toBe(true);
-    expect(zichtbaar("tabbar")).toBe(false);
+    await tot(() => titel() === "Kon je werkruimte niet laden", "terug naar de lege staat");
+    expect(uitleg()).toBe("Je sessie is verlopen. Log opnieuw in met je licentie.");
+    expect(loginknop()).not.toBeNull();
+    expect(heeftTabs()).toBe(false);
     // Precies één refreshpoging, en de dode sessie is opgeruimd.
     expect(gevraagd.filter((g) => g.url === TOKEN_URL)).toHaveLength(1);
     expect(w.sessionStorage.getItem("agentic-team-dashboard:oauth")).toBeNull();

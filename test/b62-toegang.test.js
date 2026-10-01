@@ -10,59 +10,13 @@
  * - één eerlijke regel bovenaan: meekijken met een daglink (met een
  *   inlogknop), of acties die in Notion wonen. */
 import { describe, expect, it, beforeAll, afterEach, vi } from "vitest";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import vm from "node:vm";
+import { laadAlles, stubOpslag as stub } from "./helpers/v2.js";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const MODULES = [
-  "schema/schema.generated.js",
-  "src/teksten.js",
-  "src/schema-helpers.js",
-  "src/werkruimte-loader.js",
-  "src/oauth-client.js",
-  "src/zones.js",
-  "src/voor-jou.js",
-  "src/metrics-sanitize.js",
-  "src/metrics.js",
-  "src/render.js",
-  "src/charts.js",
-  "src/feed.js",
-  "src/homepage.js",
-  "src/databrowser.js",
-  "src/data-bewerken.js",
-  "src/item-blad.js",
-  "src/voor-jou-scherm.js",
-  "src/acties-tab.js",
-  "src/vaste-taken.js",
-  "src/catalogus.js",
-  "src/hulp.js",
-  "src/opdracht.js",
-  "src/rijpagina.js",
-  "src/notion-werk.js",
-  "src/modules-beheer.js",
-  "src/team-beheer.js",
-  "src/app.js",
-];
-
-function stubOpslag() {
-  const kluis = new Map();
-  Object.defineProperty(window, "localStorage", {
-    configurable: true,
-    value: {
-      getItem: (k) => (kluis.has(k) ? kluis.get(k) : null),
-      setItem: (k, v) => kluis.set(k, String(v)),
-      removeItem: (k) => kluis.delete(k),
-    },
-  });
-}
 
 let g;
 beforeAll(() => {
-  stubOpslag();
-  for (const rel of MODULES) vm.runInThisContext(readFileSync(join(ROOT, rel), "utf8"), { filename: rel });
-  g = globalThis;
+  stub(window);
+  g = laadAlles({ metApp: true });
 });
 afterEach(() => {
   sessionStorage.clear();
@@ -120,7 +74,7 @@ describe("b62 — schrijven naast een metricsbestand", () => {
     const ctx = { schema: g.AGENTIC_TEAM_SCHEMA, bundle: metricsBundel({ acties: "notion" }), kanSchrijven: true };
     const m = g.magDomeinBewerken(ctx, "acties");
     expect(m.ok).toBe(false);
-    expect(m.reden).toContain("Notion");
+    expect(m.reden).toContain("je eigen systeem");
   });
 
   it("de daglink blijft alleen-lezen", () => {
@@ -129,28 +83,30 @@ describe("b62 — schrijven naast een metricsbestand", () => {
   });
 });
 
-describe("b62 — de balk bovenaan", () => {
+describe("b62 — de balk bovenaan (dashboard v2)", () => {
   const ctxMet = (bron, systeemPerDomein = {}) => ({
-    schema: g.AGENTIC_TEAM_SCHEMA, bron,
+    schema: g.AGENTIC_TEAM_SCHEMA, bron, today: new Date(2026, 8, 29, 7, 42), kanSchrijven: g.bronKanSchrijven(bron),
     bundle: { kind: "rows", source: "werkruimte", systeemPerDomein, domains: {} },
   });
+  const toon = (ctx) => { document.body.innerHTML = '<div id="root"></div><div id="live"></div>'; g.V2._reset(); g.V2.toon(ctx); return document.getElementById("root"); };
 
   it("daglink: meekijken, met een inlogknop die hier terugkomt", () => {
     const meta = document.createElement("meta");
     meta.name = "at-oauth"; meta.content = "1";
     document.head.appendChild(meta);
-    const html = g.toegangsBalkHtml(ctxMet({ token: daglink("at_een") }));
-    expect(html).toContain("Je kijkt mee met je daglink");
-    expect(html).toContain("data-login");
+    const balk = toon(ctxMet({ token: daglink("at_een") })).querySelector(".balk.daglink");
+    expect(balk.textContent).toContain("Je kijkt mee met je daglink");
+    expect(balk.querySelector('[data-act="login"]')).not.toBeNull();
   });
 
   it("acties in Notion: eerlijk zeggen waar je afhandelt", () => {
-    const html = g.toegangsBalkHtml(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" }));
-    expect(html).toContain("Je acties staan in Notion");
+    const root = toon(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" }));
+    expect(root.querySelector(".balk.notion").textContent).toContain("Je acties staan in je eigen systeem");
   });
 
   it("ingelogd met je werkruimte: geen balk", () => {
-    expect(g.toegangsBalkHtml(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "werkruimte" }))).toBe("");
+    const root = toon(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "werkruimte" }));
+    expect(root.querySelector(".balk.daglink, .balk.notion")).toBeNull();
   });
 });
 

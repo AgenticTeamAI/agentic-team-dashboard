@@ -132,11 +132,12 @@ describe("het beheerpaneel", () => {
     expect(tabel.classList.contains("detail-table")).toBe(true);
     expect(tabel.classList.contains("team-tabel")).toBe(true);
     const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
-    const mobiel = [...css.matchAll(/@media \(max-width: 640px\) \{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
-    expect(mobiel).toMatch(/\.team-tabel thead \{ display: none; \}/);
-    expect(mobiel).toMatch(/\.team-tabel tr[^{]*\{[^}]*display: block/);
-    // Naamvelden in dezelfde donkere stijl als het uitnodigveld.
-    expect(css).toMatch(/\.team-uitnodigen input\[type="email"\],\s*\.team-uitnodigen input\[type="text"\],\s*input\.team-naam \{/);
+    // Dashboard v2: het paneel staat op Beheer; op een telefoon stapelen de rijen.
+    const mobiel = [...css.matchAll(/@media \(max-width:640px\)\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join("\n");
+    expect(mobiel).toMatch(/\.team-tabel thead\{display:none\}/);
+    expect(mobiel).toMatch(/\.team-tabel tr[^{]*\{[^}]*display:block/);
+    // Naam- en adresvelden krijgen de gewone veldstijl (rand, vlak, hoogte).
+    expect(css).toMatch(/input\[type=text\],input\[type=email\][^{]*\{[^}]*border:1px solid var\(--veldrand\)/);
   });
 
   it("verschijnt ook met een lege lijst — dan wil je juist iemand uitnodigen", async () => {
@@ -269,7 +270,7 @@ describe("uitnodigen", () => {
     el.querySelector("[data-team-uitnodig-adres]").value = "piet@klant.nl";
     el.querySelector('[data-team-uitnodigen] button[type="submit"]').click();
     await tick();
-    expect(el.querySelector("[data-team-fout]").textContent).toContain("Vraag je team in Claude");
+    expect(el.querySelector("[data-team-fout]").textContent).toContain("Vraag je team in je AI-assistent");
 
     // Een 404 mét fout-veld is de nieuwe site die "geen beheerder" zegt: die tekst tonen.
     g.modulesFetch = vi.fn(async () => ({ status: 404, body: { fout: "Niet beschikbaar." } }));

@@ -57,7 +57,7 @@ const ALTIJD_WERKRUIMTE = ["logboek", "bedrijfscontext", "bronkoppeling", "notit
  * dat bestand is woordelijk juridisch getoetst en elke toevoeging daar vraagt
  * een nieuwe toets. */
 const BRONSYSTEEM_NAMEN = {
-  notion: "Notion",
+  notion: "je eigen systeem",
   crm: "je CRM",
   hubspot: "HubSpot",
   werkboek: "een werkboek buiten je werkruimte",

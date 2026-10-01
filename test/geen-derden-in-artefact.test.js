@@ -62,6 +62,16 @@ const JS_MODULES = [
   "notion-werk.js",
   "modules-beheer.js",
   "team-beheer.js",
+  "v2-prod.js",
+  "v2-begin.js",
+  "v2-basis.js",
+  "v2-logica.js",
+  "v2-voor-jou.js",
+  "v2-acties-team.js",
+  "v2-gegevens.js",
+  "v2-hulp.js",
+  "v2-bediening.js",
+  "v2-eind.js",
   "app.js",
 ];
 
@@ -183,7 +193,7 @@ describe("signaturen — geen onderdelen van derden in dashboard.html", () => {
  * browser gebruikt wat er op het systeem van de bezoeker staat. Deze test
  * bewaakt dat het bij namen blijft. */
 const TOEGESTANE_FONTFAMILIES = [
-  "var(--font)", // de eigen variabele
+  "var(--font)", "var(--f)", "var(--mono)", // de eigen variabelen (de stack staat in :root)
   "inter", "-apple-system", "blinkmacsystemfont", "segoe ui", "roboto", "sans-serif",
   "sfmono-regular", "consolas", "monospace",
 ];

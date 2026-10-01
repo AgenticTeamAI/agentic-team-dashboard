@@ -252,9 +252,10 @@ describe("deeplink achter de login", () => {
   it("zegt bij een deeplink zonder sessie wat je moet doen, niet wat er ontbreekt", () => {
     const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
     expect(html).toContain("Log in om deze pagina te openen");
-    expect(html).toMatch(/bedoeldeRoute\(window\.location\.hash\) && oauthMogelijk\(\)/);
+    expect(html).toMatch(/const deeplink = bedoeldeRoute\(window\.location\.hash\)/);
+    expect(html).toMatch(/deeplink && oauthMogelijk\(\)/);
     // en de daglink-uitleg blijft bestaan voor wie niet kán inloggen
-    expect(html).toContain("Geen daglink gevonden");
+    expect(html).toContain("Open je dashboard via de daglink in je dagstart");
   });
 
   /* De route hoort in de PKCE-record die er al is, niet in een eigen sleutel:
@@ -274,6 +275,7 @@ describe("deeplink achter de login", () => {
   it("voegt geen opslagsleutel toe aan het artefact", () => {
     const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
     const sleutels = [...new Set(html.match(/"agentic-team-dashboard:[a-z-]+"/g) || [])];
-    expect(sleutels).toHaveLength(7);
+    // Acht sinds de themakeuze (dashboard v2, 1-10-2026; staat in de privacytekst).
+    expect(sleutels).toHaveLength(8);
   });
 });

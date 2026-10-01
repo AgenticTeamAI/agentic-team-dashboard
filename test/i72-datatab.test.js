@@ -153,7 +153,7 @@ describe("bronVan", () => {
   it("normaliseert zoals de instantie dat doet", () => {
     expect(g.bronVan(met({ acties: "  Werkruimte " }), "acties").toestand).toBe("hier");
     expect(g.bronVan(met({ acties: " NOTION " }), "acties").toestand).toBe("elders");
-    expect(g.bronVan(met({ acties: " NOTION " }), "acties").naam).toBe("Notion");
+    expect(g.bronVan(met({ acties: " NOTION " }), "acties").naam).toBe("je eigen systeem");
   });
 
   it("laat domeinen die per definitie hier wonen altijd 'hier' zijn", () => {
@@ -183,7 +183,7 @@ describe("extern in de domeinlijst", () => {
     expect(c.textContent).toMatch(/Woont niet in je werkruimte/);
     const rij = c.querySelector('[data-data-domein="sales_funnel"]');
     expect(rij, "een extern domein moet klikbaar zijn — daar zit het antwoord op 'waar dan wel?'").not.toBeNull();
-    expect(rij.textContent).toContain("woont in Notion");
+    expect(rij.textContent).toContain("woont in je eigen systeem");
   });
 
   /* Een kale telling is bij een extern domein een onwaarheid in cijfervorm:
@@ -194,7 +194,7 @@ describe("extern in de domeinlijst", () => {
       systeemPerDomein: { sales_funnel: "notion" },
     });
     const rij = c.querySelector('[data-data-domein="sales_funnel"]');
-    expect(rij.textContent).toContain("woont in Notion");
+    expect(rij.textContent).toContain("woont in je eigen systeem");
     expect(rij.textContent).toContain("1 losse rij hier");
   });
 
@@ -219,7 +219,7 @@ describe("herkomststrook", () => {
 
   it("zegt waar het woont, wat dat hier betekent, en belooft geen sync", () => {
     const html = g.herkomstStrookHtml(ctxMet({ systeemPerDomein: { interacties: "notion" } }), "interacties", domein(), 0);
-    expect(html).toContain("Notion");
+    expect(html).toContain("je eigen systeem");
     expect(html).toMatch(/niet wijzigen|meekijken/);
     expect(html).toMatch(/leest niet mee/);
     expect(html).toMatch(/hoort ook zo/);
@@ -227,7 +227,7 @@ describe("herkomststrook", () => {
 
   it("legt losse rijen uit in plaats van ze als het volledige beeld te tonen", () => {
     const html = g.herkomstStrookHtml(ctxMet({ systeemPerDomein: { interacties: "notion" } }), "interacties", domein(), 3);
-    expect(html).toMatch(/geen kopie van Notion/);
+    expect(html).toMatch(/geen kopie van je eigen systeem/);
     expect(html).toMatch(/volledige beeld staat daar/);
   });
 

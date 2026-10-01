@@ -261,7 +261,7 @@ async function nodigTeamlidUit(sectieEl, form) {
       // Een site van vóór deze route kent hem niet (een kale 404, geen
       // fout-veld). Het dashboard kan eerder live staan dan de site, en bij een
       // lege lijst toont het het formulier al — zeg dan wat wél kan.
-      teamFout(sectieEl, "Uitnodigen kan hier nog niet. Vraag je team in Claude om iemand uit te nodigen.");
+      teamFout(sectieEl, "Uitnodigen kan hier nog niet. Vraag je team in je AI-assistent om iemand uit te nodigen.");
     } else {
       teamFout(sectieEl, teamFoutTekst(uit, "Uitnodigen lukte niet. Probeer het zo opnieuw."));
     }
