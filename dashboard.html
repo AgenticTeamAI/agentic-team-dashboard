@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-b9I7DWvozgdqx7bxeDwWMYUkKWfkXQTabgyOrAXKanw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-N5CSlRVGwJVZ+hFgGH/GEoMzTIGWHJu3T/iHoQtyAB4='">
 
 
 
@@ -112,6 +112,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* Koppen krijgen de focus om een schermlezer te vertellen waar je bent, niet om aangeklikt te worden. */
+h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .ic{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
 .ic.klein{width:15px;height:15px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
@@ -14412,7 +14414,7 @@ function renderRonde() {
     const vervolg = !kanSchrijven() ? "Log in om ze af te handelen; je komt terug waar je was." : kc.stil ? (door ? "Let op: je team werkt nu niet vanzelf. Regel dat eerst, anders blijft wat je doorgaf liggen." : "Let op: je team werkt nu niet vanzelf. Regel dat, dan komt er weer nieuw werk.") : door ? `Bij het volgende werkmoment gaat je team verder met ${telwoord(door, "ding", "dingen")} die je terugstuurde of doorgaf.` : "Je team werkt bij het volgende werkmoment weer verder.";
     return `<div class="inhoud" style="max-width:680px"><section class="vak" style="display:flex;flex-direction:column;gap:12px"><h2 class="titel" id="blad-titel" tabindex="-1">${kop}</h2>
       <p>${vervolg}</p>${rest ? `<p class="klein">${telwoord(rest, "ding staat", "dingen staan")} nog bij Voor jou (overgeslagen of later).</p>` : ""}
-      <div class="rijtje">${!kanSchrijven() ? loginKnop("Inloggen") : rest ? knop("Loop de rest door", "ronde-start", "", "prim") : ""}${kc.stil && kanSchrijven() ? knop("Is je team klaar?", "go", 'data-r="/team/klaar"', "prim") : ""}<button class="knop ${kanSchrijven() && !kc.stil ? "prim" : ""}" data-act="ronde-stop">Terug naar Voor jou</button></div></section></div>`;
+      <div class="rijtje">${!kanSchrijven() ? loginKnop("Inloggen") : rest ? knop("Loop de rest door", "ronde-start", "", "prim") : ""}${kc.stil && kanSchrijven() ? knop("Is je team klaar?", "go", 'data-r="/team/klaar"', "prim") : ""}<button class="knop ${kanSchrijven() && !kc.stil && !rest ? "prim" : ""}" data-act="ronde-stop">Terug naar Voor jou</button></div></section></div>`;
   }
   const a = actie(r.ids[r.i]); const s = soortVan(a); const ag = werkAgent(a); const id = esc(a.id);
   const pct = Math.round(r.i / r.ids.length * 100);

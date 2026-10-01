@@ -100,6 +100,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* Koppen krijgen de focus om een schermlezer te vertellen waar je bent, niet om aangeklikt te worden. */
+h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .ic{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
 .ic.klein{width:15px;height:15px}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}

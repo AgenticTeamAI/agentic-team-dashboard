@@ -331,7 +331,7 @@ function renderRonde() {
     const vervolg = !kanSchrijven() ? "Log in om ze af te handelen; je komt terug waar je was." : kc.stil ? (door ? "Let op: je team werkt nu niet vanzelf. Regel dat eerst, anders blijft wat je doorgaf liggen." : "Let op: je team werkt nu niet vanzelf. Regel dat, dan komt er weer nieuw werk.") : door ? `Bij het volgende werkmoment gaat je team verder met ${telwoord(door, "ding", "dingen")} die je terugstuurde of doorgaf.` : "Je team werkt bij het volgende werkmoment weer verder.";
     return `<div class="inhoud" style="max-width:680px"><section class="vak" style="display:flex;flex-direction:column;gap:12px"><h2 class="titel" id="blad-titel" tabindex="-1">${kop}</h2>
       <p>${vervolg}</p>${rest ? `<p class="klein">${telwoord(rest, "ding staat", "dingen staan")} nog bij Voor jou (overgeslagen of later).</p>` : ""}
-      <div class="rijtje">${!kanSchrijven() ? loginKnop("Inloggen") : rest ? knop("Loop de rest door", "ronde-start", "", "prim") : ""}${kc.stil && kanSchrijven() ? knop("Is je team klaar?", "go", 'data-r="/team/klaar"', "prim") : ""}<button class="knop ${kanSchrijven() && !kc.stil ? "prim" : ""}" data-act="ronde-stop">Terug naar Voor jou</button></div></section></div>`;
+      <div class="rijtje">${!kanSchrijven() ? loginKnop("Inloggen") : rest ? knop("Loop de rest door", "ronde-start", "", "prim") : ""}${kc.stil && kanSchrijven() ? knop("Is je team klaar?", "go", 'data-r="/team/klaar"', "prim") : ""}<button class="knop ${kanSchrijven() && !kc.stil && !rest ? "prim" : ""}" data-act="ronde-stop">Terug naar Voor jou</button></div></section></div>`;
   }
   const a = actie(r.ids[r.i]); const s = soortVan(a); const ag = werkAgent(a); const id = esc(a.id);
   const pct = Math.round(r.i / r.ids.length * 100);
