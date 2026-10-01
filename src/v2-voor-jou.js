@@ -192,7 +192,7 @@ function renderVoorJouNotion() {
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
-  const items = metricsVoorJou(CTX) || [];
+  const blok = metricsVoorJou(CTX); const items = blok || [];
   const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
   const verhaal = feed.length
     ? `<p class="zin">${esc(v.titel)} ${ags.length ? `waren <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
@@ -207,9 +207,10 @@ function renderVoorJouNotion() {
   };
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
-    <section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("notion", "Waarom staat dit in Notion?")}</div>
+    ${!blok ? `<section class="leeg" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in Notion. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in Claude.</p><div class="rijtje">${hoe("notion", "Waarom staat dit in Notion?")}</div></section>`
+    : `<section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("notion", "Waarom staat dit in Notion?")}</div>
     <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in Notion, of vraag het je team in Claude.</p></section>
-    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}
+    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}`}
     ${renderOnderregels()}${privacyHtml()}</div>`;
 }
 

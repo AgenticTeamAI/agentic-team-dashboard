@@ -316,3 +316,22 @@ describe("v2 — tekst uit de werkruimte is nooit HTML", () => {
     expect(window.__lek).toBeUndefined();
   });
 });
+
+describe("v2 — Notion-klanten", () => {
+  const notionCtx = (werk) => Object.assign(maakCtx({ schrijven: true }), {
+    metricsWerk: werk,
+    bundle: { kind: "metrics", source: "werkruimte", klant: "FFG", systeemPerDomein: { acties: "notion", ritmetaken: "notion" }, domains: {}, instantieDomeinen: [] },
+  });
+  it("stuurt de dagstart de lijst nog niet mee, dan zegt Voor jou dat — niet 'niets voor jou'", () => {
+    open(notionCtx({ voorJou: null, ritmetaken: null, gegenereerdOp: "2026-09-29T07:02:00" }));
+    expect($("#root").textContent).toContain("Je dagstart stuurt je lijst nog niet mee");
+    expect($("#root").textContent).not.toContain("Niets voor jou in je dagstart");
+  });
+  it("met de lijst: dezelfde nummers, en 'Open in Notion' zonder verwijzer", () => {
+    open(notionCtx({ voorJou: [{ nr: 3, titel: "Offerte nakijken", soort: "check", te_laat: true, specialist: DM, sinds: "2026-09-24", deadline: null, url: "https://www.notion.so/x" }], ritmetaken: null, gegenereerdOp: "2026-09-29T07:02:00" }));
+    expect($(".item .nr").textContent).toBe("3");
+    const link = $('.item a[href="https://www.notion.so/x"]');
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+});
