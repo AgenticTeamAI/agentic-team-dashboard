@@ -101,7 +101,7 @@ describe("b62 — de balk bovenaan (dashboard v2)", () => {
 
   it("acties in Notion: eerlijk zeggen waar je afhandelt", () => {
     const root = toon(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" }));
-    expect(root.querySelector(".balk.notion").textContent).toContain("Je acties en vaste taken staan in Notion");
+    expect(root.querySelector(".balk.notion").textContent).toContain("Je acties staan in Notion");
   });
 
   it("ingelogd met je werkruimte: geen balk", () => {

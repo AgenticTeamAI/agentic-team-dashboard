@@ -183,6 +183,7 @@ function focusSleutel(el) {
 function hadSheetVoor() { return !!document.querySelector('.scrim[data-act="scrim"]'); }
 function render() {
   const root = document.getElementById("root"); if (!root) return;
+  nieuweTekenbeurt();
   if (CTX && S.dataCtx !== CTX) { S.data = bouwData(); S.dataCtx = CTX; kcCache = null; }
   if (CTX && S.nummerBundel !== CTX.bundle) { S.nummerBundel = CTX.bundle; S.nummers = {}; S.volgNr = 1; telNummersOpnieuw(); }
   const ae = document.activeElement; const inRoot = ae && root.contains(ae);
@@ -198,6 +199,7 @@ function render() {
   zetFormulierenTerug(root, concept);
   if (S.ui.bewerk && !S.ui.bewerk.voorGelezen) { const f = root.querySelector("[data-v2-veldform]"); if (f) { S.ui.bewerk.voor = leesFormulier(f); S.ui.bewerk.voorGelezen = true; } }
   document.body.style.overflow = document.querySelector(".scrim") ? "hidden" : "";
+  markeerBezig();
   if (CTX && tabVan() === "beheer") {
     // De beheerpanelen komen uit oudere modules; een fout daarin mag de rest van het scherm niet breken.
     try { vulBeheer(); zetBeheerTerug(root, concept); } catch (e) { console.error(e); }
@@ -310,8 +312,8 @@ function sluitBlad() { const naar = S.terugNaar || (parts()[0] === "acties" ? "/
 /* ---------- Schrijven ---------- */
 const WAT = { goedkeuren: "goedgekeurd", terug: "teruggestuurd", ja: "ja, doe maar", nee: "niet gedaan", zelf: "zelf aangepast", later: "later", gezien: "gezien", klaar: "afgerond",
   zelfOppakken: "zelf opgepakt", geefAan: "doorgegeven", aanCollega: "naar collega", nieuweDatum: "nieuwe datum", tochZelf: "zelf gedaan", nuOppakken: "opgepakt", heropen: "heropend",
-  zetBijMij: "bij jou gezet", opvolgen: "team volgt op", alleenEigenaar: "op andere naam", stoppen: "gestopt", prio: "belang", verwijder: "verwijderd" };
-const NAAM_NODIG = ["later", "zelfOppakken", "tochZelf", "heropen", "zetBijMij"];
+  zetBijMij: "bij jou gezet", naarJij: "naar jou", opvolgen: "team volgt op", alleenEigenaar: "op andere naam", stoppen: "gestopt", prio: "belang", verwijder: "verwijderd" };
+const NAAM_NODIG = ["later", "zelfOppakken", "tochZelf", "heropen", "zetBijMij", "naarJij"];
 function pasToe(key, w) {
   if (!w) return;
   if (CTX && CTX.werkBij && (w.weg || (w.entry && w.entry.entryId))) { if (CTX.werkBij(key, w) !== false) return; }
@@ -348,18 +350,37 @@ function patchVoor(f, a, c, arg) {
     const patch = toewijsPatch(dom, a.rij, keuze); return { patch, melding: toewijsTekst(a.rij, patch, keuze, jij()) };
   }
   if (f === "prio") return { patch: { Prioriteit: arg }, melding: "Belang: " + String(arg).toLowerCase() + "." };
+  if (f === "naarJij") return verplaatsPatch(a.rij, "wacht", "jij", c); // uit Wacht: wektijd eraf, op jouw naam
   const plan = afhandelPatch(f, a.rij, c);
-  if (f === "goedkeuren" && a.kanaal) plan.melding = a.kanaal === "post" ? "Goedgekeurd. Genoteerd als door jou geplaatst." : "Goedgekeurd. Genoteerd als door jou verstuurd.";
+  if (f === "goedkeuren" && a.kanaal) plan.melding = a.kanaal === "post" ? "Goedgekeurd. Plaatsen doe jij; je team publiceert niets." : "Goedgekeurd. Versturen doe jij; je team verstuurt niets.";
   // Zelfde zinnen als in het ontwerp: "de Dealmaker", "De Stem".
   const sp = slugVanNaam(plan.patch && plan.patch.Agent);
   if (sp && f === "terug") plan.melding = "Teruggestuurd naar " + deNaam(sp) + ". Die pakt het op bij het volgende werkmoment.";
   if (sp && (f === "ja" || f === "geefAan")) plan.melding = (f === "ja" ? "Akkoord. " : "Doorgegeven aan " + deNaam(sp) + ". ") + (f === "ja" ? deNaam(sp, true) + " gaat ermee aan de slag" : "Die pakt het op") + " bij het volgende werkmoment.";
   return plan;
 }
+/* Wat nu onderweg is naar de werkruimte. Zolang een item hierin staat, doen
+ * zijn knoppen niets (ook niet na een hertekening of via een sneltoets). */
+const BEZIG = new Set();
+function isBezig(k) { return BEZIG.has(k); }
+function markeerBezig() {
+  for (const k of BEZIG) {
+    const id = k.replace(/^[a-z]+:/, "");
+    for (const el of document.querySelectorAll(`#root [data-id="${cssEsc(id)}"][data-act]:not([data-act="open"]), #root .scrim[data-act="scrim"] [data-act]:not([data-act="sh-dicht"])`)) {
+      if (el.closest(".scrim") && !(S.sheet && S.sheet.id === id)) continue;
+      el.setAttribute("aria-disabled", "true");
+    }
+  }
+}
 async function uitvoeren(id, f, arg, btn) {
   const a = actie(id); if (!a || !kanSchrijven()) return;
+  if (isBezig("actie:" + id)) return;
   if (NAAM_NODIG.includes(f) && !jij()) { vraagNaam(() => uitvoeren(id, f, arg)); return; }
-  const lijstVoor = voorJouLijst().map(x => x.id); const p = parts(); const routeVoor = S.route;
+  BEZIG.add("actie:" + id);
+  try { await uitvoerenBinnen(a, id, f, arg, btn); } finally { BEZIG.delete("actie:" + id); render(); }
+}
+async function uitvoerenBinnen(a, id, f, arg, btn) {
+  const lijstVoor = voorJouLijst().map(x => x.id); const p = parts(); const routeVoor = S.route; const sheetVoor = S.sheet;
   const inRonde = !!(S.ronde && p[1] === "een-voor-een");
   const opts = typeof arg === "object" && arg ? arg : {};
   const spNaam = opts.ag && AGENTS[opts.ag] ? AGENTS[opts.ag].naam : null;
@@ -378,7 +399,8 @@ async function uitvoeren(id, f, arg, btn) {
         // De vervolgactie staat er al; laat hem zien en zeg wat er nog open staat.
         if (nieuw) pasToe("acties", { entry: res.entry });
         S.sheet = null;
-        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null });
+        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null,
+          undo: nieuw ? async () => { await verwijderEntry(CTX, "acties", nieuw); pasToe("acties", { weg: nieuw }); } : null });
         render(); return;
       }
       if (nieuw) toepassen.push({ entry: res.entry });
@@ -400,26 +422,29 @@ async function uitvoeren(id, f, arg, btn) {
       undo = async () => { const t = await snelWijzig(CTX, "acties", id, vorige); pasToe("acties", { entry: t && t.entry }); };
     }
   } catch (e) {
-    meldFout(e); S.sheet = S.sheet && S.sheet.id === id ? Object.assign(S.sheet, { fout: foutTekst(e) }) : null; render(); return;
+    meldFout(e); if (S.sheet && S.sheet === sheetVoor && S.sheet.id === id) S.sheet.fout = foutTekst(e); else if (S.sheet === sheetVoor) S.sheet = null; render(); return;
   }
   if (["ja", "geefAan", "terug", "opvolgen"].includes(f) && klaarCheck().stil) melding += " Dit ligt stil tot je team weer vanzelf werkt.";
-  if (f !== "prio") S.sessie.afgehandeld.unshift({ id, titel: a.titel, wat: WAT[f] || f, undo, t: Date.now() });
+  const regel = { id, titel: a.titel, wat: WAT[f] || f, undo, t: Date.now() };
+  if (f !== "prio") S.sessie.afgehandeld.unshift(regel);
   const i = lijstVoor.indexOf(id);
   const volgende = i >= 0 ? (lijstVoor.slice(i + 1)[0] || lijstVoor.slice(0, i).reverse()[0] || null) : null;
-  S.sheet = null;
-  if (inRonde) { S.ronde.i++; if (["terug", "ja", "geefAan", "opvolgen"].includes(f)) S.ronde.naarTeam.push(nieuw || id); S.focusNa = "#blad-titel"; }
+  if (S.sheet === sheetVoor) S.sheet = null;
+  const zelfdePlek = S.route === routeVoor;
+  if (!zelfdePlek) { /* je klikte intussen verder: dan blijf je waar je bent */ }
+  else if (inRonde && S.ronde) { S.ronde.i++; if (["terug", "ja", "geefAan", "opvolgen"].includes(f)) S.ronde.naarTeam.push(nieuw || id); S.focusNa = "#blad-titel"; }
   else if (f === "prio" || f === "alleenEigenaar" || f === "nieuweDatum") { /* het blad blijft open */ }
   else if (p[0] === "voor-jou" && p[1]) { S.route = volgende ? "/voor-jou/" + volgende : "/"; zetHash(S.route); S.focusNa = volgende ? "#blad-titel" : ".werkbak-kop h2, .leeg h3"; }
   else if (p[0] === "acties" && p[1]) { const naar = S.terugNaar || "/acties"; S.terugNaar = null; S.route = naar; zetHash(S.route); S.focusNa = `[data-act="open"][data-id="${cssEsc(id)}"]|#scroller .titel`; }
   else if (tabVan() === "voorjou" && volgende) S.focusNa = `[data-kaart="${cssEsc(volgende)}"] .item-open, button.compact[data-id="${cssEsc(volgende)}"]`;
   else if (tabVan() === "voorjou") S.focusNa = ".leeg h3, .werkbak-kop h2";
-  if (tabVan() === "voorjou" && !inRonde) await wegAnimatie(id);
+  if (zelfdePlek && tabVan() === "voorjou" && !inRonde) await wegAnimatie(id);
   toast(melding, {
     undo: undo ? async () => {
       await undo();
       if (itemRoute(routeVoor) && !inRonde) { S.route = routeVoor; zetHash(S.route); }
       if (inRonde && S.ronde) { const j = S.ronde.ids.indexOf(id); if (j >= 0) S.ronde.i = j; S.ronde.eind = null; }
-      S.sessie.afgehandeld = S.sessie.afgehandeld.filter(x => x.id !== id);
+      S.sessie.afgehandeld = S.sessie.afgehandeld.filter(x => x !== regel);
     } : null,
     bekijk: nieuw ? "/acties/" + nieuw : null,
   });
@@ -429,6 +454,10 @@ async function uitvoeren(id, f, arg, btn) {
   render();
 }
 async function nieuweOpdracht(sh, btn) {
+  const sleutelB = "opdracht"; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await nieuweOpdrachtBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function nieuweOpdrachtBinnen(sh, btn) {
   const wat = (sh.wat || "").trim();
   if (!wat) { sh.fout = "Schrijf eerst wat er moet gebeuren."; S.focusNa = "#sh-wat"; render(); return; }
   const wie = sh.ag ? { agent: AGENTS[sh.ag].naam } : { mens: sh.mens || jij() };
@@ -440,13 +469,17 @@ async function nieuweOpdracht(sh, btn) {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "acties", data });
     const nid = res && res.entry && res.entry.entryId;
     const tekst = sh.ag ? "Doorgegeven aan " + deNaam(sh.ag) + "." : (!sh.mens || naamGelijk(sh.mens, jij())) ? "Op je eigen lijst gezet." : "Bij " + voornaam(sh.mens) + " gezet.";
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     toast(tekst, { undo: nid ? async () => { await verwijderEntry(CTX, "acties", nid); pasToe("acties", { weg: nid }); } : null, bekijk: nid ? "/acties/" + nid : null });
     pasToe("acties", { entry: res && res.entry });
     render();
   } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function opmerkingPlaatsen(sh, btn) {
+  const sleutelB = "opmerking:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await opmerkingPlaatsenBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function opmerkingPlaatsenBinnen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const a = actie(sh.id);
   if (!tekst) { S.focusNa = "#sh-tekst"; render(); return; }
   const info = notitieVeldVan(CTX); if (!info || !a) return;
@@ -456,12 +489,16 @@ async function opmerkingPlaatsen(sh, btn) {
   try {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "notities", data });
     const nid = res && res.entry && res.entry.entryId;
-    S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
+    if (S.sheet === sh) S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
     toast("Opmerking geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function notitieOpslaan(sh, btn) {
+  const sleutelB = "notitie:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await notitieOpslaanBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function notitieOpslaanBinnen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const onderwerp = (sh.onderwerp || "").trim();
   if (!tekst && !onderwerp) { sh.fout = "Schrijf eerst je notitie."; S.focusNa = "#sh-tekst"; render(); return; }
   const info = notitieVeldVan(CTX); if (!info) return;
@@ -471,12 +508,16 @@ async function notitieOpslaan(sh, btn) {
   try {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "notities", data });
     const nid = res && res.entry && res.entry.entryId;
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     toast("Notitie geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function nieuweRij(form, btn) {
+  const sleutelB = "nieuw:" + (S.sheet && S.sheet.k); if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await nieuweRijBinnen(form, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function nieuweRijBinnen(form, btn) {
   const sh = S.sheet; const k = sh.k; const d = domeinVan(k);
   const data = leesFormulier(form);
   const { titel } = nieuwVelden(k);
@@ -487,7 +528,7 @@ async function nieuweRij(form, btn) {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: k, data });
     const nid = res && res.entry && res.entry.entryId;
     const naam = data[titel.naam];
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     if (!sh.ouder && nid) { go("/gegevens/" + k + "/" + encodeURIComponent(nid)); S.focusNa = "#rij-titel"; }
     toast(naam + " is toegevoegd.", { undo: nid ? async () => { await verwijderEntry(CTX, k, nid); pasToe(k, { weg: nid }); if (itemOpGegevens(k, nid)) go("/gegevens/" + k); } : null });
     pasToe(k, { entry: res && res.entry }); render();
@@ -496,16 +537,24 @@ async function nieuweRij(form, btn) {
 }
 function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && ontcijfer(p[2] || "") === id; }
 async function rijVerwijderen(sh, btn) {
+  const sleutelB = "weg:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await rijVerwijderenBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function rijVerwijderenBinnen(sh, btn) {
   const t = rijTitel(sh.k, sh.id) || "";
   zetBezig(btn);
   try {
     await verwijderEntry(CTX, sh.k, sh.id);
-    S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
+    if (S.sheet === sh) S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
     toast("‘" + t + "’ is verwijderd.");
     pasToe(sh.k, { weg: sh.id }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function veldOpslaan(form) {
+  const sleutelB = "veld:" + (S.ui.bewerk && S.ui.bewerk.id); if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await veldOpslaanBinnen(form); } finally { BEZIG.delete(sleutelB); }
+}
+async function veldOpslaanBinnen(form) {
   const e = S.ui.bewerk; if (!e) return;
   const d = domeinVan(e.k); const r = rijVan(e.k, e.id); if (!r) return;
   const patch = formulierPatch(d, e.voor, leesFormulier(form));
@@ -520,6 +569,10 @@ async function veldOpslaan(form) {
   } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; meldFout(err); render(); }
 }
 async function taakSchrijf(t, patch, melding, undoPatch) {
+  const sleutelB = "taak:" + t.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await taakSchrijfBinnen(t, patch, melding, undoPatch); } finally { BEZIG.delete(sleutelB); }
+}
+async function taakSchrijfBinnen(t, patch, melding, undoPatch) {
   try {
     const ant = await snelWijzig(CTX, "ritmetaken", t.id, patch);
     toast(melding, { undo: async () => { const x = await snelWijzig(CTX, "ritmetaken", t.id, undoPatch); pasToe("ritmetaken", { entry: x && x.entry }); } });
@@ -527,6 +580,10 @@ async function taakSchrijf(t, patch, melding, undoPatch) {
   } catch (e) { meldFout(e); render(); }
 }
 async function zetAan(sleutel, btn) {
+  const sleutelB = "zetaan:" + sleutel; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await zetAanBinnen(sleutel, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function zetAanBinnen(sleutel, btn) {
   const t = (vtCatalogus.data || []).find(x => x.sleutel === sleutel); if (!t) return;
   zetBezig(btn);
   try {
@@ -564,15 +621,22 @@ function huidigItem() {
 }
 function naarBaan(id, baan, btn) {
   const a = actie(id); if (!a) return; const s = soortVan(a);
-  if (baan === "jij") { if (s === "klaar") uitvoeren(id, "heropen", null, btn); else uitvoeren(id, "tochZelf", null, btn); }
-  else if (baan === "team") { if (s === "check" || s === "check-extern") { S.sheet = { type: "terug", id, tekst: "" }; render(); } else { S.sheet = { type: "wie", id, doel: "sleep" }; render(); } }
+  if (baan === "jij") {
+    if (s === "klaar") uitvoeren(id, "heropen", null, btn);
+    else if (s === "wacht" || (a.wachtenTot && dt(a.wachtenTot) > NU)) uitvoeren(id, "naarJij", null, btn);
+    else uitvoeren(id, "tochZelf", null, btn);
+  }
+  else if (baan === "team") { if ((s === "check" || s === "check-extern") && werkAgent(a)) { S.sheet = { type: "terug", id, tekst: "" }; render(); } else { S.sheet = { type: "wie", id, doel: "sleep" }; render(); } }
   else if (baan === "wacht") { S.sheet = { type: "later", id }; render(); }
   else if (baan === "af") { if (["check", "check-extern", "voorstel"].includes(s)) S.sheet = { type: "afronden", id }; else if (s === "team") S.sheet = { type: "stoppen", id }; else { uitvoeren(id, "klaar", null, btn); return; } render(); }
 }
 function kiesInSheet(v, btn) {
   const sh = S.sheet; const k = v.slice(0, v.indexOf(":")), val = v.slice(v.indexOf(":") + 1); const id = sh.id;
   if (sh.type === "wie") {
-    if (sh.doel === "toewijzen") { uitvoeren(id, "alleenEigenaar", k === "ag" ? AGENTS[val].naam : (val || jij()), btn); return; }
+    if (sh.doel === "toewijzen") {
+      if (k !== "ag" && !val && !jij()) { vraagNaam(() => uitvoeren(id, "alleenEigenaar", jij())); return; }
+      uitvoeren(id, "alleenEigenaar", k === "ag" ? AGENTS[val].naam : (val || jij()), btn); return;
+    }
     if (k === "ag") { uitvoeren(id, sh.doel === "ja" ? "ja" : "geefAan", { ag: val }, btn); return; }
     if (!val || (jij() && naamGelijk(val, jij()))) uitvoeren(id, "tochZelf", null, btn); else uitvoeren(id, "aanCollega", val, btn);
     return;
@@ -608,6 +672,7 @@ function bevestigSheet(btn) {
       const naam = (sh.naam || "").trim();
       if (!naam) { sh.fout = "Vul je naam in."; S.focusNa = "#sh-naam"; render(); return; }
       zetBezig(btn);
+      S.naamGeheugen = naam;
       Promise.resolve(zetMijnNaam(bron(), naam)).catch(() => { /* de kopie in deze browser telt */ }).then(() => {
         const daarna = sh.daarna; S.sheet = null; kcCache = null; telNummersOpnieuw();
         toast("Je werkt nu als " + naam + ".");
@@ -626,7 +691,7 @@ function opKlik(e) {
   const el = e.target.closest && e.target.closest("[data-act]"); if (!el || !document.getElementById("root").contains(el)) return;
   if (el.getAttribute("aria-disabled") === "true" || el.disabled) return;
   const act = el.dataset.act;
-  if ((act === "scrim" || act === "scrim-item") && e.target.closest("[data-stop]")) return;
+  if ((act === "scrim" || act === "scrim-item") && (e.target.closest("[data-stop]") || (S.drukStart && S.drukStart.closest && S.drukStart.closest("[data-stop]")))) return;
   const d = el.dataset;
   switch (act) {
     case "go": go(d.r); if (!el.closest(".tabbalk, .dtabs") && !itemRoute() && !S.focusNa) S.focusNa = "#scroller .titel|#scroller h2"; break;
@@ -692,11 +757,14 @@ function opKlik(e) {
   e.preventDefault();
   render();
 }
+/* Zoeken tekent na een korte pauze in het typen, niet bij elke toets. */
+let strakskKlok = null;
+function straks() { clearTimeout(strakskKlok); strakskKlok = setTimeout(render, 120); }
 function opInvoer(e) {
   const el = e.target; const d = el.dataset || {};
-  if (d.input === "zoek") { S.ui.acties.zoek = el.value; render(); }
-  else if (d.input === "hulpzoek") { S.ui.hulp.zoek = el.value; render(); }
-  else if (d.input === "gzoek") { S.ui.gegevens.zoek = el.value; render(); }
+  if (d.input === "zoek") { S.ui.acties.zoek = el.value; straks(); }
+  else if (d.input === "hulpzoek") { S.ui.hulp.zoek = el.value; straks(); }
+  else if (d.input === "gzoek") { S.ui.gegevens.zoek = el.value; straks(); }
   else if (d.sh && S.sheet) { S.sheet[d.sh] = el.value; if (S.sheet.fout) { S.sheet.fout = ""; const f = document.querySelector(".sheet .fout"); if (f) f.remove(); } }
 }
 function opWijziging(e) {
@@ -719,6 +787,7 @@ function opToets(e) {
   if (e.key === "Escape" && S.ui.bewerk && !S.sheet) { const v = S.ui.bewerk.veld; S.ui.bewerk = null; S.focusNa = `[data-act="veld-wijzig"][data-v="${cssEsc(v)}"]`; render(); return; }
   if (e.key === "Escape") { if (S.sheet) { S.sheet = null; render(); e.preventDefault(); return; } if (itemRoute() && !(isDesk() && parts()[0] === "voor-jou")) { sluitBlad(); render(); } return; }
   const tag = (e.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag) || e.target.isContentEditable) return;
+  if (e.repeat) return;
   if (!CTX || S.sheet || toegang() === "notion") return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
   if (!isDesk() || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -741,16 +810,22 @@ function opToets(e) {
 }
 function opToggle(e) { const el = e.target; if (!(el instanceof HTMLDetailsElement)) return; if (el.dataset.hsec) S.ui.hulp.open[el.dataset.hsec] = el.open; if (el.id) S.ui.det[el.id] = el.open; }
 function toastPauze(aan) { return (e) => { if (S.toast && e.target.closest && e.target.closest("[data-toast]")) { if (aan) S.toast.pauze = true; else if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-toast]"))) { S.toast.pauze = false; S.toast.start = Math.max(S.toast.start, Date.now() - 5000); } } }; }
-function opSleepStart(e) { const el = e.target.closest && e.target.closest("[data-drag]"); if (!el) return; S.drag = el.dataset.drag; try { e.dataTransfer.setData("text/plain", S.drag); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* oude browser */ } }
-function opSleepOver(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && S.drag) { e.preventDefault(); c.classList.add("over"); } }
+function opSleepStart(e) { const el = e.target.closest && e.target.closest("[data-drag]"); if (!el) return; S.drag = el.dataset.drag; const baan = el.closest("[data-drop]"); S.dragVan = baan ? baan.dataset.drop : null; try { e.dataTransfer.setData("text/plain", S.drag); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* oude browser */ } }
+function opSleepOver(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && S.drag && c.dataset.drop !== S.dragVan) { e.preventDefault(); c.classList.add("over"); } }
 function opSleepUit(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && !c.contains(e.relatedTarget)) c.classList.remove("over"); }
-function opLos(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault(); const id = S.drag; S.drag = null; c.classList.remove("over"); naarBaan(id, c.dataset.drop); }
+function opLos(e) {
+  const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault();
+  const id = S.drag; const van = S.dragVan; S.drag = null; S.dragVan = null; c.classList.remove("over");
+  if (c.dataset.drop === van) return; // op zijn eigen baan losgelaten: niets veranderen
+  naarBaan(id, c.dataset.drop);
+}
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
 const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;
+  document.addEventListener("mousedown", (e) => { S.drukStart = e.target; }, true);
   document.addEventListener("click", opKlik);
   document.addEventListener("input", opInvoer);
   document.addEventListener("change", opWijziging);

@@ -19,11 +19,11 @@ function sindsTekst(a) {
   return wanneer(sindsVan(a));
 }
 function dagenTeLaat(a) { return Math.max(1, dagenTussen(a.deadline, NU)); }
-function loginKnop(label, cls) { return kanInloggen() ? knop(esc(label || "Inloggen en afhandelen"), "login", "", cls || "prim") : ""; }
+function loginKnop(label, cls) { return kanInloggen() ? knop(esc(ingelogd() && !label ? "Opnieuw inloggen om af te handelen" : (label || "Inloggen en afhandelen")), "login", "", cls || "prim") : ""; }
 
 /* ---------- Kop, tabs, balken ---------- */
 function aantalVoorJou() {
-  if (toegang() === "notion") { const m = metricsVoorJou(CTX); return m ? m.length : 0; }
+  if (toegang() === "notion") { const m = werkbakUitDagstart(); return m ? m.length : 0; }
   return aanJouZet().length;
 }
 function tabs() {
@@ -51,8 +51,8 @@ function renderBalk() {
     ${kanInloggen() ? `<div class="rijtje"><button class="knop prim" data-act="login">Inloggen om af te handelen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft. Je komt precies hier terug.</span></div>` : ""}</div>`;
   if (tg === "notion") {
     const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
-    const naam = (bronVan(CTX, "acties").naam) || "Notion";
-    return `<div class="balk notion"><div><b>Je acties en vaste taken staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. Afhandelen doe je in ${esc(naam)}, of vraag het je team.</div></div>`;
+    const naam = naamElders("acties");
+    return `<div class="balk notion"><div><b>Je acties${takenElders() ? " en vaste taken" : ""} staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. Afhandelen doe je in ${esc(naam)}, of vraag het je team.</div></div>`;
   }
   return "";
 }
@@ -68,7 +68,13 @@ function waarschuwingenHtml() {
 /* ---------- Voor jou ---------- */
 function renderBovenkaart() {
   const kc = klaarCheck();
-  if ((kc.stil || kc.stilNotion) && !S.ui.dismissed.stil) {
+  if (kc.stilNotion && !S.ui.dismissed.stil) {
+    // Notion: een lege ronde meldt niets in de feed. Dus geen rood, wel de vraag.
+    const r = kc.regels.find(x => x.id === "werkt") || { tekst: "" };
+    return `<section class="bovenkaart" aria-label="Werkt je team nog vanzelf?"><div class="tussen"><h3>Werkt je team nog vanzelf?</h3><button class="ikknop" data-act="dismiss" data-k="stil" aria-label="Sluiten">${ic("sluit")}</button></div>
+      <p>${esc(r.tekst)}</p><div class="rijtje"><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button>${hoe("vanzelf-werken")}</div></section>`;
+  }
+  if (kc.stil && !S.ui.dismissed.stil) {
     const r = kc.regels.find(x => (x.id === "aan" || x.id === "werkt") && (x.k === "nee" || x.k === "let")) || { tekst: "" };
     const geenTaken = !S.data.taken.length && toegang() !== "notion";
     return `<section class="bovenkaart stil-rood" aria-label="Je team staat stil"><div class="tussen"><h3>${geenTaken ? "Je team werkt nog niet vanzelf" : "Je team staat stil"}</h3></div>
@@ -133,12 +139,13 @@ function renderWerkbak(gekozenId) {
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
   const min = Math.max(1, Math.round(n * 0.75));
   const berg = n > 10 || P.werkdagenNa(sindsVan(oudste), NU) > 5;
+  const oudsteBoven = l[0] === oudste;
   const oud = dagen <= 0 ? "van vandaag" : "oudste " + dagen + " " + (dagen === 1 ? "dag" : "dagen");
   const vol = l.slice(0, 5).map(a => itemKaart(a, a.id === gekozenId)).join("");
   const comp = l.slice(5, 10).map(a => compactItem(a, a.id === gekozenId)).join("");
   const rest = n > 10 ? `<button class="regel" data-act="acties-baan" data-baan="jij"><span class="rl"><b>Nog ${n - 10} op jouw lijst</b><span>Alles staat bij Acties, in de baan Jij</span></span>${ic("chev")}</button>` : "";
   return `<section class="werkbak-kop" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
-    ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b> Het staat nu bovenaan. Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
+    ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b>${oudsteBoven ? " Het staat nu bovenaan." : ""} Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
     <button class="knop breed" data-act="ronde-start">Loop ze één voor één door ${ic("pijl", "klein")}</button></section>
     <div class="stapel">${vol}${comp}${rest}</div>`;
 }
@@ -153,8 +160,10 @@ function checkRegelHtml() {
 function renderOnderregels() {
   const kc = klaarCheck();
   if (toegang() === "notion") return checkRegelHtml();
-  const bt = bijTeam(); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
-  const col = bijCollegas();
+  // Dezelfde indeling als de banen op Acties, zodat de tellers daar kloppen.
+  const B = banenVan(CTX.bundle, CTX.schema, { ik: ik(), nu: NU }) || {};
+  const bt = viaIds(B.team); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
+  const col = viaIds(B.collega);
   const perCol = {}; col.forEach(a => { const k = voornaam(a.eigenaar); perCol[k] = (perCol[k] || 0) + 1; });
   const teamRegel = kc.stil ? `<b>Bij je team: ${bt.length} ${bt.length === 1 ? "ligt" : "liggen"} stil</b><span>Tot je team weer vanzelf werkt</span>`
     : `<b>Bij je team: ${bezig} bezig · ${volg} voor het volgende werkmoment</b><span>Werk dat je team oppakt zonder dat jij iets hoeft te doen</span>`;
@@ -192,10 +201,10 @@ function renderVoorJouNotion() {
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
-  const blok = metricsVoorJou(CTX); const items = blok || [];
+  const blok = werkbakUitDagstart(); const items = blok || [];
   const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
   const verhaal = feed.length
-    ? `<p class="zin">${esc(v.titel)} ${ags.length ? `waren <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
+    ? `<p class="zin">${esc(v.titel)} ${ags.length ? `${ags.length === 1 ? "was" : "waren"} <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
        <div class="tussen"><div class="chiprij">${ags.map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>`
     : `<p class="zin">${esc(v.titel)} deed je team niets vanzelf.</p><p class="detail stil">Kijk bij ‘Is je team klaar?’ wat er nodig is.</p>`;
   const kaart = (it) => {
@@ -227,7 +236,7 @@ function bladKnoppen(a) {
     case "voorstel": return knop("Ja, doe maar", "ja", `data-id="${id}"`, "prim breed") + rij(knop("Nee, niet doen", "sheet", `data-type="nee" data-id="${id}"`), meerKnop(a));
     case "signaal": return knop("Laat je team opvolgen", "sheet", `data-type="opvolgen" data-id="${id}"`, "teamvol breed") + rij(knop("Ik pak het zelf op", "sheet", `data-type="zelfop" data-id="${id}"`), knop("Gezien, niets doen", "doe", `data-f="gezien" data-id="${id}"`), meerKnop(a));
     case "taak": case "weer": return knop(ic("vink", "klein") + "Klaar", "doe", `data-f="klaar" data-id="${id}"`, "prim breed") + rij(knop("Nieuwe datum", "sheet", `data-type="${s === "weer" ? "later" : "datum"}" data-id="${id}"`), knop("Geef aan je team", "sheet", `data-type="wie" data-doel="geef" data-id="${id}"`, "team"), meerKnop(a));
-    case "team": return `<p class="balkregel">${kc.stil ? "Dit ligt stil tot je team weer vanzelf werkt." : a.status === "Bezig" ? `${esc(deNaam(ag, true))} werkt hier nu aan${a.bezigSinds ? " (sinds " + esc(wanneer(a.bezigSinds)) + ")" : ""}. Terugsturen of aanpassen kan weer na het werkmoment.` : `${esc(deNaam(ag, true))} pakt dit op ${esc(bijHetVolgende())}. Het resultaat zie je terug bij Voor jou.`}</p>`
+    case "team": return `<p class="balkregel">${a.wachtenTot && dt(a.wachtenTot) > NU ? `Dit wacht tot ${esc(datumKort(a.wachtenTot))}; daarna pakt ${esc(deNaam(ag))} het op.` : kc.stil ? "Dit ligt stil tot je team weer vanzelf werkt." : a.status === "Bezig" ? `${esc(deNaam(ag, true))} werkt hier nu aan${a.bezigSinds ? " (sinds " + esc(wanneer(a.bezigSinds)) + ")" : ""}. Terugsturen of aanpassen kan weer na het werkmoment.` : `${esc(deNaam(ag, true))} pakt dit op ${esc(bijHetVolgende())}. Het resultaat zie je terug bij Voor jou.`}</p>`
       + rij(knop("Toch zelf doen", "doe", `data-f="tochZelf" data-id="${id}"`), magSchrijven("notities") ? knop(ic("plus", "klein") + "Opmerking", "sheet", `data-type="opmerking" data-id="${id}"`) : "");
     case "wacht": return knop("Nu oppakken", "doe", `data-f="nuOppakken" data-id="${id}"`, "prim breed") + rij(knop("Datum verzetten", "sheet", `data-type="later" data-id="${id}"`));
     case "klaar": return `<p class="balkregel">Afgerond${a.afgerondOp ? " op " + esc(datumKort(a.afgerondOp)) : ""}${isAgentSlug(a.afgerondDoor) ? " door " + esc(deNaam(a.afgerondDoor)) : ""}${uitkomstVan(a) ? " · " + esc(uitkomstVan(a)) : ""}.</p>` + rij(knop("Toch weer openen", "doe", `data-f="heropen" data-id="${id}"`));
@@ -306,6 +315,7 @@ function renderVelden(a) {
     ${a.correctie ? rij("Jouw aanpassing", esc(a.correctie)) : ""}
   </dl><p class="klein stil">Je wijzigt één veld tegelijk; de rest blijft staan. De statusnamen zijn dezelfde als in Claude en Notion.</p>`;
 }
+/* Wat werd er met dit werk gedaan? Alleen wat uit de velden blijkt. */
 function uitkomstVan(a) {
   if (a.status !== "Klaar") {
     if (a.teruggestuurd && soortVan(a) === "team") return "teruggestuurd";
@@ -314,8 +324,11 @@ function uitkomstVan(a) {
   }
   if (isAgentSlug(a.afgerondDoor)) return "je team rondde het zelf af";
   if (/^niet doen/i.test(a.correctie)) return "niet gedaan";
+  if (S.data.acties.some(x => x.onder === a.id)) return "je team volgt op";
+  if (a.teruggestuurd) return "na terugsturen afgerond";
   if (a.gecorrigeerd) return "zelf aangepast";
-  if (isAgentSlug(a.door)) return a.kanaal || /^\s*onderwerp\s*:/im.test(a.werk) ? "goedgekeurd, zelf verstuurd" : "goedgekeurd";
+  if (a.type === "Alert") return "gezien";
+  if (isAgentSlug(a.door)) return "goedgekeurd";
   return "afgerond";
 }
 

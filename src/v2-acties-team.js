@@ -66,8 +66,8 @@ function baanLeeg(k) {
 function laterGroep(B) { return B.later.length ? `<details class="uitklap" ${det("acties-later")}><summary>Later op je lijst (${B.later.length})${ic("chev")}</summary><div class="binnen">${B.later.map(rij).join("")}</div></details>` : ""; }
 function renderActies() {
   if (toegang() === "notion") {
-    const n = (metricsVoorJou(CTX) || []).length;
-    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(bronVan(CTX, "acties").naam || "Notion")}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(bronVan(CTX, "acties").naam || "Notion")}, of vraag het je team in Claude.</p>
+    const n = (werkbakUitDagstart() || []).length; const naam = naamElders("acties");
+    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team in Claude.</p>
     <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("notion", "Waarom staat dit in Notion?")}</div></section></div>`;
   }
   if (!rows(CTX.bundle, "acties")) {
@@ -202,7 +202,7 @@ function watDoetTaak(t) {
   return i.length > 320 ? i.slice(0, 317) + "…" : i;
 }
 function taakRij(t) {
-  const st = taakStatus(t); const mag = magSchrijven("ritmetaken") && !t.url;
+  const st = taakStatus(t); const mag = magSchrijven("ritmetaken") && !t.alleenLezen;
   const stTekst = st.k === "achter" ? `<span class="achter">~ ${esc(st.tekst)}</span>` : st.k === "ok" ? `<span class="okt">✓ ${esc(st.tekst)}</span>` : `<span>${esc(st.tekst)}</span>`;
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
@@ -216,8 +216,8 @@ function renderVasteTaken() {
   const kc = klaarCheck(); const cs = checkSamenvatting(kc);
   const checkRegel = `<button class="regel" data-act="go" data-r="/team/klaar"><span class="rl"><b>${esc(cs.kop)}</b><span>${esc(cs.sub)}</span></span>${ic("chev")}</button>`;
   const T = S.data.taken;
-  const bron = bronVan(CTX, "ritmetaken");
-  const elders = bron.toestand === "elders" || (toegang() === "notion" && !dataRijenVan(CTX, "ritmetaken"));
+  const bron = { naam: naamElders("ritmetaken") };
+  const elders = takenElders();
   if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "Notion")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team in Claude. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
   const slot = !magSchrijven("ritmetaken") && !elders ? `<div class="slotregel">${ic("slot", "klein")}<span>${toegang() === "daglink" ? "Aanpassen kan na inloggen." : "Je sessie mag alleen lezen. Log opnieuw in om aan te passen."}</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
   if (!T.length) return `${checkRegel}<section class="leeg"><h3>Je team heeft nog geen vaste taken</h3>${slot}<p class="stil">Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen.</p>
@@ -307,7 +307,7 @@ function resultaatWeken(n) {
   const ma = maandag(); const weken = [];
   for (let i = n - 1; i >= 0; i--) {
     const van = plusDagen(ma, -7 * i); const tot = plusDagen(van, 7);
-    const af = S.data.acties.filter(a => a.status === "Klaar" && !/^niet doen/i.test(a.correctie) && dt(a.afgerondOp) && dt(a.afgerondOp) >= van && dt(a.afgerondOp) < tot);
+    const af = S.data.acties.filter(a => { const m = afgerondMoment(a); return a.status === "Klaar" && !/^niet doen/i.test(a.correctie) && m && m >= van && m < tot; });
     const team = af.filter(a => isAgentSlug(a.afgerondDoor)).length;
     const voor = af.filter(a => !isAgentSlug(a.afgerondDoor) && (isAgentSlug(a.door) || isAgentSlug(a.agent))).length;
     weken.push({ label: "wk " + isoWeek(van), van, team, voor, zelf: af.length - team - voor });

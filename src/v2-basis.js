@@ -68,11 +68,24 @@ function ingelogd() { return !!(bron() && bron().oauth); }
 function magSchrijven(domein) { return !!(CTX && magDomeinBewerken(CTX, domein).ok); }
 function kanSchrijven() { return magSchrijven("acties"); }
 function kanInloggen() { return typeof oauthMogelijk === "function" && oauthMogelijk(); }
-/* Werkdata in Notion (of een ander systeem): de acties staan dan niet als rijen
- * hier. Zelfde afleiding als de klaar-check (kcNotion). */
-function isNotion() { return !!CTX && kcNotion(CTX); }
+/* Werkdata in Notion (of een ander systeem), per domein. De acties-ervaring
+ * (Voor jou, Acties) gaat alleen op "Notion" als de ACTIES elders wonen, of
+ * als er op de metricsroute geen acties-rijen zijn. Wonen alleen de vaste
+ * taken elders, dan blijft de rest gewoon de werkruimte. Eén verdwaalde rij
+ * in de werkruimte (bv. een welkomstpakket-actie) verandert daar niets aan:
+ * dezelfde regel als werkdataDomeinen in de loader. */
+function woontElders(domein) { return !!CTX && bronVan(CTX, domein).toestand === "elders"; }
+function isNotion() {
+  if (!CTX) return false;
+  if (woontElders("acties")) return true;
+  return CTX.bundle && CTX.bundle.kind === "metrics" && !rows(CTX.bundle, "acties");
+}
+function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
+/* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
+function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
+function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "Notion"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
-function jij() { return (ingelogd() && mijnNaam(bron())) || ""; }
+function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }
 function bedrijf() { return (CTX && CTX.bundle && CTX.bundle.klant) || ""; }
 
@@ -99,13 +112,17 @@ function bouwAgents(schema) {
   }
   return uit;
 }
-function namen() { return agentNamen(CTX && CTX.schema); }
+let NAMEN = { schema: null, set: null };
+function namen() { const sc = CTX && CTX.schema; if (NAMEN.schema !== sc) NAMEN = { schema: sc, set: agentNamen(sc) }; return NAMEN.set; }
 function isAgentSlug(s) { return !!(s && AGENTS[s]); }
+let SLUG_INDEX = new Map(); let SLUG_CACHE = new Map();
 function slugVanNaam(n) {
   if (!n) return null;
-  const w = normAgentNaam(n);
-  for (const [slug, a] of Object.entries(AGENTS)) if (normAgentNaam(a.naam) === w || normAgentNaam(slug) === w) return slug;
-  return null;
+  const k = String(n);
+  if (SLUG_CACHE.has(k)) return SLUG_CACHE.get(k);
+  const slug = SLUG_INDEX.get(normAgentNaam(k)) || null;
+  SLUG_CACHE.set(k, slug);
+  return slug;
 }
 function isAgentNaam(n) { return !!slugVanNaam(n); }
 function naamGelijk(a, b) { return P.naamGelijk(a, b); }
@@ -150,11 +167,14 @@ function relatiesVan(rij, domein) {
 function relatieId(w) { const v = Array.isArray(w) ? w[0] : w; return v && typeof v === "object" ? (v.id || null) : (v || null); }
 
 const OPMERKING_RE = /^— Opmerking van [^\n]*?: ([\s\S]*?) —\n?\n?/;
+/* Gaat dit werk naar buiten? Alleen als het eruitziet als een bericht: de
+ * eerste regel is "Onderwerp: …" (een mail), of een specialist voor
+ * zichtbaarheid zette een post klaar. Twijfel = gewoon "Goedkeuren". */
 function kanaalVan(rij, werk, door) {
   const agent = slugVanNaam(tekstVan(rij, "Agent")) || (isAgentSlug(door) ? door : null);
-  if (/^\s*onderwerp\s*:/im.test(werk)) return "mail";
-  if (agent === "outreach-specialist") return "mail";
-  if ((agent === "content-strateeg" || agent === "de-stem") && tekstVan(rij, "Type") !== "Beslissing") return "post";
+  const eerste = String(werk || "").split("\n").find(r => r.trim()) || "";
+  if (/^\s*onderwerp\s*:/i.test(eerste)) return "mail";
+  if ((agent === "content-strateeg" || agent === "de-stem") && /linkedin|\bpost\b/i.test(tekstVan(rij, "Actie"))) return "post";
   return null;
 }
 
@@ -198,6 +218,14 @@ function actieVan(rij) {
   a.kanaal = status === "Wacht op review" ? kanaalVan(rij, a.werk, a.door) : null;
   return a;
 }
+/* Wanneer werd dit afgerond? "Afgerond op" is een datum zonder tijd; de
+ * stempel van de instantie heeft wel een tijd. Zonder beide: onbekend. */
+function afgerondMoment(a) {
+  const op = dt(a.afgerondOp); const bij = dt(a.bijgewerkt);
+  if (op && heeftTijd(a.afgerondOp)) return op;
+  if (bij && (!op || zelfdeDag(bij, op))) return bij;
+  return op || bij || null;
+}
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
 function opmerkingenBij(id) {
@@ -209,8 +237,9 @@ function opmerkingenBij(id) {
 }
 
 function taakVan(rij) {
+  const uitWerkruimte = (dataRijenVan(CTX, "ritmetaken") || []).includes(rij);
   return {
-    id: rij.__entryId, rij, url: rij.__url || null,
+    id: rij.__entryId, rij, url: rij.__url || null, alleenLezen: !uitWerkruimte,
     naam: tekstVan(rij, "Taak") || "(zonder naam)",
     agent: slugVanNaam(tekstVan(rij, "Agent")),
     ritme: tekstVan(rij, "Ritme"),
@@ -225,15 +254,18 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
     .filter(f => f.tekst);
 }
 
 function bouwData() {
   AGENTS = bouwAgents(CTX.schema);
+  SLUG_INDEX = new Map(); SLUG_CACHE = new Map();
+  for (const [slug, a] of Object.entries(AGENTS)) { SLUG_INDEX.set(normAgentNaam(slug), slug); SLUG_INDEX.set(normAgentNaam(a.naam), slug); }
   const acties = (rows(CTX.bundle, "acties") || []).map(actieVan);
   const ids = new Set(acties.map(a => a.id));
+  const perId = new Map(acties.map(a => [a.id, a]));
   for (const a of acties) a.opmerkingen = opmerkingenBij(a.id);
   const taken = (vtTaakRijen(CTX) || []).map(taakVan);
-  return { acties, ids, taken, feed: feedVan() };
+  return { acties, ids, perId, taken, feed: feedVan() };
 }

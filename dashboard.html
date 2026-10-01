@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-mppI1tG7BaQcAOzUx8v9Yk5V7ePVyo6qVDKGWA69GeY='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-oE/9W7wKdg0dce44WpUONWbYuZN+pS75CekWpyOntg0='">
 
 
 
@@ -13794,11 +13794,24 @@ function ingelogd() { return !!(bron() && bron().oauth); }
 function magSchrijven(domein) { return !!(CTX && magDomeinBewerken(CTX, domein).ok); }
 function kanSchrijven() { return magSchrijven("acties"); }
 function kanInloggen() { return typeof oauthMogelijk === "function" && oauthMogelijk(); }
-/* Werkdata in Notion (of een ander systeem): de acties staan dan niet als rijen
- * hier. Zelfde afleiding als de klaar-check (kcNotion). */
-function isNotion() { return !!CTX && kcNotion(CTX); }
+/* Werkdata in Notion (of een ander systeem), per domein. De acties-ervaring
+ * (Voor jou, Acties) gaat alleen op "Notion" als de ACTIES elders wonen, of
+ * als er op de metricsroute geen acties-rijen zijn. Wonen alleen de vaste
+ * taken elders, dan blijft de rest gewoon de werkruimte. Eén verdwaalde rij
+ * in de werkruimte (bv. een welkomstpakket-actie) verandert daar niets aan:
+ * dezelfde regel als werkdataDomeinen in de loader. */
+function woontElders(domein) { return !!CTX && bronVan(CTX, domein).toestand === "elders"; }
+function isNotion() {
+  if (!CTX) return false;
+  if (woontElders("acties")) return true;
+  return CTX.bundle && CTX.bundle.kind === "metrics" && !rows(CTX.bundle, "acties");
+}
+function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
+/* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
+function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
+function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "Notion"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
-function jij() { return (ingelogd() && mijnNaam(bron())) || ""; }
+function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }
 function bedrijf() { return (CTX && CTX.bundle && CTX.bundle.klant) || ""; }
 
@@ -13825,13 +13838,17 @@ function bouwAgents(schema) {
   }
   return uit;
 }
-function namen() { return agentNamen(CTX && CTX.schema); }
+let NAMEN = { schema: null, set: null };
+function namen() { const sc = CTX && CTX.schema; if (NAMEN.schema !== sc) NAMEN = { schema: sc, set: agentNamen(sc) }; return NAMEN.set; }
 function isAgentSlug(s) { return !!(s && AGENTS[s]); }
+let SLUG_INDEX = new Map(); let SLUG_CACHE = new Map();
 function slugVanNaam(n) {
   if (!n) return null;
-  const w = normAgentNaam(n);
-  for (const [slug, a] of Object.entries(AGENTS)) if (normAgentNaam(a.naam) === w || normAgentNaam(slug) === w) return slug;
-  return null;
+  const k = String(n);
+  if (SLUG_CACHE.has(k)) return SLUG_CACHE.get(k);
+  const slug = SLUG_INDEX.get(normAgentNaam(k)) || null;
+  SLUG_CACHE.set(k, slug);
+  return slug;
 }
 function isAgentNaam(n) { return !!slugVanNaam(n); }
 function naamGelijk(a, b) { return P.naamGelijk(a, b); }
@@ -13876,11 +13893,14 @@ function relatiesVan(rij, domein) {
 function relatieId(w) { const v = Array.isArray(w) ? w[0] : w; return v && typeof v === "object" ? (v.id || null) : (v || null); }
 
 const OPMERKING_RE = /^— Opmerking van [^\n]*?: ([\s\S]*?) —\n?\n?/;
+/* Gaat dit werk naar buiten? Alleen als het eruitziet als een bericht: de
+ * eerste regel is "Onderwerp: …" (een mail), of een specialist voor
+ * zichtbaarheid zette een post klaar. Twijfel = gewoon "Goedkeuren". */
 function kanaalVan(rij, werk, door) {
   const agent = slugVanNaam(tekstVan(rij, "Agent")) || (isAgentSlug(door) ? door : null);
-  if (/^\s*onderwerp\s*:/im.test(werk)) return "mail";
-  if (agent === "outreach-specialist") return "mail";
-  if ((agent === "content-strateeg" || agent === "de-stem") && tekstVan(rij, "Type") !== "Beslissing") return "post";
+  const eerste = String(werk || "").split("\n").find(r => r.trim()) || "";
+  if (/^\s*onderwerp\s*:/i.test(eerste)) return "mail";
+  if ((agent === "content-strateeg" || agent === "de-stem") && /linkedin|\bpost\b/i.test(tekstVan(rij, "Actie"))) return "post";
   return null;
 }
 
@@ -13924,6 +13944,14 @@ function actieVan(rij) {
   a.kanaal = status === "Wacht op review" ? kanaalVan(rij, a.werk, a.door) : null;
   return a;
 }
+/* Wanneer werd dit afgerond? "Afgerond op" is een datum zonder tijd; de
+ * stempel van de instantie heeft wel een tijd. Zonder beide: onbekend. */
+function afgerondMoment(a) {
+  const op = dt(a.afgerondOp); const bij = dt(a.bijgewerkt);
+  if (op && heeftTijd(a.afgerondOp)) return op;
+  if (bij && (!op || zelfdeDag(bij, op))) return bij;
+  return op || bij || null;
+}
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
 function opmerkingenBij(id) {
@@ -13935,8 +13963,9 @@ function opmerkingenBij(id) {
 }
 
 function taakVan(rij) {
+  const uitWerkruimte = (dataRijenVan(CTX, "ritmetaken") || []).includes(rij);
   return {
-    id: rij.__entryId, rij, url: rij.__url || null,
+    id: rij.__entryId, rij, url: rij.__url || null, alleenLezen: !uitWerkruimte,
     naam: tekstVan(rij, "Taak") || "(zonder naam)",
     agent: slugVanNaam(tekstVan(rij, "Agent")),
     ritme: tekstVan(rij, "Ritme"),
@@ -13951,17 +13980,20 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
     .filter(f => f.tekst);
 }
 
 function bouwData() {
   AGENTS = bouwAgents(CTX.schema);
+  SLUG_INDEX = new Map(); SLUG_CACHE = new Map();
+  for (const [slug, a] of Object.entries(AGENTS)) { SLUG_INDEX.set(normAgentNaam(slug), slug); SLUG_INDEX.set(normAgentNaam(a.naam), slug); }
   const acties = (rows(CTX.bundle, "acties") || []).map(actieVan);
   const ids = new Set(acties.map(a => a.id));
+  const perId = new Map(acties.map(a => [a.id, a]));
   for (const a of acties) a.opmerkingen = opmerkingenBij(a.id);
   const taken = (vtTaakRijen(CTX) || []).map(taakVan);
-  return { acties, ids, taken, feed: feedVan() };
+  return { acties, ids, perId, taken, feed: feedVan() };
 }
 
 
@@ -13971,10 +14003,14 @@ function bouwData() {
  * Jij en de klaar-check. Deze laag rekent met de schermvorm (zie v2-basis.js)
  * en vraagt elk oordeel door aan de geteste productiefuncties. */
 
-function actie(id) { return S.data && S.data.acties.find(a => a.id === id); }
+function actie(id) { return S.data && S.data.perId ? S.data.perId.get(id) : null; }
 function ik() { return jij() || undefined; }
-function hoortBijMens(a) { return P.hoortBijMens(a.rij, namen(), NU); }
-function vanMij(a) { return P.vanMij(a.rij, ik(), namen()); }
+/* Per tekenbeurt onthouden: honderden rijen maal tientallen aanroepen. */
+let RC = new Map();
+function nieuweTekenbeurt() { RC = new Map(); }
+function onthoud(soort, a, fn) { const k = soort + "|" + a.id; if (!RC.has(k)) RC.set(k, fn()); return RC.get(k); }
+function hoortBijMens(a) { return onthoud("mens", a, () => P.hoortBijMens(a.rij, namen(), NU)); }
+function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen())); }
 function isTeLaat(a) { return P.isTeLaat(a.rij, namen(), NU); }
 function sindsVan(a) { return P.sindsVan(a.rij) || dt(a.aangemaakt) || NU; }
 function viaIds(rijen) { return (rijen || []).map(r => actie(r.__entryId)).filter(Boolean); }
@@ -13985,8 +14021,9 @@ function kloptNiet() { return viaIds(P.kloptNiet(CTX.bundle, CTX.schema, { ik: i
 function maandag() { return plusDagen(dagStart(NU), -((NU.getDay() + 6) % 7)); }
 function afgerondDezeWeek(lijst) {
   const ma = maandag();
-  return (lijst || S.data.acties).filter(a => a.status === "Klaar" && dt(a.afgerondOp) && dt(a.afgerondOp) >= ma)
-    .sort((a, b) => dt(b.afgerondOp) - dt(a.afgerondOp));
+  // Zonder enige datum blijft hij zichtbaar: liever in Afgerond dan nergens.
+  return (lijst || S.data.acties).filter(a => a.status === "Klaar" && (!afgerondMoment(a) || afgerondMoment(a) >= ma))
+    .sort((a, b) => (afgerondMoment(b) || 0) - (afgerondMoment(a) || 0));
 }
 
 /* Nummers blijven staan tot Ververs, zodat "nummer 3" in Claude en hier
@@ -13998,8 +14035,7 @@ function voorJouLijst() { const l = aanJouZet(); l.forEach(nummer); return l.sor
 /* soortVan uit voor-jou.js, met één verfijning voor het scherm: werk dat naar
  * buiten gaat (een mail, een post) krijgt "ik verstuur hem zelf" op de knop. */
 function soortVan(a) {
-  const s = P.soortVan(a.rij, namen(), NU);
-  return s === "check" && a.kanaal ? "check-extern" : s;
+  return onthoud("soort", a, () => { const s = P.soortVan(a.rij, namen(), NU); return s === "check" && a.kanaal ? "check-extern" : s; });
 }
 const SOORT_LABEL = {
   check: "Klaar om te checken", "check-extern": "Klaar om te checken", voorstel: "Voorstel", signaal: "Signaal",
@@ -14025,11 +14061,13 @@ function verhaalData() {
   const titel = ochtend ? "Terwijl je sliep" : "Vandaag";
   const A = S.data.acties;
   const na = (v) => { const d = dt(v); return !!d && d > van; };
-  const zelf = A.filter(a => a.status === "Klaar" && isAgentSlug(a.afgerondDoor) && na(a.afgerondOp || a.bijgewerkt));
+  const zelf = A.filter(a => a.status === "Klaar" && isAgentSlug(a.afgerondDoor) && afgerondMoment(a) && afgerondMoment(a) > van);
   const klaarAlle = A.filter(a => isAgentSlug(a.door) && na(a.aangemaakt) && (hoortBijMens(a) || (a.status === "Klaar" && !isAgentSlug(a.afgerondDoor))));
   const klaar = klaarAlle.filter(vanMij); const klaarAnder = klaarAlle.filter(a => !vanMij(a));
   const begon = A.filter(a => a.status === "Bezig" && isAgentNaam(a.eigenaar) && na(a.bezigSinds));
-  const feed = S.data.feed.filter(f => f.t > van);
+  // 's Ochtends telt alleen wat een werkmoment deed (de start en het slot van
+  // een ronde, en wat er 's nachts verscheen) — niet je eigen dagstart om 08:30.
+  const feed = S.data.feed.filter(f => f.t > van && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
   const agents = [...new Set([...klaar.map(werkAgent), ...zelf.map(a => a.afgerondDoor), ...begon.map(werkAgent), ...feed.map(f => f.ag)].filter(isAgentSlug))];
   return { titel, zelf, klaar, klaarAnder, begon, agents, van, feed };
 }
@@ -14045,7 +14083,7 @@ function verhaalZin(v) {
 function verhaalDetail(v) {
   const frag = v.klaar.concat(v.zelf).slice(0, 2).map((a, i) => {
     const ag = werkAgent(a) || a.afgerondDoor;
-    const wat = a.status === "Klaar" ? "rondde ‘" + a.titel + "’ af" : "zette ‘" + a.titel + "’ klaar";
+    const wat = a.status === "Klaar" && isAgentSlug(a.afgerondDoor) ? "rondde ‘" + a.titel + "’ af" : "zette ‘" + a.titel + "’ klaar";
     return "<b>" + esc(deNaam(ag, i === 0)) + "</b> " + esc(wat);
   });
   return frag.length ? frag.join("; ") + "." : "";
@@ -14053,22 +14091,32 @@ function verhaalDetail(v) {
 
 /* ── Werkmoment en klaar-check ──────────────────────────────────────── */
 function laatsteWerkmoment() { const s = P.werkmomentSporen(CTX); return s.length ? new Date(Math.max(...s)) : null; }
-function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneer(l) + ")" : ""); }
+/* Een spoor zonder tijd (alleen een datum) komt binnen als middernacht; noem
+ * dan de dag, geen verzonnen "00:00". */
+function wanneerSpoor(d) {
+  if (!d) return "";
+  if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) return zelfdeDag(d, NU) ? "vandaag" : zelfdeDag(d, plusDagen(NU, -1)) ? "gisteren" : datumKort(d);
+  return wanneer(d);
+}
+function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneerSpoor(l) + ")" : ""); }
 const KC_LABEL = { start: "Zo regel je het in 2 minuten", vaker: "Laat je team vaker werken", ronde: "Loop ze één voor één door", login: "Inloggen" };
 let kcCache = null;
 function klaarCheck() {
   if (kcCache && kcCache.ctx === CTX && kcCache.n === S.data) return kcCache.kc;
   const kc = P.klaarCheck(CTX);
   kc.regels = kc.regels.map(r => Object.assign({}, r, { actie: r.actie ? [KC_LABEL[r.actie] || "Bekijk", r.actie] : null }));
-  if (!kc.notion && ingelogd()) kc.regels.push({ id: "afhandelen", k: "ok", telt: false, titel: "Je kunt afhandelen", tekst: jij() ? "Ingelogd als " + voornaam(jij()) + "." : "Je bent ingelogd." });
+  if (!kc.notion && kanSchrijven()) kc.regels.push({ id: "afhandelen", k: "ok", telt: false, titel: "Je kunt afhandelen", tekst: jij() ? "Ingelogd als " + voornaam(jij()) + "." : "Je bent ingelogd." });
+  if (!kc.notion && ingelogd() && !kanSchrijven()) kc.regels = kc.regels.map(r => r.id === "afhandelen" ? Object.assign({}, r, { titel: "Je sessie mag alleen lezen", tekst: "Log opnieuw in om af te handelen." }) : r);
   kc.recent = laatsteWerkmoment();
-  kc.stilNotion = kc.notion && kc.regels.some(x => x.id === "werkt" && (x.k === "nee" || x.k === "let"));
+  // Notion: een lege ronde meldt niets in de feed, dus hooguit "let op" (vaste-taken.js).
+  kc.stilNotion = kc.notion && kc.regels.some(x => x.id === "werkt" && x.k === "let");
   kcCache = { ctx: CTX, n: S.data, kc };
   return kc;
 }
 function checkSamenvatting(kc) {
+  if (kc.notion && !kc.totaal) return { kop: "Is je team klaar? Dat zien we hier niet", sub: "Je vaste taken en acties staan in " + naamElders("acties") + "." };
   const s = klaarSamenvatting(kc);
-  if (!kc.notion && kc.totaal === kc.ok && kc.recent && !kc.wachten) s.sub = "Je team werkt vanzelf. Laatst: " + wanneer(kc.recent) + ".";
+  if (!kc.notion && kc.totaal === kc.ok && kc.recent && !kc.wachten) s.sub = "Je team werkt vanzelf. Laatst: " + wanneerSpoor(kc.recent) + ".";
   return s;
 }
 
@@ -14107,11 +14155,11 @@ function sindsTekst(a) {
   return wanneer(sindsVan(a));
 }
 function dagenTeLaat(a) { return Math.max(1, dagenTussen(a.deadline, NU)); }
-function loginKnop(label, cls) { return kanInloggen() ? knop(esc(label || "Inloggen en afhandelen"), "login", "", cls || "prim") : ""; }
+function loginKnop(label, cls) { return kanInloggen() ? knop(esc(ingelogd() && !label ? "Opnieuw inloggen om af te handelen" : (label || "Inloggen en afhandelen")), "login", "", cls || "prim") : ""; }
 
 /* ---------- Kop, tabs, balken ---------- */
 function aantalVoorJou() {
-  if (toegang() === "notion") { const m = metricsVoorJou(CTX); return m ? m.length : 0; }
+  if (toegang() === "notion") { const m = werkbakUitDagstart(); return m ? m.length : 0; }
   return aanJouZet().length;
 }
 function tabs() {
@@ -14139,8 +14187,8 @@ function renderBalk() {
     ${kanInloggen() ? `<div class="rijtje"><button class="knop prim" data-act="login">Inloggen om af te handelen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft. Je komt precies hier terug.</span></div>` : ""}</div>`;
   if (tg === "notion") {
     const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
-    const naam = (bronVan(CTX, "acties").naam) || "Notion";
-    return `<div class="balk notion"><div><b>Je acties en vaste taken staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. Afhandelen doe je in ${esc(naam)}, of vraag het je team.</div></div>`;
+    const naam = naamElders("acties");
+    return `<div class="balk notion"><div><b>Je acties${takenElders() ? " en vaste taken" : ""} staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. Afhandelen doe je in ${esc(naam)}, of vraag het je team.</div></div>`;
   }
   return "";
 }
@@ -14156,7 +14204,13 @@ function waarschuwingenHtml() {
 /* ---------- Voor jou ---------- */
 function renderBovenkaart() {
   const kc = klaarCheck();
-  if ((kc.stil || kc.stilNotion) && !S.ui.dismissed.stil) {
+  if (kc.stilNotion && !S.ui.dismissed.stil) {
+    // Notion: een lege ronde meldt niets in de feed. Dus geen rood, wel de vraag.
+    const r = kc.regels.find(x => x.id === "werkt") || { tekst: "" };
+    return `<section class="bovenkaart" aria-label="Werkt je team nog vanzelf?"><div class="tussen"><h3>Werkt je team nog vanzelf?</h3><button class="ikknop" data-act="dismiss" data-k="stil" aria-label="Sluiten">${ic("sluit")}</button></div>
+      <p>${esc(r.tekst)}</p><div class="rijtje"><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button>${hoe("vanzelf-werken")}</div></section>`;
+  }
+  if (kc.stil && !S.ui.dismissed.stil) {
     const r = kc.regels.find(x => (x.id === "aan" || x.id === "werkt") && (x.k === "nee" || x.k === "let")) || { tekst: "" };
     const geenTaken = !S.data.taken.length && toegang() !== "notion";
     return `<section class="bovenkaart stil-rood" aria-label="Je team staat stil"><div class="tussen"><h3>${geenTaken ? "Je team werkt nog niet vanzelf" : "Je team staat stil"}</h3></div>
@@ -14221,12 +14275,13 @@ function renderWerkbak(gekozenId) {
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
   const min = Math.max(1, Math.round(n * 0.75));
   const berg = n > 10 || P.werkdagenNa(sindsVan(oudste), NU) > 5;
+  const oudsteBoven = l[0] === oudste;
   const oud = dagen <= 0 ? "van vandaag" : "oudste " + dagen + " " + (dagen === 1 ? "dag" : "dagen");
   const vol = l.slice(0, 5).map(a => itemKaart(a, a.id === gekozenId)).join("");
   const comp = l.slice(5, 10).map(a => compactItem(a, a.id === gekozenId)).join("");
   const rest = n > 10 ? `<button class="regel" data-act="acties-baan" data-baan="jij"><span class="rl"><b>Nog ${n - 10} op jouw lijst</b><span>Alles staat bij Acties, in de baan Jij</span></span>${ic("chev")}</button>` : "";
   return `<section class="werkbak-kop" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
-    ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b> Het staat nu bovenaan. Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
+    ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b>${oudsteBoven ? " Het staat nu bovenaan." : ""} Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
     <button class="knop breed" data-act="ronde-start">Loop ze één voor één door ${ic("pijl", "klein")}</button></section>
     <div class="stapel">${vol}${comp}${rest}</div>`;
 }
@@ -14241,8 +14296,10 @@ function checkRegelHtml() {
 function renderOnderregels() {
   const kc = klaarCheck();
   if (toegang() === "notion") return checkRegelHtml();
-  const bt = bijTeam(); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
-  const col = bijCollegas();
+  // Dezelfde indeling als de banen op Acties, zodat de tellers daar kloppen.
+  const B = banenVan(CTX.bundle, CTX.schema, { ik: ik(), nu: NU }) || {};
+  const bt = viaIds(B.team); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
+  const col = viaIds(B.collega);
   const perCol = {}; col.forEach(a => { const k = voornaam(a.eigenaar); perCol[k] = (perCol[k] || 0) + 1; });
   const teamRegel = kc.stil ? `<b>Bij je team: ${bt.length} ${bt.length === 1 ? "ligt" : "liggen"} stil</b><span>Tot je team weer vanzelf werkt</span>`
     : `<b>Bij je team: ${bezig} bezig · ${volg} voor het volgende werkmoment</b><span>Werk dat je team oppakt zonder dat jij iets hoeft te doen</span>`;
@@ -14280,10 +14337,10 @@ function renderVoorJouNotion() {
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
-  const blok = metricsVoorJou(CTX); const items = blok || [];
+  const blok = werkbakUitDagstart(); const items = blok || [];
   const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
   const verhaal = feed.length
-    ? `<p class="zin">${esc(v.titel)} ${ags.length ? `waren <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
+    ? `<p class="zin">${esc(v.titel)} ${ags.length ? `${ags.length === 1 ? "was" : "waren"} <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
        <div class="tussen"><div class="chiprij">${ags.map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>`
     : `<p class="zin">${esc(v.titel)} deed je team niets vanzelf.</p><p class="detail stil">Kijk bij ‘Is je team klaar?’ wat er nodig is.</p>`;
   const kaart = (it) => {
@@ -14315,7 +14372,7 @@ function bladKnoppen(a) {
     case "voorstel": return knop("Ja, doe maar", "ja", `data-id="${id}"`, "prim breed") + rij(knop("Nee, niet doen", "sheet", `data-type="nee" data-id="${id}"`), meerKnop(a));
     case "signaal": return knop("Laat je team opvolgen", "sheet", `data-type="opvolgen" data-id="${id}"`, "teamvol breed") + rij(knop("Ik pak het zelf op", "sheet", `data-type="zelfop" data-id="${id}"`), knop("Gezien, niets doen", "doe", `data-f="gezien" data-id="${id}"`), meerKnop(a));
     case "taak": case "weer": return knop(ic("vink", "klein") + "Klaar", "doe", `data-f="klaar" data-id="${id}"`, "prim breed") + rij(knop("Nieuwe datum", "sheet", `data-type="${s === "weer" ? "later" : "datum"}" data-id="${id}"`), knop("Geef aan je team", "sheet", `data-type="wie" data-doel="geef" data-id="${id}"`, "team"), meerKnop(a));
-    case "team": return `<p class="balkregel">${kc.stil ? "Dit ligt stil tot je team weer vanzelf werkt." : a.status === "Bezig" ? `${esc(deNaam(ag, true))} werkt hier nu aan${a.bezigSinds ? " (sinds " + esc(wanneer(a.bezigSinds)) + ")" : ""}. Terugsturen of aanpassen kan weer na het werkmoment.` : `${esc(deNaam(ag, true))} pakt dit op ${esc(bijHetVolgende())}. Het resultaat zie je terug bij Voor jou.`}</p>`
+    case "team": return `<p class="balkregel">${a.wachtenTot && dt(a.wachtenTot) > NU ? `Dit wacht tot ${esc(datumKort(a.wachtenTot))}; daarna pakt ${esc(deNaam(ag))} het op.` : kc.stil ? "Dit ligt stil tot je team weer vanzelf werkt." : a.status === "Bezig" ? `${esc(deNaam(ag, true))} werkt hier nu aan${a.bezigSinds ? " (sinds " + esc(wanneer(a.bezigSinds)) + ")" : ""}. Terugsturen of aanpassen kan weer na het werkmoment.` : `${esc(deNaam(ag, true))} pakt dit op ${esc(bijHetVolgende())}. Het resultaat zie je terug bij Voor jou.`}</p>`
       + rij(knop("Toch zelf doen", "doe", `data-f="tochZelf" data-id="${id}"`), magSchrijven("notities") ? knop(ic("plus", "klein") + "Opmerking", "sheet", `data-type="opmerking" data-id="${id}"`) : "");
     case "wacht": return knop("Nu oppakken", "doe", `data-f="nuOppakken" data-id="${id}"`, "prim breed") + rij(knop("Datum verzetten", "sheet", `data-type="later" data-id="${id}"`));
     case "klaar": return `<p class="balkregel">Afgerond${a.afgerondOp ? " op " + esc(datumKort(a.afgerondOp)) : ""}${isAgentSlug(a.afgerondDoor) ? " door " + esc(deNaam(a.afgerondDoor)) : ""}${uitkomstVan(a) ? " · " + esc(uitkomstVan(a)) : ""}.</p>` + rij(knop("Toch weer openen", "doe", `data-f="heropen" data-id="${id}"`));
@@ -14394,6 +14451,7 @@ function renderVelden(a) {
     ${a.correctie ? rij("Jouw aanpassing", esc(a.correctie)) : ""}
   </dl><p class="klein stil">Je wijzigt één veld tegelijk; de rest blijft staan. De statusnamen zijn dezelfde als in Claude en Notion.</p>`;
 }
+/* Wat werd er met dit werk gedaan? Alleen wat uit de velden blijkt. */
 function uitkomstVan(a) {
   if (a.status !== "Klaar") {
     if (a.teruggestuurd && soortVan(a) === "team") return "teruggestuurd";
@@ -14402,8 +14460,11 @@ function uitkomstVan(a) {
   }
   if (isAgentSlug(a.afgerondDoor)) return "je team rondde het zelf af";
   if (/^niet doen/i.test(a.correctie)) return "niet gedaan";
+  if (S.data.acties.some(x => x.onder === a.id)) return "je team volgt op";
+  if (a.teruggestuurd) return "na terugsturen afgerond";
   if (a.gecorrigeerd) return "zelf aangepast";
-  if (isAgentSlug(a.door)) return a.kanaal || /^\s*onderwerp\s*:/im.test(a.werk) ? "goedgekeurd, zelf verstuurd" : "goedgekeurd";
+  if (a.type === "Alert") return "gezien";
+  if (isAgentSlug(a.door)) return "goedgekeurd";
   return "afgerond";
 }
 
@@ -14523,8 +14584,8 @@ function baanLeeg(k) {
 function laterGroep(B) { return B.later.length ? `<details class="uitklap" ${det("acties-later")}><summary>Later op je lijst (${B.later.length})${ic("chev")}</summary><div class="binnen">${B.later.map(rij).join("")}</div></details>` : ""; }
 function renderActies() {
   if (toegang() === "notion") {
-    const n = (metricsVoorJou(CTX) || []).length;
-    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(bronVan(CTX, "acties").naam || "Notion")}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(bronVan(CTX, "acties").naam || "Notion")}, of vraag het je team in Claude.</p>
+    const n = (werkbakUitDagstart() || []).length; const naam = naamElders("acties");
+    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team in Claude.</p>
     <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("notion", "Waarom staat dit in Notion?")}</div></section></div>`;
   }
   if (!rows(CTX.bundle, "acties")) {
@@ -14659,7 +14720,7 @@ function watDoetTaak(t) {
   return i.length > 320 ? i.slice(0, 317) + "…" : i;
 }
 function taakRij(t) {
-  const st = taakStatus(t); const mag = magSchrijven("ritmetaken") && !t.url;
+  const st = taakStatus(t); const mag = magSchrijven("ritmetaken") && !t.alleenLezen;
   const stTekst = st.k === "achter" ? `<span class="achter">~ ${esc(st.tekst)}</span>` : st.k === "ok" ? `<span class="okt">✓ ${esc(st.tekst)}</span>` : `<span>${esc(st.tekst)}</span>`;
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
@@ -14673,8 +14734,8 @@ function renderVasteTaken() {
   const kc = klaarCheck(); const cs = checkSamenvatting(kc);
   const checkRegel = `<button class="regel" data-act="go" data-r="/team/klaar"><span class="rl"><b>${esc(cs.kop)}</b><span>${esc(cs.sub)}</span></span>${ic("chev")}</button>`;
   const T = S.data.taken;
-  const bron = bronVan(CTX, "ritmetaken");
-  const elders = bron.toestand === "elders" || (toegang() === "notion" && !dataRijenVan(CTX, "ritmetaken"));
+  const bron = { naam: naamElders("ritmetaken") };
+  const elders = takenElders();
   if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "Notion")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team in Claude. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
   const slot = !magSchrijven("ritmetaken") && !elders ? `<div class="slotregel">${ic("slot", "klein")}<span>${toegang() === "daglink" ? "Aanpassen kan na inloggen." : "Je sessie mag alleen lezen. Log opnieuw in om aan te passen."}</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
   if (!T.length) return `${checkRegel}<section class="leeg"><h3>Je team heeft nog geen vaste taken</h3>${slot}<p class="stil">Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen.</p>
@@ -14764,7 +14825,7 @@ function resultaatWeken(n) {
   const ma = maandag(); const weken = [];
   for (let i = n - 1; i >= 0; i--) {
     const van = plusDagen(ma, -7 * i); const tot = plusDagen(van, 7);
-    const af = S.data.acties.filter(a => a.status === "Klaar" && !/^niet doen/i.test(a.correctie) && dt(a.afgerondOp) && dt(a.afgerondOp) >= van && dt(a.afgerondOp) < tot);
+    const af = S.data.acties.filter(a => { const m = afgerondMoment(a); return a.status === "Klaar" && !/^niet doen/i.test(a.correctie) && m && m >= van && m < tot; });
     const team = af.filter(a => isAgentSlug(a.afgerondDoor)).length;
     const voor = af.filter(a => !isAgentSlug(a.afgerondDoor) && (isAgentSlug(a.door) || isAgentSlug(a.agent))).length;
     weken.push({ label: "wk " + isoWeek(van), van, team, voor, zelf: af.length - team - voor });
@@ -14869,7 +14930,9 @@ function rijMeta(k, r) {
 function actiesBij(k, id) { return S.data.acties.filter(a => a.hoort.some(h => h.domein === k && h.id === id)); }
 function dealsBij(orgId) {
   const d = domeinVan("sales_funnel"); if (!d) return [];
-  return rijenVan("sales_funnel").filter(r => relatieId(getField(r, "Organisatie")) === orgId);
+  const veld = dataVelden(d).find(v => v.naam === "Organisatie" && v.type === "relatie");
+  if (!veld) return [];
+  return rijenVan("sales_funnel").filter(r => verwijstNaar(getField(r, "Organisatie"), veld, "organisaties", orgId));
 }
 function dealLoopt(r) { const s = dataCelTekst(getField(r, "Opvolg Status")); return !/gewonnen|verloren/i.test(s); }
 function dealWaarde(r) { return Number(getField(r, "Verwachte Omzet")) || 0; }
@@ -14931,7 +14994,7 @@ function renderLijst(k) {
 }
 
 /* veldInvoerHtml (data-bewerken.js) geeft het veld geen naam; die zetten we erop. */
-function metNaam(html, naam) { return html.replace(/<(input|select|textarea)(?![^>]*aria-label)/, `<$1 aria-label="${esc(naam)}"`); }
+function metNaam(html, naam, id) { return html.replace(/<(input|select|textarea)(?![^>]*aria-label)/, `<$1 aria-label="${esc(naam)}"${id ? ` id="${esc(id)}"` : ""}`); }
 
 /* ---------- Eén rij als pagina ---------- */
 function veldWaardeHtml(v, w) {
@@ -14955,7 +15018,7 @@ function veldRij(k, r, v) {
   const e = S.ui.bewerk; const bewerk = e && e.k === k && e.id === r.__entryId && e.veld === v.naam;
   const w = getField(r, v.naam); const t = dataCelTekst(w);
   const lang = t && isLangeTekst(v, t);
-  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${metNaam(veldInvoerHtml(v, w, CTX), v.naam)}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
+  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${metNaam(veldInvoerHtml(v, w, CTX), v.naam, "veld-invoer")}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
   const wijzig = magSchrijven(k) && v.type !== "relatie" ? ` <button class="hoe wijzig" data-act="veld-wijzig" data-k="${k}" data-id="${esc(r.__entryId)}" data-v="${esc(v.naam)}" aria-label="${esc(v.naam)} wijzigen">wijzig</button>` : "";
   return `<dt>${esc(v.naam)}</dt><dd class="${lang ? "lang" : ""}">${lang ? `<span style="flex:1 1 100%">${esc(t)}</span>` : veldWaardeHtml(v, w)}${wijzig}</dd>`;
 }
@@ -15408,6 +15471,7 @@ function focusSleutel(el) {
 function hadSheetVoor() { return !!document.querySelector('.scrim[data-act="scrim"]'); }
 function render() {
   const root = document.getElementById("root"); if (!root) return;
+  nieuweTekenbeurt();
   if (CTX && S.dataCtx !== CTX) { S.data = bouwData(); S.dataCtx = CTX; kcCache = null; }
   if (CTX && S.nummerBundel !== CTX.bundle) { S.nummerBundel = CTX.bundle; S.nummers = {}; S.volgNr = 1; telNummersOpnieuw(); }
   const ae = document.activeElement; const inRoot = ae && root.contains(ae);
@@ -15423,6 +15487,7 @@ function render() {
   zetFormulierenTerug(root, concept);
   if (S.ui.bewerk && !S.ui.bewerk.voorGelezen) { const f = root.querySelector("[data-v2-veldform]"); if (f) { S.ui.bewerk.voor = leesFormulier(f); S.ui.bewerk.voorGelezen = true; } }
   document.body.style.overflow = document.querySelector(".scrim") ? "hidden" : "";
+  markeerBezig();
   if (CTX && tabVan() === "beheer") {
     // De beheerpanelen komen uit oudere modules; een fout daarin mag de rest van het scherm niet breken.
     try { vulBeheer(); zetBeheerTerug(root, concept); } catch (e) { console.error(e); }
@@ -15535,8 +15600,8 @@ function sluitBlad() { const naar = S.terugNaar || (parts()[0] === "acties" ? "/
 /* ---------- Schrijven ---------- */
 const WAT = { goedkeuren: "goedgekeurd", terug: "teruggestuurd", ja: "ja, doe maar", nee: "niet gedaan", zelf: "zelf aangepast", later: "later", gezien: "gezien", klaar: "afgerond",
   zelfOppakken: "zelf opgepakt", geefAan: "doorgegeven", aanCollega: "naar collega", nieuweDatum: "nieuwe datum", tochZelf: "zelf gedaan", nuOppakken: "opgepakt", heropen: "heropend",
-  zetBijMij: "bij jou gezet", opvolgen: "team volgt op", alleenEigenaar: "op andere naam", stoppen: "gestopt", prio: "belang", verwijder: "verwijderd" };
-const NAAM_NODIG = ["later", "zelfOppakken", "tochZelf", "heropen", "zetBijMij"];
+  zetBijMij: "bij jou gezet", naarJij: "naar jou", opvolgen: "team volgt op", alleenEigenaar: "op andere naam", stoppen: "gestopt", prio: "belang", verwijder: "verwijderd" };
+const NAAM_NODIG = ["later", "zelfOppakken", "tochZelf", "heropen", "zetBijMij", "naarJij"];
 function pasToe(key, w) {
   if (!w) return;
   if (CTX && CTX.werkBij && (w.weg || (w.entry && w.entry.entryId))) { if (CTX.werkBij(key, w) !== false) return; }
@@ -15573,18 +15638,37 @@ function patchVoor(f, a, c, arg) {
     const patch = toewijsPatch(dom, a.rij, keuze); return { patch, melding: toewijsTekst(a.rij, patch, keuze, jij()) };
   }
   if (f === "prio") return { patch: { Prioriteit: arg }, melding: "Belang: " + String(arg).toLowerCase() + "." };
+  if (f === "naarJij") return verplaatsPatch(a.rij, "wacht", "jij", c); // uit Wacht: wektijd eraf, op jouw naam
   const plan = afhandelPatch(f, a.rij, c);
-  if (f === "goedkeuren" && a.kanaal) plan.melding = a.kanaal === "post" ? "Goedgekeurd. Genoteerd als door jou geplaatst." : "Goedgekeurd. Genoteerd als door jou verstuurd.";
+  if (f === "goedkeuren" && a.kanaal) plan.melding = a.kanaal === "post" ? "Goedgekeurd. Plaatsen doe jij; je team publiceert niets." : "Goedgekeurd. Versturen doe jij; je team verstuurt niets.";
   // Zelfde zinnen als in het ontwerp: "de Dealmaker", "De Stem".
   const sp = slugVanNaam(plan.patch && plan.patch.Agent);
   if (sp && f === "terug") plan.melding = "Teruggestuurd naar " + deNaam(sp) + ". Die pakt het op bij het volgende werkmoment.";
   if (sp && (f === "ja" || f === "geefAan")) plan.melding = (f === "ja" ? "Akkoord. " : "Doorgegeven aan " + deNaam(sp) + ". ") + (f === "ja" ? deNaam(sp, true) + " gaat ermee aan de slag" : "Die pakt het op") + " bij het volgende werkmoment.";
   return plan;
 }
+/* Wat nu onderweg is naar de werkruimte. Zolang een item hierin staat, doen
+ * zijn knoppen niets (ook niet na een hertekening of via een sneltoets). */
+const BEZIG = new Set();
+function isBezig(k) { return BEZIG.has(k); }
+function markeerBezig() {
+  for (const k of BEZIG) {
+    const id = k.replace(/^[a-z]+:/, "");
+    for (const el of document.querySelectorAll(`#root [data-id="${cssEsc(id)}"][data-act]:not([data-act="open"]), #root .scrim[data-act="scrim"] [data-act]:not([data-act="sh-dicht"])`)) {
+      if (el.closest(".scrim") && !(S.sheet && S.sheet.id === id)) continue;
+      el.setAttribute("aria-disabled", "true");
+    }
+  }
+}
 async function uitvoeren(id, f, arg, btn) {
   const a = actie(id); if (!a || !kanSchrijven()) return;
+  if (isBezig("actie:" + id)) return;
   if (NAAM_NODIG.includes(f) && !jij()) { vraagNaam(() => uitvoeren(id, f, arg)); return; }
-  const lijstVoor = voorJouLijst().map(x => x.id); const p = parts(); const routeVoor = S.route;
+  BEZIG.add("actie:" + id);
+  try { await uitvoerenBinnen(a, id, f, arg, btn); } finally { BEZIG.delete("actie:" + id); render(); }
+}
+async function uitvoerenBinnen(a, id, f, arg, btn) {
+  const lijstVoor = voorJouLijst().map(x => x.id); const p = parts(); const routeVoor = S.route; const sheetVoor = S.sheet;
   const inRonde = !!(S.ronde && p[1] === "een-voor-een");
   const opts = typeof arg === "object" && arg ? arg : {};
   const spNaam = opts.ag && AGENTS[opts.ag] ? AGENTS[opts.ag].naam : null;
@@ -15603,7 +15687,8 @@ async function uitvoeren(id, f, arg, btn) {
         // De vervolgactie staat er al; laat hem zien en zeg wat er nog open staat.
         if (nieuw) pasToe("acties", { entry: res.entry });
         S.sheet = null;
-        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null });
+        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null,
+          undo: nieuw ? async () => { await verwijderEntry(CTX, "acties", nieuw); pasToe("acties", { weg: nieuw }); } : null });
         render(); return;
       }
       if (nieuw) toepassen.push({ entry: res.entry });
@@ -15625,26 +15710,29 @@ async function uitvoeren(id, f, arg, btn) {
       undo = async () => { const t = await snelWijzig(CTX, "acties", id, vorige); pasToe("acties", { entry: t && t.entry }); };
     }
   } catch (e) {
-    meldFout(e); S.sheet = S.sheet && S.sheet.id === id ? Object.assign(S.sheet, { fout: foutTekst(e) }) : null; render(); return;
+    meldFout(e); if (S.sheet && S.sheet === sheetVoor && S.sheet.id === id) S.sheet.fout = foutTekst(e); else if (S.sheet === sheetVoor) S.sheet = null; render(); return;
   }
   if (["ja", "geefAan", "terug", "opvolgen"].includes(f) && klaarCheck().stil) melding += " Dit ligt stil tot je team weer vanzelf werkt.";
-  if (f !== "prio") S.sessie.afgehandeld.unshift({ id, titel: a.titel, wat: WAT[f] || f, undo, t: Date.now() });
+  const regel = { id, titel: a.titel, wat: WAT[f] || f, undo, t: Date.now() };
+  if (f !== "prio") S.sessie.afgehandeld.unshift(regel);
   const i = lijstVoor.indexOf(id);
   const volgende = i >= 0 ? (lijstVoor.slice(i + 1)[0] || lijstVoor.slice(0, i).reverse()[0] || null) : null;
-  S.sheet = null;
-  if (inRonde) { S.ronde.i++; if (["terug", "ja", "geefAan", "opvolgen"].includes(f)) S.ronde.naarTeam.push(nieuw || id); S.focusNa = "#blad-titel"; }
+  if (S.sheet === sheetVoor) S.sheet = null;
+  const zelfdePlek = S.route === routeVoor;
+  if (!zelfdePlek) { /* je klikte intussen verder: dan blijf je waar je bent */ }
+  else if (inRonde && S.ronde) { S.ronde.i++; if (["terug", "ja", "geefAan", "opvolgen"].includes(f)) S.ronde.naarTeam.push(nieuw || id); S.focusNa = "#blad-titel"; }
   else if (f === "prio" || f === "alleenEigenaar" || f === "nieuweDatum") { /* het blad blijft open */ }
   else if (p[0] === "voor-jou" && p[1]) { S.route = volgende ? "/voor-jou/" + volgende : "/"; zetHash(S.route); S.focusNa = volgende ? "#blad-titel" : ".werkbak-kop h2, .leeg h3"; }
   else if (p[0] === "acties" && p[1]) { const naar = S.terugNaar || "/acties"; S.terugNaar = null; S.route = naar; zetHash(S.route); S.focusNa = `[data-act="open"][data-id="${cssEsc(id)}"]|#scroller .titel`; }
   else if (tabVan() === "voorjou" && volgende) S.focusNa = `[data-kaart="${cssEsc(volgende)}"] .item-open, button.compact[data-id="${cssEsc(volgende)}"]`;
   else if (tabVan() === "voorjou") S.focusNa = ".leeg h3, .werkbak-kop h2";
-  if (tabVan() === "voorjou" && !inRonde) await wegAnimatie(id);
+  if (zelfdePlek && tabVan() === "voorjou" && !inRonde) await wegAnimatie(id);
   toast(melding, {
     undo: undo ? async () => {
       await undo();
       if (itemRoute(routeVoor) && !inRonde) { S.route = routeVoor; zetHash(S.route); }
       if (inRonde && S.ronde) { const j = S.ronde.ids.indexOf(id); if (j >= 0) S.ronde.i = j; S.ronde.eind = null; }
-      S.sessie.afgehandeld = S.sessie.afgehandeld.filter(x => x.id !== id);
+      S.sessie.afgehandeld = S.sessie.afgehandeld.filter(x => x !== regel);
     } : null,
     bekijk: nieuw ? "/acties/" + nieuw : null,
   });
@@ -15654,6 +15742,10 @@ async function uitvoeren(id, f, arg, btn) {
   render();
 }
 async function nieuweOpdracht(sh, btn) {
+  const sleutelB = "opdracht"; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await nieuweOpdrachtBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function nieuweOpdrachtBinnen(sh, btn) {
   const wat = (sh.wat || "").trim();
   if (!wat) { sh.fout = "Schrijf eerst wat er moet gebeuren."; S.focusNa = "#sh-wat"; render(); return; }
   const wie = sh.ag ? { agent: AGENTS[sh.ag].naam } : { mens: sh.mens || jij() };
@@ -15665,13 +15757,17 @@ async function nieuweOpdracht(sh, btn) {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "acties", data });
     const nid = res && res.entry && res.entry.entryId;
     const tekst = sh.ag ? "Doorgegeven aan " + deNaam(sh.ag) + "." : (!sh.mens || naamGelijk(sh.mens, jij())) ? "Op je eigen lijst gezet." : "Bij " + voornaam(sh.mens) + " gezet.";
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     toast(tekst, { undo: nid ? async () => { await verwijderEntry(CTX, "acties", nid); pasToe("acties", { weg: nid }); } : null, bekijk: nid ? "/acties/" + nid : null });
     pasToe("acties", { entry: res && res.entry });
     render();
   } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function opmerkingPlaatsen(sh, btn) {
+  const sleutelB = "opmerking:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await opmerkingPlaatsenBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function opmerkingPlaatsenBinnen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const a = actie(sh.id);
   if (!tekst) { S.focusNa = "#sh-tekst"; render(); return; }
   const info = notitieVeldVan(CTX); if (!info || !a) return;
@@ -15681,12 +15777,16 @@ async function opmerkingPlaatsen(sh, btn) {
   try {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "notities", data });
     const nid = res && res.entry && res.entry.entryId;
-    S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
+    if (S.sheet === sh) S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
     toast("Opmerking geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function notitieOpslaan(sh, btn) {
+  const sleutelB = "notitie:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await notitieOpslaanBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function notitieOpslaanBinnen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const onderwerp = (sh.onderwerp || "").trim();
   if (!tekst && !onderwerp) { sh.fout = "Schrijf eerst je notitie."; S.focusNa = "#sh-tekst"; render(); return; }
   const info = notitieVeldVan(CTX); if (!info) return;
@@ -15696,12 +15796,16 @@ async function notitieOpslaan(sh, btn) {
   try {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "notities", data });
     const nid = res && res.entry && res.entry.entryId;
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     toast("Notitie geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function nieuweRij(form, btn) {
+  const sleutelB = "nieuw:" + (S.sheet && S.sheet.k); if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await nieuweRijBinnen(form, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function nieuweRijBinnen(form, btn) {
   const sh = S.sheet; const k = sh.k; const d = domeinVan(k);
   const data = leesFormulier(form);
   const { titel } = nieuwVelden(k);
@@ -15712,7 +15816,7 @@ async function nieuweRij(form, btn) {
     const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: k, data });
     const nid = res && res.entry && res.entry.entryId;
     const naam = data[titel.naam];
-    S.sheet = null;
+    if (S.sheet === sh) S.sheet = null;
     if (!sh.ouder && nid) { go("/gegevens/" + k + "/" + encodeURIComponent(nid)); S.focusNa = "#rij-titel"; }
     toast(naam + " is toegevoegd.", { undo: nid ? async () => { await verwijderEntry(CTX, k, nid); pasToe(k, { weg: nid }); if (itemOpGegevens(k, nid)) go("/gegevens/" + k); } : null });
     pasToe(k, { entry: res && res.entry }); render();
@@ -15721,16 +15825,24 @@ async function nieuweRij(form, btn) {
 }
 function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && ontcijfer(p[2] || "") === id; }
 async function rijVerwijderen(sh, btn) {
+  const sleutelB = "weg:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await rijVerwijderenBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function rijVerwijderenBinnen(sh, btn) {
   const t = rijTitel(sh.k, sh.id) || "";
   zetBezig(btn);
   try {
     await verwijderEntry(CTX, sh.k, sh.id);
-    S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
+    if (S.sheet === sh) S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
     toast("‘" + t + "’ is verwijderd.");
     pasToe(sh.k, { weg: sh.id }); render();
   } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function veldOpslaan(form) {
+  const sleutelB = "veld:" + (S.ui.bewerk && S.ui.bewerk.id); if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await veldOpslaanBinnen(form); } finally { BEZIG.delete(sleutelB); }
+}
+async function veldOpslaanBinnen(form) {
   const e = S.ui.bewerk; if (!e) return;
   const d = domeinVan(e.k); const r = rijVan(e.k, e.id); if (!r) return;
   const patch = formulierPatch(d, e.voor, leesFormulier(form));
@@ -15745,6 +15857,10 @@ async function veldOpslaan(form) {
   } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; meldFout(err); render(); }
 }
 async function taakSchrijf(t, patch, melding, undoPatch) {
+  const sleutelB = "taak:" + t.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await taakSchrijfBinnen(t, patch, melding, undoPatch); } finally { BEZIG.delete(sleutelB); }
+}
+async function taakSchrijfBinnen(t, patch, melding, undoPatch) {
   try {
     const ant = await snelWijzig(CTX, "ritmetaken", t.id, patch);
     toast(melding, { undo: async () => { const x = await snelWijzig(CTX, "ritmetaken", t.id, undoPatch); pasToe("ritmetaken", { entry: x && x.entry }); } });
@@ -15752,6 +15868,10 @@ async function taakSchrijf(t, patch, melding, undoPatch) {
   } catch (e) { meldFout(e); render(); }
 }
 async function zetAan(sleutel, btn) {
+  const sleutelB = "zetaan:" + sleutel; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
+  try { return await zetAanBinnen(sleutel, btn); } finally { BEZIG.delete(sleutelB); }
+}
+async function zetAanBinnen(sleutel, btn) {
   const t = (vtCatalogus.data || []).find(x => x.sleutel === sleutel); if (!t) return;
   zetBezig(btn);
   try {
@@ -15789,15 +15909,22 @@ function huidigItem() {
 }
 function naarBaan(id, baan, btn) {
   const a = actie(id); if (!a) return; const s = soortVan(a);
-  if (baan === "jij") { if (s === "klaar") uitvoeren(id, "heropen", null, btn); else uitvoeren(id, "tochZelf", null, btn); }
-  else if (baan === "team") { if (s === "check" || s === "check-extern") { S.sheet = { type: "terug", id, tekst: "" }; render(); } else { S.sheet = { type: "wie", id, doel: "sleep" }; render(); } }
+  if (baan === "jij") {
+    if (s === "klaar") uitvoeren(id, "heropen", null, btn);
+    else if (s === "wacht" || (a.wachtenTot && dt(a.wachtenTot) > NU)) uitvoeren(id, "naarJij", null, btn);
+    else uitvoeren(id, "tochZelf", null, btn);
+  }
+  else if (baan === "team") { if ((s === "check" || s === "check-extern") && werkAgent(a)) { S.sheet = { type: "terug", id, tekst: "" }; render(); } else { S.sheet = { type: "wie", id, doel: "sleep" }; render(); } }
   else if (baan === "wacht") { S.sheet = { type: "later", id }; render(); }
   else if (baan === "af") { if (["check", "check-extern", "voorstel"].includes(s)) S.sheet = { type: "afronden", id }; else if (s === "team") S.sheet = { type: "stoppen", id }; else { uitvoeren(id, "klaar", null, btn); return; } render(); }
 }
 function kiesInSheet(v, btn) {
   const sh = S.sheet; const k = v.slice(0, v.indexOf(":")), val = v.slice(v.indexOf(":") + 1); const id = sh.id;
   if (sh.type === "wie") {
-    if (sh.doel === "toewijzen") { uitvoeren(id, "alleenEigenaar", k === "ag" ? AGENTS[val].naam : (val || jij()), btn); return; }
+    if (sh.doel === "toewijzen") {
+      if (k !== "ag" && !val && !jij()) { vraagNaam(() => uitvoeren(id, "alleenEigenaar", jij())); return; }
+      uitvoeren(id, "alleenEigenaar", k === "ag" ? AGENTS[val].naam : (val || jij()), btn); return;
+    }
     if (k === "ag") { uitvoeren(id, sh.doel === "ja" ? "ja" : "geefAan", { ag: val }, btn); return; }
     if (!val || (jij() && naamGelijk(val, jij()))) uitvoeren(id, "tochZelf", null, btn); else uitvoeren(id, "aanCollega", val, btn);
     return;
@@ -15833,6 +15960,7 @@ function bevestigSheet(btn) {
       const naam = (sh.naam || "").trim();
       if (!naam) { sh.fout = "Vul je naam in."; S.focusNa = "#sh-naam"; render(); return; }
       zetBezig(btn);
+      S.naamGeheugen = naam;
       Promise.resolve(zetMijnNaam(bron(), naam)).catch(() => { /* de kopie in deze browser telt */ }).then(() => {
         const daarna = sh.daarna; S.sheet = null; kcCache = null; telNummersOpnieuw();
         toast("Je werkt nu als " + naam + ".");
@@ -15851,7 +15979,7 @@ function opKlik(e) {
   const el = e.target.closest && e.target.closest("[data-act]"); if (!el || !document.getElementById("root").contains(el)) return;
   if (el.getAttribute("aria-disabled") === "true" || el.disabled) return;
   const act = el.dataset.act;
-  if ((act === "scrim" || act === "scrim-item") && e.target.closest("[data-stop]")) return;
+  if ((act === "scrim" || act === "scrim-item") && (e.target.closest("[data-stop]") || (S.drukStart && S.drukStart.closest && S.drukStart.closest("[data-stop]")))) return;
   const d = el.dataset;
   switch (act) {
     case "go": go(d.r); if (!el.closest(".tabbalk, .dtabs") && !itemRoute() && !S.focusNa) S.focusNa = "#scroller .titel|#scroller h2"; break;
@@ -15917,11 +16045,14 @@ function opKlik(e) {
   e.preventDefault();
   render();
 }
+/* Zoeken tekent na een korte pauze in het typen, niet bij elke toets. */
+let strakskKlok = null;
+function straks() { clearTimeout(strakskKlok); strakskKlok = setTimeout(render, 120); }
 function opInvoer(e) {
   const el = e.target; const d = el.dataset || {};
-  if (d.input === "zoek") { S.ui.acties.zoek = el.value; render(); }
-  else if (d.input === "hulpzoek") { S.ui.hulp.zoek = el.value; render(); }
-  else if (d.input === "gzoek") { S.ui.gegevens.zoek = el.value; render(); }
+  if (d.input === "zoek") { S.ui.acties.zoek = el.value; straks(); }
+  else if (d.input === "hulpzoek") { S.ui.hulp.zoek = el.value; straks(); }
+  else if (d.input === "gzoek") { S.ui.gegevens.zoek = el.value; straks(); }
   else if (d.sh && S.sheet) { S.sheet[d.sh] = el.value; if (S.sheet.fout) { S.sheet.fout = ""; const f = document.querySelector(".sheet .fout"); if (f) f.remove(); } }
 }
 function opWijziging(e) {
@@ -15944,6 +16075,7 @@ function opToets(e) {
   if (e.key === "Escape" && S.ui.bewerk && !S.sheet) { const v = S.ui.bewerk.veld; S.ui.bewerk = null; S.focusNa = `[data-act="veld-wijzig"][data-v="${cssEsc(v)}"]`; render(); return; }
   if (e.key === "Escape") { if (S.sheet) { S.sheet = null; render(); e.preventDefault(); return; } if (itemRoute() && !(isDesk() && parts()[0] === "voor-jou")) { sluitBlad(); render(); } return; }
   const tag = (e.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag) || e.target.isContentEditable) return;
+  if (e.repeat) return;
   if (!CTX || S.sheet || toegang() === "notion") return;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
   if (!isDesk() || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -15966,16 +16098,22 @@ function opToets(e) {
 }
 function opToggle(e) { const el = e.target; if (!(el instanceof HTMLDetailsElement)) return; if (el.dataset.hsec) S.ui.hulp.open[el.dataset.hsec] = el.open; if (el.id) S.ui.det[el.id] = el.open; }
 function toastPauze(aan) { return (e) => { if (S.toast && e.target.closest && e.target.closest("[data-toast]")) { if (aan) S.toast.pauze = true; else if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-toast]"))) { S.toast.pauze = false; S.toast.start = Math.max(S.toast.start, Date.now() - 5000); } } }; }
-function opSleepStart(e) { const el = e.target.closest && e.target.closest("[data-drag]"); if (!el) return; S.drag = el.dataset.drag; try { e.dataTransfer.setData("text/plain", S.drag); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* oude browser */ } }
-function opSleepOver(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && S.drag) { e.preventDefault(); c.classList.add("over"); } }
+function opSleepStart(e) { const el = e.target.closest && e.target.closest("[data-drag]"); if (!el) return; S.drag = el.dataset.drag; const baan = el.closest("[data-drop]"); S.dragVan = baan ? baan.dataset.drop : null; try { e.dataTransfer.setData("text/plain", S.drag); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* oude browser */ } }
+function opSleepOver(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && S.drag && c.dataset.drop !== S.dragVan) { e.preventDefault(); c.classList.add("over"); } }
 function opSleepUit(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (c && !c.contains(e.relatedTarget)) c.classList.remove("over"); }
-function opLos(e) { const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault(); const id = S.drag; S.drag = null; c.classList.remove("over"); naarBaan(id, c.dataset.drop); }
+function opLos(e) {
+  const c = e.target.closest && e.target.closest("[data-drop]"); if (!c || !S.drag) return; e.preventDefault();
+  const id = S.drag; const van = S.dragVan; S.drag = null; S.dragVan = null; c.classList.remove("over");
+  if (c.dataset.drop === van) return; // op zijn eigen baan losgelaten: niets veranderen
+  naarBaan(id, c.dataset.drop);
+}
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
 const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;
+  document.addEventListener("mousedown", (e) => { S.drukStart = e.target; }, true);
   document.addEventListener("click", opKlik);
   document.addEventListener("input", opInvoer);
   document.addEventListener("change", opWijziging);
@@ -16000,8 +16138,18 @@ function v2Start(haken) {
   opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
+let v2Werkruimte = null;
 function v2Toon(ctx) {
+  // Een andere werkruimte in hetzelfde tabblad (een daglink van een ander
+  // bedrijf): niets van de vorige blijft staan.
+  const sleutel = ctx && ctx.bundle ? (ctx.bundle.klant || "") + "|" + ((ctx.bron && ctx.bron.instantieUrl) || "") : null;
+  if (v2Werkruimte !== null && sleutel !== v2Werkruimte) {
+    S.sessie = { afgehandeld: [] }; S.ronde = null; S.nummers = {}; S.volgNr = 1; S.nummerBundel = null; S.toast = null; S.naamGeheugen = "";
+    if (typeof _resetCatalogus === "function") _resetCatalogus();
+  }
+  v2Werkruimte = sleutel;
   CTX = ctx; NU = (ctx && ctx.today) || new Date();
+  if (ctx && ctx.schema) AGENTS = bouwAgents(ctx.schema);
   S.leeg = null; S.versieFout = null;
   // Na inloggen zet app.js de bedoelde route in de adresbalk; die geldt meteen,
   // zonder eerst Voor jou te laten zien.

@@ -219,10 +219,11 @@ describe("v2 — Acties: wie is aan zet", () => {
     await wacht(() => expect($("[data-toast]")).not.toBeNull()); // de schrijfactie is af vóór de volgende test
   });
 
-  it("zoeken gaat ook door wat je team schreef", () => {
+  it("zoeken gaat ook door wat je team schreef", async () => {
     open(maakCtx(), "#/acties");
     const z = $("#acties-zoek"); z.value = "beste peter"; z.dispatchEvent(new Event("input", { bubbles: true }));
-    expect($$(".baan .rij").map(r => r.dataset.id)).toEqual(["a2"]);
+    // tekenen na een korte typpauze
+    await wacht(() => expect($$(".baan .rij").map(r => r.dataset.id)).toEqual(["a2"]));
   });
 });
 
@@ -386,5 +387,104 @@ describe("modulesFetch — alleen een ingelogde sessie praat met de site", () =>
     expect(uit.ok).toBe(false);
     expect(spy).not.toHaveBeenCalled();
     vm_zetBron(null);
+  });
+});
+
+describe("v2 — review 1-10: data en logica", () => {
+  it("acties in Notion met één verdwaalde rij in de werkruimte: de werkbak uit de dagstart blijft staan", () => {
+    const ctx = maakCtx({ acties: [rij("welkom", { Actie: "Welkomstpakket", Status: "Open", Eigenaar: "Sanne Verbeek" })] });
+    ctx.bundle.kind = "metrics"; ctx.bundle.systeemPerDomein = { acties: "notion" };
+    ctx.metricsWerk = { voorJou: [{ nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: false, specialist: DM, sinds: "2026-09-28", deadline: null, url: null }], ritmetaken: null, gegenereerdOp: "2026-09-29T07:02:00" };
+    open(ctx);
+    expect($(".tabbalk .badge").textContent).toBe("1");
+    expect($("#root").textContent).toContain("Offerte nakijken");
+    // de vaste taken komen hier ook uit de dagstart (geen rijen in de werkruimte)
+    expect($(".balk.notion").textContent).toContain("Je acties en vaste taken staan in Notion");
+  });
+
+  it("alleen de vaste taken elders: Voor jou blijft gewoon je werkruimte", () => {
+    const ctx = maakCtx(); ctx.bundle.systeemPerDomein = { ritmetaken: "notion" };
+    open(ctx);
+    expect($(".balk.notion")).toBeNull();
+    expect($('[data-kaart="a1"]')).not.toBeNull();
+  });
+
+  it("een afronding met alleen een datum telt mee in het verhaal van vandaag", () => {
+    const middag = new Date(2026, 8, 29, 14, 30);
+    const ctx = maakCtx({ acties: [rij("z1", { Actie: "Dossier bijgewerkt", Status: "Klaar", Eigenaar: DM, Agent: DM, "Afgerond door": DM, "Afgerond op": "2026-09-29" }, "2026-09-29T02:10:00")] });
+    ctx.today = middag;
+    open(ctx);
+    expect($(".verhaal .zin").textContent).toContain("Vandaag rondde je team 1 ding zelf af");
+  });
+
+  it("'ik verstuur hem zelf' alleen bij een echte mail, niet bij elke tekst met 'Onderwerp:' erin", () => {
+    open(maakCtx({ acties: [
+      rij("m1", { Actie: "Mail Jansen", Status: "Wacht op review", Eigenaar: "Sanne Verbeek", Agent: OS, "Aangemaakt door": OS, Toelichting: "Onderwerp: Vervolg\n\nBeste Peter," }, "2026-09-29T02:00:00"),
+      rij("m2", { Actie: "MT-agenda", Status: "Wacht op review", Eigenaar: "Sanne Verbeek", Agent: DM, "Aangemaakt door": DM, Toelichting: "Agenda\nOnderwerp: Q4-planning" }, "2026-09-29T02:00:00"),
+    ] }));
+    expect($('[data-kaart="m1"] [data-f="goedkeuren"]').textContent).toBe("Goedgekeurd, ik verstuur hem zelf");
+    expect($('[data-kaart="m2"] [data-f="goedkeuren"]').textContent).toBe("Goedkeuren");
+  });
+
+  it("vaste taken uit het metricsbestand zijn niet aan of uit te zetten", () => {
+    const ctx = maakCtx(); ctx.bundle.kind = "metrics";
+    ctx.metricsWerk = { voorJou: null, ritmetaken: [{ taak: "Facturen nalopen", agent: "Administratie", ritme: "wekelijks-vr", actief: true, laatst_gedraaid: null, volgorde: 1, url: null }], gegenereerdOp: "2026-09-29T07:02:00" };
+    open(ctx, "#/team/vaste-taken");
+    expect($('[data-act="taak-aan"]').hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("v2 — review 1-10: schrijfacties", () => {
+  it("een kaart op zijn eigen baan loslaten schrijft niets", () => {
+    const ctx = maakCtx(); const spy = nepInstantie(ctx);
+    const mm = window.matchMedia;
+    window.matchMedia = (q) => ({ matches: /min-width/.test(q), addEventListener() {}, removeEventListener() {} });
+    try {
+      open(ctx, "#/acties");
+      $('[data-act="av"][data-v="bord"]').click();
+      const kaart = $('[data-drop="jij"] [data-drag="a1"]');
+      kaart.dispatchEvent(new Event("dragstart", { bubbles: true }));
+      const over = new Event("dragover", { bubbles: true, cancelable: true });
+      $('[data-drop="jij"]').dispatchEvent(over);
+      expect(over.defaultPrevented).toBe(false);
+      $('[data-drop="jij"]').dispatchEvent(new Event("drop", { bubbles: true, cancelable: true }));
+      expect(spy).not.toHaveBeenCalled();
+      expect($(".scrim")).toBeNull();
+    } finally { window.matchMedia = mm; }
+  });
+
+  it("twee keer op Goedkeuren (ook na een hertekening) schrijft één keer", async () => {
+    const ctx = maakCtx(); const spy = nepInstantie(ctx);
+    open(ctx);
+    $('[data-kaart="a1"] [data-f="goedkeuren"]').click();
+    g.V2.render(); // bv. een melding die verloopt
+    const knop = $('[data-kaart="a1"] [data-f="goedkeuren"]');
+    if (knop) knop.click();
+    await wacht(() => expect($("[data-toast]")).not.toBeNull());
+    expect(patches(spy)).toHaveLength(1);
+  });
+
+  it("een nieuwe rij twee keer versturen geeft één POST", async () => {
+    const ctx = maakCtx({ organisaties: [rij("o1", { Naam: "Van Dam Bouw" })] }); const spy = nepInstantie(ctx);
+    open(ctx, "#/gegevens/organisaties");
+    $('[data-act="sheet"][data-type="nieuw"]').click();
+    $("#sh-nieuw-titel").value = "Kok Advies";
+    const form = $("[data-v2-nieuw]");
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await wacht(() => expect($("[data-toast]")).not.toBeNull());
+    expect(posts(spy)).toHaveLength(1);
+  });
+
+  it("uit Wacht naar jou: de wektijd gaat eraf, op jouw naam", async () => {
+    const ctx = maakCtx({ acties: [rij("w1", { Actie: "Contract terug", Status: "Wacht", Eigenaar: "Sanne Verbeek", "Wachten tot": "2026-10-02" })] }); const spy = nepInstantie(ctx);
+    open(ctx, "#/acties/w1");
+    // via het verplaatsblad, zoals op de telefoon
+    window.location.hash = "#/acties"; g.V2.hashGewijzigd();
+    g.V2._S.sheet = { type: "verplaats", id: "w1", baan: "wacht" }; g.V2.render();
+    $('.scrim [data-act="sh-kies"][data-v="baan:jij"]').click();
+    await wacht(() => expect(patches(spy)).toHaveLength(1));
+    expect(patches(spy)[0].data).toEqual({ Eigenaar: "Sanne Verbeek", Status: "Open", "Wachten tot": null });
+    await wacht(() => expect($("[data-toast]")).not.toBeNull());
   });
 });

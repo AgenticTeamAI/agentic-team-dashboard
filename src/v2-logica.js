@@ -4,10 +4,14 @@
  * Jij en de klaar-check. Deze laag rekent met de schermvorm (zie v2-basis.js)
  * en vraagt elk oordeel door aan de geteste productiefuncties. */
 
-function actie(id) { return S.data && S.data.acties.find(a => a.id === id); }
+function actie(id) { return S.data && S.data.perId ? S.data.perId.get(id) : null; }
 function ik() { return jij() || undefined; }
-function hoortBijMens(a) { return P.hoortBijMens(a.rij, namen(), NU); }
-function vanMij(a) { return P.vanMij(a.rij, ik(), namen()); }
+/* Per tekenbeurt onthouden: honderden rijen maal tientallen aanroepen. */
+let RC = new Map();
+function nieuweTekenbeurt() { RC = new Map(); }
+function onthoud(soort, a, fn) { const k = soort + "|" + a.id; if (!RC.has(k)) RC.set(k, fn()); return RC.get(k); }
+function hoortBijMens(a) { return onthoud("mens", a, () => P.hoortBijMens(a.rij, namen(), NU)); }
+function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen())); }
 function isTeLaat(a) { return P.isTeLaat(a.rij, namen(), NU); }
 function sindsVan(a) { return P.sindsVan(a.rij) || dt(a.aangemaakt) || NU; }
 function viaIds(rijen) { return (rijen || []).map(r => actie(r.__entryId)).filter(Boolean); }
@@ -18,8 +22,9 @@ function kloptNiet() { return viaIds(P.kloptNiet(CTX.bundle, CTX.schema, { ik: i
 function maandag() { return plusDagen(dagStart(NU), -((NU.getDay() + 6) % 7)); }
 function afgerondDezeWeek(lijst) {
   const ma = maandag();
-  return (lijst || S.data.acties).filter(a => a.status === "Klaar" && dt(a.afgerondOp) && dt(a.afgerondOp) >= ma)
-    .sort((a, b) => dt(b.afgerondOp) - dt(a.afgerondOp));
+  // Zonder enige datum blijft hij zichtbaar: liever in Afgerond dan nergens.
+  return (lijst || S.data.acties).filter(a => a.status === "Klaar" && (!afgerondMoment(a) || afgerondMoment(a) >= ma))
+    .sort((a, b) => (afgerondMoment(b) || 0) - (afgerondMoment(a) || 0));
 }
 
 /* Nummers blijven staan tot Ververs, zodat "nummer 3" in Claude en hier
@@ -31,8 +36,7 @@ function voorJouLijst() { const l = aanJouZet(); l.forEach(nummer); return l.sor
 /* soortVan uit voor-jou.js, met één verfijning voor het scherm: werk dat naar
  * buiten gaat (een mail, een post) krijgt "ik verstuur hem zelf" op de knop. */
 function soortVan(a) {
-  const s = P.soortVan(a.rij, namen(), NU);
-  return s === "check" && a.kanaal ? "check-extern" : s;
+  return onthoud("soort", a, () => { const s = P.soortVan(a.rij, namen(), NU); return s === "check" && a.kanaal ? "check-extern" : s; });
 }
 const SOORT_LABEL = {
   check: "Klaar om te checken", "check-extern": "Klaar om te checken", voorstel: "Voorstel", signaal: "Signaal",
@@ -58,11 +62,13 @@ function verhaalData() {
   const titel = ochtend ? "Terwijl je sliep" : "Vandaag";
   const A = S.data.acties;
   const na = (v) => { const d = dt(v); return !!d && d > van; };
-  const zelf = A.filter(a => a.status === "Klaar" && isAgentSlug(a.afgerondDoor) && na(a.afgerondOp || a.bijgewerkt));
+  const zelf = A.filter(a => a.status === "Klaar" && isAgentSlug(a.afgerondDoor) && afgerondMoment(a) && afgerondMoment(a) > van);
   const klaarAlle = A.filter(a => isAgentSlug(a.door) && na(a.aangemaakt) && (hoortBijMens(a) || (a.status === "Klaar" && !isAgentSlug(a.afgerondDoor))));
   const klaar = klaarAlle.filter(vanMij); const klaarAnder = klaarAlle.filter(a => !vanMij(a));
   const begon = A.filter(a => a.status === "Bezig" && isAgentNaam(a.eigenaar) && na(a.bezigSinds));
-  const feed = S.data.feed.filter(f => f.t > van);
+  // 's Ochtends telt alleen wat een werkmoment deed (de start en het slot van
+  // een ronde, en wat er 's nachts verscheen) — niet je eigen dagstart om 08:30.
+  const feed = S.data.feed.filter(f => f.t > van && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
   const agents = [...new Set([...klaar.map(werkAgent), ...zelf.map(a => a.afgerondDoor), ...begon.map(werkAgent), ...feed.map(f => f.ag)].filter(isAgentSlug))];
   return { titel, zelf, klaar, klaarAnder, begon, agents, van, feed };
 }
@@ -78,7 +84,7 @@ function verhaalZin(v) {
 function verhaalDetail(v) {
   const frag = v.klaar.concat(v.zelf).slice(0, 2).map((a, i) => {
     const ag = werkAgent(a) || a.afgerondDoor;
-    const wat = a.status === "Klaar" ? "rondde ‘" + a.titel + "’ af" : "zette ‘" + a.titel + "’ klaar";
+    const wat = a.status === "Klaar" && isAgentSlug(a.afgerondDoor) ? "rondde ‘" + a.titel + "’ af" : "zette ‘" + a.titel + "’ klaar";
     return "<b>" + esc(deNaam(ag, i === 0)) + "</b> " + esc(wat);
   });
   return frag.length ? frag.join("; ") + "." : "";
@@ -86,22 +92,32 @@ function verhaalDetail(v) {
 
 /* ── Werkmoment en klaar-check ──────────────────────────────────────── */
 function laatsteWerkmoment() { const s = P.werkmomentSporen(CTX); return s.length ? new Date(Math.max(...s)) : null; }
-function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneer(l) + ")" : ""); }
+/* Een spoor zonder tijd (alleen een datum) komt binnen als middernacht; noem
+ * dan de dag, geen verzonnen "00:00". */
+function wanneerSpoor(d) {
+  if (!d) return "";
+  if (d.getHours() === 0 && d.getMinutes() === 0 && d.getSeconds() === 0) return zelfdeDag(d, NU) ? "vandaag" : zelfdeDag(d, plusDagen(NU, -1)) ? "gisteren" : datumKort(d);
+  return wanneer(d);
+}
+function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneerSpoor(l) + ")" : ""); }
 const KC_LABEL = { start: "Zo regel je het in 2 minuten", vaker: "Laat je team vaker werken", ronde: "Loop ze één voor één door", login: "Inloggen" };
 let kcCache = null;
 function klaarCheck() {
   if (kcCache && kcCache.ctx === CTX && kcCache.n === S.data) return kcCache.kc;
   const kc = P.klaarCheck(CTX);
   kc.regels = kc.regels.map(r => Object.assign({}, r, { actie: r.actie ? [KC_LABEL[r.actie] || "Bekijk", r.actie] : null }));
-  if (!kc.notion && ingelogd()) kc.regels.push({ id: "afhandelen", k: "ok", telt: false, titel: "Je kunt afhandelen", tekst: jij() ? "Ingelogd als " + voornaam(jij()) + "." : "Je bent ingelogd." });
+  if (!kc.notion && kanSchrijven()) kc.regels.push({ id: "afhandelen", k: "ok", telt: false, titel: "Je kunt afhandelen", tekst: jij() ? "Ingelogd als " + voornaam(jij()) + "." : "Je bent ingelogd." });
+  if (!kc.notion && ingelogd() && !kanSchrijven()) kc.regels = kc.regels.map(r => r.id === "afhandelen" ? Object.assign({}, r, { titel: "Je sessie mag alleen lezen", tekst: "Log opnieuw in om af te handelen." }) : r);
   kc.recent = laatsteWerkmoment();
-  kc.stilNotion = kc.notion && kc.regels.some(x => x.id === "werkt" && (x.k === "nee" || x.k === "let"));
+  // Notion: een lege ronde meldt niets in de feed, dus hooguit "let op" (vaste-taken.js).
+  kc.stilNotion = kc.notion && kc.regels.some(x => x.id === "werkt" && x.k === "let");
   kcCache = { ctx: CTX, n: S.data, kc };
   return kc;
 }
 function checkSamenvatting(kc) {
+  if (kc.notion && !kc.totaal) return { kop: "Is je team klaar? Dat zien we hier niet", sub: "Je vaste taken en acties staan in " + naamElders("acties") + "." };
   const s = klaarSamenvatting(kc);
-  if (!kc.notion && kc.totaal === kc.ok && kc.recent && !kc.wachten) s.sub = "Je team werkt vanzelf. Laatst: " + wanneer(kc.recent) + ".";
+  if (!kc.notion && kc.totaal === kc.ok && kc.recent && !kc.wachten) s.sub = "Je team werkt vanzelf. Laatst: " + wanneerSpoor(kc.recent) + ".";
   return s;
 }
 

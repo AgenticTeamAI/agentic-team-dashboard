@@ -5,8 +5,18 @@ function v2Start(haken) {
   opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
+let v2Werkruimte = null;
 function v2Toon(ctx) {
+  // Een andere werkruimte in hetzelfde tabblad (een daglink van een ander
+  // bedrijf): niets van de vorige blijft staan.
+  const sleutel = ctx && ctx.bundle ? (ctx.bundle.klant || "") + "|" + ((ctx.bron && ctx.bron.instantieUrl) || "") : null;
+  if (v2Werkruimte !== null && sleutel !== v2Werkruimte) {
+    S.sessie = { afgehandeld: [] }; S.ronde = null; S.nummers = {}; S.volgNr = 1; S.nummerBundel = null; S.toast = null; S.naamGeheugen = "";
+    if (typeof _resetCatalogus === "function") _resetCatalogus();
+  }
+  v2Werkruimte = sleutel;
   CTX = ctx; NU = (ctx && ctx.today) || new Date();
+  if (ctx && ctx.schema) AGENTS = bouwAgents(ctx.schema);
   S.leeg = null; S.versieFout = null;
   // Na inloggen zet app.js de bedoelde route in de adresbalk; die geldt meteen,
   // zonder eerst Voor jou te laten zien.
