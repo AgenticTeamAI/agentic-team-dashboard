@@ -30,11 +30,13 @@ function verwachtingRegel(ag) {
  * fetch). Het blad zet je tekst plus het scherm waar je was in je eigen
  * mailprogramma; jij ziet alles en verstuurt hem zelf. */
 const FEEDBACK_ADRES = "support@agentic-team.ai";
+const FEEDBACK_MAX = 4000;
+function feedbackScherm() { return paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "") + " (#" + (S.route || "/") + ")"; }
+function feedbackDirect() { return ingelogd() && typeof V2_HAKEN.feedback === "function"; }
 function feedbackTekst(tekst) {
-  const scherm = paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "");
   const wanneer = new Date(); const tw = (n) => String(n).padStart(2, "0");
   return [String(tekst || "").trim(), "", "—",
-    "Scherm: " + scherm + " (#" + (S.route || "/") + ")",
+    "Scherm: " + feedbackScherm(),
     CTX && bedrijf() ? "Werkruimte: " + bedrijf() : null,
     "Moment: " + tw(wanneer.getDate()) + "-" + tw(wanneer.getMonth() + 1) + "-" + wanneer.getFullYear() + " " + tw(wanneer.getHours()) + ":" + tw(wanneer.getMinutes()),
   ].filter(r => r !== null).join("\n");
@@ -42,17 +44,41 @@ function feedbackTekst(tekst) {
 function feedbackMail(tekst) {
   return "mailto:" + FEEDBACK_ADRES + "?subject=" + encodeURIComponent("Feedback op het dashboard") + "&body=" + encodeURIComponent(feedbackTekst(tekst));
 }
+/* Versturen naar de site (die zet hem in de Notion-database Dashboard-feedback).
+ * Lukt het niet, dan blijft je tekst staan en wordt het blad de mailroute. */
+async function feedbackSturen(btn) {
+  const sh = S.sheet; if (!sh || sh.type !== "feedback" || isBezig("feedback")) return;
+  const tekst = (sh.tekst || "").trim();
+  if (!tekst) { sh.fout = "Schrijf eerst je feedback."; S.focusNa = "#sh-tekst"; render(); return; }
+  BEZIG.add("feedback"); zetBezig(btn);
+  let uit = null;
+  try { uit = await V2_HAKEN.feedback({ tekst, scherm: feedbackScherm() }); } catch (e) { uit = null; }
+  finally { BEZIG.delete("feedback"); }
+  if (S.sheet !== sh) return;
+  if (uit && uit.ok) { S.sheet = null; toast("Dank je! Je feedback is binnen."); render(); return; }
+  if (uit && uit.status === 400 && uit.body && uit.body.fout) sh.fout = uit.body.fout;
+  else { sh.terugval = true; sh.fout = "Versturen lukte nu niet. Mail hem hieronder, dan komt hij ook aan."; }
+  render();
+}
 function openMail(url) { if (V2_HAKEN.mail) { V2_HAKEN.mail(url); return; } try { window.location.href = url; } catch (e) { /* geen mailprogramma */ } }
 function renderSheet() {
   const sh = S.sheet; if (!sh) return ""; const a = sh.id && !sh.k ? actie(sh.id) : null;
   const wrap = (titel, inner, cls) => `<div class="scrim ${cls || "klein"}" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-titel" data-stop>${isDesk() ? "" : '<span class="greep" aria-hidden="true"></span>'}<div class="tussen"><h3 id="sheet-titel" tabindex="-1">${esc(titel)}</h3><button class="ikknop" data-act="sh-dicht" aria-label="Sluiten">${ic("sluit")}</button></div>${inner}</div></div>`;
   const annuleer = `<button class="knop stil" data-act="sh-dicht">Annuleer</button>`;
   const fout = sh.fout ? `<p class="fout" role="alert">${esc(sh.fout)}</p>` : "";
-  if (sh.type === "feedback") return wrap("Feedback geven", `<p class="klein stil">Wat werkt niet, wat mis je, wat kan beter? Eén zin is genoeg.</p>
-      <label class="lb" for="sh-tekst">Je feedback</label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: ik zie niet waar mijn vaste taken staan.">${esc(sh.tekst || "")}</textarea>
-      <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem: het dashboard stuurt zelf niets."}</p>
+  if (sh.type === "feedback") {
+    const veld = `<p class="klein stil">Wat werkt niet, wat mis je, wat kan beter? Eén zin is genoeg.</p>
+      <label class="lb" for="sh-tekst">Je feedback</label><textarea id="sh-tekst" data-sh="tekst" maxlength="${FEEDBACK_MAX}" placeholder="Bijvoorbeeld: ik zie niet waar mijn vaste taken staan.">${esc(sh.tekst || "")}</textarea>${fout}`;
+    // Ingelogd: rechtstreeks naar ons (Notion). Met een daglink praat het
+    // dashboard nooit met de site, dus dan — en als versturen mislukt — mail.
+    if (feedbackDirect() && !sh.terugval) return wrap("Feedback geven", `${veld}
+      <p class="verwachting">Je tekst gaat met het scherm waar je was en je naam naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee.</p>
+      <div class="rijtje">${knop(ic("bericht", "klein") + "Verstuur", "feedback-stuur", "", "prim")}${annuleer}</div>`);
+    return wrap("Feedback geven", `${veld}
+      <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem zelf."}${!sh.terugval && kanInloggen() && !ingelogd() ? " Log je in, dan kun je hem hier direct versturen." : ""}</p>
       <div class="rijtje">${knop(ic("bericht", "klein") + "Open in je mail", "feedback-mail", "", "prim")}${knop(ic("kopieer", "klein") + "Kopieer", "feedback-kopieer")}<button class="knop stil" data-act="sh-dicht">${sh.gemaild ? "Sluiten" : "Annuleer"}</button></div>
       <p class="klein stil">Gaat er geen mail open? Kopieer je tekst en mail hem naar <span class="mono" style="user-select:all;white-space:nowrap">${FEEDBACK_ADRES}</span>.</p>`);
+  }
   const ag = a ? werkAgent(a) : null; const kc = klaarCheck();
   switch (sh.type) {
     case "terug": return wrap("Terug naar " + deNaam(ag), `<label class="lb" for="sh-tekst">Wat moet ${esc(deNaam(ag))} anders doen?</label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: korter, en noem de offerte van vorige week.">${esc(sh.tekst || "")}</textarea>
@@ -746,12 +772,13 @@ function opKlik(e) {
     case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; meldFout(f); render(); }); } return; }
     case "kopieer": { const a = actie(d.id); if (a) kopieerNaar(a.werk || ""); return; }
     case "kopieer-tekst": kopieerNaar(d.t); return;
+    case "feedback-stuur": feedbackSturen(el); return;
     case "feedback-mail": if (!S.sheet) return; S.sheet.gemaild = true; render(); openMail(feedbackMail(S.sheet.tekst)); return;
     case "feedback-kopieer": if (!S.sheet) return; kopieerNaar(feedbackTekst(S.sheet.tekst)); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
-    case "thema": S.thema = isDonker() ? "licht" : "donker"; document.documentElement.dataset.thema = S.thema; render(); return;
+    case "thema": wisselThema(); render(); return;
     case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
     case "dismiss": S.ui.dismissed[d.k] = true; break;
     case "acties-baan": if (d.baan === "collega") { S.ui.openCollega = true; S.ui.acties.baan = "jij"; S.ui.acties.van = "mij"; } else S.ui.acties.baan = d.baan; S.ui.acties.toon = "open"; go("/acties"); break;

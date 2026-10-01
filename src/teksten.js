@@ -62,8 +62,18 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * browser houdt nog een kopie als terugval. Dat zijn twee bewaarplekken in
    * plaats van één, en een opsomming die dat niet noemt is niet uitputtend meer
    * — vandaar dat deze alinea beide noemt, plus dat de browser er één keer per
-   * sessie om vraagt. */
-  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+   * sessie om vraagt.
+   *
+   * Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
+   * brief-jurist-dashboard-v2-delta.md): de themakeuze komt erbij, alleen als
+   * die afwijkt van je systeeminstelling. Puur een weergavevoorkeur, blijft in
+   * de browser. */
+  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+  /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
+   * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
+   * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
+   * in onze eigen administratie (Notion-database Dashboard-feedback). */
+  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");

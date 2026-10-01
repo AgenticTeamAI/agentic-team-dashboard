@@ -159,6 +159,9 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     // wanneer, en het privacyblok op de site vertelt dat ook. Valt deze zin
     // weg, dan spreken twee eigen teksten elkaar tegen.
     expect(HTML).toContain("wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer");
+    // Dashboard v2: wat de browser erbij bewaart en wat er bij feedback naar ons gaat.
+    expect(HTML).toContain("je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling");
+    expect(HTML).toContain("Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst");
   });
 
   /* Twee zinnen uit de versie van vóór de dashboard-login. Ze waren toen waar
@@ -204,6 +207,7 @@ describe("geen telemetrie — het gebouwde artefact", () => {
       '"agentic-team-dashboard:naam"',           // f33: localStorage, de naam waaronder je werkt (per seat)
       '"agentic-team-dashboard:oauth"',          // sessionStorage, de OAuth-tokens (p10)
       '"agentic-team-dashboard:oauth-pkce"',     // sessionStorage, verifier + state tijdens de redirect
+      '"agentic-team-dashboard:thema"',          // v2: localStorage, licht/donker als het afwijkt van het systeem
     ]);
     // De twee p10-sleutels horen in sessionStorage, niet in localStorage:
     // tabblad dicht = weg, dezelfde eigenschap als de daglink. De

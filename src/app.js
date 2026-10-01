@@ -344,6 +344,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     exporteer: (formaat) => startExport(formaat),
     // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
     minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
+    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
+    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
   });
   wireNavigatie();
   const uitRedirect = await verwerkOauthRedirect();

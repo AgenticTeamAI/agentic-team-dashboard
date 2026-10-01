@@ -30,8 +30,22 @@ function tabs() {
   const n = CTX ? aantalVoorJou() : 0;
   return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]];
 }
-/* Licht of donker: standaard de systeeminstelling, de knop in de kop zet het
- * om voor dit bezoek. Onthouden kan niet zonder nieuwe opslagsleutel (i87). */
+/* Licht of donker: standaard de systeeminstelling. De knop in de kop wisselt;
+ * een keuze die afwijkt van het systeem onthoudt de browser (THEMA_KEY, in de
+ * privacytekst genoemd). Wissel je terug naar wat het systeem al doet, dan
+ * verdwijnt de sleutel weer en volgt het dashboard het systeem. */
+const THEMA_KEY = "agentic-team-dashboard:thema";
+function leesThema() { try { const v = window.localStorage.getItem(THEMA_KEY); return v === "licht" || v === "donker" ? v : null; } catch (e) { return null; } }
+function zetThema(v) {
+  S.thema = v || null;
+  try { if (v) document.documentElement.dataset.thema = v; else delete document.documentElement.dataset.thema; } catch (e) { /* geen document */ }
+}
+function wisselThema() {
+  const nieuw = isDonker() ? "licht" : "donker";
+  const volgSysteem = (nieuw === "donker") === systeemDonker();
+  zetThema(volgSysteem ? null : nieuw);
+  try { if (volgSysteem) window.localStorage.removeItem(THEMA_KEY); else window.localStorage.setItem(THEMA_KEY, nieuw); } catch (e) { /* privémodus: geldt dan alleen dit bezoek */ }
+}
 function systeemDonker() { try { return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); } catch (e) { return false; } }
 function isDonker() { return S.thema ? S.thema === "donker" : systeemDonker(); }
 function themaKnop() { const d = isDonker(); return `<button class="ikknop" data-act="thema" aria-label="Donker thema" aria-pressed="${d}" title="${d ? "Licht thema" : "Donker thema"}">${ic(d ? "zon" : "maan")}</button>`; }

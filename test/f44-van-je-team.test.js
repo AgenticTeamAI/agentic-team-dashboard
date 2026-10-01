@@ -275,6 +275,7 @@ describe("deeplink achter de login", () => {
   it("voegt geen opslagsleutel toe aan het artefact", () => {
     const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
     const sleutels = [...new Set(html.match(/"agentic-team-dashboard:[a-z-]+"/g) || [])];
-    expect(sleutels).toHaveLength(7);
+    // Acht sinds de themakeuze (dashboard v2, 1-10-2026; staat in de privacytekst).
+    expect(sleutels).toHaveLength(8);
   });
 });

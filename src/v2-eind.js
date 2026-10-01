@@ -2,6 +2,7 @@
 function v2Start(haken) {
   Object.assign(V2_HAKEN, haken || {});
   bedraad();
+  zetThema(leesThema());
   opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
@@ -43,8 +44,11 @@ function v2Reset() {
   S.ui.acties = { weergave: "lijst", van: "mij", toon: "open", zoek: "", baan: "jij" }; S.ui.team.filter = null; S.ui.gegevens = { zoek: "", filter: "" };
   S.ui.bewerk = null; S.ui.dismissed = {}; S.ui.meerOpen = {}; S.ui.det = {}; S.ui.hulp = { zoek: "", open: {}, vb: "stil", stap: -1 };
   S.scrollMap = {}; S.laatsteSleutel = null; kcCache = null;
-  S.thema = null; if (typeof document !== "undefined") delete document.documentElement.dataset.thema;
+  zetThema(null);
 }
+
+// Het thema staat al vóór de eerste tekenbeurt goed: geen lichte flits bij donker.
+zetThema(leesThema());
 
 globalThis.V2 = {
   start: v2Start, toon: v2Toon, leeg: v2Leeg, versieFout: v2VersieFout, hashGewijzigd: v2HashGewijzigd, render,

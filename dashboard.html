@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-SkqOoAWUcy1Hh5amnxoBHdXCyVu4xPwKVJJBe81Xr1s='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-JoYEm2OzsCqlWPk5GJldOKq2uIh8Or6WENnQxE8PHoA='">
 
 
 
@@ -3322,8 +3322,18 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * browser houdt nog een kopie als terugval. Dat zijn twee bewaarplekken in
    * plaats van één, en een opsomming die dat niet noemt is niet uitputtend meer
    * — vandaar dat deze alinea beide noemt, plus dat de browser er één keer per
-   * sessie om vraagt. */
-  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+   * sessie om vraagt.
+   *
+   * Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
+   * brief-jurist-dashboard-v2-delta.md): de themakeuze komt erbij, alleen als
+   * die afwijkt van je systeeminstelling. Puur een weergavevoorkeur, blijft in
+   * de browser. */
+  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+  /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
+   * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
+   * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
+   * in onze eigen administratie (Notion-database Dashboard-feedback). */
+  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
@@ -14211,8 +14221,22 @@ function tabs() {
   const n = CTX ? aantalVoorJou() : 0;
   return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]];
 }
-/* Licht of donker: standaard de systeeminstelling, de knop in de kop zet het
- * om voor dit bezoek. Onthouden kan niet zonder nieuwe opslagsleutel (i87). */
+/* Licht of donker: standaard de systeeminstelling. De knop in de kop wisselt;
+ * een keuze die afwijkt van het systeem onthoudt de browser (THEMA_KEY, in de
+ * privacytekst genoemd). Wissel je terug naar wat het systeem al doet, dan
+ * verdwijnt de sleutel weer en volgt het dashboard het systeem. */
+const THEMA_KEY = "agentic-team-dashboard:thema";
+function leesThema() { try { const v = window.localStorage.getItem(THEMA_KEY); return v === "licht" || v === "donker" ? v : null; } catch (e) { return null; } }
+function zetThema(v) {
+  S.thema = v || null;
+  try { if (v) document.documentElement.dataset.thema = v; else delete document.documentElement.dataset.thema; } catch (e) { /* geen document */ }
+}
+function wisselThema() {
+  const nieuw = isDonker() ? "licht" : "donker";
+  const volgSysteem = (nieuw === "donker") === systeemDonker();
+  zetThema(volgSysteem ? null : nieuw);
+  try { if (volgSysteem) window.localStorage.removeItem(THEMA_KEY); else window.localStorage.setItem(THEMA_KEY, nieuw); } catch (e) { /* privémodus: geldt dan alleen dit bezoek */ }
+}
 function systeemDonker() { try { return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); } catch (e) { return false; } }
 function isDonker() { return S.thema ? S.thema === "donker" : systeemDonker(); }
 function themaKnop() { const d = isDonker(); return `<button class="ikknop" data-act="thema" aria-label="Donker thema" aria-pressed="${d}" title="${d ? "Licht thema" : "Donker thema"}">${ic(d ? "zon" : "maan")}</button>`; }
@@ -15369,11 +15393,13 @@ function verwachtingRegel(ag) {
  * fetch). Het blad zet je tekst plus het scherm waar je was in je eigen
  * mailprogramma; jij ziet alles en verstuurt hem zelf. */
 const FEEDBACK_ADRES = "support@agentic-team.ai";
+const FEEDBACK_MAX = 4000;
+function feedbackScherm() { return paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "") + " (#" + (S.route || "/") + ")"; }
+function feedbackDirect() { return ingelogd() && typeof V2_HAKEN.feedback === "function"; }
 function feedbackTekst(tekst) {
-  const scherm = paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "");
   const wanneer = new Date(); const tw = (n) => String(n).padStart(2, "0");
   return [String(tekst || "").trim(), "", "—",
-    "Scherm: " + scherm + " (#" + (S.route || "/") + ")",
+    "Scherm: " + feedbackScherm(),
     CTX && bedrijf() ? "Werkruimte: " + bedrijf() : null,
     "Moment: " + tw(wanneer.getDate()) + "-" + tw(wanneer.getMonth() + 1) + "-" + wanneer.getFullYear() + " " + tw(wanneer.getHours()) + ":" + tw(wanneer.getMinutes()),
   ].filter(r => r !== null).join("\n");
@@ -15381,17 +15407,41 @@ function feedbackTekst(tekst) {
 function feedbackMail(tekst) {
   return "mailto:" + FEEDBACK_ADRES + "?subject=" + encodeURIComponent("Feedback op het dashboard") + "&body=" + encodeURIComponent(feedbackTekst(tekst));
 }
+/* Versturen naar de site (die zet hem in de Notion-database Dashboard-feedback).
+ * Lukt het niet, dan blijft je tekst staan en wordt het blad de mailroute. */
+async function feedbackSturen(btn) {
+  const sh = S.sheet; if (!sh || sh.type !== "feedback" || isBezig("feedback")) return;
+  const tekst = (sh.tekst || "").trim();
+  if (!tekst) { sh.fout = "Schrijf eerst je feedback."; S.focusNa = "#sh-tekst"; render(); return; }
+  BEZIG.add("feedback"); zetBezig(btn);
+  let uit = null;
+  try { uit = await V2_HAKEN.feedback({ tekst, scherm: feedbackScherm() }); } catch (e) { uit = null; }
+  finally { BEZIG.delete("feedback"); }
+  if (S.sheet !== sh) return;
+  if (uit && uit.ok) { S.sheet = null; toast("Dank je! Je feedback is binnen."); render(); return; }
+  if (uit && uit.status === 400 && uit.body && uit.body.fout) sh.fout = uit.body.fout;
+  else { sh.terugval = true; sh.fout = "Versturen lukte nu niet. Mail hem hieronder, dan komt hij ook aan."; }
+  render();
+}
 function openMail(url) { if (V2_HAKEN.mail) { V2_HAKEN.mail(url); return; } try { window.location.href = url; } catch (e) { /* geen mailprogramma */ } }
 function renderSheet() {
   const sh = S.sheet; if (!sh) return ""; const a = sh.id && !sh.k ? actie(sh.id) : null;
   const wrap = (titel, inner, cls) => `<div class="scrim ${cls || "klein"}" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-titel" data-stop>${isDesk() ? "" : '<span class="greep" aria-hidden="true"></span>'}<div class="tussen"><h3 id="sheet-titel" tabindex="-1">${esc(titel)}</h3><button class="ikknop" data-act="sh-dicht" aria-label="Sluiten">${ic("sluit")}</button></div>${inner}</div></div>`;
   const annuleer = `<button class="knop stil" data-act="sh-dicht">Annuleer</button>`;
   const fout = sh.fout ? `<p class="fout" role="alert">${esc(sh.fout)}</p>` : "";
-  if (sh.type === "feedback") return wrap("Feedback geven", `<p class="klein stil">Wat werkt niet, wat mis je, wat kan beter? Eén zin is genoeg.</p>
-      <label class="lb" for="sh-tekst">Je feedback</label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: ik zie niet waar mijn vaste taken staan.">${esc(sh.tekst || "")}</textarea>
-      <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem: het dashboard stuurt zelf niets."}</p>
+  if (sh.type === "feedback") {
+    const veld = `<p class="klein stil">Wat werkt niet, wat mis je, wat kan beter? Eén zin is genoeg.</p>
+      <label class="lb" for="sh-tekst">Je feedback</label><textarea id="sh-tekst" data-sh="tekst" maxlength="${FEEDBACK_MAX}" placeholder="Bijvoorbeeld: ik zie niet waar mijn vaste taken staan.">${esc(sh.tekst || "")}</textarea>${fout}`;
+    // Ingelogd: rechtstreeks naar ons (Notion). Met een daglink praat het
+    // dashboard nooit met de site, dus dan — en als versturen mislukt — mail.
+    if (feedbackDirect() && !sh.terugval) return wrap("Feedback geven", `${veld}
+      <p class="verwachting">Je tekst gaat met het scherm waar je was en je naam naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee.</p>
+      <div class="rijtje">${knop(ic("bericht", "klein") + "Verstuur", "feedback-stuur", "", "prim")}${annuleer}</div>`);
+    return wrap("Feedback geven", `${veld}
+      <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem zelf."}${!sh.terugval && kanInloggen() && !ingelogd() ? " Log je in, dan kun je hem hier direct versturen." : ""}</p>
       <div class="rijtje">${knop(ic("bericht", "klein") + "Open in je mail", "feedback-mail", "", "prim")}${knop(ic("kopieer", "klein") + "Kopieer", "feedback-kopieer")}<button class="knop stil" data-act="sh-dicht">${sh.gemaild ? "Sluiten" : "Annuleer"}</button></div>
       <p class="klein stil">Gaat er geen mail open? Kopieer je tekst en mail hem naar <span class="mono" style="user-select:all;white-space:nowrap">${FEEDBACK_ADRES}</span>.</p>`);
+  }
   const ag = a ? werkAgent(a) : null; const kc = klaarCheck();
   switch (sh.type) {
     case "terug": return wrap("Terug naar " + deNaam(ag), `<label class="lb" for="sh-tekst">Wat moet ${esc(deNaam(ag))} anders doen?</label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: korter, en noem de offerte van vorige week.">${esc(sh.tekst || "")}</textarea>
@@ -16085,12 +16135,13 @@ function opKlik(e) {
     case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; meldFout(f); render(); }); } return; }
     case "kopieer": { const a = actie(d.id); if (a) kopieerNaar(a.werk || ""); return; }
     case "kopieer-tekst": kopieerNaar(d.t); return;
+    case "feedback-stuur": feedbackSturen(el); return;
     case "feedback-mail": if (!S.sheet) return; S.sheet.gemaild = true; render(); openMail(feedbackMail(S.sheet.tekst)); return;
     case "feedback-kopieer": if (!S.sheet) return; kopieerNaar(feedbackTekst(S.sheet.tekst)); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
-    case "thema": S.thema = isDonker() ? "licht" : "donker"; document.documentElement.dataset.thema = S.thema; render(); return;
+    case "thema": wisselThema(); render(); return;
     case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
     case "dismiss": S.ui.dismissed[d.k] = true; break;
     case "acties-baan": if (d.baan === "collega") { S.ui.openCollega = true; S.ui.acties.baan = "jij"; S.ui.acties.van = "mij"; } else S.ui.acties.baan = d.baan; S.ui.acties.toon = "open"; go("/acties"); break;
@@ -16215,6 +16266,7 @@ function bedraad() {
 function v2Start(haken) {
   Object.assign(V2_HAKEN, haken || {});
   bedraad();
+  zetThema(leesThema());
   opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
@@ -16256,8 +16308,11 @@ function v2Reset() {
   S.ui.acties = { weergave: "lijst", van: "mij", toon: "open", zoek: "", baan: "jij" }; S.ui.team.filter = null; S.ui.gegevens = { zoek: "", filter: "" };
   S.ui.bewerk = null; S.ui.dismissed = {}; S.ui.meerOpen = {}; S.ui.det = {}; S.ui.hulp = { zoek: "", open: {}, vb: "stil", stap: -1 };
   S.scrollMap = {}; S.laatsteSleutel = null; kcCache = null;
-  S.thema = null; if (typeof document !== "undefined") delete document.documentElement.dataset.thema;
+  zetThema(null);
 }
+
+// Het thema staat al vóór de eerste tekenbeurt goed: geen lichte flits bij donker.
+zetThema(leesThema());
 
 globalThis.V2 = {
   start: v2Start, toon: v2Toon, leeg: v2Leeg, versieFout: v2VersieFout, hashGewijzigd: v2HashGewijzigd, render,
@@ -16614,6 +16669,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     exporteer: (formaat) => startExport(formaat),
     // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
     minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
+    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
+    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
   });
   wireNavigatie();
   const uitRedirect = await verwerkOauthRedirect();

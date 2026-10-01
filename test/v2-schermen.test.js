@@ -519,18 +519,71 @@ describe("v2 — generieke termen, thema en feedback", () => {
     g.V2.leeg({}); expect(inBeeld()).not.toMatch(/Claude|Notion/);
   });
 
-  it("de knop in de kop zet donker aan voor dit bezoek, en weer licht", () => {
-    open(maakCtx());
-    const k = () => $('.akop [data-act="thema"]');
-    expect(k().getAttribute("aria-label")).toBe("Donker thema");
-    expect(k().getAttribute("aria-pressed")).toBe("false");
-    k().click();
-    expect(document.documentElement.dataset.thema).toBe("donker");
-    expect(k().getAttribute("aria-pressed")).toBe("true");
-    k().click();
-    expect(document.documentElement.dataset.thema).toBe("licht");
-    g.V2._reset();
-    expect(document.documentElement.dataset.thema).toBeUndefined();
+  it("de knop in de kop wisselt het thema en onthoudt alleen een keuze die afwijkt van het systeem", () => {
+    const SLEUTEL = "agentic-team-dashboard:thema";
+    try {
+      open(maakCtx());
+      const k = () => $('.akop [data-act="thema"]');
+      expect(k().getAttribute("aria-label")).toBe("Donker thema");
+      expect(k().getAttribute("aria-pressed")).toBe("false");
+      k().click();
+      expect(document.documentElement.dataset.thema).toBe("donker");
+      expect(k().getAttribute("aria-pressed")).toBe("true");
+      expect(window.localStorage.getItem(SLEUTEL)).toBe("donker");
+      // Terug naar wat het systeem al doet (licht): de sleutel verdwijnt weer.
+      k().click();
+      expect(document.documentElement.dataset.thema).toBeUndefined();
+      expect(window.localStorage.getItem(SLEUTEL)).toBeNull();
+      // Een volgend bezoek begint meteen in de bewaarde keuze; rommel telt niet.
+      window.localStorage.setItem(SLEUTEL, "donker"); g.V2._reset(); open(maakCtx());
+      expect(document.documentElement.dataset.thema).toBe("donker");
+      expect(k().getAttribute("aria-pressed")).toBe("true");
+      window.localStorage.setItem(SLEUTEL, "<script>"); g.V2._reset(); open(maakCtx());
+      expect(document.documentElement.dataset.thema).toBeUndefined();
+    } finally { window.localStorage.removeItem(SLEUTEL); g.V2._reset(); }
+  });
+
+  it("feedback ingelogd: één verzending met tekst en scherm, daarna een bedankje; geen mail", async () => {
+    const ctx = maakCtx(); const mail = vi.fn();
+    const feedback = vi.fn(async () => ({ ok: true, status: 200, body: { ok: true } }));
+    window.location.hash = "#/acties"; g.V2.start({ mail, feedback }); g.V2.toon(ctx);
+    $('.akop [data-act="sheet"][data-type="feedback"]').click();
+    expect($(".sheet").textContent).toContain("Gegevens uit je werkruimte gaan niet mee");
+    $('[data-act="feedback-stuur"]').click();
+    expect($(".sheet .fout").textContent).toBe("Schrijf eerst je feedback.");
+    expect(feedback).not.toHaveBeenCalled();
+    const ta = $("#sh-tekst"); ta.value = "Ik mis een filter op klant."; ta.dispatchEvent(new Event("input", { bubbles: true }));
+    $('[data-act="feedback-stuur"]').click(); $('[data-act="feedback-stuur"]') && $('[data-act="feedback-stuur"]').click();
+    await wacht(() => expect($("[data-toast]")).not.toBeNull());
+    expect(feedback).toHaveBeenCalledTimes(1);
+    expect(feedback.mock.calls[0][0]).toEqual({ tekst: "Ik mis een filter op klant.", scherm: "Acties (#/acties)" });
+    expect($("[data-toast]").textContent).toContain("Je feedback is binnen");
+    expect($(".sheet")).toBeNull();
+    expect(mail).not.toHaveBeenCalled();
+    g.V2.start({ feedback: undefined });
+  });
+
+  it("feedback ingelogd maar de site faalt: je tekst blijft staan en mailen wordt de route", async () => {
+    const ctx = maakCtx(); const mail = vi.fn();
+    const feedback = vi.fn(async () => ({ ok: false, status: 404, body: null }));
+    window.location.hash = "#/"; g.V2.start({ mail, feedback }); g.V2.toon(ctx);
+    g.V2._S.sheet = { type: "feedback", tekst: "De knop doet niks." }; g.V2.render();
+    $('[data-act="feedback-stuur"]').click();
+    await wacht(() => expect($('[data-act="feedback-mail"]')).not.toBeNull());
+    expect($(".sheet .fout").textContent).toContain("Versturen lukte nu niet");
+    expect($("#sh-tekst").value).toBe("De knop doet niks.");
+    $('[data-act="feedback-mail"]').click();
+    expect(decodeURIComponent(mail.mock.calls[0][0])).toContain("De knop doet niks.");
+    g.V2.start({ feedback: undefined });
+  });
+
+  it("feedback met een daglink: nooit naar de site, alleen je eigen mail", () => {
+    const feedback = vi.fn();
+    window.location.hash = "#/"; g.V2.start({ feedback }); g.V2.toon(maakCtx({ schrijven: false }));
+    g.V2._S.sheet = { type: "feedback", tekst: "x" }; g.V2.render();
+    expect($('[data-act="feedback-stuur"]')).toBeNull();
+    expect($('[data-act="feedback-mail"]')).not.toBeNull();
+    g.V2.start({ feedback: undefined });
   });
 
   it("feedback: je tekst en het scherm gaan naar je eigen mail; het dashboard verstuurt niets", () => {
