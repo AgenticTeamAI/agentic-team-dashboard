@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.91.1
-//   registry updated: 2026-09-11
-//   bron-commit     : 248f9bc5e8f366354f592284ec0cb7300af26076
-//   geextraheerd op : 2026-09-25T06:49:20Z
+//   registryVersion : 1.92.0
+//   registry updated: 2026-09-30
+//   bron-commit     : a51b2ca230fb1549d663d5e68f40cb768dafaf8d
+//   geextraheerd op : 2026-10-01T07:02:20Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.91.1",
-  "registryUpdated": "2026-09-11",
-  "sourceCommit": "248f9bc5e8f366354f592284ec0cb7300af26076",
-  "extractedAt": "2026-09-25T06:49:20Z",
+  "registryVersion": "1.92.0",
+  "registryUpdated": "2026-09-30",
+  "sourceCommit": "a51b2ca230fb1549d663d5e68f40cb768dafaf8d",
+  "extractedAt": "2026-10-01T07:02:20Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -1488,7 +1488,33 @@ window.AGENTIC_TEAM_SCHEMA = {
             "Wacht",
             "Wacht op review",
             "Klaar"
-          ]
+          ],
+          "opties_meta": {
+            "Voorstel": {
+              "rol": "voorstel",
+              "klantlabel": "Voorstel"
+            },
+            "Open": {
+              "rol": "open",
+              "klantlabel": "Open"
+            },
+            "Bezig": {
+              "rol": "bezig",
+              "klantlabel": "Bezig"
+            },
+            "Wacht": {
+              "rol": "wacht",
+              "klantlabel": "Wacht"
+            },
+            "Wacht op review": {
+              "rol": "check",
+              "klantlabel": "Klaar om te checken"
+            },
+            "Klaar": {
+              "rol": "klaar",
+              "klantlabel": "Afgerond"
+            }
+          }
         },
         {
           "naam": "Type",
@@ -1639,7 +1665,36 @@ window.AGENTIC_TEAM_SCHEMA = {
             "wekelijks-wo",
             "wekelijks-vr",
             "maandelijks"
-          ]
+          ],
+          "opties_meta": {
+            "elk-uur": {
+              "klantlabel": "Elk uur"
+            },
+            "elke-2-uur": {
+              "klantlabel": "Om de 2 uur"
+            },
+            "elke-4-uur": {
+              "klantlabel": "Om de 4 uur"
+            },
+            "dagelijks": {
+              "klantlabel": "Elke dag"
+            },
+            "wekelijks-ma": {
+              "klantlabel": "Elke maandag"
+            },
+            "wekelijks-di": {
+              "klantlabel": "Elke dinsdag"
+            },
+            "wekelijks-wo": {
+              "klantlabel": "Elke woensdag"
+            },
+            "wekelijks-vr": {
+              "klantlabel": "Elke vrijdag"
+            },
+            "maandelijks": {
+              "klantlabel": "Elke 1e van de maand"
+            }
+          }
         },
         {
           "naam": "Volgorde",
