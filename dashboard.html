@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-QrA1pIExRgy1ye1Ub7TtC9cODiWtANisZ/8X5vwBxIw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-mppI1tG7BaQcAOzUx8v9Yk5V7ePVyo6qVDKGWA69GeY='">
 
 
 
@@ -121,8 +121,9 @@ h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .sprite{position:absolute;width:0;height:0;overflow:hidden}
 
 /* ---------- App en kop ---------- */
-.app{min-height:100vh;padding-bottom:96px}
-.app.met-fab{padding-bottom:150px}
+.app{min-height:100vh;padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px))}
+.app.met-fab{padding-bottom:calc(150px + env(safe-area-inset-bottom, 0px))}
+html{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));scroll-padding-top:72px}
 .akop{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top, 0px))}
 .merk{display:flex;flex-direction:column;min-width:0;flex:1}
 .merk b{font-size:17px;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -132,7 +133,7 @@ h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .ikknop:hover{background:var(--surface);border-color:var(--line)}
 .ikknop[aria-current="page"]{background:var(--surface);border-color:var(--line)}
 .avatar{width:40px;height:40px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;display:inline-grid;place-items:center;margin-left:4px}
-.inlogknop{border:1px solid var(--jij);background:var(--jij-zacht);color:var(--ink);font-weight:650;border-radius:999px;padding:7px 12px;font-size:13.5px;min-height:36px}
+.inlogknop{border:1px solid var(--jij);background:var(--jij-zacht);color:var(--ink);font-weight:650;border-radius:999px;padding:7px 12px;font-size:13.5px;min-height:40px}
 .dtabs{display:none;gap:4px;margin-left:10px}
 .dtab{border:0;background:transparent;padding:8px 12px;border-radius:10px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:7px;min-height:40px;white-space:nowrap}
 .dtab[aria-current="page"]{color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
@@ -202,7 +203,7 @@ a.link{min-height:40px}
 .pil.team{background:var(--team-zacht);border-color:transparent;color:var(--team-tekst)}
 .pil.ok{background:var(--klaar-zacht);border-color:transparent;color:var(--klaar)}
 .pil.status{font-family:var(--mono);font-size:11px;font-weight:500}
-button.knoppil{cursor:pointer;min-height:32px}
+button.knoppil{cursor:pointer;min-height:40px}
 .soort{font-size:12.5px;font-weight:700;color:var(--jij-tekst)}
 .soort.teamk{color:var(--team-tekst)}
 .soort.rood{color:var(--rood)}
@@ -580,6 +581,7 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- Desktop ---------- */
 @media (min-width:900px){
+  html{scroll-padding-bottom:24px}
   .app{padding-bottom:40px}
   .app.met-fab{padding-bottom:40px}
   .akop{padding-inline:20px}
@@ -12998,9 +13000,12 @@ function actieveModuleKeys() {
 /* De enige plek die de site aanroept: GET zonder body, POST mét. Geeft
  * {status, body} terug en gooit alleen op netwerkfouten. */
 async function modulesFetch(pad, body, tokenOverride) {
+  // Alleen een ingelogde sessie praat met de site: een daglink-token hoort
+  // daar nooit te komen, ook niet in de seconden na uitloggen.
   const token = tokenOverride !== undefined
     ? tokenOverride
-    : (huidigeBron && huidigeBron.token ? huidigeBron.token : "");
+    : (huidigeBron && huidigeBron.oauth && huidigeBron.token ? huidigeBron.token : "");
+  if (!token) return { status: 0, ok: false, body: null };
   const res = await fetch(`${MODULES_SITE_ORIGIN}${pad}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
@@ -14130,7 +14135,7 @@ function renderTabbalk() {
 }
 function renderBalk() {
   const tg = toegang();
-  if (tg === "daglink") return `<div class="balk daglink" role="status"><div><b>Je kijkt mee met je daglink:</b> alleen lezen.</div>
+  if (tg === "daglink") return `<div class="balk daglink"><div><b>Je kijkt mee met je daglink:</b> alleen lezen.</div>
     ${kanInloggen() ? `<div class="rijtje"><button class="knop prim" data-act="login">Inloggen om af te handelen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft. Je komt precies hier terug.</span></div>` : ""}</div>`;
   if (tg === "notion") {
     const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
@@ -14145,7 +14150,7 @@ function renderBalk() {
 function waarschuwingenHtml() {
   const l = (CTX && CTX.bundelWaarschuwingen) || [];
   if (!l.length) return "";
-  return `<div class="balk notion" role="status" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
+  return `<div class="balk notion" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
 }
 
 /* ---------- Voor jou ---------- */
@@ -14301,7 +14306,7 @@ function renderVoorJouNotion() {
 function meerKnop(a) { return `<button class="knop stil" data-act="sheet" data-type="meer" data-id="${esc(a.id)}">${ic("meer", "klein")}Meer</button>`; }
 function bladKnoppen(a) {
   const s = soortVan(a); const ag = werkAgent(a); const id = esc(a.id); const kc = klaarCheck();
-  if (!kanSchrijven()) return `<div class="balk daglink"><div>${toegang() === "daglink" ? "Je kijkt mee met je daglink. Om dit af te handelen log je in; je komt direct terug bij dit item." : "Afhandelen kan hier niet."}</div>${kanInloggen() ? `<button class="knop prim breed" data-act="login">Inloggen en afhandelen</button>` : ""}</div>`;
+  if (!kanSchrijven()) return `<div class="balk daglink"><div>${toegang() === "daglink" ? "Je kijkt mee met je daglink. Om dit af te handelen log je in; je komt direct terug bij dit item." : toegang() === "ingelogd" ? "Je sessie mag alleen lezen. Log opnieuw in om dit af te handelen; je komt direct terug bij dit item." : "Afhandelen kan hier niet."}</div>${kanInloggen() && toegang() !== "notion" ? `<button class="knop prim breed" data-act="login">Inloggen en afhandelen</button>` : ""}</div>`;
   const rij = (...k) => `<div class="knoprij">${k.join("")}</div>`;
   const terug = ag ? knop(ic("terug", "klein") + "Terug met opmerking", "sheet", `data-type="terug" data-id="${id}"`, "team") : "";
   switch (s) {
@@ -14671,7 +14676,7 @@ function renderVasteTaken() {
   const bron = bronVan(CTX, "ritmetaken");
   const elders = bron.toestand === "elders" || (toegang() === "notion" && !dataRijenVan(CTX, "ritmetaken"));
   if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "Notion")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team in Claude. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
-  const slot = toegang() === "daglink" ? `<div class="slotregel">${ic("slot", "klein")}<span>Aanpassen kan na inloggen.</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
+  const slot = !magSchrijven("ritmetaken") && !elders ? `<div class="slotregel">${ic("slot", "klein")}<span>${toegang() === "daglink" ? "Aanpassen kan na inloggen." : "Je sessie mag alleen lezen. Log opnieuw in om aan te passen."}</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
   if (!T.length) return `${checkRegel}<section class="leeg"><h3>Je team heeft nog geen vaste taken</h3>${slot}<p class="stil">Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen.</p>
     <p class="stil">Je zet ze in Claude aan:</p><div style="width:100%">${kopieerBlok("Zet mijn ritmetaken aan.")}</div><button class="knop" data-act="go" data-r="/team/klaar">Bekijk het stappenblad</button></section>${renderCatalogus()}`;
   const w = weekTelling();
@@ -14713,7 +14718,7 @@ function renderKlaarRegels(kc) {
   return `<div class="check">${kc.regels.map(r => {
     const act = r.actie ? (r.actie[1] === "login" ? 'data-act="login"' : r.actie[1] === "ronde" ? 'data-act="ronde-start"' : `data-act="naar-stappen" data-doel="${r.actie[1] === "vaker" ? "vaker" : "start"}"`) : "";
     const toon = r.actie && !(r.actie[1] === "login" && !kanInloggen());
-    return `<div class="cregel"><span class="cvorm ${r.k}" aria-label="${{ ok: "in orde", let: "let op", nee: "niet in orde", onbekend: "onbekend" }[r.k]}">${{ ok: "✓", let: "~", nee: "✗", onbekend: "?" }[r.k]}</span><div class="kol" style="gap:3px"><b>${esc(r.titel)}</b><p>${esc(r.tekst)}</p>${toon ? `<button class="link" ${act}>${esc(r.actie[0])} ${ic("chev", "klein")}</button>` : ""}</div></div>`;
+    return `<div class="cregel"><span class="cvorm ${r.k}" role="img" aria-label="${{ ok: "in orde", let: "let op", nee: "niet in orde", onbekend: "onbekend" }[r.k]}">${{ ok: "✓", let: "~", nee: "✗", onbekend: "?" }[r.k]}</span><div class="kol" style="gap:3px"><b>${esc(r.titel)}</b><p>${esc(r.tekst)}</p>${toon ? `<button class="link" ${act}>${esc(r.actie[0])} ${ic("chev", "klein")}</button>` : ""}</div></div>`;
   }).join("")}</div>`;
 }
 function werkmomentNaam() { return "Werkmoment " + (bedrijf() || "je bedrijf"); }
@@ -14776,7 +14781,8 @@ function renderResultaat() {
   const stap = Math.max(1, Math.ceil(piek / 4)); const max = stap * 4;
   const h = 150, x0 = 34, bw = 46, gap = 34, top = 14;
   const y = v => top + h - v / max * h;
-  let svg = `<svg class="grafiek" viewBox="0 0 ${x0 + W.length * (bw + gap)} ${top + h + 26}" role="img" aria-label="Afgerond per week, opgesplitst naar wie het deed">`;
+  const label = "Afgerond per week. " + W.map(w => `${w.label}: ${w.team} door je team, ${w.voor} door jou met voorwerk, ${w.zelf} door jou alleen`).join("; ") + ".";
+  let svg = `<svg class="grafiek" viewBox="0 0 ${x0 + W.length * (bw + gap)} ${top + h + 26}" role="img" aria-label="${esc(label)}">`;
   [0, 1, 2, 3, 4].map(i => i * stap).forEach(v => { svg += `<line class="rast" x1="${x0}" x2="${x0 + W.length * (bw + gap) - gap + 6}" y1="${y(v)}" y2="${y(v)}"/><text x="${x0 - 8}" y="${y(v) + 3}" text-anchor="end">${v}</text>`; });
   W.forEach((w, i) => {
     const x = x0 + 10 + i * (bw + gap); let acc = 0;
@@ -14790,7 +14796,7 @@ function renderResultaat() {
   return `<section class="vak" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">De afgelopen 4 weken · ${telwoord(tot, "ding", "dingen")} afgerond</h2>
     <div class="cijfers"><div class="teller"><b>${som("team")}</b><span>helemaal door je team</span></div><div class="teller"><b>${som("voor")}</b><span>door jou, met voorwerk van je team</span></div><div class="teller"><b>${som("zelf")}</b><span>door jou alleen</span></div></div>
     <div class="grafiekrij">${svg}<div class="legenda2"><span><i class="l-team"></i>helemaal door je team (zelf afgerond)</span><span><i class="l-voor"></i>jij, met voorwerk van je team</span><span><i class="l-zelf"></i>jij alleen</span></div></div>
-    <p class="klein stil">Rekenhulp: met ± <label class="sr" for="minuten">Minuten per stuk</label><select id="minuten" data-change="minuten" class="mono" style="min-height:32px;border:1px solid var(--veldrand);border-radius:6px;background:var(--surface)">${[10, 15, 25, 45, 60].concat([10, 15, 25, 45, 60].includes(min) ? [] : [min]).map(m => `<option value="${m}" ${m === min ? "selected" : ""}>${m}</option>`).join("")}</select> minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p></section>
+    <p class="klein stil">Rekenhulp: met ± <label class="sr" for="minuten">Minuten per stuk</label><select id="minuten" data-change="minuten" class="mono" style="min-height:40px;border:1px solid var(--veldrand);border-radius:6px;background:var(--surface)">${[10, 15, 25, 45, 60].concat([10, 15, 25, 45, 60].includes(min) ? [] : [min]).map(m => `<option value="${m}" ${m === min ? "selected" : ""}>${m}</option>`).join("")}</select> minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p></section>
     ${cv && cv.aanwezig && typeof cv.pct === "number" ? `<section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Klopte het werk? · alleen intern</h2><p>Van de ${telwoord(cv.autonoom, "actie", "acties")} die je team de afgelopen ${cv.vensterDagen} dagen zelf afrondde, bleef ${Math.round(cv.pct)}% zonder correctie staan.</p></section>` : ""}
     ${gebruik.length ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><h2 class="vakkop">Het meest ingezet · afgelopen ${telwoord(CTX.periodWeeks || 12, "week", "weken")}</h2>
       ${gebruik.map(x => `<div class="tussen">${agKnop(x.slug)}<span class="mono">${x.value}×</span></div>`).join("")}</section>` : ""}`;
@@ -14924,6 +14930,9 @@ function renderLijst(k) {
     ${lijst.length > 300 ? `<p class="klein stil">De eerste 300 van ${lijst.length}. Zoek om de rest te vinden.</p>` : ""}</div></div>`;
 }
 
+/* veldInvoerHtml (data-bewerken.js) geeft het veld geen naam; die zetten we erop. */
+function metNaam(html, naam) { return html.replace(/<(input|select|textarea)(?![^>]*aria-label)/, `<$1 aria-label="${esc(naam)}"`); }
+
 /* ---------- Eén rij als pagina ---------- */
 function veldWaardeHtml(v, w) {
   const t = dataCelTekst(w);
@@ -14946,7 +14955,7 @@ function veldRij(k, r, v) {
   const e = S.ui.bewerk; const bewerk = e && e.k === k && e.id === r.__entryId && e.veld === v.naam;
   const w = getField(r, v.naam); const t = dataCelTekst(w);
   const lang = t && isLangeTekst(v, t);
-  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${veldInvoerHtml(v, w, CTX)}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
+  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${metNaam(veldInvoerHtml(v, w, CTX), v.naam)}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
   const wijzig = magSchrijven(k) && v.type !== "relatie" ? ` <button class="hoe wijzig" data-act="veld-wijzig" data-k="${k}" data-id="${esc(r.__entryId)}" data-v="${esc(v.naam)}" aria-label="${esc(v.naam)} wijzigen">wijzig</button>` : "";
   return `<dt>${esc(v.naam)}</dt><dd class="${lang ? "lang" : ""}">${lang ? `<span style="flex:1 1 100%">${esc(t)}</span>` : veldWaardeHtml(v, w)}${wijzig}</dd>`;
 }
@@ -15144,13 +15153,13 @@ function hulpSecties() {
       <p class="contextregel"><b>Vuistregel:</b> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
       <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <b>Geef aan je team</b>.</p>${naar("Naar Acties", "/acties")}`],
     ["daglink", "Daglink of inloggen?", () => `
-      <div class="tabel2" role="table" aria-label="Daglink of inloggen"><div class="h" role="columnheader"></div><div class="h" role="columnheader">Daglink</div><div class="h" role="columnheader">Inloggen</div>
-       <div class="h" role="rowheader">Waar</div><div>De link in je dagstart</div><div>dashboard.agentic-team.ai</div>
-       <div class="h" role="rowheader">Hoe lang</div><div>24 uur</div><div>Tot je dit tabblad sluit</div>
-       <div class="h" role="rowheader">Kijken</div><div>Ja</div><div>Ja</div>
-       <div class="h" role="rowheader">Afhandelen</div><div>Nee</div><div>Ja</div>
-       <div class="h" role="rowheader">Vaste taken aanpassen</div><div>Nee</div><div>Ja</div>
-       <div class="h" role="rowheader">Collega's uitnodigen</div><div>Nee</div><div>De beheerder</div></div>
+      <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
+       <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
+       <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+       <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
+       <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
+       <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
+       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table></div>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="klein stil">Kopieer een zin en plak hem in Claude.</p>
@@ -15308,7 +15317,7 @@ function renderSheet() {
       const { titel, extra } = nieuwVelden(sh.k); const ouder = sh.ouder ? rijTitel(sh.ouder, sh.id) : null;
       return wrap("Nieuwe " + domeinEnkel(sh.k), `<form class="kol" style="gap:10px" data-v2-nieuw>
         <div><label class="lb" for="sh-nieuw-titel">${esc(titel ? titel.naam : "Naam")}</label><input type="text" id="sh-nieuw-titel" name="${esc(titel ? titel.naam : "Naam")}" data-veldtype="titel" maxlength="200"></div>
-        ${extra.length ? `<div class="twee-velden">${extra.map(v => `<div><label class="lb">${esc(v.naam)} <span class="stil klein">(mag leeg)</span></label>${veldInvoerHtml(v, undefined, CTX)}</div>`).join("")}</div>` : ""}
+        ${extra.length ? `<div class="twee-velden">${extra.map(v => `<div><span class="lb" aria-hidden="true">${esc(v.naam)} <span class="stil klein">(mag leeg)</span></span>${metNaam(veldInvoerHtml(v, undefined, CTX), v.naam)}</div>`).join("")}</div>` : ""}
         ${ouder ? `<p class="klein stil">Komt meteen bij ${esc(ouder)} te staan.</p>` : ""}<p class="klein stil">De rest vul je daarna aan, of laat je je team aanvullen.</p>${fout}
         <div class="rijtje"><button class="knop prim" type="submit">Opslaan</button>${annuleer}</div></form>`);
     }
@@ -15326,7 +15335,7 @@ function toastKnoppen(t) { return `${t.login ? `<button data-act="login">Inlogge
 function renderToast(inline) {
   const t = S.toast; if (!t) return "";
   if (inline) return `<div class="toast-inline" data-toast><span>${ic("vink", "klein")} ${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
-  return `<div class="toast ${t.fout ? "fout" : ""}" data-toast role="status"><span>${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
+  return `<div class="toast ${t.fout ? "fout" : ""}" data-toast><span>${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
 }
 /* 8 seconden; pauzeert zolang je muis of focus erop staat. De tekst gaat ook
  * naar de vaste voorleesregel (#live). */
@@ -15342,7 +15351,8 @@ function toast(tekst, opts) {
 }
 
 /* ---------- Tekenen ---------- */
-function itemRoute(r) { const p = (r || S.route).split("/").filter(Boolean); return ((p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een") || (p[0] === "acties" && p[1])) ? decodeURIComponent(p[1]) : null; }
+function ontcijfer(t) { try { return decodeURIComponent(t); } catch (e) { return t; } }
+function itemRoute(r) { const p = (r || S.route).split("/").filter(Boolean); return ((p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een") || (p[0] === "acties" && p[1])) ? ontcijfer(p[1]) : null; }
 function basisRoute() { const p = parts(); if (!itemRoute()) return S.route; if (isDesk() && p[0] === "voor-jou") return S.route; return S.terugNaar || (p[0] === "acties" ? "/acties" : "/"); }
 function scrollSleutel() { const p = parts(); if (p[1] === "een-voor-een") return "/ronde/" + (S.ronde ? S.ronde.i : 0); if (isDesk() && p[0] === "voor-jou") return "/"; return basisRoute(); }
 function inlineToastModus() { return !!S.toast && ((parts()[1] === "een-voor-een") || (!isDesk() && !!itemRoute())); }
@@ -15395,6 +15405,7 @@ function focusSleutel(el) {
   if (!el || !el.dataset) return null; if (el.id) return "#" + cssEsc(el.id); const d = el.dataset; if (!d.act) return null;
   return `[data-act="${d.act}"]` + ["id", "f", "type", "r", "v", "k", "t", "i", "doel"].filter(k => d[k] != null).map(k => `[data-${k}="${cssEsc(d[k])}"]`).join("");
 }
+function hadSheetVoor() { return !!document.querySelector('.scrim[data-act="scrim"]'); }
 function render() {
   const root = document.getElementById("root"); if (!root) return;
   if (CTX && S.dataCtx !== CTX) { S.data = bouwData(); S.dataCtx = CTX; kcCache = null; }
@@ -15404,6 +15415,7 @@ function render() {
   if (inRoot && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) { try { sel = [ae.selectionStart, ae.selectionEnd]; } catch (e) { /* geen selectie */ } }
   if (S.laatsteSleutel) S.scrollMap[S.laatsteSleutel] = window.scrollY || 0;
   const pk = document.getElementById("paneel-kolom"); const pkTop = pk ? pk.scrollTop : 0; const oudeRoute = S.vorigeRoute;
+  if (S.sheet && !hadSheetVoor() && !S.sheetOpener && sleutel) S.sheetOpener = sleutel;
   const sheetEl = document.querySelector(".scrim .sheet"); const sheetTop = sheetEl ? sheetEl.scrollTop : 0; const hadSheet = !!document.querySelector('.scrim[data-act="scrim"]');
   const concept = bewaarFormulieren(root);
   if (CTX && parts()[1] === "een-voor-een" && !S.ronde) { const l = voorJouLijst(); S.ronde = { ids: l.map(a => a.id), i: 0, start: Date.now(), naarTeam: [] }; }
@@ -15470,7 +15482,7 @@ function zetFormulierenTerug(root, concept) {
 function paginaTitel() {
   if (!CTX) return "Hulp — Je team";
   const t = tabVan(); const id = itemRoute(); const a = id && actie(id);
-  if (a) return a.titel + " — Je team";
+  if (a) return "Actie — Je team";
   const naam = { voorjou: "Voor jou", acties: "Acties", team: "Team", gegevens: "Gegevens", hulp: "Hulp", beheer: "Beheer" }[t] || "Je team";
   const n = aantalVoorJou();
   return (n && t === "voorjou" ? `(${n}) ` : "") + naam + " — Je team";
@@ -15489,8 +15501,16 @@ function routeUitHash(h) {
   if (r === "/klaar") return "/team/klaar";
   if (r === "/ronde") return "/voor-jou/een-voor-een";
   if (r === "/prestaties" || r.startsWith("/detail")) return "/team/resultaat";
-  if ((m = /^\/opdracht(?:\/([a-z-]+))?$/.exec(r))) { S.opdrachtVoor = { ag: m[1] || null }; return "/acties"; }
+  if (/^\/opdracht(?:\/[a-z-]+)?$/.test(r)) return "/acties";
   return r;
+}
+/* #/opdracht[/specialist] opent één keer het opdrachtblad; daarna staat er
+ * #/acties in de adresbalk, zodat het blad niet bij elke hertekening opnieuw opent. */
+function opdrachtUitHash() {
+  const m = /^#\/opdracht(?:\/([a-z-]+))?\/?$/.exec(String(window.location.hash || ""));
+  if (!m) return;
+  S.opdrachtVoor = { ag: m[1] || null };
+  try { history.replaceState(null, "", window.location.pathname + window.location.search + "#/acties"); } catch (e) { /* geen history */ }
 }
 function zetHash(r) {
   try { if (window.location.hash !== "#" + r) window.location.hash = r; } catch (e) { /* geen location (tests) */ }
@@ -15527,6 +15547,7 @@ function foutTekst(e) { return (e && e.message) || "Dat is niet gelukt."; }
  * meteen bij: je komt daarna terug op dezelfde plek. */
 function meldFout(e) {
   if (e && (e.oauthVerlopen || e.daglinkVerlopen)) toast(foutTekst(e), { fout: true, login: kanInloggen() });
+  else if (e && e.status === 403) toast("Je sessie mag hier alleen lezen. Log opnieuw in om af te handelen.", { fout: true, login: kanInloggen() });
   else toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true });
 }
 function zetBezig(btn) { if (!btn) return; btn.setAttribute("aria-disabled", "true"); btn.classList.add("bezig"); if (!btn.querySelector(".draai")) btn.insertAdjacentHTML("afterbegin", '<span class="draai" aria-hidden="true"></span>'); }
@@ -15576,7 +15597,15 @@ async function uitvoeren(id, f, arg, btn) {
       const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "acties", data: plan.data });
       nieuw = res && res.entry && res.entry.entryId;
       const vorige = vorigeWaarden(a.rij, plan.ouder);
-      const ant = await snelWijzig(CTX, "acties", id, plan.ouder);
+      let ant;
+      try { ant = await snelWijzig(CTX, "acties", id, plan.ouder); }
+      catch (e2) {
+        // De vervolgactie staat er al; laat hem zien en zeg wat er nog open staat.
+        if (nieuw) pasToe("acties", { entry: res.entry });
+        S.sheet = null;
+        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null });
+        render(); return;
+      }
       if (nieuw) toepassen.push({ entry: res.entry });
       toepassen.push({ entry: ant && ant.entry });
       melding = spNaam ? "Doorgegeven aan " + deNaam(opts.ag) + ". Die pakt het op bij het volgende werkmoment." : plan.melding;
@@ -15640,7 +15669,7 @@ async function nieuweOpdracht(sh, btn) {
     toast(tekst, { undo: nid ? async () => { await verwijderEntry(CTX, "acties", nid); pasToe("acties", { weg: nid }); } : null, bekijk: nid ? "/acties/" + nid : null });
     pasToe("acties", { entry: res && res.entry });
     render();
-  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function opmerkingPlaatsen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const a = actie(sh.id);
@@ -15655,7 +15684,7 @@ async function opmerkingPlaatsen(sh, btn) {
     S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
     toast("Opmerking geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function notitieOpslaan(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const onderwerp = (sh.onderwerp || "").trim();
@@ -15670,7 +15699,7 @@ async function notitieOpslaan(sh, btn) {
     S.sheet = null;
     toast("Notitie geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function nieuweRij(form, btn) {
   const sh = S.sheet; const k = sh.k; const d = domeinVan(k);
@@ -15688,9 +15717,9 @@ async function nieuweRij(form, btn) {
     toast(naam + " is toegevoegd.", { undo: nid ? async () => { await verwijderEntry(CTX, k, nid); pasToe(k, { weg: nid }); if (itemOpGegevens(k, nid)) go("/gegevens/" + k); } : null });
     pasToe(k, { entry: res && res.entry }); render();
     void d;
-  } catch (e) { sh.fout = foutTekst(e) + " Je invoer staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je invoer staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
-function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && decodeURIComponent(p[2] || "") === id; }
+function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && ontcijfer(p[2] || "") === id; }
 async function rijVerwijderen(sh, btn) {
   const t = rijTitel(sh.k, sh.id) || "";
   zetBezig(btn);
@@ -15699,7 +15728,7 @@ async function rijVerwijderen(sh, btn) {
     S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
     toast("‘" + t + "’ is verwijderd.");
     pasToe(sh.k, { weg: sh.id }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function veldOpslaan(form) {
   const e = S.ui.bewerk; if (!e) return;
@@ -15713,7 +15742,7 @@ async function veldOpslaan(form) {
     S.ui.bewerk = null; S.focusNa = `[data-act="veld-wijzig"][data-v="${cssEsc(e.veld)}"]`;
     toast(e.veld + " bijgewerkt.", { undo: async () => { const t = await snelWijzig(CTX, e.k, e.id, vorige); pasToe(e.k, { entry: t && t.entry }); } });
     pasToe(e.k, { entry: ant && ant.entry }); render();
-  } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; render(); }
+  } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; meldFout(err); render(); }
 }
 async function taakSchrijf(t, patch, melding, undoPatch) {
   try {
@@ -15738,7 +15767,7 @@ async function zetAan(sleutel, btn) {
       } : null,
     });
     pasToe("ritmetaken", { entry: ant && ant.entry }); render();
-  } catch (e) { toast("Aanzetten lukte niet: " + foutTekst(e), { fout: true }); render(); }
+  } catch (e) { meldFout(e); render(); }
 }
 async function kopieerNaar(t) {
   const ok = await kopieerTekst(t);
@@ -15847,16 +15876,16 @@ function opKlik(e) {
     case "sh-set": S.sheet[d.k] = d.v; if (d.k === "ag") S.sheet.mens = null; if (d.k === "mens") S.sheet.ag = null; S.sheet.fout = ""; break;
     case "sh-kies": kiesInSheet(d.v, el); return;
     case "sh-ok": bevestigSheet(el); return;
-    case "undo": if (kanSchrijven() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { toast("Ongedaan maken lukte niet: " + foutTekst(f), { fout: true }); render(); }); } return;
+    case "undo": if (kanSchrijven() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return;
     case "toast-dicht": S.toast = null; break;
     case "toast-bekijk": if (S.toast && S.toast.bekijk) { const b = S.toast.bekijk; S.toast = null; if (!itemRoute()) S.terugNaar = S.route; const keep = S.terugNaar; go(b); S.terugNaar = keep; } break;
-    case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; toast("Ongedaan maken lukte niet: " + foutTekst(f), { fout: true }); render(); }); } return; }
+    case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; meldFout(f); render(); }); } return; }
     case "kopieer": { const a = actie(d.id); if (a) kopieerNaar(a.werk || ""); return; }
     case "kopieer-tekst": kopieerNaar(d.t); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
-    case "ververs": S.nummerBundel = null; if (V2_HAKEN.ververs) V2_HAKEN.ververs(); toast("Ververst. De nummers zijn opnieuw geteld."); break;
+    case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
     case "dismiss": S.ui.dismissed[d.k] = true; break;
     case "acties-baan": if (d.baan === "collega") { S.ui.openCollega = true; S.ui.acties.baan = "jij"; S.ui.acties.van = "mij"; } else S.ui.acties.baan = d.baan; S.ui.acties.toon = "open"; go("/acties"); break;
     case "av": S.ui.acties[d.k] = d.v; break;
@@ -15916,9 +15945,13 @@ function opToets(e) {
   if (e.key === "Escape") { if (S.sheet) { S.sheet = null; render(); e.preventDefault(); return; } if (itemRoute() && !(isDesk() && parts()[0] === "voor-jou")) { sluitBlad(); render(); } return; }
   const tag = (e.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag) || e.target.isContentEditable) return;
   if (!CTX || S.sheet || toegang() === "notion") return;
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }); } return; }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
   if (!isDesk() || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest && e.target.closest(".akop, .dtabs, .tabbalk")) return;
+  // Alleen als je op een item staat (kaart, blad, één voor één) of nergens op:
+  // dan schrijft een losse letter nooit per ongeluk vanaf een link of uitklap.
+  const t = e.target; const opItem = t === document.body || t === document.documentElement || (t.closest && t.closest("[data-kaart], .blad, .ronde, #blad-titel"));
+  if (!opItem) return;
   const inRonde = parts()[1] === "een-voor-een";
   if (/^[1-9]$/.test(e.key)) { if (inRonde || tabVan() !== "voorjou") return; const a = voorJouLijst().find(x => S.nummers[x.id] === Number(e.key)); if (a) { go("/voor-jou/" + a.id); S.focusNa = "#blad-titel"; render(); } return; }
   if (inRonde && e.key === "j") { if (S.ronde) { S.ronde.i++; S.toast = null; S.focusNa = "#blad-titel"; render(); } return; }
@@ -15926,9 +15959,10 @@ function opToets(e) {
   const kaart = e.target.closest && e.target.closest("[data-kaart]");
   const cur = kaart ? actie(kaart.dataset.kaart) : huidigItem(); if (!cur) return;
   S.sheetOpener = focusSleutel(document.activeElement) || "#blad-titel";
-  if (e.key === "g" && kanSchrijven()) { const f = primair(cur); if (f) f(); }
-  else if (e.key === "t" && kanSchrijven() && ["check", "check-extern"].includes(soortVan(cur)) && werkAgent(cur)) { S.sheet = { type: "terug", id: cur.id, tekst: "" }; render(); }
-  else if ((e.key === "j" || e.key === "k") && tabVan() === "voorjou") { const l = voorJouLijst(); const i = l.findIndex(x => x.id === cur.id); const n = l[i + (e.key === "j" ? 1 : -1)]; if (n) { go("/voor-jou/" + n.id); S.focusNa = "#blad-titel"; render(); } }
+  const toets = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (toets === "g" && kanSchrijven()) { const f = primair(cur); if (f) f(); }
+  else if (toets === "t" && kanSchrijven() && ["check", "check-extern"].includes(soortVan(cur)) && werkAgent(cur)) { S.sheet = { type: "terug", id: cur.id, tekst: "" }; render(); }
+  else if ((toets === "j" || toets === "k") && tabVan() === "voorjou") { const l = voorJouLijst(); const i = l.findIndex(x => x.id === cur.id); const n = l[i + (toets === "j" ? 1 : -1)]; if (n) { go("/voor-jou/" + n.id); S.focusNa = "#blad-titel"; render(); } }
 }
 function opToggle(e) { const el = e.target; if (!(el instanceof HTMLDetailsElement)) return; if (el.dataset.hsec) S.ui.hulp.open[el.dataset.hsec] = el.open; if (el.id) S.ui.det[el.id] = el.open; }
 function toastPauze(aan) { return (e) => { if (S.toast && e.target.closest && e.target.closest("[data-toast]")) { if (aan) S.toast.pauze = true; else if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-toast]"))) { S.toast.pauze = false; S.toast.start = Math.max(S.toast.start, Date.now() - 5000); } } }; }
@@ -15963,6 +15997,7 @@ function bedraad() {
 function v2Start(haken) {
   Object.assign(V2_HAKEN, haken || {});
   bedraad();
+  opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
 function v2Toon(ctx) {
@@ -15978,6 +16013,7 @@ function v2Toon(ctx) {
 function v2Leeg(o) { CTX = null; S.data = null; S.dataCtx = null; S.leeg = o || null; S.versieFout = null; S.route = routeUitHash(window.location.hash); render(); }
 function v2VersieFout(o) { CTX = null; S.data = null; S.dataCtx = null; S.versieFout = o || {}; render(); }
 function v2HashGewijzigd() {
+  opdrachtUitHash();
   const r = routeUitHash(window.location.hash);
   if (r !== S.route) {
     S.route = r; S.sheet = null; S.ui.bewerk = null;
@@ -15996,6 +16032,7 @@ function v2Reset() {
 
 globalThis.V2 = {
   start: v2Start, toon: v2Toon, leeg: v2Leeg, versieFout: v2VersieFout, hashGewijzigd: v2HashGewijzigd, render,
+  meld: (tekst, o) => { toast(tekst, o); render(); },
   // Voor de tests: de toestand en een paar afgeleide lijsten, alleen-lezen bedoeld.
   _S: S, _reset: v2Reset, _aanJouZet: () => aanJouZet(), _banen: () => banen(), _routeUitHash: routeUitHash,
 };
@@ -16230,10 +16267,15 @@ function uitloggen() {
   vergeetOauthSessie();
   resetOauthVernieuwing();
   naamBijLadenGedaan = null;
-  const daglink = restoreDaglink();
-  if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
+  // Meteen weg: de bundel, de bron en wat de site over de licentie vertelde.
+  // Anders blijven de schrijfknoppen en Beheer even werken met de oude sessie.
   currentBundle = null;
   huidigeBron = null;
+  window.__dashboardCtx = undefined;
+  void laadModuleOverzicht(null);
+  void laadTeam(null);
+  const daglink = restoreDaglink();
+  if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
 }
 
@@ -16284,8 +16326,16 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
     const bundle = await loadWerkruimteBundle(bron);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
     laadBeheer();
+    return true;
   } catch (err) {
     console.error(err);
+    // Verversen of herladen na een schrijfactie dat mislukt: de werkruimte die
+    // je zag blijft staan, met een melding. Alleen een sessie die op is, gaat
+    // terug naar inloggen.
+    if (behoudRoute && currentBundle && !err.oauthVerlopen && !err.daglinkVerlopen) {
+      V2.meld(err.message + " Wat je ziet, is de stand van daarvoor.", { fout: true });
+      return false;
+    }
     currentBundle = null;
     if (err.oauthVerlopen) {
       // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
@@ -16331,7 +16381,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   V2.start({
     login: startLogin,
     uitloggen,
-    ververs: () => { if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true }); },
+    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
     exporteer: (formaat) => startExport(formaat),
     // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
     minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },

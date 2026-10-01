@@ -219,7 +219,7 @@ function renderVasteTaken() {
   const bron = bronVan(CTX, "ritmetaken");
   const elders = bron.toestand === "elders" || (toegang() === "notion" && !dataRijenVan(CTX, "ritmetaken"));
   if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "Notion")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team in Claude. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
-  const slot = toegang() === "daglink" ? `<div class="slotregel">${ic("slot", "klein")}<span>Aanpassen kan na inloggen.</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
+  const slot = !magSchrijven("ritmetaken") && !elders ? `<div class="slotregel">${ic("slot", "klein")}<span>${toegang() === "daglink" ? "Aanpassen kan na inloggen." : "Je sessie mag alleen lezen. Log opnieuw in om aan te passen."}</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
   if (!T.length) return `${checkRegel}<section class="leeg"><h3>Je team heeft nog geen vaste taken</h3>${slot}<p class="stil">Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen.</p>
     <p class="stil">Je zet ze in Claude aan:</p><div style="width:100%">${kopieerBlok("Zet mijn ritmetaken aan.")}</div><button class="knop" data-act="go" data-r="/team/klaar">Bekijk het stappenblad</button></section>${renderCatalogus()}`;
   const w = weekTelling();
@@ -261,7 +261,7 @@ function renderKlaarRegels(kc) {
   return `<div class="check">${kc.regels.map(r => {
     const act = r.actie ? (r.actie[1] === "login" ? 'data-act="login"' : r.actie[1] === "ronde" ? 'data-act="ronde-start"' : `data-act="naar-stappen" data-doel="${r.actie[1] === "vaker" ? "vaker" : "start"}"`) : "";
     const toon = r.actie && !(r.actie[1] === "login" && !kanInloggen());
-    return `<div class="cregel"><span class="cvorm ${r.k}" aria-label="${{ ok: "in orde", let: "let op", nee: "niet in orde", onbekend: "onbekend" }[r.k]}">${{ ok: "✓", let: "~", nee: "✗", onbekend: "?" }[r.k]}</span><div class="kol" style="gap:3px"><b>${esc(r.titel)}</b><p>${esc(r.tekst)}</p>${toon ? `<button class="link" ${act}>${esc(r.actie[0])} ${ic("chev", "klein")}</button>` : ""}</div></div>`;
+    return `<div class="cregel"><span class="cvorm ${r.k}" role="img" aria-label="${{ ok: "in orde", let: "let op", nee: "niet in orde", onbekend: "onbekend" }[r.k]}">${{ ok: "✓", let: "~", nee: "✗", onbekend: "?" }[r.k]}</span><div class="kol" style="gap:3px"><b>${esc(r.titel)}</b><p>${esc(r.tekst)}</p>${toon ? `<button class="link" ${act}>${esc(r.actie[0])} ${ic("chev", "klein")}</button>` : ""}</div></div>`;
   }).join("")}</div>`;
 }
 function werkmomentNaam() { return "Werkmoment " + (bedrijf() || "je bedrijf"); }
@@ -324,7 +324,8 @@ function renderResultaat() {
   const stap = Math.max(1, Math.ceil(piek / 4)); const max = stap * 4;
   const h = 150, x0 = 34, bw = 46, gap = 34, top = 14;
   const y = v => top + h - v / max * h;
-  let svg = `<svg class="grafiek" viewBox="0 0 ${x0 + W.length * (bw + gap)} ${top + h + 26}" role="img" aria-label="Afgerond per week, opgesplitst naar wie het deed">`;
+  const label = "Afgerond per week. " + W.map(w => `${w.label}: ${w.team} door je team, ${w.voor} door jou met voorwerk, ${w.zelf} door jou alleen`).join("; ") + ".";
+  let svg = `<svg class="grafiek" viewBox="0 0 ${x0 + W.length * (bw + gap)} ${top + h + 26}" role="img" aria-label="${esc(label)}">`;
   [0, 1, 2, 3, 4].map(i => i * stap).forEach(v => { svg += `<line class="rast" x1="${x0}" x2="${x0 + W.length * (bw + gap) - gap + 6}" y1="${y(v)}" y2="${y(v)}"/><text x="${x0 - 8}" y="${y(v) + 3}" text-anchor="end">${v}</text>`; });
   W.forEach((w, i) => {
     const x = x0 + 10 + i * (bw + gap); let acc = 0;
@@ -338,7 +339,7 @@ function renderResultaat() {
   return `<section class="vak" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">De afgelopen 4 weken · ${telwoord(tot, "ding", "dingen")} afgerond</h2>
     <div class="cijfers"><div class="teller"><b>${som("team")}</b><span>helemaal door je team</span></div><div class="teller"><b>${som("voor")}</b><span>door jou, met voorwerk van je team</span></div><div class="teller"><b>${som("zelf")}</b><span>door jou alleen</span></div></div>
     <div class="grafiekrij">${svg}<div class="legenda2"><span><i class="l-team"></i>helemaal door je team (zelf afgerond)</span><span><i class="l-voor"></i>jij, met voorwerk van je team</span><span><i class="l-zelf"></i>jij alleen</span></div></div>
-    <p class="klein stil">Rekenhulp: met ± <label class="sr" for="minuten">Minuten per stuk</label><select id="minuten" data-change="minuten" class="mono" style="min-height:32px;border:1px solid var(--veldrand);border-radius:6px;background:var(--surface)">${[10, 15, 25, 45, 60].concat([10, 15, 25, 45, 60].includes(min) ? [] : [min]).map(m => `<option value="${m}" ${m === min ? "selected" : ""}>${m}</option>`).join("")}</select> minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p></section>
+    <p class="klein stil">Rekenhulp: met ± <label class="sr" for="minuten">Minuten per stuk</label><select id="minuten" data-change="minuten" class="mono" style="min-height:40px;border:1px solid var(--veldrand);border-radius:6px;background:var(--surface)">${[10, 15, 25, 45, 60].concat([10, 15, 25, 45, 60].includes(min) ? [] : [min]).map(m => `<option value="${m}" ${m === min ? "selected" : ""}>${m}</option>`).join("")}</select> minuten per stuk scheelde je team je ongeveer <b>${telwoord(uren, "uur", "uur")}</b>.</p></section>
     ${cv && cv.aanwezig && typeof cv.pct === "number" ? `<section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Klopte het werk? · alleen intern</h2><p>Van de ${telwoord(cv.autonoom, "actie", "acties")} die je team de afgelopen ${cv.vensterDagen} dagen zelf afrondde, bleef ${Math.round(cv.pct)}% zonder correctie staan.</p></section>` : ""}
     ${gebruik.length ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><h2 class="vakkop">Het meest ingezet · afgelopen ${telwoord(CTX.periodWeeks || 12, "week", "weken")}</h2>
       ${gebruik.map(x => `<div class="tussen">${agKnop(x.slug)}<span class="mono">${x.value}×</span></div>`).join("")}</section>` : ""}`;

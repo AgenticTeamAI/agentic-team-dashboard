@@ -47,7 +47,7 @@ function renderTabbalk() {
 }
 function renderBalk() {
   const tg = toegang();
-  if (tg === "daglink") return `<div class="balk daglink" role="status"><div><b>Je kijkt mee met je daglink:</b> alleen lezen.</div>
+  if (tg === "daglink") return `<div class="balk daglink"><div><b>Je kijkt mee met je daglink:</b> alleen lezen.</div>
     ${kanInloggen() ? `<div class="rijtje"><button class="knop prim" data-act="login">Inloggen om af te handelen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft. Je komt precies hier terug.</span></div>` : ""}</div>`;
   if (tg === "notion") {
     const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
@@ -62,7 +62,7 @@ function renderBalk() {
 function waarschuwingenHtml() {
   const l = (CTX && CTX.bundelWaarschuwingen) || [];
   if (!l.length) return "";
-  return `<div class="balk notion" role="status" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
+  return `<div class="balk notion" data-waarschuwingen><b>Let op</b>${l.map(w => `<p class="klein">${esc(w)}</p>`).join("")}</div>`;
 }
 
 /* ---------- Voor jou ---------- */
@@ -218,7 +218,7 @@ function renderVoorJouNotion() {
 function meerKnop(a) { return `<button class="knop stil" data-act="sheet" data-type="meer" data-id="${esc(a.id)}">${ic("meer", "klein")}Meer</button>`; }
 function bladKnoppen(a) {
   const s = soortVan(a); const ag = werkAgent(a); const id = esc(a.id); const kc = klaarCheck();
-  if (!kanSchrijven()) return `<div class="balk daglink"><div>${toegang() === "daglink" ? "Je kijkt mee met je daglink. Om dit af te handelen log je in; je komt direct terug bij dit item." : "Afhandelen kan hier niet."}</div>${kanInloggen() ? `<button class="knop prim breed" data-act="login">Inloggen en afhandelen</button>` : ""}</div>`;
+  if (!kanSchrijven()) return `<div class="balk daglink"><div>${toegang() === "daglink" ? "Je kijkt mee met je daglink. Om dit af te handelen log je in; je komt direct terug bij dit item." : toegang() === "ingelogd" ? "Je sessie mag alleen lezen. Log opnieuw in om dit af te handelen; je komt direct terug bij dit item." : "Afhandelen kan hier niet."}</div>${kanInloggen() && toegang() !== "notion" ? `<button class="knop prim breed" data-act="login">Inloggen en afhandelen</button>` : ""}</div>`;
   const rij = (...k) => `<div class="knoprij">${k.join("")}</div>`;
   const terug = ag ? knop(ic("terug", "klein") + "Terug met opmerking", "sheet", `data-type="terug" data-id="${id}"`, "team") : "";
   switch (s) {

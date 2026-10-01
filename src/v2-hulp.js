@@ -118,13 +118,13 @@ function hulpSecties() {
       <p class="contextregel"><b>Vuistregel:</b> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
       <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <b>Geef aan je team</b>.</p>${naar("Naar Acties", "/acties")}`],
     ["daglink", "Daglink of inloggen?", () => `
-      <div class="tabel2" role="table" aria-label="Daglink of inloggen"><div class="h" role="columnheader"></div><div class="h" role="columnheader">Daglink</div><div class="h" role="columnheader">Inloggen</div>
-       <div class="h" role="rowheader">Waar</div><div>De link in je dagstart</div><div>dashboard.agentic-team.ai</div>
-       <div class="h" role="rowheader">Hoe lang</div><div>24 uur</div><div>Tot je dit tabblad sluit</div>
-       <div class="h" role="rowheader">Kijken</div><div>Ja</div><div>Ja</div>
-       <div class="h" role="rowheader">Afhandelen</div><div>Nee</div><div>Ja</div>
-       <div class="h" role="rowheader">Vaste taken aanpassen</div><div>Nee</div><div>Ja</div>
-       <div class="h" role="rowheader">Collega's uitnodigen</div><div>Nee</div><div>De beheerder</div></div>
+      <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
+       <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
+       <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+       <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
+       <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
+       <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
+       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table></div>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="klein stil">Kopieer een zin en plak hem in Claude.</p>

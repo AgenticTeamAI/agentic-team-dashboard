@@ -92,7 +92,7 @@ function renderSheet() {
       const { titel, extra } = nieuwVelden(sh.k); const ouder = sh.ouder ? rijTitel(sh.ouder, sh.id) : null;
       return wrap("Nieuwe " + domeinEnkel(sh.k), `<form class="kol" style="gap:10px" data-v2-nieuw>
         <div><label class="lb" for="sh-nieuw-titel">${esc(titel ? titel.naam : "Naam")}</label><input type="text" id="sh-nieuw-titel" name="${esc(titel ? titel.naam : "Naam")}" data-veldtype="titel" maxlength="200"></div>
-        ${extra.length ? `<div class="twee-velden">${extra.map(v => `<div><label class="lb">${esc(v.naam)} <span class="stil klein">(mag leeg)</span></label>${veldInvoerHtml(v, undefined, CTX)}</div>`).join("")}</div>` : ""}
+        ${extra.length ? `<div class="twee-velden">${extra.map(v => `<div><span class="lb" aria-hidden="true">${esc(v.naam)} <span class="stil klein">(mag leeg)</span></span>${metNaam(veldInvoerHtml(v, undefined, CTX), v.naam)}</div>`).join("")}</div>` : ""}
         ${ouder ? `<p class="klein stil">Komt meteen bij ${esc(ouder)} te staan.</p>` : ""}<p class="klein stil">De rest vul je daarna aan, of laat je je team aanvullen.</p>${fout}
         <div class="rijtje"><button class="knop prim" type="submit">Opslaan</button>${annuleer}</div></form>`);
     }
@@ -110,7 +110,7 @@ function toastKnoppen(t) { return `${t.login ? `<button data-act="login">Inlogge
 function renderToast(inline) {
   const t = S.toast; if (!t) return "";
   if (inline) return `<div class="toast-inline" data-toast><span>${ic("vink", "klein")} ${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
-  return `<div class="toast ${t.fout ? "fout" : ""}" data-toast role="status"><span>${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
+  return `<div class="toast ${t.fout ? "fout" : ""}" data-toast><span>${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
 }
 /* 8 seconden; pauzeert zolang je muis of focus erop staat. De tekst gaat ook
  * naar de vaste voorleesregel (#live). */
@@ -126,7 +126,8 @@ function toast(tekst, opts) {
 }
 
 /* ---------- Tekenen ---------- */
-function itemRoute(r) { const p = (r || S.route).split("/").filter(Boolean); return ((p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een") || (p[0] === "acties" && p[1])) ? decodeURIComponent(p[1]) : null; }
+function ontcijfer(t) { try { return decodeURIComponent(t); } catch (e) { return t; } }
+function itemRoute(r) { const p = (r || S.route).split("/").filter(Boolean); return ((p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een") || (p[0] === "acties" && p[1])) ? ontcijfer(p[1]) : null; }
 function basisRoute() { const p = parts(); if (!itemRoute()) return S.route; if (isDesk() && p[0] === "voor-jou") return S.route; return S.terugNaar || (p[0] === "acties" ? "/acties" : "/"); }
 function scrollSleutel() { const p = parts(); if (p[1] === "een-voor-een") return "/ronde/" + (S.ronde ? S.ronde.i : 0); if (isDesk() && p[0] === "voor-jou") return "/"; return basisRoute(); }
 function inlineToastModus() { return !!S.toast && ((parts()[1] === "een-voor-een") || (!isDesk() && !!itemRoute())); }
@@ -179,6 +180,7 @@ function focusSleutel(el) {
   if (!el || !el.dataset) return null; if (el.id) return "#" + cssEsc(el.id); const d = el.dataset; if (!d.act) return null;
   return `[data-act="${d.act}"]` + ["id", "f", "type", "r", "v", "k", "t", "i", "doel"].filter(k => d[k] != null).map(k => `[data-${k}="${cssEsc(d[k])}"]`).join("");
 }
+function hadSheetVoor() { return !!document.querySelector('.scrim[data-act="scrim"]'); }
 function render() {
   const root = document.getElementById("root"); if (!root) return;
   if (CTX && S.dataCtx !== CTX) { S.data = bouwData(); S.dataCtx = CTX; kcCache = null; }
@@ -188,6 +190,7 @@ function render() {
   if (inRoot && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) { try { sel = [ae.selectionStart, ae.selectionEnd]; } catch (e) { /* geen selectie */ } }
   if (S.laatsteSleutel) S.scrollMap[S.laatsteSleutel] = window.scrollY || 0;
   const pk = document.getElementById("paneel-kolom"); const pkTop = pk ? pk.scrollTop : 0; const oudeRoute = S.vorigeRoute;
+  if (S.sheet && !hadSheetVoor() && !S.sheetOpener && sleutel) S.sheetOpener = sleutel;
   const sheetEl = document.querySelector(".scrim .sheet"); const sheetTop = sheetEl ? sheetEl.scrollTop : 0; const hadSheet = !!document.querySelector('.scrim[data-act="scrim"]');
   const concept = bewaarFormulieren(root);
   if (CTX && parts()[1] === "een-voor-een" && !S.ronde) { const l = voorJouLijst(); S.ronde = { ids: l.map(a => a.id), i: 0, start: Date.now(), naarTeam: [] }; }
@@ -254,7 +257,7 @@ function zetFormulierenTerug(root, concept) {
 function paginaTitel() {
   if (!CTX) return "Hulp — Je team";
   const t = tabVan(); const id = itemRoute(); const a = id && actie(id);
-  if (a) return a.titel + " — Je team";
+  if (a) return "Actie — Je team";
   const naam = { voorjou: "Voor jou", acties: "Acties", team: "Team", gegevens: "Gegevens", hulp: "Hulp", beheer: "Beheer" }[t] || "Je team";
   const n = aantalVoorJou();
   return (n && t === "voorjou" ? `(${n}) ` : "") + naam + " — Je team";
@@ -273,8 +276,16 @@ function routeUitHash(h) {
   if (r === "/klaar") return "/team/klaar";
   if (r === "/ronde") return "/voor-jou/een-voor-een";
   if (r === "/prestaties" || r.startsWith("/detail")) return "/team/resultaat";
-  if ((m = /^\/opdracht(?:\/([a-z-]+))?$/.exec(r))) { S.opdrachtVoor = { ag: m[1] || null }; return "/acties"; }
+  if (/^\/opdracht(?:\/[a-z-]+)?$/.test(r)) return "/acties";
   return r;
+}
+/* #/opdracht[/specialist] opent één keer het opdrachtblad; daarna staat er
+ * #/acties in de adresbalk, zodat het blad niet bij elke hertekening opnieuw opent. */
+function opdrachtUitHash() {
+  const m = /^#\/opdracht(?:\/([a-z-]+))?\/?$/.exec(String(window.location.hash || ""));
+  if (!m) return;
+  S.opdrachtVoor = { ag: m[1] || null };
+  try { history.replaceState(null, "", window.location.pathname + window.location.search + "#/acties"); } catch (e) { /* geen history */ }
 }
 function zetHash(r) {
   try { if (window.location.hash !== "#" + r) window.location.hash = r; } catch (e) { /* geen location (tests) */ }
@@ -311,6 +322,7 @@ function foutTekst(e) { return (e && e.message) || "Dat is niet gelukt."; }
  * meteen bij: je komt daarna terug op dezelfde plek. */
 function meldFout(e) {
   if (e && (e.oauthVerlopen || e.daglinkVerlopen)) toast(foutTekst(e), { fout: true, login: kanInloggen() });
+  else if (e && e.status === 403) toast("Je sessie mag hier alleen lezen. Log opnieuw in om af te handelen.", { fout: true, login: kanInloggen() });
   else toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true });
 }
 function zetBezig(btn) { if (!btn) return; btn.setAttribute("aria-disabled", "true"); btn.classList.add("bezig"); if (!btn.querySelector(".draai")) btn.insertAdjacentHTML("afterbegin", '<span class="draai" aria-hidden="true"></span>'); }
@@ -360,7 +372,15 @@ async function uitvoeren(id, f, arg, btn) {
       const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/entries", { domein: "acties", data: plan.data });
       nieuw = res && res.entry && res.entry.entryId;
       const vorige = vorigeWaarden(a.rij, plan.ouder);
-      const ant = await snelWijzig(CTX, "acties", id, plan.ouder);
+      let ant;
+      try { ant = await snelWijzig(CTX, "acties", id, plan.ouder); }
+      catch (e2) {
+        // De vervolgactie staat er al; laat hem zien en zeg wat er nog open staat.
+        if (nieuw) pasToe("acties", { entry: res.entry });
+        S.sheet = null;
+        toast("Je team volgt het op, maar dit item zelf staat nog open: " + foutTekst(e2) + " Rond het zo zelf af.", { fout: true, bekijk: nieuw ? "/acties/" + nieuw : null });
+        render(); return;
+      }
       if (nieuw) toepassen.push({ entry: res.entry });
       toepassen.push({ entry: ant && ant.entry });
       melding = spNaam ? "Doorgegeven aan " + deNaam(opts.ag) + ". Die pakt het op bij het volgende werkmoment." : plan.melding;
@@ -424,7 +444,7 @@ async function nieuweOpdracht(sh, btn) {
     toast(tekst, { undo: nid ? async () => { await verwijderEntry(CTX, "acties", nid); pasToe("acties", { weg: nid }); } : null, bekijk: nid ? "/acties/" + nid : null });
     pasToe("acties", { entry: res && res.entry });
     render();
-  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function opmerkingPlaatsen(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const a = actie(sh.id);
@@ -439,7 +459,7 @@ async function opmerkingPlaatsen(sh, btn) {
     S.sheet = null; S.ui.det["u-" + a.id + "-opm"] = true;
     toast("Opmerking geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function notitieOpslaan(sh, btn) {
   const tekst = (sh.tekst || "").trim(); const onderwerp = (sh.onderwerp || "").trim();
@@ -454,7 +474,7 @@ async function notitieOpslaan(sh, btn) {
     S.sheet = null;
     toast("Notitie geplaatst.", { undo: nid ? async () => { await verwijderEntry(CTX, "notities", nid); pasToe("notities", { weg: nid }); } : null });
     pasToe("notities", { entry: res && res.entry }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
 async function nieuweRij(form, btn) {
   const sh = S.sheet; const k = sh.k; const d = domeinVan(k);
@@ -472,9 +492,9 @@ async function nieuweRij(form, btn) {
     toast(naam + " is toegevoegd.", { undo: nid ? async () => { await verwijderEntry(CTX, k, nid); pasToe(k, { weg: nid }); if (itemOpGegevens(k, nid)) go("/gegevens/" + k); } : null });
     pasToe(k, { entry: res && res.entry }); render();
     void d;
-  } catch (e) { sh.fout = foutTekst(e) + " Je invoer staat er nog; probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Je invoer staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
-function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && decodeURIComponent(p[2] || "") === id; }
+function itemOpGegevens(k, id) { const p = parts(); return p[0] === "gegevens" && p[1] === k && ontcijfer(p[2] || "") === id; }
 async function rijVerwijderen(sh, btn) {
   const t = rijTitel(sh.k, sh.id) || "";
   zetBezig(btn);
@@ -483,7 +503,7 @@ async function rijVerwijderen(sh, btn) {
     S.sheet = null; go("/gegevens/" + sh.k); S.focusNa = "#scroller .titel";
     toast("‘" + t + "’ is verwijderd.");
     pasToe(sh.k, { weg: sh.id }); render();
-  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; render(); }
+  } catch (e) { sh.fout = foutTekst(e) + " Probeer het opnieuw."; meldFout(e); render(); }
 }
 async function veldOpslaan(form) {
   const e = S.ui.bewerk; if (!e) return;
@@ -497,7 +517,7 @@ async function veldOpslaan(form) {
     S.ui.bewerk = null; S.focusNa = `[data-act="veld-wijzig"][data-v="${cssEsc(e.veld)}"]`;
     toast(e.veld + " bijgewerkt.", { undo: async () => { const t = await snelWijzig(CTX, e.k, e.id, vorige); pasToe(e.k, { entry: t && t.entry }); } });
     pasToe(e.k, { entry: ant && ant.entry }); render();
-  } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; render(); }
+  } catch (err) { e.fout = foutTekst(err) + " Probeer het opnieuw."; meldFout(err); render(); }
 }
 async function taakSchrijf(t, patch, melding, undoPatch) {
   try {
@@ -522,7 +542,7 @@ async function zetAan(sleutel, btn) {
       } : null,
     });
     pasToe("ritmetaken", { entry: ant && ant.entry }); render();
-  } catch (e) { toast("Aanzetten lukte niet: " + foutTekst(e), { fout: true }); render(); }
+  } catch (e) { meldFout(e); render(); }
 }
 async function kopieerNaar(t) {
   const ok = await kopieerTekst(t);
@@ -631,16 +651,16 @@ function opKlik(e) {
     case "sh-set": S.sheet[d.k] = d.v; if (d.k === "ag") S.sheet.mens = null; if (d.k === "mens") S.sheet.ag = null; S.sheet.fout = ""; break;
     case "sh-kies": kiesInSheet(d.v, el); return;
     case "sh-ok": bevestigSheet(el); return;
-    case "undo": if (kanSchrijven() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { toast("Ongedaan maken lukte niet: " + foutTekst(f), { fout: true }); render(); }); } return;
+    case "undo": if (kanSchrijven() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return;
     case "toast-dicht": S.toast = null; break;
     case "toast-bekijk": if (S.toast && S.toast.bekijk) { const b = S.toast.bekijk; S.toast = null; if (!itemRoute()) S.terugNaar = S.route; const keep = S.terugNaar; go(b); S.terugNaar = keep; } break;
-    case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; toast("Ongedaan maken lukte niet: " + foutTekst(f), { fout: true }); render(); }); } return; }
+    case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; meldFout(f); render(); }); } return; }
     case "kopieer": { const a = actie(d.id); if (a) kopieerNaar(a.werk || ""); return; }
     case "kopieer-tekst": kopieerNaar(d.t); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
-    case "ververs": S.nummerBundel = null; if (V2_HAKEN.ververs) V2_HAKEN.ververs(); toast("Ververst. De nummers zijn opnieuw geteld."); break;
+    case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
     case "dismiss": S.ui.dismissed[d.k] = true; break;
     case "acties-baan": if (d.baan === "collega") { S.ui.openCollega = true; S.ui.acties.baan = "jij"; S.ui.acties.van = "mij"; } else S.ui.acties.baan = d.baan; S.ui.acties.toon = "open"; go("/acties"); break;
     case "av": S.ui.acties[d.k] = d.v; break;
@@ -700,9 +720,13 @@ function opToets(e) {
   if (e.key === "Escape") { if (S.sheet) { S.sheet = null; render(); e.preventDefault(); return; } if (itemRoute() && !(isDesk() && parts()[0] === "voor-jou")) { sluitBlad(); render(); } return; }
   const tag = (e.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag) || e.target.isContentEditable) return;
   if (!CTX || S.sheet || toegang() === "notion") return;
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }); } return; }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
   if (!isDesk() || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest && e.target.closest(".akop, .dtabs, .tabbalk")) return;
+  // Alleen als je op een item staat (kaart, blad, één voor één) of nergens op:
+  // dan schrijft een losse letter nooit per ongeluk vanaf een link of uitklap.
+  const t = e.target; const opItem = t === document.body || t === document.documentElement || (t.closest && t.closest("[data-kaart], .blad, .ronde, #blad-titel"));
+  if (!opItem) return;
   const inRonde = parts()[1] === "een-voor-een";
   if (/^[1-9]$/.test(e.key)) { if (inRonde || tabVan() !== "voorjou") return; const a = voorJouLijst().find(x => S.nummers[x.id] === Number(e.key)); if (a) { go("/voor-jou/" + a.id); S.focusNa = "#blad-titel"; render(); } return; }
   if (inRonde && e.key === "j") { if (S.ronde) { S.ronde.i++; S.toast = null; S.focusNa = "#blad-titel"; render(); } return; }
@@ -710,9 +734,10 @@ function opToets(e) {
   const kaart = e.target.closest && e.target.closest("[data-kaart]");
   const cur = kaart ? actie(kaart.dataset.kaart) : huidigItem(); if (!cur) return;
   S.sheetOpener = focusSleutel(document.activeElement) || "#blad-titel";
-  if (e.key === "g" && kanSchrijven()) { const f = primair(cur); if (f) f(); }
-  else if (e.key === "t" && kanSchrijven() && ["check", "check-extern"].includes(soortVan(cur)) && werkAgent(cur)) { S.sheet = { type: "terug", id: cur.id, tekst: "" }; render(); }
-  else if ((e.key === "j" || e.key === "k") && tabVan() === "voorjou") { const l = voorJouLijst(); const i = l.findIndex(x => x.id === cur.id); const n = l[i + (e.key === "j" ? 1 : -1)]; if (n) { go("/voor-jou/" + n.id); S.focusNa = "#blad-titel"; render(); } }
+  const toets = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (toets === "g" && kanSchrijven()) { const f = primair(cur); if (f) f(); }
+  else if (toets === "t" && kanSchrijven() && ["check", "check-extern"].includes(soortVan(cur)) && werkAgent(cur)) { S.sheet = { type: "terug", id: cur.id, tekst: "" }; render(); }
+  else if ((toets === "j" || toets === "k") && tabVan() === "voorjou") { const l = voorJouLijst(); const i = l.findIndex(x => x.id === cur.id); const n = l[i + (toets === "j" ? 1 : -1)]; if (n) { go("/voor-jou/" + n.id); S.focusNa = "#blad-titel"; render(); } }
 }
 function opToggle(e) { const el = e.target; if (!(el instanceof HTMLDetailsElement)) return; if (el.dataset.hsec) S.ui.hulp.open[el.dataset.hsec] = el.open; if (el.id) S.ui.det[el.id] = el.open; }
 function toastPauze(aan) { return (e) => { if (S.toast && e.target.closest && e.target.closest("[data-toast]")) { if (aan) S.toast.pauze = true; else if (!(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest("[data-toast]"))) { S.toast.pauze = false; S.toast.start = Math.max(S.toast.start, Date.now() - 5000); } } }; }

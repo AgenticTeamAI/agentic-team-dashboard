@@ -226,10 +226,15 @@ function uitloggen() {
   vergeetOauthSessie();
   resetOauthVernieuwing();
   naamBijLadenGedaan = null;
-  const daglink = restoreDaglink();
-  if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
+  // Meteen weg: de bundel, de bron en wat de site over de licentie vertelde.
+  // Anders blijven de schrijfknoppen en Beheer even werken met de oude sessie.
   currentBundle = null;
   huidigeBron = null;
+  window.__dashboardCtx = undefined;
+  void laadModuleOverzicht(null);
+  void laadTeam(null);
+  const daglink = restoreDaglink();
+  if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
 }
 
@@ -280,8 +285,16 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
     const bundle = await loadWerkruimteBundle(bron);
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
     laadBeheer();
+    return true;
   } catch (err) {
     console.error(err);
+    // Verversen of herladen na een schrijfactie dat mislukt: de werkruimte die
+    // je zag blijft staan, met een melding. Alleen een sessie die op is, gaat
+    // terug naar inloggen.
+    if (behoudRoute && currentBundle && !err.oauthVerlopen && !err.daglinkVerlopen) {
+      V2.meld(err.message + " Wat je ziet, is de stand van daarvoor.", { fout: true });
+      return false;
+    }
     currentBundle = null;
     if (err.oauthVerlopen) {
       // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
@@ -327,7 +340,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   V2.start({
     login: startLogin,
     uitloggen,
-    ververs: () => { if (huidigeBron) laadWerkruimte(huidigeBron, { behoudRoute: true }); },
+    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
     exporteer: (formaat) => startExport(formaat),
     // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
     minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },

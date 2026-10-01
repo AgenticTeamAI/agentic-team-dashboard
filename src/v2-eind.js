@@ -2,6 +2,7 @@
 function v2Start(haken) {
   Object.assign(V2_HAKEN, haken || {});
   bedraad();
+  opdrachtUitHash();
   S.route = routeUitHash(typeof window !== "undefined" ? window.location.hash : "");
 }
 function v2Toon(ctx) {
@@ -17,6 +18,7 @@ function v2Toon(ctx) {
 function v2Leeg(o) { CTX = null; S.data = null; S.dataCtx = null; S.leeg = o || null; S.versieFout = null; S.route = routeUitHash(window.location.hash); render(); }
 function v2VersieFout(o) { CTX = null; S.data = null; S.dataCtx = null; S.versieFout = o || {}; render(); }
 function v2HashGewijzigd() {
+  opdrachtUitHash();
   const r = routeUitHash(window.location.hash);
   if (r !== S.route) {
     S.route = r; S.sheet = null; S.ui.bewerk = null;
@@ -35,6 +37,7 @@ function v2Reset() {
 
 globalThis.V2 = {
   start: v2Start, toon: v2Toon, leeg: v2Leeg, versieFout: v2VersieFout, hashGewijzigd: v2HashGewijzigd, render,
+  meld: (tekst, o) => { toast(tekst, o); render(); },
   // Voor de tests: de toestand en een paar afgeleide lijsten, alleen-lezen bedoeld.
   _S: S, _reset: v2Reset, _aanJouZet: () => aanJouZet(), _banen: () => banen(), _routeUitHash: routeUitHash,
 };

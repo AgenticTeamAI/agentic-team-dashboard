@@ -59,9 +59,12 @@ function actieveModuleKeys() {
 /* De enige plek die de site aanroept: GET zonder body, POST mét. Geeft
  * {status, body} terug en gooit alleen op netwerkfouten. */
 async function modulesFetch(pad, body, tokenOverride) {
+  // Alleen een ingelogde sessie praat met de site: een daglink-token hoort
+  // daar nooit te komen, ook niet in de seconden na uitloggen.
   const token = tokenOverride !== undefined
     ? tokenOverride
-    : (huidigeBron && huidigeBron.token ? huidigeBron.token : "");
+    : (huidigeBron && huidigeBron.oauth && huidigeBron.token ? huidigeBron.token : "");
+  if (!token) return { status: 0, ok: false, body: null };
   const res = await fetch(`${MODULES_SITE_ORIGIN}${pad}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {

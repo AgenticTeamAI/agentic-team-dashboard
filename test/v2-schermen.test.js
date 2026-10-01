@@ -7,7 +7,12 @@
  * werkruimte nooit als HTML wordt gelezen. De patches zelf zijn getest in de
  * tests van voor-jou.js; hier gaat het om de knoppen die ze aanroepen. */
 import { describe, expect, it, beforeAll, beforeEach, afterEach, vi } from "vitest";
+import vm from "node:vm";
 import { laadAlles, stubOpslag } from "./helpers/v2.js";
+
+/* huidigeBron is een top-level let in app.js; zonder app.js bestaat hij niet,
+ * dus hier zetten we hem zoals app.js dat doet. */
+function vm_zetBron(b) { vm.runInThisContext("var huidigeBron;"); globalThis.huidigeBron = b; }
 
 let g;
 let RS, DM, OS;
@@ -333,5 +338,53 @@ describe("v2 — Notion-klanten", () => {
     const link = $('.item a[href="https://www.notion.so/x"]');
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     expect(link.getAttribute("target")).toBe("_blank");
+  });
+});
+
+describe("v2 — review 1-10: regressies en randen", () => {
+  it("#/opdracht opent het blad één keer; na versturen springt het niet opnieuw open", async () => {
+    const ctx = maakCtx(); const spy = nepInstantie(ctx);
+    open(ctx, "#/opdracht/researcher");
+    expect($(".scrim h3").textContent).toBe("Geef je team een opdracht");
+    expect(window.location.hash).toBe("#/acties");
+    const wat = $("#sh-wat"); wat.value = "Zoek tien bedrijven"; wat.dispatchEvent(new Event("input", { bubbles: true }));
+    $('.scrim [data-act="sh-ok"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    await wacht(() => expect($("[data-toast]")).not.toBeNull());
+    expect($(".scrim")).toBeNull();
+  });
+
+  it("een losse letter vanaf een link of uitklap keurt niets goed", () => {
+    const ctx = maakCtx(); const spy = nepInstantie(ctx);
+    const mm = window.matchMedia;
+    window.matchMedia = (q) => ({ matches: /min-width/.test(q), addEventListener() {}, removeEventListener() {} });
+    try {
+      open(ctx);
+      const link = $('.verhaal [data-act="go"]');
+      link.dispatchEvent(new KeyboardEvent("keydown", { key: "g", bubbles: true }));
+      expect(spy).not.toHaveBeenCalled();
+    } finally { window.matchMedia = mm; }
+  });
+
+  it("een kapotte hash laat het scherm niet leeg", () => {
+    open(maakCtx(), "#/acties/%E0");
+    expect($(".tabbalk")).not.toBeNull();
+    expect($("#root").textContent).toContain("Dit item is er niet (meer)");
+  });
+
+  it("de tabtitel noemt geen actietitel (die belandt in je browsergeschiedenis)", () => {
+    open(maakCtx(), "#/acties/a1");
+    expect(document.title).toBe("Actie — Je team");
+  });
+});
+
+describe("modulesFetch — alleen een ingelogde sessie praat met de site", () => {
+  it("zonder sessie (daglink) gaat er niets naar de site", async () => {
+    const spy = vi.spyOn(globalThis, "fetch");
+    vm_zetBron({ token: "daglinktoken" });
+    const uit = await g.modulesFetch("/api/dashboard/modules/verzoek", { x: 1 });
+    expect(uit.ok).toBe(false);
+    expect(spy).not.toHaveBeenCalled();
+    vm_zetBron(null);
   });
 });

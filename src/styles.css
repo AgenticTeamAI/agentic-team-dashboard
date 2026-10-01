@@ -109,8 +109,9 @@ h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .sprite{position:absolute;width:0;height:0;overflow:hidden}
 
 /* ---------- App en kop ---------- */
-.app{min-height:100vh;padding-bottom:96px}
-.app.met-fab{padding-bottom:150px}
+.app{min-height:100vh;padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px))}
+.app.met-fab{padding-bottom:calc(150px + env(safe-area-inset-bottom, 0px))}
+html{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));scroll-padding-top:72px}
 .akop{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top, 0px))}
 .merk{display:flex;flex-direction:column;min-width:0;flex:1}
 .merk b{font-size:17px;letter-spacing:-.01em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -120,7 +121,7 @@ h2[tabindex="-1"]:focus,h3[tabindex="-1"]:focus{outline:none}
 .ikknop:hover{background:var(--surface);border-color:var(--line)}
 .ikknop[aria-current="page"]{background:var(--surface);border-color:var(--line)}
 .avatar{width:40px;height:40px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;display:inline-grid;place-items:center;margin-left:4px}
-.inlogknop{border:1px solid var(--jij);background:var(--jij-zacht);color:var(--ink);font-weight:650;border-radius:999px;padding:7px 12px;font-size:13.5px;min-height:36px}
+.inlogknop{border:1px solid var(--jij);background:var(--jij-zacht);color:var(--ink);font-weight:650;border-radius:999px;padding:7px 12px;font-size:13.5px;min-height:40px}
 .dtabs{display:none;gap:4px;margin-left:10px}
 .dtab{border:0;background:transparent;padding:8px 12px;border-radius:10px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;gap:7px;min-height:40px;white-space:nowrap}
 .dtab[aria-current="page"]{color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
@@ -190,7 +191,7 @@ a.link{min-height:40px}
 .pil.team{background:var(--team-zacht);border-color:transparent;color:var(--team-tekst)}
 .pil.ok{background:var(--klaar-zacht);border-color:transparent;color:var(--klaar)}
 .pil.status{font-family:var(--mono);font-size:11px;font-weight:500}
-button.knoppil{cursor:pointer;min-height:32px}
+button.knoppil{cursor:pointer;min-height:40px}
 .soort{font-size:12.5px;font-weight:700;color:var(--jij-tekst)}
 .soort.teamk{color:var(--team-tekst)}
 .soort.rood{color:var(--rood)}
@@ -568,6 +569,7 @@ tr:last-child td{border-bottom:0}
 
 /* ---------- Desktop ---------- */
 @media (min-width:900px){
+  html{scroll-padding-bottom:24px}
   .app{padding-bottom:40px}
   .app.met-fab{padding-bottom:40px}
   .akop{padding-inline:20px}

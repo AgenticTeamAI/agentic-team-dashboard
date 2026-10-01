@@ -112,6 +112,9 @@ function renderLijst(k) {
     ${lijst.length > 300 ? `<p class="klein stil">De eerste 300 van ${lijst.length}. Zoek om de rest te vinden.</p>` : ""}</div></div>`;
 }
 
+/* veldInvoerHtml (data-bewerken.js) geeft het veld geen naam; die zetten we erop. */
+function metNaam(html, naam) { return html.replace(/<(input|select|textarea)(?![^>]*aria-label)/, `<$1 aria-label="${esc(naam)}"`); }
+
 /* ---------- Eén rij als pagina ---------- */
 function veldWaardeHtml(v, w) {
   const t = dataCelTekst(w);
@@ -134,7 +137,7 @@ function veldRij(k, r, v) {
   const e = S.ui.bewerk; const bewerk = e && e.k === k && e.id === r.__entryId && e.veld === v.naam;
   const w = getField(r, v.naam); const t = dataCelTekst(w);
   const lang = t && isLangeTekst(v, t);
-  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${veldInvoerHtml(v, w, CTX)}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
+  if (bewerk) return `<dt><span>${esc(v.naam)}</span></dt><dd class="inline-edit"><form class="rijtje" style="flex:1;align-items:flex-start" data-v2-veldform>${metNaam(veldInvoerHtml(v, w, CTX), v.naam)}<span class="rijtje"><button class="knop prim klein-knop" type="submit">Opslaan</button><button class="knop stil klein-knop" type="button" data-act="veld-annuleer">Annuleer</button></span>${e.fout ? `<span class="fout" role="alert">${esc(e.fout)}</span>` : ""}</form></dd>`;
   const wijzig = magSchrijven(k) && v.type !== "relatie" ? ` <button class="hoe wijzig" data-act="veld-wijzig" data-k="${k}" data-id="${esc(r.__entryId)}" data-v="${esc(v.naam)}" aria-label="${esc(v.naam)} wijzigen">wijzig</button>` : "";
   return `<dt>${esc(v.naam)}</dt><dd class="${lang ? "lang" : ""}">${lang ? `<span style="flex:1 1 100%">${esc(t)}</span>` : veldWaardeHtml(v, w)}${wijzig}</dd>`;
 }
