@@ -43,12 +43,13 @@ function v2Reset() {
   S.ui.acties = { weergave: "lijst", van: "mij", toon: "open", zoek: "", baan: "jij" }; S.ui.team.filter = null; S.ui.gegevens = { zoek: "", filter: "" };
   S.ui.bewerk = null; S.ui.dismissed = {}; S.ui.meerOpen = {}; S.ui.det = {}; S.ui.hulp = { zoek: "", open: {}, vb: "stil", stap: -1 };
   S.scrollMap = {}; S.laatsteSleutel = null; kcCache = null;
+  S.thema = null; if (typeof document !== "undefined") delete document.documentElement.dataset.thema;
 }
 
 globalThis.V2 = {
   start: v2Start, toon: v2Toon, leeg: v2Leeg, versieFout: v2VersieFout, hashGewijzigd: v2HashGewijzigd, render,
   meld: (tekst, o) => { toast(tekst, o); render(); },
   // Voor de tests: de toestand en een paar afgeleide lijsten, alleen-lezen bedoeld.
-  _S: S, _reset: v2Reset, _aanJouZet: () => aanJouZet(), _banen: () => banen(), _routeUitHash: routeUitHash,
+  _S: S, _reset: v2Reset, _aanJouZet: () => aanJouZet(), _banen: () => banen(), _routeUitHash: routeUitHash, _feedbackMail: (t) => feedbackMail(t),
 };
 })();

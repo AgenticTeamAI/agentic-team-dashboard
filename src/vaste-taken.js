@@ -203,7 +203,7 @@ function vasteTakenHtml(ctx) {
   const bron = bronVan(ctx, "ritmetaken");
   const rijen = dataRijenVan(ctx, "ritmetaken");
   if (bron.toestand === "elders" || (!rijen && ctx.bundle && ctx.bundle.kind === "metrics")) {
-    const waar = bron.toestand === "elders" ? bron.naam : "Notion";
+    const waar = bron.toestand === "elders" ? bron.naam : "je eigen systeem";
     // f54: levert je dagstart de vaste taken mee, dan zie je ze hier — alleen lezen.
     const uitDagstart = typeof metricsRitmeRijen === "function" ? metricsRitmeRijen(ctx) : null;
     if (uitDagstart) {
@@ -211,19 +211,19 @@ function vasteTakenHtml(ctx) {
     ${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
     <section class="vt-vak"><h2>Wanneer werkt je team · werkdagen</h2>${weekHtml(ctx, weekTelling(uitDagstart, ctx.today || new Date()))}</section>
     ${notionTakenHtml(ctx, uitDagstart)}
-    <section class="vt-vak"><p>Iets aanpassen? Zeg het je team in Claude, bijvoorbeeld:</p>
+    <section class="vt-vak"><p>Iets aanpassen? Zeg het je team, bijvoorbeeld:</p>
       ${vtKopieerHtml("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
     }
     return `${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
     <section class="vt-vak"><h2>Je vaste taken staan in ${esc(waar)}</h2>
-      <p>Aanpassen doe je daar, of vraag het je team in Claude. Bijvoorbeeld:</p>
+      <p>Aanpassen doe je daar, of vraag het je team. Bijvoorbeeld:</p>
       ${vtKopieerHtml("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
   }
   const alle = rijen || [];
   if (!alle.length) {
     return `${typeof hoeWerktDitHtml === "function" ? hoeWerktDitHtml("vaste-taken") : ""}
     <section class="vt-vak"><h2>Je team heeft nog geen vaste taken</h2>
-      <p>Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen. Je zet ze aan in Claude:</p>
+      <p>Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen. Je zet ze aan in je AI-assistent:</p>
       ${vtKopieerHtml("Zet mijn ritmetaken aan.")}
       <p class="footnote">Je team zet dan de vaste taken klaar die bij jouw modules horen, en stelt een werkmoment voor.</p></section>`;
   }
@@ -240,7 +240,7 @@ function vasteTakenHtml(ctx) {
       ${aan.length ? `<ol class="vt-lijst">${aan.map(r => taakRijHtml(ctx, r, kan)).join("")}</ol>` : `<p>Er staat nu geen enkele vaste taak aan.</p>`}
       ${uit.length ? `<details class="blad-uitklap"><summary>Uitgezet (${uit.length})</summary><ol class="vt-lijst">${uit.map(r => taakRijHtml(ctx, r, kan)).join("")}</ol></details>` : ""}
     </section>
-    <section class="vt-vak"><h2>Meer vast werk?</h2><p>Zeg het tegen je team in Claude. Bijvoorbeeld:</p>
+    <section class="vt-vak"><h2>Meer vast werk?</h2><p>Zeg het tegen je team. Bijvoorbeeld:</p>
       ${vtKopieerHtml("Zet elke vrijdag een weekreflectie op.")}</section>`;
 }
 
@@ -292,7 +292,7 @@ function renderVasteTaken(el, ctx) {
     const k = e.target.closest && e.target.closest("[data-vt-kopieer]");
     if (!k) return;
     const gelukt = await kopieerTekst(k.getAttribute("data-vt-kopieer"));
-    meld(gelukt ? "Gekopieerd. Plak het in Claude." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.");
+    meld(gelukt ? "Gekopieerd. Plak het in je AI-assistent." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.");
   };
 }
 
@@ -376,8 +376,8 @@ function klaarCheck(ctx) {
   const notion = kcNotion(ctx);
   const act = kcActivatiesDezeWeek(ctx);
   r.push(act === null
-    ? { id: "verbonden", k: "onbekend", titel: "Verbonden met Claude", tekst: "Hoe vaak je je team iets vroeg, telt je werkruimte nog niet." }
-    : { id: "verbonden", k: act > 0 ? "ok" : "let", titel: "Verbonden met Claude",
+    ? { id: "verbonden", k: "onbekend", titel: "Verbonden met je AI-assistent", tekst: "Hoe vaak je je team iets vroeg, telt je werkruimte nog niet." }
+    : { id: "verbonden", k: act > 0 ? "ok" : "let", titel: "Verbonden met je AI-assistent",
       tekst: act > 0 ? `Je vroeg je team deze week ${act} keer iets.` : "Je vroeg je team deze week nog niets." });
 
   // f54: levert de dagstart de vaste taken mee, dan oordelen we er gewoon over.
@@ -386,15 +386,15 @@ function klaarCheck(ctx) {
     const fs = feedSporen(ctx);
     const lp = fs && fs.length ? new Date(Math.max(...fs)) : null;
     const nf = lp ? werkdagenNa(lp, nu) : 99;
-    r.push({ id: "aan", k: "onbekend", titel: "Vaste taken staan aan", tekst: "Je vaste taken staan in Notion; dat kunnen we hier niet controleren." });
+    r.push({ id: "aan", k: "onbekend", titel: "Vaste taken staan aan", tekst: "Je vaste taken staan in je eigen systeem; dat kunnen we hier niet controleren." });
     r.push(!fs ? { id: "werkt", k: "onbekend", titel: "Je team werkt vanzelf", tekst: "Dat zien we aan je teamfeed, en die kent je werkruimte nog niet." }
       : nf <= 1 ? { id: "werkt", k: "ok", titel: "Je team werkt vanzelf", tekst: `Laatst in je teamfeed: ${vtWanneer(lp, nu)}.` }
         : nf < 5 ? { id: "werkt", k: "onbekend", titel: "Je team werkt vanzelf", tekst: `Laatst in je teamfeed: ${vtWanneer(lp, nu)}. Een werkmoment zonder werk meldt niets, dus dat kan kloppen.` }
           : { id: "werkt", k: "let", titel: "Werkt je team nog vanzelf?", actie: "start",
-            tekst: `${lp ? `Je team meldde sinds ${kcSinds(lp, nu)} niets meer in je teamfeed.` : "Je team meldde nog niets in je teamfeed."} Kijk of je werkmoment in Claude nog aanstaat.` });
-    r.push({ id: "beurt", k: "onbekend", titel: "Alle vaste taken komen aan de beurt", tekst: "Je vaste taken staan in Notion; dat kunnen we hier niet controleren." });
-    r.push({ id: "wacht", k: "onbekend", titel: "Niets ligt te lang op je te wachten", tekst: "Je acties staan in Notion." });
-    r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in Notion", tekst: "Hier zie je wat je team deed." });
+            tekst: `${lp ? `Je team meldde sinds ${kcSinds(lp, nu)} niets meer in je teamfeed.` : "Je team meldde nog niets in je teamfeed."} Kijk of je werkmoment in je AI-assistent nog aanstaat.` });
+    r.push({ id: "beurt", k: "onbekend", titel: "Alle vaste taken komen aan de beurt", tekst: "Je vaste taken staan in je eigen systeem; dat kunnen we hier niet controleren." });
+    r.push({ id: "wacht", k: "onbekend", titel: "Niets ligt te lang op je te wachten", tekst: "Je acties staan in je eigen systeem." });
+    r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in je eigen systeem", tekst: "Hier zie je wat je team deed." });
   } else {
     const taken = vtTaakRijen(ctx) || [];
     const actief = taken.filter(vtActief);
@@ -441,10 +441,10 @@ function klaarCheck(ctx) {
       ? { id: "wacht", k: "ok", titel: "Niets ligt te lang op je te wachten",
         tekst: !oudste ? "Er wacht niets op je." : kd === 0 ? "Er wacht niets langer dan vandaag." : `Het oudste wacht ${kd === 1 ? "1 dag" : kd + " dagen"}.` }
       : { id: "wacht", k: "let", titel: "Er ligt werk te lang op je te wachten", actie: notion ? undefined : "ronde",
-        tekst: `Het oudste wacht al ${kd} dagen. ${notion ? "Je vindt het bij Voor jou, met een link naar Notion." : "Het staat bovenaan in Voor jou."}` });
+        tekst: `Het oudste wacht al ${kd} dagen. ${notion ? "Je vindt het bij Voor jou, met een link naar je eigen systeem." : "Het staat bovenaan in Voor jou."}` });
     // Geen oordeel over je team, dus telt niet mee — en alleen in beeld als er iets te doen is.
     if (notion) {
-      r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in Notion", tekst: "Hier zie je de stand van je dagstart." });
+      r.push({ id: "afhandelen", k: "onbekend", telt: false, titel: "Afhandelen doe je in je eigen systeem", tekst: "Hier zie je de stand van je dagstart." });
     } else if (!magDomeinBewerken(ctx, "acties").ok) {
       r.push({ id: "afhandelen", k: "let", telt: false, titel: "Je kijkt alleen mee", actie: "login", tekst: "Met je daglink kun je lezen, niet afhandelen." });
     }
@@ -458,7 +458,7 @@ function klaarCheck(ctx) {
 
 function klaarSamenvatting(kc) {
   const letop = kc.totaal - kc.ok;
-  if (kc.notion && kc.onbekend) return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} te controleren`, sub: `${kc.onbekend} ${kc.onbekend === 1 ? "punt staat" : "punten staan"} in Notion en kunnen we hier niet zien.` };
+  if (kc.notion && kc.onbekend) return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} te controleren`, sub: `${kc.onbekend} ${kc.onbekend === 1 ? "punt staat" : "punten staan"} in je eigen systeem en kunnen we hier niet zien.` };
   if (!letop && kc.wachten) return { kop: "Is je team klaar? Bijna — nog even wachten", sub: "Na de eerste nacht weten we of je team vanzelf werkt." };
   if (!letop) return { kop: "Is je team klaar? Ja, alles in orde", sub: "Je team werkt vanzelf." };
   return { kop: `Is je team klaar? ${kc.ok} van ${kc.totaal} · ${letop} ${letop === 1 ? "punt vraagt" : "punten vragen"} aandacht`, sub: "Kijk wat er nodig is." };
@@ -487,7 +487,7 @@ function stappenbladHtml(ctx, vaker, { volledig = false } = {}) {
     return `<section class="vt-vak kc-stappen" id="stappen"><h2>Laat je team vaker werken</h2>
       <p>Je werkmoment bestaat al. Zet het vaker aan, dan komen al je vaste taken aan de beurt.</p>
       <ol class="kc-stappenlijst">
-        <li><strong>Open in Claude: Scheduled.</strong> Zoek je werkmoment: de taak met get_werkronde in de opdracht.</li>
+        <li><strong>Open de geplande taken in je AI-assistent.</strong> Zoek je werkmoment: de taak met get_werkronde in de opdracht.</li>
         <li><strong>Zet "Wanneer" op elke 4 uur.</strong> Je team doet dan tot zes vaste taken per dag in plaats van één. Een werkmoment zonder werk stopt meteen en kost vrijwel niets.</li>
         <li><strong>Klaar.</strong> Morgen zie je hier dat alle taken aan de beurt kwamen.</li>
       </ol></section>`;
@@ -505,18 +505,18 @@ function stappenbladHtml(ctx, vaker, { volledig = false } = {}) {
     return `<section class="vt-vak kc-stappen" id="stappen"><h2>Zet je werkmoment (weer) aan</h2>
       <p>Je vaste taken staan klaar. Wat ontbreekt, is het moment waarop je team ze oppakt.</p>
       <ol class="kc-stappenlijst">
-        <li><strong>Open in Claude: Scheduled.</strong>
-          <span class="footnote">Staat daar al een taak met get_werkronde in de opdracht? Kijk of hij aanstaat. Zo niet, kies New task en vul in:</span>
+        <li><strong>Open de geplande taken in je AI-assistent.</strong>
+          <span class="footnote">Staat daar al een taak met get_werkronde in de opdracht? Kijk of hij aanstaat. Zo niet, maak een nieuwe geplande taak aan en vul in:</span>
           ${velden}</li>
         ${klaar}
       </ol></section>`;
   }
   return `<section class="vt-vak kc-stappen" id="stappen"><h2>Laat je team vanzelf werken</h2>
     <ol class="kc-stappenlijst">
-      <li><strong>Zeg in Claude tegen je team:</strong>${vtKopieerHtml("Zet mijn ritmetaken aan.")}
+      <li><strong>Zeg in je AI-assistent tegen je team:</strong>${vtKopieerHtml("Zet mijn ritmetaken aan.")}
         <span class="footnote">Je team zet dan de vaste taken klaar die bij jouw modules horen.</span></li>
-      <li><strong>Je team stelt een geplande taak voor. Druk op Schedule.</strong>
-        <span class="footnote">Zie je die knop niet? Ga in Claude naar Scheduled › New task en vul in:</span>
+      <li><strong>Je team stelt een geplande taak voor. Bevestig die.</strong>
+        <span class="footnote">Zie je geen voorstel? Maak dan zelf een nieuwe geplande taak aan en vul in:</span>
         ${velden}</li>
       ${klaar}
     </ol></section>`;
@@ -544,7 +544,7 @@ function renderKlaar(el, ctx) {
     const k = e.target.closest && e.target.closest("[data-vt-kopieer]");
     if (!k) return;
     const gelukt = await kopieerTekst(k.getAttribute("data-vt-kopieer"));
-    meld(gelukt ? "Gekopieerd. Plak het in Claude." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.");
+    meld(gelukt ? "Gekopieerd. Plak het in je AI-assistent." : "Kopiëren lukte niet. Selecteer de tekst en kopieer hem zelf.");
   };
 }
 

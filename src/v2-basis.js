@@ -56,7 +56,7 @@ const S = {
     gegevens: { zoek: "", filter: "" }, bewerk: null, toevoegen: null,
     dismissed: {}, meerOpen: {}, det: {}, openCollega: false, stappenDoel: null,
   },
-  sheet: null, toast: null, ronde: null, drag: null, terugNaar: null,
+  sheet: null, toast: null, ronde: null, drag: null, terugNaar: null, thema: null,
   focusNa: null, scrollDoel: null, sheetOpener: null, vorigSheetType: null,
   laatsteSleutel: null, scrollMap: {}, vorigeRoute: null,
   leeg: null, // {titel, tekst, login} zolang er geen werkruimte is
@@ -83,7 +83,7 @@ function isNotion() {
 function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
 /* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
 function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
-function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "Notion"; }
+function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "je eigen systeem"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
 function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }

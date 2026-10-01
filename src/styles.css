@@ -2,9 +2,10 @@
  *
  * De visuele bron is het goedgekeurde klikbare ontwerp (dashboard-v2-prototype,
  * 29-09/30-09). Oranje = jij bent aan zet, teal = je team. Systeemfont, geen
- * externe bronnen. Het thema volgt de systeeminstelling (prefers-color-scheme)
- * en onthoudt niets: een eigen keuze die blijft staan vraagt een nieuwe
- * opslagsleutel (juridisch restpunt i87).
+ * externe bronnen. Het thema volgt de systeeminstelling (prefers-color-scheme);
+ * de maan/zon in de kop zet licht of donker voor dit bezoek (data-thema op
+ * <html>). Onthouden doet hij niets: een keuze die blijft staan vraagt een
+ * nieuwe opslagsleutel (juridisch restpunt i87).
  *
  * Elke kleur loopt via de tokens hieronder; test/css-tokens.test.js bewaakt
  * dat er geen losse kleur bij komt en dat de tekst/vlak-paren in beide thema's
@@ -52,7 +53,7 @@
   --r-l: 16px;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-thema="licht"]) {
     color-scheme: dark;
     --bg: #121513;
     --surface: #1A1E1B;
@@ -90,6 +91,45 @@
     --r-l: 16px;
   }
 }
+/* Een eigen keuze (de maan/zon in de kop) wint van de systeeminstelling. Zelfde
+ * waarden als hierboven; test/css-tokens.test.js houdt ze gelijk. */
+:root[data-thema="donker"] {
+  color-scheme: dark;
+  --bg: #121513;
+  --surface: #1A1E1B;
+  --surface-2: #161A17;
+  --ink: #ECEEE9;
+  --muted: #9AA39C;
+  --line: #2D332F;
+  --line-2: #3A413C;
+  --veldrand: #6A726C;
+  --jij: #F0A548;
+  --jij-tekst: #F2B461;
+  --jij-zacht: #3A2C18;
+  --jij-mark: #F0A548;
+  --op-jij: #1B1206;
+  --team: #62B5AC;
+  --team-tekst: #7CC7BE;
+  --team-zacht: #18302D;
+  --op-team: #0C1917;
+  --rood: #F08A62;
+  --rood-zacht: #3A2018;
+  --klaar: #5BD48A;
+  --klaar-zacht: #16301F;
+  --focus: #8AB4F8;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --schaduw: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --schaduw-klein: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --toast-bg: #ECEEE9;
+  --toast-ink: #121513;
+  --toast-accent: #8F5409;
+  --masker: #000000;
+  --f: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+}
 
 /* ---------- Basis ---------- */
 *{box-sizing:border-box}
@@ -120,6 +160,8 @@ html{scroll-padding-bottom:calc(96px + env(safe-area-inset-bottom, 0px));scroll-
 .ikknop{width:40px;height:40px;border-radius:10px;border:1px solid transparent;background:transparent;display:inline-grid;place-items:center;color:var(--ink);flex:none}
 .ikknop:hover{background:var(--surface);border-color:var(--line)}
 .ikknop[aria-current="page"]{background:var(--surface);border-color:var(--line)}
+.fblabel{display:none}
+@media (min-width:1100px){.fbknop{width:auto;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border-color:var(--line)}.fbknop .fblabel{display:inline;font-size:14px;font-weight:600}}
 .avatar{width:40px;height:40px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700;display:inline-grid;place-items:center;margin-left:4px}
 .inlogknop{border:1px solid var(--jij);background:var(--jij-zacht);color:var(--ink);font-weight:650;border-radius:999px;padding:7px 12px;font-size:13.5px;min-height:40px}
 .dtabs{display:none;gap:4px;margin-left:10px}

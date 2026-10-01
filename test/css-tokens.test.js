@@ -52,8 +52,11 @@ describe("i86 — thema's", () => {
   const css = readFileSync(join(ROOT, "src/styles.css"), "utf8");
   const licht = css.slice(css.indexOf(":root {"), css.indexOf("}", css.indexOf(":root {")) + 1);
   const mediaStart = css.indexOf("@media (prefers-color-scheme: dark)");
-  const donkerStart = css.indexOf(":root {", mediaStart);
+  const donkerStart = css.indexOf(':root:not([data-thema="licht"]) {', mediaStart);
   const donker = css.slice(donkerStart, css.indexOf("}", donkerStart) + 1);
+  // Een eigen keuze (knop in de kop) zet data-thema="donker" op <html>.
+  const keuzeStart = css.indexOf(':root[data-thema="donker"] {');
+  const keuze = css.slice(keuzeStart, css.indexOf("}", keuzeStart) + 1);
   const tokens = (blok) => Object.fromEntries([...blok.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
   const L = tokens(licht);
   const D = tokens(donker);
@@ -65,13 +68,19 @@ describe("i86 — thema's", () => {
     expect(donker).toMatch(/color-scheme:\s*dark/);
   });
 
+  it("een eigen keuze voor donker gebruikt precies dezelfde waarden als het systeemthema", () => {
+    expect(keuzeStart).toBeGreaterThan(donkerStart);
+    expect(keuze).toMatch(/color-scheme:\s*dark/);
+    expect(tokens(keuze)).toEqual(D);
+  });
+
   it("donker definieert dezelfde kleurtokens als licht", () => {
     const kleuren = (t) => Object.keys(t).filter((k) => !["--font", "--mono"].includes(k)).sort();
     expect(kleuren(D)).toEqual(kleuren(L));
   });
 
   it("gebruikt buiten de tokenblokken geen losse kleuren", () => {
-    const rest = css.replace(licht, "").replace(donker, "");
+    const rest = css.replace(licht, "").replace(donker, "").replace(keuze, "");
     const los = [...rest.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\(/g)].map((m) => m[0]);
     expect(los, "losse kleuren in styles.css — maak er een token van").toEqual([]);
     for (const bestand of ["src/charts.js", "src/render.js", "src/homepage.js", "src/databrowser.js", "src/shell.html"]) {

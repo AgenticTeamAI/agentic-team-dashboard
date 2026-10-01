@@ -399,7 +399,7 @@ describe("v2 — review 1-10: data en logica", () => {
     expect($(".tabbalk .badge").textContent).toBe("1");
     expect($("#root").textContent).toContain("Offerte nakijken");
     // de vaste taken komen hier ook uit de dagstart (geen rijen in de werkruimte)
-    expect($(".balk.notion").textContent).toContain("Je acties en vaste taken staan in Notion");
+    expect($(".balk.notion").textContent).toContain("Je acties en vaste taken staan in je eigen systeem");
   });
 
   it("alleen de vaste taken elders: Voor jou blijft gewoon je werkruimte", () => {
@@ -486,5 +486,86 @@ describe("v2 — review 1-10: schrijfacties", () => {
     await wacht(() => expect(patches(spy)).toHaveLength(1));
     expect(patches(spy)[0].data).toEqual({ Eigenaar: "Sanne Verbeek", Status: "Open", "Wachten tot": null });
     await wacht(() => expect($("[data-toast]")).not.toBeNull());
+  });
+});
+
+/* 1 okt — het dashboard werkt met elke AI-assistent (Claude, ChatGPT, …) en
+ * noemt geen merk: geen "Claude" en geen "Notion" in beeld. Plus de
+ * themaknop en de feedbackknop. */
+describe("v2 — generieke termen, thema en feedback", () => {
+  const taken = () => [rij("t1", { Taak: "Facturen nalopen", Agent: g.AGENTIC_TEAM_SCHEMA.agents.find(a => a.slug === "administratie").displayName, Actief: true, Ritme: "wekelijks-vr" }, "2026-09-01T10:00:00")];
+  const notionCtx = () => Object.assign(maakCtx({ schrijven: true }), {
+    metricsWerk: { voorJou: [{ nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: true, specialist: DM, sinds: "2026-09-24", deadline: null, url: "https://www.notion.so/x" }],
+      ritmetaken: [{ taak: "Facturen nalopen", agent: "Administratie", ritme: "wekelijks-vr", actief: true, laatst_gedraaid: null, volgorde: 1, url: "https://www.notion.so/t" }], gegenereerdOp: "2026-09-29T07:02:00" },
+    bundle: { kind: "metrics", source: "werkruimte", klant: "FFG", systeemPerDomein: { acties: "notion", ritmetaken: "notion" }, domains: {}, instantieDomeinen: [] },
+  });
+  const ROUTES = ["#/", "#/acties", "#/acties/a1", "#/team", "#/team/vaste-taken", "#/team/klaar", "#/team/resultaat", "#/gegevens", "#/hulp", "#/beheer"];
+  // De privacy-alinea's zijn woordelijk van de jurist (src/teksten.js) en blijven
+  // staan tot een nieuwe toets; alles daarbuiten noemt geen merk.
+  const juridisch = () => vm.runInThisContext("PRIVACY_UITKLAP_ALINEAS");
+  const inBeeld = () => juridisch().reduce((t, a) => t.split(a).join(""), document.body.textContent) + " " + $$("[title],[aria-label],[placeholder]").map(e => ["title", "aria-label", "placeholder"].map(a => e.getAttribute(a) || "").join(" ")).join(" ");
+
+  it("werkruimte, daglink, lege werkruimte en eigen systeem: nergens Claude of Notion", () => {
+    const situaties = { werkruimte: maakCtx({ ritmetaken: taken() }), daglink: maakCtx({ schrijven: false }), leeg: maakCtx({ acties: [] }), eigen: notionCtx() };
+    for (const [naam, ctx] of Object.entries(situaties)) {
+      for (const r of ROUTES) {
+        open(ctx, r);
+        { const t = inBeeld(); const m = /Claude|Notion|Scheduled/.exec(t); expect(m ? t.slice(Math.max(0, m.index - 120), m.index + 60) : "", naam + " " + r).toBe(""); }
+        g.V2._S.sheet = { type: "account" }; g.V2.render();
+        expect(inBeeld(), naam + " account").not.toMatch(/Claude|Notion/);
+        g.V2._S.sheet = null;
+      }
+    }
+    g.V2.leeg({}); expect(inBeeld()).not.toMatch(/Claude|Notion/);
+  });
+
+  it("de knop in de kop zet donker aan voor dit bezoek, en weer licht", () => {
+    open(maakCtx());
+    const k = () => $('.akop [data-act="thema"]');
+    expect(k().getAttribute("aria-label")).toBe("Donker thema");
+    expect(k().getAttribute("aria-pressed")).toBe("false");
+    k().click();
+    expect(document.documentElement.dataset.thema).toBe("donker");
+    expect(k().getAttribute("aria-pressed")).toBe("true");
+    k().click();
+    expect(document.documentElement.dataset.thema).toBe("licht");
+    g.V2._reset();
+    expect(document.documentElement.dataset.thema).toBeUndefined();
+  });
+
+  it("feedback: je tekst en het scherm gaan naar je eigen mail; het dashboard verstuurt niets", () => {
+    const ctx = maakCtx(); const spy = nepInstantie(ctx); const mail = vi.fn();
+    window.location.hash = "#/acties"; g.V2.start({ mail }); g.V2.toon(ctx);
+    $('.akop [data-act="sheet"][data-type="feedback"]').click();
+    expect($("#sheet-titel").textContent).toBe("Feedback geven");
+    const ta = $("#sh-tekst"); ta.value = "Ik mis een filter op klant & datum."; ta.dispatchEvent(new Event("input", { bubbles: true }));
+    $('[data-act="feedback-mail"]').click();
+    expect(mail).toHaveBeenCalledTimes(1);
+    const url = mail.mock.calls[0][0];
+    expect(url.startsWith("mailto:support@agentic-team.ai?subject=")).toBe(true);
+    const body = decodeURIComponent(url.slice(url.indexOf("&body=") + 6));
+    expect(body).toContain("Ik mis een filter op klant & datum.");
+    expect(body).toContain("Scherm: Acties (#/acties)");
+    expect(body).toContain("Werkruimte: Verbeek Advies");
+    expect(spy).not.toHaveBeenCalled();
+    // Het blad blijft open: gaat er geen mail open, dan kopieer je je tekst nog.
+    expect($("#sh-tekst").value).toBe("Ik mis een filter op klant & datum.");
+    expect($(".sheet").textContent).toContain("Ging je mailprogramma open?");
+  });
+
+  it("feedback kan ook zonder werkruimte (Hulp als lege staat) en via het accountmenu", () => {
+    g.V2.start({}); g.V2.leeg({});
+    $('[data-act="sheet"][data-type="feedback"]').click();
+    expect($("#sheet-titel").textContent).toBe("Feedback geven");
+    expect(decodeURIComponent(g.V2._feedbackMail("x"))).not.toContain("Werkruimte:");
+    g.V2._S.sheet = null;
+    open(maakCtx());
+    g.V2._S.sheet = { type: "account" }; g.V2.render();
+    $('.sheet [data-act="sh-naar"][data-type="feedback"]').click();
+    expect($("#sheet-titel").textContent).toBe("Feedback geven");
+  });
+
+  it("een oude hulplink naar de Notion-uitleg landt op de nieuwe sectie", () => {
+    expect(g.V2._routeUitHash("#/hulp/notion")).toBe("/hulp/eigen-systeem");
   });
 });

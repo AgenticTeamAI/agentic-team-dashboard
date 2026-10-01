@@ -270,7 +270,7 @@ describe("uitnodigen", () => {
     el.querySelector("[data-team-uitnodig-adres]").value = "piet@klant.nl";
     el.querySelector('[data-team-uitnodigen] button[type="submit"]').click();
     await tick();
-    expect(el.querySelector("[data-team-fout]").textContent).toContain("Vraag je team in Claude");
+    expect(el.querySelector("[data-team-fout]").textContent).toContain("Vraag je team in je AI-assistent");
 
     // Een 404 mét fout-veld is de nieuwe site die "geen beheerder" zegt: die tekst tonen.
     g.modulesFetch = vi.fn(async () => ({ status: 404, body: { fout: "Niet beschikbaar." } }));

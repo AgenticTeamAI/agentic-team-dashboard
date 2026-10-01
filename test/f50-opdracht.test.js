@@ -248,10 +248,10 @@ describe("f50 — het formulier", () => {
     expect(g.opdrachtKnopHtml(ctxMet({ schrijven: false }))).toBe("");
   });
 
-  it("acties in Notion: geen formulier, wel de zin voor Claude", () => {
+  it("acties in je eigen systeem: geen formulier, wel de zin voor je team", () => {
     const el = open(ctxMet({ acties: metSpecialisten(), systeemPerDomein: { acties: "notion" } }));
     expect(el.querySelector("[data-opdracht]")).toBeNull();
-    expect(el.textContent).toContain("Notion");
+    expect(el.textContent).toContain("je eigen systeem");
   });
 });
 

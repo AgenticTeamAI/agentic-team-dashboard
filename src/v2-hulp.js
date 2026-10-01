@@ -15,7 +15,7 @@ const VOORBEELDEN = {
       ["Als jij wilt", "Jij verstuurt", "De deal beweegt weer.", "klaar"]] },
   notes: { tab: "Gespreksnotities worden acties", soort: "Zo kun je je team gebruiken", titel: "Van gespreksnotities naar een lijst die zichzelf afwerkt",
     lede: "Je komt uit een klantgesprek met een pagina aantekeningen. In plaats van zelf een lijstje te maken, geef je de notities aan je team.",
-    stappen: [["Na het gesprek", "Jij plakt je notities in Claude", "“Maak hier acties van en koppel ze aan de deal.”", "jij"],
+    stappen: [["Na het gesprek", "Jij plakt je notities in je AI-assistent", "“Maak hier acties van en koppel ze aan de deal.”", "jij"],
       ["Direct", "Elke afspraak wordt een actie", "Met een eigenaar en een deadline. Werk voor jou komt op jouw naam, werk voor een specialist bij je team.", "team"],
       ["Volgende werkmoment", "De Dealmaker pakt zijn deel op", "Hij zet je notities om in een diagnose en een eerlijke inschatting, bij de deal.", "team"],
       ["Volgende werkmoment", "De Outreach Specialist schrijft de follow-up", "Een conceptmail die laat zien dat je goed geluisterd hebt. Hij verstuurt niets.", "team"],
@@ -63,7 +63,7 @@ function hulpSecties() {
   return [
     ["in-een-minuut", "Je team in één minuut", () => `
       <p>Je team bestaat uit specialisten, elk met een eigen vak: van je deals tot je facturen. Ze werken op twee manieren.</p>
-      <ul><li><b>Als je het vraagt.</b> Je praat gewoon met Claude. Past je vraag bij een vakgebied, dan pakt de juiste specialist hem op en zegt hij wie hij is. Je hoeft zelf niemand te kiezen.</li>
+      <ul><li><b>Als je het vraagt.</b> Je praat gewoon met je AI-assistent. Past je vraag bij een vakgebied, dan pakt de juiste specialist hem op en zegt hij wie hij is. Je hoeft zelf niemand te kiezen.</li>
       <li><b>Vanzelf, op vaste momenten.</b> Terwijl jij iets anders doet, loopt je team het open werk en je vaste taken langs. Dat heet je werkmoment.</li></ul>
       <p>Wat naar buiten gaat, zoals een mail, een post of een factuur, komt altijd eerst bij jou. Je team verstuurt, publiceert of betaalt nooit zelf.</p>
       ${CTX ? `<div class="chiprij">${teamLeden().slice(0, 12).map(s => agChip(s)).join("")}</div>` : ""}
@@ -83,16 +83,16 @@ function hulpSecties() {
     ["wie-aan-zet", "Wie is aan zet?", () => `
       <p>Elk item zegt wie aan zet is. Dezelfde kleuren zie je overal: <b class="kleur-jij">oranje</b> ben jij, <b class="kleur-team">teal</b> is je team.</p>
       <div class="banenuitleg">
-       <div class="bu j"><span class="vorm" aria-hidden="true">●</span><div><b>Jij</b> · klaar om te checken, voorstel, signaal of taak voor jou<small>In Claude of Notion: Wacht op review · Voorstel · Open op jouw naam</small></div></div>
-       <div class="bu t"><span class="vorm" aria-hidden="true">◐</span><div><b>Je team</b> · staat klaar voor het volgende werkmoment, of een specialist werkt eraan<small>In Claude of Notion: Open of Bezig, met een specialist als eigenaar</small></div></div>
-       <div class="bu"><span class="vorm" aria-hidden="true">○</span><div><b>Wacht</b> · op iets of iemand, soms tot een datum; daarna komt het vanzelf terug<small>In Claude of Notion: Wacht</small></div></div>
-       <div class="bu"><span class="vorm" aria-hidden="true">✓</span><div><b>Afgerond</b><small>In Claude of Notion: Klaar</small></div></div></div>
+       <div class="bu j"><span class="vorm" aria-hidden="true">●</span><div><b>Jij</b> · klaar om te checken, voorstel, signaal of taak voor jou<small>Statusnaam: Wacht op review · Voorstel · Open op jouw naam</small></div></div>
+       <div class="bu t"><span class="vorm" aria-hidden="true">◐</span><div><b>Je team</b> · staat klaar voor het volgende werkmoment, of een specialist werkt eraan<small>Statusnaam: Open of Bezig, met een specialist als eigenaar</small></div></div>
+       <div class="bu"><span class="vorm" aria-hidden="true">○</span><div><b>Wacht</b> · op iets of iemand, soms tot een datum; daarna komt het vanzelf terug<small>Statusnaam: Wacht</small></div></div>
+       <div class="bu"><span class="vorm" aria-hidden="true">✓</span><div><b>Afgerond</b><small>Statusnaam: Klaar</small></div></div></div>
       <p>Iets naar een andere baan? Sleep het erheen op het bord, of kies <b>Verplaats</b>. Naar je team vraagt het aan wie, naar Wacht tot wanneer.</p>
       <p class="contextregel"><b>De vaste regel:</b> een mail, bericht, publicatie of iets anders wat niet terug te draaien is, doet je team nooit zelf. Het komt als ‘klaar om te checken’ of als voorstel bij jou.</p>${naar("Bekijk wat nu aan jou is", "/acties")}`],
     ["vanzelf-werken", "Je werkmoment: zo werkt je team vanzelf", () => `
-      <p>Je team werkt vanzelf op het moment dat jij in Claude plant: je <b>werkmoment</b>. Dat regel je één keer, in twee minuten.</p>
-      <ol class="stappen"><li><div><b>Zeg in Claude tegen je team:</b>${k("Zet mijn ritmetaken aan.")}<span class="klein stil">Je team zet dan de vaste taken klaar die bij jouw modules horen. Staan ze er al, sla deze stap dan over.</span></div></li>
-      <li><div><b>Je team stelt een geplande taak voor. Druk op Schedule.</b><span class="klein">Zie je die knop niet? Ga in Claude naar <b>Scheduled › New task</b>: elke dag, buiten werktijd (bijvoorbeeld 02:00), met deze opdracht:</span>${k(WERKMOMENT_OPDRACHT)}</div></li>
+      <p>Je team werkt vanzelf op het moment dat jij in je AI-assistent plant: je <b>werkmoment</b>. Dat regel je één keer, in twee minuten.</p>
+      <ol class="stappen"><li><div><b>Zeg in je AI-assistent tegen je team:</b>${k("Zet mijn ritmetaken aan.")}<span class="klein stil">Je team zet dan de vaste taken klaar die bij jouw modules horen. Staan ze er al, sla deze stap dan over.</span></div></li>
+      <li><div><b>Je team stelt een geplande taak voor. Bevestig die.</b><span class="klein">Zie je geen voorstel? Maak dan zelf een nieuwe geplande taak aan: elke dag, buiten werktijd (bijvoorbeeld 02:00), met deze opdracht:</span>${k(WERKMOMENT_OPDRACHT)}</div></li>
       <li><div><b>Klaar.</b><span>Na de eerste nacht staat bij Voor jou wat je team deed.</span></div></li></ol>
       <h4 class="vakkop">Zo loopt één werkmoment</h4>
       <ol class="stappen"><li><div><b>Het werkmoment begint</b><span class="stil">Bijvoorbeeld elke nacht, of om de paar uur.</span></div></li><li><div><b>Is er werk?</b><span class="stil">Open werk voor een specialist, en vaste taken die aan de beurt zijn. Niets? Dan stopt het meteen.</span></div></li>
@@ -114,7 +114,7 @@ function hulpSecties() {
       <p class="klein">Zo start je er een:</p>${k("Draai de commerciële keten voor installatiebedrijven in Utrecht.")}`],
     ["opdracht", "Je team een opdracht geven", () => `
       <p>Kies <b>Opdracht geven</b>: het vraagt alleen wat er moet gebeuren, wie het oppakt en voor wanneer. Bij het volgende werkmoment pakt de specialist het op; het resultaat zie je bij Voor jou.</p>
-      <p>Of zeg het in Claude:</p>${k("Zet een actie klaar voor de Researcher: zoek tien installatiebedrijven in Utrecht die groeien.")}
+      <p>Of zeg het in je AI-assistent:</p>${k("Zet een actie klaar voor de Researcher: zoek tien installatiebedrijven in Utrecht die groeien.")}
       <p class="contextregel"><b>Vuistregel:</b> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
       <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <b>Geef aan je team</b>.</p>${naar("Naar Acties", "/acties")}`],
     ["daglink", "Daglink of inloggen?", () => `
@@ -127,7 +127,7 @@ function hulpSecties() {
        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table></div>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
-      <p class="klein stil">Kopieer een zin en plak hem in Claude.</p>
+      <p class="klein stil">Kopieer een zin en plak hem in je AI-assistent.</p>
       <b class="klein">Je dag beginnen</b>${k("Start mijn dag.")}
       <b class="klein">Vaste taken aanzetten</b>${k("Zet mijn ritmetaken aan.")}
       <b class="klein">Een vaste taak erbij</b>${k("Maak hier een ritmetaak van: elke vrijdag mijn week samenvatten.")}
@@ -136,11 +136,11 @@ function hulpSecties() {
       <b class="klein">Hulp</b>${k("Help me mijn team gebruiken.")}`],
     ["werkt-niet", "Het werkt niet zoals je verwacht", () => `
       <div class="kol" style="gap:10px">
-      <div><b>Mijn team deed vannacht niets.</b><p class="stil">Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in Claude niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</p></div>
+      <div><b>Mijn team deed vannacht niets.</b><p class="stil">Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in je AI-assistent niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</p></div>
       <div><b>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</b><p class="stil">Die zetten wij per team aan. Mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>, dan regelen we het.</p></div>
       <div><b>Ik kan niet op de knoppen drukken.</b><p class="stil">Je kijkt met je daglink: die is alleen om te lezen. Log in met je e-mailadres; je komt terug waar je was.</p></div>
       <div><b>Een actie staat bij een collega.</b><p class="stil">Onder Acties staat ‘Bij collega's’. Open het item en kies bij Alle gegevens op wiens naam het staat.</p></div>
-      <div><b>Mijn team reageert niet in Claude, of ik zie geen tools meer.</b><p class="stil">Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw in Claude (Instellingen › Connectors).</p></div>
+      <div><b>Mijn team reageert niet in mijn AI-assistent, of ik zie geen tools meer.</b><p class="stil">Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw bij de koppelingen (connectors) van je AI-assistent.</p></div>
       <div><b>Mijn collega is uitgenodigd, maar komt er niet in.</b><p class="stil">Laat je collega inloggen met precies het adres waarop die is uitgenodigd. Sommige mailscanners klikken links al aan; stuur dan een nieuwe uitnodiging.</p></div></div>
       ${naar("Is je team klaar?", "/team/klaar")}`],
     ["gegevens", "Je gegevens: klanten, deals en contactpersonen", () => `
@@ -149,19 +149,19 @@ function hulpSecties() {
       <li><b>Aanpassen:</b> druk bij een veld op ‘wijzig’. Je past één veld tegelijk aan; de rest blijft staan. Vergist? Maak het ongedaan.</li>
       <li><b>Toevoegen:</b> een nieuwe organisatie, contactpersoon, deal of notitie. Of laat je team de gegevens aanvullen, met bron.</li>
       <li><b>Verwijderen:</b> onder Meer. Wat eraan hangt, zoals acties en contactpersonen, blijft bestaan. Verwijderen kun je niet ongedaan maken.</li></ul>
-      <p class="klein stil">Welke velden er zijn, hangt af van je modules. Staan je gegevens in Notion of een CRM, dan pas je ze daar aan.</p>${naar("Naar je gegevens", "/gegevens")}`],
-    ["notion", "Je werkdata staat in Notion", () => `
-      <p>Werk je met je eigen Notion of een CRM, dan staan je acties en vaste taken daar. Het dashboard leest ze niet rechtstreeks.</p>
-      <ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar Notion.</li>
-      <li><b>In Notion doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team in Claude.</li></ul>`],
+      <p class="klein stil">Welke velden er zijn, hangt af van je modules. Staan je gegevens in je eigen systeem, zoals een CRM, dan pas je ze daar aan.</p>${naar("Naar je gegevens", "/gegevens")}`],
+    ["eigen-systeem", "Je werkdata staat in je eigen systeem", () => `
+      <p>Werk je met je eigen systeem, zoals een CRM, dan staan je acties en vaste taken daar. Het dashboard leest ze niet rechtstreeks.</p>
+      <ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
+      <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
-    ["woorden", "Woorden die je in Claude of Notion ziet", () => `
-      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in Claude</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+    ["woorden", "Woorden die je team gebruikt", () => `
+      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
   ];
 }
 function htmlTekst(h) { return String(h).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase(); }
 const HULPPLAAT = `<svg class="hulpplaat" viewBox="0 0 520 110" role="img" aria-label="Jij vraagt, je team werkt, jij beslist">
-  <rect class="kj" x="4" y="14" width="148" height="80" rx="12"/><text x="78" y="46" text-anchor="middle" font-weight="700" font-size="15">Jij vraagt</text><text class="sub" x="78" y="68" text-anchor="middle">in Claude, of hier</text>
+  <rect class="kj" x="4" y="14" width="148" height="80" rx="12"/><text x="78" y="46" text-anchor="middle" font-weight="700" font-size="15">Jij vraagt</text><text class="sub" x="78" y="68" text-anchor="middle">in je AI-assistent</text>
   <path class="pijl" d="M158 54h20"/><path class="pijlkop" d="M178 49l8 5-8 5z"/>
   <rect class="kt" x="186" y="14" width="148" height="80" rx="12"/><text x="260" y="46" text-anchor="middle" font-weight="700" font-size="15">Je team werkt</text><text class="sub" x="260" y="68" text-anchor="middle">op je werkmoment</text>
   <path class="pijl" d="M340 54h20"/><path class="pijlkop" d="M360 49l8 5-8 5z"/>
@@ -173,7 +173,7 @@ function renderHulp() {
   const leeg = S.leeg;
   const kop = !CTX
     ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b data-leeg-titel>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px" data-leeg-tekst>${esc(leeg.tekst)}</p>` : ""}</div>
-      ${leeg && leeg.bezig ? "" : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator in Claude om een daglink.</span>`}</div>`}
+      ${leeg && leeg.bezig ? "" : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator om een daglink.</span>`}</div>`}
       <p class="klein stil">${esc(PRIVACY_LEGE_STAAT)}</p></div>`
     : `<button class="link" data-act="go" data-r="${S.hist.length ? "__terug" : "/"}">${ic("links", "klein")} Terug</button>`;
   const versie = document.querySelector('meta[name="at-schema"]');
@@ -183,6 +183,7 @@ function renderHulp() {
     ${kc && !z ? `<button class="regel" data-act="go" data-r="/team/klaar"><span class="rl"><b>Is je team klaar? ${kc.ok} van ${kc.totaal}</b><span>${kc.totaal - kc.ok ? "Bekijk wat er nodig is" : "Alles in orde"}</span></span>${ic("chev")}</button>` : ""}
     ${!z ? `<section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Zo werkt je team</h2>${HULPPLAAT}</section>` : ""}
     ${secties.map(([id, t, h]) => `<details class="hsec" id="h-${id}" ${S.ui.hulp.open[id] || z || doel === id ? "open" : ""} data-hsec="${id}"><summary>${esc(t)}${ic("chev")}</summary><div class="binnen">${h}</div></details>`).join("") || '<p class="stil">Niets gevonden. Probeer een ander woord.</p>'}
-    <section class="vak"><p>Kom je er niet uit? Zeg in Claude: <b>‘Help me mijn team gebruiken.’</b> Of mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>.</p></section>
+    <section class="vak" style="display:flex;flex-direction:column;gap:10px"><p>Kom je er niet uit? Zeg in je AI-assistent: <b>‘Help me mijn team gebruiken.’</b> Of mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>.</p>
+      <div class="rijtje"><button class="knop" data-act="sheet" data-type="feedback">${ic("bericht", "klein")}Geef feedback op het dashboard</button></div></section>
     ${versie ? `<p class="klein stil">Teamdefinitie: schemaversie ${esc(versie.getAttribute("content"))}. Je connector kan een nieuwere versie draaien.</p>` : ""}</div>`;
 }

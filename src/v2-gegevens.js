@@ -61,7 +61,7 @@ function dealWaarde(r) { return Number(getField(r, "Verwachte Omzet")) || 0; }
 function renderGegevens() {
   const p = parts();
   if (toegang() === "notion" && !p[1]) {
-    const naam = bronVan(CTX, "organisaties").naam || bronVan(CTX, "acties").naam || "Notion";
+    const naam = bronVan(CTX, "organisaties").naam || bronVan(CTX, "acties").naam || "je eigen systeem";
     return `<div class="inhoud">${renderBalk()}<h2 class="titel">Gegevens</h2><section class="vak" style="display:flex;flex-direction:column;gap:8px"><p><b>Je klanten, deals en contactpersonen staan in ${esc(naam)}.</b> Daar bekijk en wijzig je ze.${rijenVan("organisaties").length ? " Wat er ook in je werkruimte staat, zie je hieronder." : ""}</p>${hoe("notion")}</section>${groepenHtml()}</div>`;
   }
   if (p[1] && p[2]) return renderRijPagina2(p[1], decodeURIComponent(p[2]));
@@ -110,7 +110,7 @@ function renderLijst(k) {
     <p class="klein stil">${b.toestand === "elders" ? "Woont in " + esc(b.naam) + "; hier staan alleen de losse rijen uit je werkruimte" : "Woont in je werkruimte"} · ${telwoord(rijenVan(k).length, domeinEnkel(k), domeinLabel(k).toLowerCase())}</p>
     ${rijenVan(k).length > 6 ? `<div class="zoek">${ic("zoek")}<input type="search" id="gegevens-zoek" data-input="gzoek" placeholder="Zoek in ${esc(domeinLabel(k).toLowerCase())}" value="${esc(g.zoek || "")}" aria-label="Zoek in ${esc(domeinLabel(k).toLowerCase())}"></div>` : ""}
     ${fv ? `<div class="seg" role="group" aria-label="${esc(fv.veld)}"><button data-act="gf" data-v="" aria-pressed="${!f}">Alle</button>${fv.waarden.map(w => `<button data-act="gf" data-v="${esc(w)}" aria-pressed="${f === w}">${esc(w)}</button>`).join("")}</div>` : ""}
-    <div class="kol" style="gap:8px">${rijen || `<p class="bordleeg">${z || f ? "Niets gevonden" + (z ? " voor ‘" + esc(z) + "’" : "") + "." : "Nog niets. " + (kan ? "Voeg de eerste toe, of vraag je team in Claude." : "Je team vult dit aan als het voor je werkt.")}</p>`}
+    <div class="kol" style="gap:8px">${rijen || `<p class="bordleeg">${z || f ? "Niets gevonden" + (z ? " voor ‘" + esc(z) + "’" : "") + "." : "Nog niets. " + (kan ? "Voeg de eerste toe, of vraag het je team." : "Je team vult dit aan als het voor je werkt.")}</p>`}
     ${lijst.length > 300 ? `<p class="klein stil">De eerste 300 van ${lijst.length}. Zoek om de rest te vinden.</p>` : ""}</div></div>`;
 }
 
@@ -189,7 +189,7 @@ function renderRijPagina2(k, id) {
   const rechts = volgorde.map(([slug, l]) => `
     <section class="vak" style="display:flex;flex-direction:column;gap:6px"><div class="tussen"><h2 class="vakkop">${esc(domeinLabel(slug))}</h2>${plus(slug)}</div>
       ${l.length ? `<div class="lijstje">${l.slice(0, 25).map(x => lijstjeRij(slug, x)).join("")}</div>${l.length > 25 ? `<p class="klein stil">… en nog ${l.length - 25}</p>` : ""}` : `<p class="bordleeg">Nog geen ${esc(domeinLabel(slug).toLowerCase())}.</p>`}
-      ${slug === "interacties" ? '<p class="klein stil">Een gesprek komt erbij als je in Claude vertelt hoe het ging.</p>' : ""}</section>`).join("")
+      ${slug === "interacties" ? '<p class="klein stil">Een gesprek komt erbij als je je team vertelt hoe het ging.</p>' : ""}</section>`).join("")
     + (notitieInfo ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><div class="tussen"><h2 class="vakkop">Notities</h2>${magSchrijven("notities") ? `<button class="knop klein-knop" data-act="sheet" data-type="notitie" data-k="${esc(k)}" data-id="${esc(id)}">${ic("plus", "klein")}Notitie</button>` : ""}</div>
       ${notities.map(n => `<div class="opm"><small>${esc([tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "))}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`).join("")}
       ${!notities.length ? '<p class="bordleeg">Nog geen notities.</p>' : ""}<p class="klein stil">Notities zijn voor jou en je collega's.</p></section>` : "");

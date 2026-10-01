@@ -375,6 +375,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   // Geen link en geen sessie: de Hulp is de lege staat, met inloggen bovenaan.
   toonLegeStaat(oauthMogelijk() ? "Log in om je team te zien" : "Open je dashboard via de daglink in je dagstart",
-    oauthMogelijk() ? "Of open dit dashboard via de daglink in je dagstart. Hieronder lees je hoe je team werkt." : "Vraag je Coördinator in Claude om een daglink. Hieronder lees je hoe je team werkt.",
+    oauthMogelijk() ? "Of open dit dashboard via de daglink in je dagstart. Hieronder lees je hoe je team werkt." : "Vraag je Coördinator om een daglink. Hieronder lees je hoe je team werkt.",
     { login: true });
 });

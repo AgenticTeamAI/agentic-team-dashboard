@@ -67,8 +67,8 @@ function laterGroep(B) { return B.later.length ? `<details class="uitklap" ${det
 function renderActies() {
   if (toegang() === "notion") {
     const n = (werkbakUitDagstart() || []).length; const naam = naamElders("acties");
-    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team in Claude.</p>
-    <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("notion", "Waarom staat dit in Notion?")}</div></section></div>`;
+    return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team.</p>
+    <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section></div>`;
   }
   if (!rows(CTX.bundle, "acties")) {
     return `<div class="inhoud">${renderBalk()}<h2 class="titel">Wie is aan zet?</h2><section class="leeg"><h3>Nog geen acties</h3><p class="stil">Zodra jij of je team iets op de lijst zet, staat het hier, met wie er aan zet is.</p>${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}</section></div>`;
@@ -156,13 +156,13 @@ function renderTeam() {
   const geenFeed = !(CTX.bundle && CTX.bundle.teamfeed);
   const leeg = f ? `<p class="stil">Geen berichten van ${esc(deNaam(f))} in de afgelopen 30 dagen.</p>`
     : geenFeed ? `<p class="stil">Je werkruimte houdt nog geen teamfeed bij. Wat je team doet, zie je bij Voor jou en Acties.</p>`
-      : `<p class="stil">Je team heeft nog niets gedaan. Vraag in Claude iets aan een specialist, of zet je vaste taken aan.</p><div class="rijtje" style="margin-top:8px"><button class="knop" data-act="go" data-r="/team/klaar">Zet je team aan het werk</button></div>`;
+      : `<p class="stil">Je team heeft nog niets gedaan. Vraag in je AI-assistent iets aan een specialist, of zet je vaste taken aan.</p><div class="rijtje" style="margin-top:8px"><button class="knop" data-act="go" data-r="/team/klaar">Zet je team aan het werk</button></div>`;
   return `<div class="inhoud">${renderBalk()}${kop}
     ${agentsInFeed.length > 1 ? `<div class="chiprij" role="group" aria-label="Filter"><button class="keuze" data-act="tf" data-v="" aria-pressed="${!f}">Iedereen</button>${agentsInFeed.map(s => `<button class="keuze" data-act="tf" data-v="${esc(s)}" aria-pressed="${f === s}"><span aria-hidden="true">${esc(AGENTS[s].em)}</span> ${esc(AGENTS[s].kort)}</button>`).join("")}</div>` : ""}
     <section class="vak">${lijst || leeg}</section>
     ${leden.length ? `<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="vakkop">Je hele team</h2>
       <div class="chiprij">${leden.map(agKnop).join("")}</div>
-      ${ongebruikt.length ? `<h3 class="vakkop" style="margin-top:6px">Nog niet ingezet</h3>${ongebruikt.slice(0, 4).map(s => `<div class="kol" style="gap:6px"><p><b>${esc(AGENTS[s].naam)}</b> · <span class="stil">${esc(AGENTS[s].rol)}</span></p><div class="kopieerblok"><code>${esc(VRAAG_VOOR[s] || "Wat kun jij voor mij doen?")}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(VRAAG_VOOR[s] || "Wat kun jij voor mij doen?")}">${ic("kopieer", "klein")}Kopieer</button></div><p class="klein stil">Plak dit in Claude; ${esc(deNaam(s))} pakt het op.</p></div>`).join("")}` : ""}</section>` : ""}</div>`;
+      ${ongebruikt.length ? `<h3 class="vakkop" style="margin-top:6px">Nog niet ingezet</h3>${ongebruikt.slice(0, 4).map(s => `<div class="kol" style="gap:6px"><p><b>${esc(AGENTS[s].naam)}</b> · <span class="stil">${esc(AGENTS[s].rol)}</span></p><div class="kopieerblok"><code>${esc(VRAAG_VOOR[s] || "Wat kun jij voor mij doen?")}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(VRAAG_VOOR[s] || "Wat kun jij voor mij doen?")}">${ic("kopieer", "klein")}Kopieer</button></div><p class="klein stil">Plak dit in je AI-assistent; ${esc(deNaam(s))} pakt het op.</p></div>`).join("")}` : ""}</section>` : ""}</div>`;
 }
 function inzetDezeWeek(slug) {
   const a = CTX.bundle && CTX.bundle.activaties;
@@ -180,8 +180,8 @@ function renderAgent(slug) {
   return `<div class="inhoud">${renderBalk()}<button class="link" data-act="go" data-r="/team">${ic("links", "klein")} Team</button>
     <section class="vak" style="display:flex;flex-direction:column;gap:12px"><div class="agentkop"><span class="groot-em" aria-hidden="true">${esc(g.em)}</span><div><h2 class="titel">${esc(g.naam)}</h2><p class="stil klein">AI-specialist${g.module ? " · module " + esc(g.module) : ""}</p></div></div>
       <p>${esc(g.rol)}</p>
-      <div class="rijtje">${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht" data-ag="${esc(slug)}">${ic("plus", "klein")}Geef een opdracht</button>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="Laat ${esc(deNaam(slug))} mij helpen met ...">${ic("kopieer", "klein")}Kopieer een vraag voor Claude</button></div>
-      <div class="tellers">${notion ? "" : `<div class="teller"><b>${gedaan}</b><span>deze week gedaan</span></div><div class="teller"><b>${wacht.length}</b><span>wacht op jou</span></div>`}${inzet !== null ? `<div class="teller"><b>${inzet}×</b><span>deze week ingezet vanuit Claude</span></div>` : ""}</div></section>
+      <div class="rijtje">${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht" data-ag="${esc(slug)}">${ic("plus", "klein")}Geef een opdracht</button>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="Laat ${esc(deNaam(slug))} mij helpen met ...">${ic("kopieer", "klein")}Kopieer een vraag voor je team</button></div>
+      <div class="tellers">${notion ? "" : `<div class="teller"><b>${gedaan}</b><span>deze week gedaan</span></div><div class="teller"><b>${wacht.length}</b><span>wacht op jou</span></div>`}${inzet !== null ? `<div class="teller"><b>${inzet}×</b><span>deze week ingezet via je AI-assistent</span></div>` : ""}</div></section>
     ${wacht.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Wacht op jou (${wacht.length})</h2>${wacht.map(rij).join("")}</section>` : ""}
     ${onder.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Onder handen (${onder.length})</h2>${onder.map(rij).join("")}</section>` : ""}
     ${taken.length ? `<section class="vak"><h2 class="vakkop">Vaste taken</h2>${taken.map(taakRij).join("")}</section>` : ""}
@@ -207,8 +207,8 @@ function taakRij(t) {
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
     <div class="kol" style="gap:5px"><span class="tnaam">${esc(t.naam)}</span><div class="tregel">${t.agent ? agChip(t.agent, { kort: true }) : ""}${ritmeSelect(t, !mag || !t.actief)}${["elk-uur", "elke-2-uur", "elke-4-uur"].includes(t.ritme) ? '<span class="klein">zo vaak als je team werkt</span>' : ""}</div>
-      <div class="tregel">${stTekst}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in Notion ${ic("pijl-op", "klein")}</a>` : ""}</div>
-      ${wat ? `<details class="uitklap kaal" ${det("taak-" + t.id)}><summary>Wat doet deze taak?${ic("chev", "klein")}</summary><div class="binnen"><p>${esc(wat)}</p><p class="klein stil">Wil je dat deze taak iets anders doet? Vraag het de Coördinator in Claude.</p></div></details>` : ""}</div></div>`;
+      <div class="tregel">${stTekst}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
+      ${wat ? `<details class="uitklap kaal" ${det("taak-" + t.id)}><summary>Wat doet deze taak?${ic("chev", "klein")}</summary><div class="binnen"><p>${esc(wat)}</p><p class="klein stil">Wil je dat deze taak iets anders doet? Vraag het de Coördinator.</p></div></details>` : ""}</div></div>`;
 }
 function kopieerBlok(t) { return `<div class="kopieerblok"><code>${esc(t)}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(t)}">${ic("kopieer", "klein")}Kopieer</button></div>`; }
 function dagenLijst(l) { return lijstZin(l.map(x => x.lang)); }
@@ -218,10 +218,10 @@ function renderVasteTaken() {
   const T = S.data.taken;
   const bron = { naam: naamElders("ritmetaken") };
   const elders = takenElders();
-  if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "Notion")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team in Claude. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
+  if (elders && !T.length) return `${checkRegel}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h3>Je vaste taken staan in ${esc(bron.naam || "je eigen systeem")}</h3><p class="stil">Aanpassen doe je daar, of vraag het je team. Het weekoverzicht verschijnt hier zodra je dagstart het meestuurt.</p>${kopieerBlok("Laat mijn ritmetaken zien en zet de facturentaak op woensdag.")}</section>`;
   const slot = !magSchrijven("ritmetaken") && !elders ? `<div class="slotregel">${ic("slot", "klein")}<span>${toegang() === "daglink" ? "Aanpassen kan na inloggen." : "Je sessie mag alleen lezen. Log opnieuw in om aan te passen."}</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>` : "";
   if (!T.length) return `${checkRegel}<section class="leeg"><h3>Je team heeft nog geen vaste taken</h3>${slot}<p class="stil">Een vaste taak is werk dat je team steeds opnieuw voor je doet, zonder dat je het hoeft te vragen.</p>
-    <p class="stil">Je zet ze in Claude aan:</p><div style="width:100%">${kopieerBlok("Zet mijn ritmetaken aan.")}</div><button class="knop" data-act="go" data-r="/team/klaar">Bekijk het stappenblad</button></section>${renderCatalogus()}`;
+    <p class="stil">Je zet ze aan in je AI-assistent:</p><div style="width:100%">${kopieerBlok("Zet mijn ritmetaken aan.")}</div><button class="knop" data-act="go" data-r="/team/klaar">Bekijk het stappenblad</button></section>${renderCatalogus()}`;
   const w = weekTelling();
   const donderdagKan = ritmes().some(k => k.waarde === "wekelijks-do" && k.kan);
   const week = `<div class="week">${w.dagen.map(x => `<div class="wdag ${w.drukste.includes(x) ? "druk" : ""}"><span class="dn">${x.d}</span><span class="aantal">${x.taken.length}</span>
@@ -235,9 +235,9 @@ function renderVasteTaken() {
       <p class="klein">Per maand komen er ongeveer <b class="mono">${w.perMaand}</b> vaste taken aan de beurt${w.vaak.length ? `, plus ${telwoord(w.vaak.length, "taak", "taken")} die zo vaak ${w.vaak.length === 1 ? "draait" : "draaien"} als je team werkt` : ""}. <span class="stil">Met één werkmoment per nacht doet je team er hooguit ${w.werkdagen} per maand.${donderdagKan ? "" : " Een wekelijkse taak kan nog niet op donderdag."}</span></p>
       ${w.drukste.length ? `<div class="contextregel"><b>Op ${dagenLijst(w.drukste)} staan ${n} vaste taken.</b> Je team doet er één per werkmoment. Werkt je team één keer per nacht, dan schuiven er ${n - 1} door.
         <details class="uitklap kaal" style="margin-top:4px" ${det("druk-uitleg")}><summary>Wat kan ik doen?${ic("chev", "klein")}</summary><div class="binnen"><ul style="margin:0;padding-left:18px"><li>Laat je team vaker werken, bijvoorbeeld elke 4 uur. <button class="hoe" data-act="naar-stappen" data-doel="vaker">Zo doe je dat</button></li><li>Zet een taak op een rustiger dag.</li><li>Zet een taak tijdelijk uit.</li></ul></div></details></div>` : ""}</section>
-    <section class="vak"><div class="tussen"><h2 class="vakkop">Je vaste taken · ${aan.length} aan</h2></div>${slot}${elders ? `<p class="klein stil">Stand van je dagstart. Aanpassen doe je in ${esc(bron.naam || "Notion")}, of zeg het je team in Claude.</p>` : `<p class="klein stil">Je team doet per werkmoment één vaste taak; staan er meer klaar, dan eerst de bovenste.</p>`}${aan.length ? aan.map(taakRij).join("") : "<p>Er staat nu geen enkele vaste taak aan.</p>"}
+    <section class="vak"><div class="tussen"><h2 class="vakkop">Je vaste taken · ${aan.length} aan</h2></div>${slot}${elders ? `<p class="klein stil">Stand van je dagstart. Aanpassen doe je in ${esc(bron.naam || "je eigen systeem")}, of zeg het je team.</p>` : `<p class="klein stil">Je team doet per werkmoment één vaste taak; staan er meer klaar, dan eerst de bovenste.</p>`}${aan.length ? aan.map(taakRij).join("") : "<p>Er staat nu geen enkele vaste taak aan.</p>"}
       ${uit.length ? `<details class="uitklap" ${det("taken-uit")}><summary>Uitgezet (${uit.length})${ic("chev")}</summary><div class="binnen">${uit.map(taakRij).join("")}</div></details>` : ""}</section>
-    <section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Meer vast werk?</h2><p class="klein">Zeg het tegen je team in Claude. Bijvoorbeeld:</p>
+    <section class="vak" style="display:flex;flex-direction:column;gap:8px"><h2 class="vakkop">Meer vast werk?</h2><p class="klein">Zeg het tegen je team. Bijvoorbeeld:</p>
       ${kopieerBlok("Zet elke vrijdag een weekreflectie op.")}</section>${renderCatalogus()}`;
 }
 /* f55: de vaste taken die bij je modules horen en nog niet aanstaan, met "Zet aan". */
@@ -279,19 +279,19 @@ function stappenblad() {
   const klaarStap = `<li><div><b>Klaar.</b><span>Na de eerste nacht staat bij Voor jou wat je team deed.${notion ? "" : " Deze check wordt dan vanzelf groen."}</span></div></li>`;
   const takenAan = T.some(t => t.actief);
   const installatie = takenAan && !notion
-    ? `<ol class="stappen"><li><div><b>Open in Claude: Scheduled</b><span class="klein">Staat daar al een taak met get_werkronde in de opdracht? Kijk of hij aanstaat. Zo niet, kies <b>New task</b> en vul in:</span>${velden}</div></li>${klaarStap}</ol>`
-    : `<ol class="stappen"><li><div><b>Zeg in Claude tegen je team:</b>${kopieerBlok("Zet mijn ritmetaken aan.")}<span class="klein stil">Je team zet dan de vaste taken klaar die bij jouw modules horen.</span></div></li>
-    <li><div><b>Je team stelt een geplande taak voor. Druk op Schedule.</b><span class="klein">Zie je die knop niet? Ga in Claude naar <b>Scheduled › New task</b> en vul in:</span>${velden}</div></li>${klaarStap}</ol>`;
+    ? `<ol class="stappen"><li><div><b>Open de geplande taken in je AI-assistent</b><span class="klein">Staat daar al een taak met get_werkronde in de opdracht? Kijk of hij aanstaat. Zo niet, maak een nieuwe geplande taak aan en vul in:</span>${velden}</div></li>${klaarStap}</ol>`
+    : `<ol class="stappen"><li><div><b>Zeg in je AI-assistent tegen je team:</b>${kopieerBlok("Zet mijn ritmetaken aan.")}<span class="klein stil">Je team zet dan de vaste taken klaar die bij jouw modules horen.</span></div></li>
+    <li><div><b>Je team stelt een geplande taak voor. Bevestig die.</b><span class="klein">Zie je geen voorstel? Maak dan zelf een nieuwe geplande taak aan en vul in:</span>${velden}</div></li>${klaarStap}</ol>`;
   const advies = `<p class="contextregel"><b>Hoe vaak?</b> Elke nacht is genoeg om mee te beginnen. Je team doet per werkmoment één vaste taak. Staan er op één dag meer vaste taken dan je team werkmomenten heeft, kies dan elke 4 uur${w.max >= 2 && !notion ? ` (bij jou staan er op ${dagenLijst(w.drukste)} ${w.max})` : ""}.</p>`;
   if (vaker) return `<section class="vak" id="stappenblad" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">Laat je team vaker werken</h2>
     <p>Je werkmoment bestaat al. Zet het vaker aan, dan komen al je vaste taken aan de beurt.</p>
-    <ol class="stappen"><li><div><b>Open in Claude: Scheduled</b><span class="klein stil">Zoek je werkmoment: de taak met get_werkronde in de opdracht${bedrijf() ? `, bijvoorbeeld ‘${esc(werkmomentNaam())}’` : ""}.</span></div></li>
+    <ol class="stappen"><li><div><b>Open de geplande taken in je AI-assistent</b><span class="klein stil">Zoek je werkmoment: de taak met get_werkronde in de opdracht${bedrijf() ? `, bijvoorbeeld ‘${esc(werkmomentNaam())}’` : ""}.</span></div></li>
     <li><div><b>Zet ‘Wanneer’ op elke 4 uur</b><span class="klein stil">Je team doet dan tot zes vaste taken per dag in plaats van één. Een werkmoment zonder werk stopt meteen en kost vrijwel niets.</span></div></li>
     <li><div><b>Klaar.</b><span>Morgen zie je hier dat alle taken aan de beurt kwamen.</span></div></li></ol>
     <details class="uitklap" ${det("nog-geen-werkmoment")}><summary>Nog geen werkmoment?${ic("chev")}</summary><div class="binnen">${installatie}</div></details></section>`;
-  return `<section class="vak" id="stappenblad" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">${takenAan && !notion ? "Zet je werkmoment (weer) aan" : "Laat je team vanzelf werken"}</h2><p>${takenAan && !notion ? "Je vaste taken staan klaar. Wat ontbreekt, is het moment waarop je team ze oppakt." : "Je team werkt op de momenten die jij in Claude plant: je werkmoment. Dat regel je één keer."}</p>
+  return `<section class="vak" id="stappenblad" style="display:flex;flex-direction:column;gap:12px"><h2 class="vakkop">${takenAan && !notion ? "Zet je werkmoment (weer) aan" : "Laat je team vanzelf werken"}</h2><p>${takenAan && !notion ? "Je vaste taken staan klaar. Wat ontbreekt, is het moment waarop je team ze oppakt." : "Je team werkt op de momenten die jij in je AI-assistent plant: je werkmoment. Dat regel je één keer."}</p>
     ${installatie}${advies}
-    <p class="klein stil">Let op: de geplande taak staat in jouw Claude-account. Koppel je opnieuw of stop je, controleer dan of hij nog aanstaat. Eén werkmoment voor het hele bedrijf is genoeg: heeft een collega er al een, dan hoeft het niet nog een keer.</p></section>`;
+    <p class="klein stil">Let op: de geplande taak staat in jouw account bij je AI-assistent. Koppel je opnieuw of stop je, controleer dan of hij nog aanstaat. Eén werkmoment voor het hele bedrijf is genoeg: heeft een collega er al een, dan hoeft het niet nog een keer.</p></section>`;
 }
 function renderKlaar() {
   const kc = klaarCheck(); const cs = checkSamenvatting(kc);
@@ -316,7 +316,7 @@ function resultaatWeken(n) {
 }
 function isoWeek(d) { const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dag = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - dag); const j = new Date(Date.UTC(x.getUTCFullYear(), 0, 1)); return Math.ceil(((x - j) / 86400000 + 1) / 7); }
 function renderResultaat() {
-  if (toegang() === "notion") return `<section class="leeg"><h3>Je resultaat staat in Notion</h3><p class="stil">Wat je team afrondde, telt je dagstart in Notion. Hier zie je het zodra je acties in je werkruimte staan.</p></section>`;
+  if (toegang() === "notion") return `<section class="leeg"><h3>Je resultaat staat in je eigen systeem</h3><p class="stil">Wat je team afrondde, telt je dagstart daar. Hier zie je het zodra je acties in je werkruimte staan.</p></section>`;
   const W = resultaatWeken(4); const tot = W.reduce((s, w) => s + w.team + w.voor + w.zelf, 0);
   if (!tot) return `<section class="leeg"><h3>Nog geen resultaat</h3><p class="stil">Zodra je team vanzelf werkt, zie je hier wat het voor je deed: helemaal zelf, met voorwerk voor jou, en wat je zelf deed.</p><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button></section>`;
   const som = (k) => W.reduce((s, w) => s + w[k], 0);

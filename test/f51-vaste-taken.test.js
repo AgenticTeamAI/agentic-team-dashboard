@@ -172,7 +172,7 @@ describe("f51 — het scherm", () => {
 
   it("vaste taken in Notion: uitleg en een kopieerzin, alleen lezen", () => {
     const el = open(ctxMet(twee(), { systeemPerDomein: { ritmetaken: "notion" } }));
-    expect(el.textContent).toContain("Je vaste taken staan in Notion");
+    expect(el.textContent).toContain("Je vaste taken staan in je eigen systeem");
     expect(el.querySelector("[data-vt-kopieer]")).not.toBeNull();
     expect(el.querySelector("[data-vt-actief]")).toBeNull();
   });

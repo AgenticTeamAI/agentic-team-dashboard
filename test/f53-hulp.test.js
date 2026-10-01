@@ -73,14 +73,14 @@ describe("f53 — zonder login en zonder data", () => {
     expect(el.querySelector('a[href^="#/"]:not([href^="#/hulp"])')).toBeNull();
   });
 
-  it("de hele installatie van het werkmoment staat erin: zin, Schedule, of zelf invullen", () => {
+  it("de hele installatie van het werkmoment staat erin: zin, bevestigen, of zelf invullen", () => {
     const el = open(null, { sectie: "vanzelf-werken" });
     const sectie = el.querySelector("#hulp-vanzelf-werken");
     expect(sectie.open).toBe(true);
     const kopieer = [...sectie.querySelectorAll("[data-vt-kopieer]")].map(k => k.getAttribute("data-vt-kopieer"));
     expect(kopieer).toEqual(["Zet mijn ritmetaken aan.", "Werkmoment — je bedrijf", vm.runInThisContext("WERKMOMENT_OPDRACHT")]);
-    expect(sectie.textContent).toContain("Druk op Schedule");
-    expect(sectie.textContent).toContain("Scheduled › New task");
+    expect(sectie.textContent).toContain("Bevestig die");
+    expect(sectie.textContent).toContain("nieuwe geplande taak");
     expect(sectie.textContent).toContain("Agentic Team-connector aan");
     expect(sectie.textContent).toContain("hooguit 3 open acties en 1 vaste taak");
   });

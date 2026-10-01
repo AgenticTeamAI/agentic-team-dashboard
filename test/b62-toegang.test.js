@@ -74,7 +74,7 @@ describe("b62 — schrijven naast een metricsbestand", () => {
     const ctx = { schema: g.AGENTIC_TEAM_SCHEMA, bundle: metricsBundel({ acties: "notion" }), kanSchrijven: true };
     const m = g.magDomeinBewerken(ctx, "acties");
     expect(m.ok).toBe(false);
-    expect(m.reden).toContain("Notion");
+    expect(m.reden).toContain("je eigen systeem");
   });
 
   it("de daglink blijft alleen-lezen", () => {
@@ -101,7 +101,7 @@ describe("b62 — de balk bovenaan (dashboard v2)", () => {
 
   it("acties in Notion: eerlijk zeggen waar je afhandelt", () => {
     const root = toon(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" }));
-    expect(root.querySelector(".balk.notion").textContent).toContain("Je acties staan in Notion");
+    expect(root.querySelector(".balk.notion").textContent).toContain("Je acties staan in je eigen systeem");
   });
 
   it("ingelogd met je werkruimte: geen balk", () => {

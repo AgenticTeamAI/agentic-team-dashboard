@@ -30,6 +30,11 @@ function tabs() {
   const n = CTX ? aantalVoorJou() : 0;
   return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]];
 }
+/* Licht of donker: standaard de systeeminstelling, de knop in de kop zet het
+ * om voor dit bezoek. Onthouden kan niet zonder nieuwe opslagsleutel (i87). */
+function systeemDonker() { try { return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); } catch (e) { return false; } }
+function isDonker() { return S.thema ? S.thema === "donker" : systeemDonker(); }
+function themaKnop() { const d = isDonker(); return `<button class="ikknop" data-act="thema" aria-label="Donker thema" aria-pressed="${d}" title="${d ? "Licht thema" : "Donker thema"}">${ic(d ? "zon" : "maan")}</button>`; }
 function renderKop() {
   const t = tabVan(); const geen = !CTX;
   const acc = ingelogd() ? `<button class="avatar" data-act="sheet" data-type="account" aria-label="Account${jij() ? " van " + esc(jij()) : ""}">${esc(jij() ? mensKort(jij()) : "?")}</button>`
@@ -38,7 +43,7 @@ function renderKop() {
   const dtabs = !geen ? `<nav class="dtabs" aria-label="Hoofdmenu">${tabs().map(([k, r, l, , b]) => `<button class="dtab" data-act="go" data-r="${r}" ${t === k ? 'aria-current="page"' : ""}>${l}${b ? `<span class="badge" aria-label="${b} voor jou">${b}</span>` : ""}</button>`).join("")}</nav>` : "";
   return `<header class="akop">
     <div class="merk"><b>Je team</b>${geen ? "" : `<span>${esc(bedrijf() || "Je werkruimte")}${stand ? ` · <span class="mono" title="Stand van je werkruimte">${stand}</span>` : ""}</span>`}</div>${dtabs}
-    <div class="kopknoppen"><button class="ikknop" data-act="go" data-r="/hulp" aria-label="Hulp" ${t === "hulp" ? 'aria-current="page"' : ""}>${ic("vraag")}</button>
+    <div class="kopknoppen"><button class="ikknop" data-act="go" data-r="/hulp" aria-label="Hulp" ${t === "hulp" ? 'aria-current="page"' : ""}>${ic("vraag")}</button><button class="ikknop fbknop" data-act="sheet" data-type="feedback" aria-label="Feedback geven" title="Feedback geven">${ic("bericht")}<span class="fblabel">Feedback</span></button>${themaKnop()}
     ${geen ? "" : `<button class="ikknop" data-act="ververs" aria-label="Ververs">${ic("ververs")}</button>`}${acc}</div></header>`;
 }
 function renderTabbalk() {
@@ -82,7 +87,7 @@ function renderBovenkaart() {
   }
   if (!S.data.acties.length && !S.data.taken.length && toegang() !== "notion" && !S.ui.dismissed.welkom) return `<section class="bovenkaart welkom"><div class="tussen"><h3>Welkom bij je team</h3><button class="ikknop" data-act="dismiss" data-k="welkom" aria-label="Sluiten">${ic("sluit")}</button></div>
     <p>Dit zijn specialisten die werk voorbereiden terwijl jij iets anders doet. Wat naar buiten gaat, komt altijd eerst bij jou.</p>
-    <div class="drie"><div><b>1 · Jij vraagt</b><span>in Claude, of hier</span></div><div><b>2 · Je team werkt</b><span>op vaste momenten</span></div><div><b>3 · Jij beslist</b><span>hier, bij Voor jou</span></div></div>
+    <div class="drie"><div><b>1 · Jij vraagt</b><span>in je AI-assistent, of hier</span></div><div><b>2 · Je team werkt</b><span>op vaste momenten</span></div><div><b>3 · Jij beslist</b><span>hier, bij Voor jou</span></div></div>
     <div class="rijtje"><button class="knop" data-act="go" data-r="/hulp/in-een-minuut">Laat zien hoe het werkt</button><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button></div></section>`;
   return "";
 }
@@ -90,7 +95,7 @@ function renderVerhaal() {
   const v = verhaalData(); const zin = verhaalZin(v); const kc = klaarCheck();
   let body;
   if (zin) body = `<p class="zin">${zin}</p>${verhaalDetail(v) ? `<p class="detail">${verhaalDetail(v)}</p>` : ""}`;
-  else if (!S.data.taken.length) body = `<p class="zin">Je team heeft nog niets vanzelf gedaan.</p><p class="detail stil">Dat begint zodra je vaste taken en een werkmoment aanstaan. Tot die tijd werkt je team alleen als je het in Claude vraagt.</p>`;
+  else if (!S.data.taken.length) body = `<p class="zin">Je team heeft nog niets vanzelf gedaan.</p><p class="detail stil">Dat begint zodra je vaste taken en een werkmoment aanstaan. Tot die tijd werkt je team alleen als je het in je AI-assistent vraagt.</p>`;
   else body = `<p class="zin">${esc(v.titel)} deed je team niets vanzelf.</p><p class="detail stil">${kc.recent ? "Het laatste wat we zagen was " + esc(wanneer(kc.recent)) + ". " : ""}Kijk bij ‘Is je team klaar?’ wat er nodig is.</p>`;
   return `<section class="vak verhaal" aria-label="${esc(v.titel)}"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${body}
     ${v.agents.length ? `<div class="tussen"><div class="chiprij">${v.agents.slice(0, 6).map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>` : ""}</section>`;
@@ -212,13 +217,13 @@ function renderVoorJouNotion() {
     const sinds = it.sinds ? dagenTussen(it.sinds, NU) : null;
     return `<article class="item"><div class="nr" aria-hidden="true">${esc(it.nr)}</div><div class="item-open" style="cursor:default"><span class="ititel"><span class="sr">Nummer ${esc(it.nr)}: </span>${esc(it.titel)}${it.te_laat ? ' <span class="pil laat">te laat</span>' : ""}</span>
       <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
-      <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in Notion ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
+      <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
   };
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
-    ${!blok ? `<section class="leeg" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in Notion. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in Claude.</p><div class="rijtje">${hoe("notion", "Waarom staat dit in Notion?")}</div></section>`
-    : `<section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("notion", "Waarom staat dit in Notion?")}</div>
-    <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in Notion, of vraag het je team in Claude.</p></section>
+    ${!blok ? `<section class="leeg" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
+    : `<section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
+    <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
     ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}`}
     ${renderOnderregels()}${privacyHtml()}</div>`;
 }
@@ -313,7 +318,7 @@ function renderVelden(a) {
     ${a.wachtenTot ? rij("Wacht tot", esc(datumKort(a.wachtenTot))) : ""}
     ${a.afgerondOp ? rij("Afgerond op", esc(datumKort(a.afgerondOp))) : ""}
     ${a.correctie ? rij("Jouw aanpassing", esc(a.correctie)) : ""}
-  </dl><p class="klein stil">Je wijzigt één veld tegelijk; de rest blijft staan. De statusnamen zijn dezelfde als in Claude en Notion.</p>`;
+  </dl><p class="klein stil">Je wijzigt één veld tegelijk; de rest blijft staan. De statusnamen zijn dezelfde als die je team gebruikt.</p>`;
 }
 /* Wat werd er met dit werk gedaan? Alleen wat uit de velden blijkt. */
 function uitkomstVan(a) {
