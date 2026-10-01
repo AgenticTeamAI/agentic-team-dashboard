@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-HeHieIZqJX2K0Qp+QjJesE8KGQj04ifXk/RFA7mZYBI='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-QrA1pIExRgy1ye1Ub7TtC9cODiWtANisZ/8X5vwBxIw='">
 
 
 
@@ -15322,7 +15322,7 @@ function renderSheet() {
   }
   return "";
 }
-function toastKnoppen(t) { return `${t.bekijk ? `<button data-act="toast-bekijk">Bekijk</button>` : ""}${t.undo && kanSchrijven() ? `<button data-act="undo">Ongedaan maken</button>` : ""}<button data-act="toast-dicht" aria-label="Melding sluiten">${ic("sluit", "klein")}</button>`; }
+function toastKnoppen(t) { return `${t.login ? `<button data-act="login">Inloggen</button>` : ""}${t.bekijk ? `<button data-act="toast-bekijk">Bekijk</button>` : ""}${t.undo && kanSchrijven() ? `<button data-act="undo">Ongedaan maken</button>` : ""}<button data-act="toast-dicht" aria-label="Melding sluiten">${ic("sluit", "klein")}</button>`; }
 function renderToast(inline) {
   const t = S.toast; if (!t) return "";
   if (inline) return `<div class="toast-inline" data-toast><span>${ic("vink", "klein")} ${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
@@ -15411,7 +15411,10 @@ function render() {
   zetFormulierenTerug(root, concept);
   if (S.ui.bewerk && !S.ui.bewerk.voorGelezen) { const f = root.querySelector("[data-v2-veldform]"); if (f) { S.ui.bewerk.voor = leesFormulier(f); S.ui.bewerk.voorGelezen = true; } }
   document.body.style.overflow = document.querySelector(".scrim") ? "hidden" : "";
-  if (CTX && tabVan() === "beheer") vulBeheer();
+  if (CTX && tabVan() === "beheer") {
+    // De beheerpanelen komen uit oudere modules; een fout daarin mag de rest van het scherm niet breken.
+    try { vulBeheer(); zetBeheerTerug(root, concept); } catch (e) { console.error(e); }
+  }
   document.title = paginaTitel();
   const key = CTX ? scrollSleutel() : "hulp";
   if (S.scrollDoel) { const el = document.getElementById(S.scrollDoel); if (el) window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 70)); S.scrollDoel = null; }
@@ -15433,6 +15436,10 @@ function render() {
  * die verloopt, een rij die binnenkomt): de waarden gaan mee op naam. */
 function bewaarFormulieren(root) {
   const uit = [];
+  // Beheer: de bestaande panelen (uitnodigen, namen) hebben geen namen op hun
+  // velden; op volgorde terugzetten is daar genoeg, de opbouw is vast.
+  const beheer = [...root.querySelectorAll(".beheer input, .beheer textarea, .beheer select")];
+  if (beheer.length) uit.push(["beheer", beheer.map(el => ({ type: el.type, w: el.type === "checkbox" || el.type === "radio" ? el.checked : el.value, focus: el === document.activeElement }))]);
   for (const f of root.querySelectorAll("[data-v2-veldform], [data-v2-nieuw]")) {
     const w = {};
     for (const el of f.querySelectorAll("[name]")) w[el.name] = el.type === "checkbox" ? el.checked : el.multiple ? [...el.selectedOptions].map(o => o.value) : el.value;
@@ -15440,8 +15447,19 @@ function bewaarFormulieren(root) {
   }
   return uit;
 }
+function zetBeheerTerug(root, concept) {
+  const b = concept.find(c => c[0] === "beheer"); if (!b) return;
+  const velden = [...root.querySelectorAll(".beheer input, .beheer textarea, .beheer select")];
+  if (velden.length !== b[1].length) return;
+  velden.forEach((el, i) => {
+    const o = b[1][i]; if (o.type !== el.type) return;
+    if (el.type === "checkbox" || el.type === "radio") el.checked = !!o.w; else el.value = o.w;
+    if (o.focus) { try { el.focus({ preventScroll: true }); } catch (e) { /* niet focusbaar */ } }
+  });
+}
 function zetFormulierenTerug(root, concept) {
   for (const [sel, w] of concept) {
+    if (sel === "beheer") continue;
     const f = root.querySelector(sel); if (!f) continue;
     for (const el of f.querySelectorAll("[name]")) {
       if (!(el.name in w)) continue; const v = w[el.name];
@@ -15505,6 +15523,12 @@ function pasToe(key, w) {
   if (CTX && CTX.herlaad) CTX.herlaad();
 }
 function foutTekst(e) { return (e && e.message) || "Dat is niet gelukt."; }
+/* Een mislukte schrijfactie. Is de sessie verlopen, dan staat inloggen er
+ * meteen bij: je komt daarna terug op dezelfde plek. */
+function meldFout(e) {
+  if (e && (e.oauthVerlopen || e.daglinkVerlopen)) toast(foutTekst(e), { fout: true, login: kanInloggen() });
+  else toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true });
+}
 function zetBezig(btn) { if (!btn) return; btn.setAttribute("aria-disabled", "true"); btn.classList.add("bezig"); if (!btn.querySelector(".draai")) btn.insertAdjacentHTML("afterbegin", '<span class="draai" aria-hidden="true"></span>'); }
 const REDUCED = () => { try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return true; } };
 function wegAnimatie(id) {
@@ -15530,6 +15554,10 @@ function patchVoor(f, a, c, arg) {
   if (f === "prio") return { patch: { Prioriteit: arg }, melding: "Belang: " + String(arg).toLowerCase() + "." };
   const plan = afhandelPatch(f, a.rij, c);
   if (f === "goedkeuren" && a.kanaal) plan.melding = a.kanaal === "post" ? "Goedgekeurd. Genoteerd als door jou geplaatst." : "Goedgekeurd. Genoteerd als door jou verstuurd.";
+  // Zelfde zinnen als in het ontwerp: "de Dealmaker", "De Stem".
+  const sp = slugVanNaam(plan.patch && plan.patch.Agent);
+  if (sp && f === "terug") plan.melding = "Teruggestuurd naar " + deNaam(sp) + ". Die pakt het op bij het volgende werkmoment.";
+  if (sp && (f === "ja" || f === "geefAan")) plan.melding = (f === "ja" ? "Akkoord. " : "Doorgegeven aan " + deNaam(sp) + ". ") + (f === "ja" ? deNaam(sp, true) + " gaat ermee aan de slag" : "Die pakt het op") + " bij het volgende werkmoment.";
   return plan;
 }
 async function uitvoeren(id, f, arg, btn) {
@@ -15551,7 +15579,7 @@ async function uitvoeren(id, f, arg, btn) {
       const ant = await snelWijzig(CTX, "acties", id, plan.ouder);
       if (nieuw) toepassen.push({ entry: res.entry });
       toepassen.push({ entry: ant && ant.entry });
-      melding = plan.melding;
+      melding = spNaam ? "Doorgegeven aan " + deNaam(opts.ag) + ". Die pakt het op bij het volgende werkmoment." : plan.melding;
       undo = async () => {
         if (nieuw) { await verwijderEntry(CTX, "acties", nieuw); pasToe("acties", { weg: nieuw }); }
         const t = await snelWijzig(CTX, "acties", id, vorige); pasToe("acties", { entry: t && t.entry });
@@ -15568,7 +15596,7 @@ async function uitvoeren(id, f, arg, btn) {
       undo = async () => { const t = await snelWijzig(CTX, "acties", id, vorige); pasToe("acties", { entry: t && t.entry }); };
     }
   } catch (e) {
-    toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true }); S.sheet = S.sheet && S.sheet.id === id ? Object.assign(S.sheet, { fout: foutTekst(e) }) : null; render(); return;
+    meldFout(e); S.sheet = S.sheet && S.sheet.id === id ? Object.assign(S.sheet, { fout: foutTekst(e) }) : null; render(); return;
   }
   if (["ja", "geefAan", "terug", "opvolgen"].includes(f) && klaarCheck().stil) melding += " Dit ligt stil tot je team weer vanzelf werkt.";
   if (f !== "prio") S.sessie.afgehandeld.unshift({ id, titel: a.titel, wat: WAT[f] || f, undo, t: Date.now() });
@@ -15692,7 +15720,7 @@ async function taakSchrijf(t, patch, melding, undoPatch) {
     const ant = await snelWijzig(CTX, "ritmetaken", t.id, patch);
     toast(melding, { undo: async () => { const x = await snelWijzig(CTX, "ritmetaken", t.id, undoPatch); pasToe("ritmetaken", { entry: x && x.entry }); } });
     pasToe("ritmetaken", { entry: ant && ant.entry }); render();
-  } catch (e) { toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true }); render(); }
+  } catch (e) { meldFout(e); render(); }
 }
 async function zetAan(sleutel, btn) {
   const t = (vtCatalogus.data || []).find(x => x.sleutel === sleutel); if (!t) return;
@@ -15940,6 +15968,10 @@ function v2Start(haken) {
 function v2Toon(ctx) {
   CTX = ctx; NU = (ctx && ctx.today) || new Date();
   S.leeg = null; S.versieFout = null;
+  // Na inloggen zet app.js de bedoelde route in de adresbalk; die geldt meteen,
+  // zonder eerst Voor jou te laten zien.
+  const r = routeUitHash(window.location.hash);
+  if (r !== S.route) { S.route = r; S.sheet = null; if (!itemRoute()) S.terugNaar = null; }
   if (S.opdrachtVoor && kanSchrijven()) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
   render();
 }

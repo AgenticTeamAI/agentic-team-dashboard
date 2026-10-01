@@ -7,6 +7,10 @@ function v2Start(haken) {
 function v2Toon(ctx) {
   CTX = ctx; NU = (ctx && ctx.today) || new Date();
   S.leeg = null; S.versieFout = null;
+  // Na inloggen zet app.js de bedoelde route in de adresbalk; die geldt meteen,
+  // zonder eerst Voor jou te laten zien.
+  const r = routeUitHash(window.location.hash);
+  if (r !== S.route) { S.route = r; S.sheet = null; if (!itemRoute()) S.terugNaar = null; }
   if (S.opdrachtVoor && kanSchrijven()) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
   render();
 }
