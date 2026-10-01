@@ -346,7 +346,7 @@ label.lb,.lb{font-weight:650;font-size:14.5px;display:block;margin-bottom:6px}
 
 /* Toast */
 .toast{position:fixed;left:12px;right:12px;bottom:calc(90px + env(safe-area-inset-bottom, 0px));z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--toast-bg);color:var(--toast-ink);border-radius:12px;padding:10px 12px 10px 14px;font-size:14px;box-shadow:var(--schaduw);animation:omhoog .18s ease}
-.toast.fout{border-left:4px solid var(--rood)}
+.toast.fout{box-shadow:inset 0 0 0 2px var(--rood),var(--schaduw)}
 .toast button,.toast-inline button{border:0;background:transparent;color:var(--toast-accent);font-weight:800;text-decoration:underline;text-underline-offset:3px;min-height:40px;padding:0 6px;white-space:nowrap}
 .toast-inline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--toast-bg);color:var(--toast-ink);border-radius:12px;padding:6px 8px 6px 12px;font-size:13.5px;margin-bottom:10px;animation:omhoog .18s ease}
 
@@ -568,7 +568,7 @@ tr:last-child td{border-bottom:0}
 /* De meldingsregel van de oudere schrijfpaden (catalogus, beheer) */
 .melding{position:fixed;left:12px;right:12px;bottom:calc(90px + env(safe-area-inset-bottom, 0px));z-index:30;display:flex;align-items:center;gap:10px;background:var(--toast-bg);color:var(--toast-ink);border-radius:12px;padding:10px 12px 10px 14px;font-size:14px;box-shadow:var(--schaduw)}
 .melding[hidden]{display:none}
-.melding-fout{border-left:4px solid var(--rood)}
+.melding-fout{box-shadow:inset 0 0 0 2px var(--rood),var(--schaduw)}
 .melding-tekst{flex:1;overflow-wrap:anywhere}
 .melding-knop{border:0;background:transparent;color:var(--toast-accent);font-weight:800;text-decoration:underline;min-height:40px;white-space:nowrap}
 .melding-sluit{border:0;background:transparent;color:var(--toast-ink);min-height:40px;min-width:40px}
