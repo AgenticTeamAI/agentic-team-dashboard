@@ -309,7 +309,7 @@ function renderHerkomst(el, ctx) {
   }
   regels.push(`<strong>Geschatte tijdwinst</strong> is een schatting op basis van jouw eigen aanname, geen meting: afgeronde acties × de minuten-per-actie die je op de Vandaag-tab instelt.`);
   if (!dataTabBeschikbaar(ctx)) {
-    regels.push(`<strong>Waarom is er geen Data-tab?</strong> Je werkgegevens zelf staan niet in je werkruimte maar in een ander systeem; dit dashboard krijgt daarvan alleen de dagtellingen door. Je Coördinator weet welk systeem dat is.`);
+    regels.push(`<strong>Waarom is er geen Data-tab?</strong> Je werkgegevens zelf staan niet in je werkruimte maar in een ander systeem; je dagstart zet hier de cijfers neer en de openstaande items met een link naar dat systeem, niet de volledige regels. Je Coördinator weet welk systeem dat is.`);
   }
   regels.push(`Dit dashboard kan niet zien welke modules je hebt aangeschaft. Toont een module nergens een spoor, dan kan dat betekenen dat hij niet gebruikt wordt — of dat je hem niet hebt.`);
 

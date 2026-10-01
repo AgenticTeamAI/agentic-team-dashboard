@@ -218,7 +218,8 @@ describe("privacybelofte — de goedgekeurde formulering, in de UI zelf", () => 
     // Elke alinea afzonderlijk toetsen is bovendien preciezer — dit faalt ook
     // als er één alinea wegvalt.
     const alineas = lees("PRIVACY_UITKLAP_ALINEAS");
-    expect(alineas.length).toBe(4);
+    // i87: vijf sinds de alinea over de openstaande items uit een eigen bron (f54).
+    expect(alineas.length).toBe(5);
     for (const alinea of alineas) expect(c.textContent).toContain(alinea);
     // de volledige tekst moet hier staan, niet achter een tweede klik of op
     // een andere pagina — een <details> op dezelfde tab voldoet daaraan

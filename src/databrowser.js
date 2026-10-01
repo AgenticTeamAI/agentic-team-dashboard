@@ -511,10 +511,10 @@ function dataRijenVan(ctx, key) {
 function dataMetricsUitleg() {
   return `<div class="grijs-blok">
     <div class="grijs-kop">❔ Je gegevens staan in een ander systeem</div>
-    <div class="grijs-tekst">Dit dashboard krijgt vandaag alleen de dagtellingen uit je werkruimte door, niet de
-    regels erachter. Je acties, deals en lessen zelf staan in het systeem waarin je ze bijhoudt — je Coördinator
-    weet welk. Wil je ze hier kunnen doorbladeren, vraag hem dan om je werkgegevens naar je werkruimte te
-    verplaatsen.</div>
+    <div class="grijs-tekst">Je dagstart zet hier de cijfers van je team neer en, als je acties en vaste taken in je
+    eigen bron staan, de openstaande items met een link naar die bron. De volledige regels erachter staan in het
+    systeem waarin je ze bijhoudt — je Coördinator weet welk. Wil je ze hier kunnen doorbladeren, vraag hem dan om je
+    werkgegevens naar je werkruimte te verplaatsen.</div>
   </div>`;
 }
 
