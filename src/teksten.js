@@ -36,6 +36,13 @@ const PRIVACY_REGEL =
  * versie die getoetst is en waarop de regressiecontrole staat. */
 const PRIVACY_UITKLAP_ALINEAS = [
   "Je bedrijfsgegevens komen rechtstreeks uit je eigen werkruimte en gaan niet langs onze servers. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie.",
+  /* i87 (oordeel jurist 1-10-2026, Juridisch Loket "Dashboard v2 —
+   * metricsbestand"): met f54 staan bij klanten met een eigen bron niet meer
+   * alleen tellingen in de werkruimte, maar ook de openstaande items. Gedekt
+   * onder "dashboardgegevens" in de DPA, maar de verwachting bij "werkdata
+   * naar keuze van de klant" vraagt dat we het zeggen. Woordelijk het voorstel
+   * van de jurist, inclusief het back-upvenster: niet "direct weg". */
+  "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
   /* De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
    * zei alleen dat er geen bedrijfsdata meegaat — waar, maar een lezer kon
