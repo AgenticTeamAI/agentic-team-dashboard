@@ -162,6 +162,7 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     // Dashboard v2: wat de browser erbij bewaart en wat er bij feedback naar ons gaat.
     expect(HTML).toContain("je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling");
     expect(HTML).toContain("Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst");
+    expect(HTML).toContain("We bewaren je naam en licentie hierbij 12 maanden en de feedback zelf 24 maanden.");
   });
 
   /* Twee zinnen uit de versie van vóór de dashboard-login. Ze waren toen waar

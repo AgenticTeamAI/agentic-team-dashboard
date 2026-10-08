@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-JoYEm2OzsCqlWPk5GJldOKq2uIh8Or6WENnQxE8PHoA='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-yS8i07t8EjdXkkAvS1ZDxPu4oLQ+FnRGqxlIShWDjl0=' 'sha256-FL18jnFClDSplN6smpSn9+f2zh8Mcu6ZErdZ6//8MGs='">
 
 
 
@@ -3332,8 +3332,10 @@ const PRIVACY_UITKLAP_ALINEAS = [
   /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
    * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
    * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
-   * in onze eigen administratie (Notion-database Dashboard-feedback). */
-  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma.",
+   * in onze eigen administratie (Notion-database Dashboard-feedback).
+   * Slotzin over de termijnen: juristoordeel 1-10-2026, punt 4; de site dwingt
+   * ze af (privacy 2.12 art. 2.5 en 6, dagelijkse ronde in de vlootcron). */
+  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma. We bewaren je naam en licentie hierbij 12 maanden en de feedback zelf 24 maanden. Meer in onze privacyverklaring.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
@@ -15394,6 +15396,8 @@ function verwachtingRegel(ag) {
  * mailprogramma; jij ziet alles en verstuurt hem zelf. */
 const FEEDBACK_ADRES = "support@agentic-team.ai";
 const FEEDBACK_MAX = 4000;
+// Melding op het moment zelf verwijst naar de rest (gelaagde informatie, art. 13 AVG; jurist 1-10-2026).
+const FEEDBACK_PRIVACY_URL = "https://www.agentic-team.ai/privacy";
 function feedbackScherm() { return paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "") + " (#" + (S.route || "/") + ")"; }
 function feedbackDirect() { return ingelogd() && typeof V2_HAKEN.feedback === "function"; }
 function feedbackTekst(tekst) {
@@ -15435,7 +15439,7 @@ function renderSheet() {
     // Ingelogd: rechtstreeks naar ons (Notion). Met een daglink praat het
     // dashboard nooit met de site, dus dan — en als versturen mislukt — mail.
     if (feedbackDirect() && !sh.terugval) return wrap("Feedback geven", `${veld}
-      <p class="verwachting">Je tekst gaat met het scherm waar je was en je naam naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee.</p>
+      <p class="verwachting">Je tekst gaat met het scherm waar je was, je naam en je licentie naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee. Zet er geen gegevens van klanten of andere mensen in. <a class="link" href="${FEEDBACK_PRIVACY_URL}" target="_blank" rel="noopener noreferrer">Privacy</a></p>
       <div class="rijtje">${knop(ic("bericht", "klein") + "Verstuur", "feedback-stuur", "", "prim")}${annuleer}</div>`);
     return wrap("Feedback geven", `${veld}
       <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem zelf."}${!sh.terugval && kanInloggen() && !ingelogd() ? " Log je in, dan kun je hem hier direct versturen." : ""}</p>

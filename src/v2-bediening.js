@@ -31,6 +31,8 @@ function verwachtingRegel(ag) {
  * mailprogramma; jij ziet alles en verstuurt hem zelf. */
 const FEEDBACK_ADRES = "support@agentic-team.ai";
 const FEEDBACK_MAX = 4000;
+// Melding op het moment zelf verwijst naar de rest (gelaagde informatie, art. 13 AVG; jurist 1-10-2026).
+const FEEDBACK_PRIVACY_URL = "https://www.agentic-team.ai/privacy";
 function feedbackScherm() { return paginaTitel().replace(/^\(\d+\) /, "").replace(/ — Je team$/, "") + " (#" + (S.route || "/") + ")"; }
 function feedbackDirect() { return ingelogd() && typeof V2_HAKEN.feedback === "function"; }
 function feedbackTekst(tekst) {
@@ -72,7 +74,7 @@ function renderSheet() {
     // Ingelogd: rechtstreeks naar ons (Notion). Met een daglink praat het
     // dashboard nooit met de site, dus dan — en als versturen mislukt — mail.
     if (feedbackDirect() && !sh.terugval) return wrap("Feedback geven", `${veld}
-      <p class="verwachting">Je tekst gaat met het scherm waar je was en je naam naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee.</p>
+      <p class="verwachting">Je tekst gaat met het scherm waar je was, je naam en je licentie naar het team achter Agentic Team. We lezen alles en gebruiken het om het dashboard beter te maken. Gegevens uit je werkruimte gaan niet mee. Zet er geen gegevens van klanten of andere mensen in. <a class="link" href="${FEEDBACK_PRIVACY_URL}" target="_blank" rel="noopener noreferrer">Privacy</a></p>
       <div class="rijtje">${knop(ic("bericht", "klein") + "Verstuur", "feedback-stuur", "", "prim")}${annuleer}</div>`);
     return wrap("Feedback geven", `${veld}
       <p class="verwachting">${sh.gemaild ? "Ging je mailprogramma open? Verstuur hem daar; dan kun je dit blad sluiten." : "Je mailprogramma opent met je tekst en het scherm waar je was. Jij verstuurt hem zelf."}${!sh.terugval && kanInloggen() && !ingelogd() ? " Log je in, dan kun je hem hier direct versturen." : ""}</p>

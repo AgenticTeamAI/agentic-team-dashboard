@@ -549,6 +549,11 @@ describe("v2 — generieke termen, thema en feedback", () => {
     window.location.hash = "#/acties"; g.V2.start({ mail, feedback }); g.V2.toon(ctx);
     $('.akop [data-act="sheet"][data-type="feedback"]').click();
     expect($(".sheet").textContent).toContain("Gegevens uit je werkruimte gaan niet mee");
+    // Jurist 1-10-2026: ook de licentie noemen, geen gegevens van anderen, en een link naar de rest.
+    expect($(".sheet").textContent).toContain("je naam en je licentie");
+    expect($(".sheet").textContent).toContain("Zet er geen gegevens van klanten of andere mensen in.");
+    const privacy = $('.sheet a[href="https://www.agentic-team.ai/privacy"]');
+    expect(privacy.getAttribute("rel")).toBe("noopener noreferrer");
     $('[data-act="feedback-stuur"]').click();
     expect($(".sheet .fout").textContent).toBe("Schrijf eerst je feedback.");
     expect(feedback).not.toHaveBeenCalled();
