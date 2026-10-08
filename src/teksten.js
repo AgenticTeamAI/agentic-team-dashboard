@@ -72,8 +72,10 @@ const PRIVACY_UITKLAP_ALINEAS = [
   /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
    * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
    * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
-   * in onze eigen administratie (Notion-database Dashboard-feedback). */
-  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma.",
+   * in onze eigen administratie (Notion-database Dashboard-feedback).
+   * Slotzin over de termijnen: juristoordeel 1-10-2026, punt 4; de site dwingt
+   * ze af (privacy 2.12 art. 2.5 en 6, dagelijkse ronde in de vlootcron). */
+  "Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst, het scherm waar je was, je licentie en de naam waaronder je werkt naar agentic-team.ai. Daar bewaren we het om het dashboard te verbeteren. Gegevens uit je werkruimte gaan niet mee. Met een daglink opent de knop alleen je eigen mailprogramma. We bewaren je naam en licentie hierbij 12 maanden en de feedback zelf 24 maanden. Meer in onze privacyverklaring.",
 ];
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
