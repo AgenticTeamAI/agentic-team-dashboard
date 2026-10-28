@@ -4,8 +4,8 @@
 // AgenticTeamAI/agent-architecture, core/agents.json.
 //   registryVersion : 1.92.0
 //   registry updated: 2026-09-30
-//   bron-commit     : a51b2ca230fb1549d663d5e68f40cb768dafaf8d
-//   geextraheerd op : 2026-10-01T07:02:20Z
+//   bron-commit     : 57f20ff59b97d1c7cbe8124204b54e7b24a6161d
+//   geextraheerd op : 2026-10-28T13:52:03Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
@@ -14,8 +14,8 @@
 window.AGENTIC_TEAM_SCHEMA = {
   "registryVersion": "1.92.0",
   "registryUpdated": "2026-09-30",
-  "sourceCommit": "a51b2ca230fb1549d663d5e68f40cb768dafaf8d",
-  "extractedAt": "2026-10-01T07:02:20Z",
+  "sourceCommit": "57f20ff59b97d1c7cbe8124204b54e7b24a6161d",
+  "extractedAt": "2026-10-28T13:52:03Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -535,6 +535,18 @@ window.AGENTIC_TEAM_SCHEMA = {
           "type": "relatie",
           "naar": "projecten",
           "crossModuleBedoeld": true
+        },
+        {
+          "naam": "Bronsysteem",
+          "type": "tekst"
+        },
+        {
+          "naam": "Extern ID",
+          "type": "tekst"
+        },
+        {
+          "naam": "Bron (link)",
+          "type": "url"
         }
       ]
     },
