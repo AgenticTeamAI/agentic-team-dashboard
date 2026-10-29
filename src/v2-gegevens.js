@@ -148,10 +148,22 @@ function lijstjeRij(k, r) {
   const waarde = k === "sales_funnel" && dealWaarde(r) ? `<span class="mono">${euro(dealWaarde(r))}</span>` : "";
   return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}</span>` : ""}</span>${waarde}</a>`;
 }
+/* i92 — Kwam je hier vanaf een andere pagina (een klantenkaart, een deal, een
+ * actie), dan brengt Terug je daar weer heen. Zonder herkomst (direct
+ * geopend, na herladen) ga je naar de lijst van dit soort gegevens. */
+function terugVanRij(k) {
+  const lijst = "/gegevens/" + k; const vorige = S.hist[S.hist.length - 1];
+  if (vorige && vorige !== S.route && vorige !== lijst) {
+    const m = /^\/gegevens\/([^/]+)\/([^/]+)$/.exec(vorige); const item = itemRoute(vorige);
+    const label = m ? rijTitel(m[1], ontcijfer(m[2])) : item ? (actie(item) || {}).titel : vorige.startsWith("/gegevens") ? null : terugLabelVan(vorige);
+    if (label) return `<button class="link" data-act="go" data-r="__terug">${ic("links", "klein")} ${esc(label)}</button>`;
+  }
+  return `<button class="link" data-act="go" data-r="${esc(lijst)}">${ic("links", "klein")} ${esc(domeinLabel(k))}</button>`;
+}
 function renderRijPagina2(k, id) {
   const d = domeinVan(k);
   const r = d && browsbaar(k) ? rijVan(k, id) : null;
-  const terug = `<button class="link" data-act="go" data-r="/gegevens/${esc(k)}">${ic("links", "klein")} ${esc(domeinLabel(k))}</button>`;
+  const terug = terugVanRij(k);
   if (!r) return `<div class="inhoud">${terug}<section class="leeg"><h3 id="rij-titel" tabindex="-1">Niet gevonden</h3><p class="stil">Deze ${esc(domeinEnkel(k))} staat niet (meer) in je werkruimte. Misschien is hij net verwijderd.</p></section></div>`;
   const titel = detailTitel(d, r); const kan = magSchrijven(k);
   // Wat ingevuld is, plus de paar velden die je meteen wilt weten; de rest van

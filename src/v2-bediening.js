@@ -88,6 +88,7 @@ function renderSheet() {
       ${kc.stil ? '<p class="verwachting let">Let op: je team werkt nu niet vanzelf. De nieuwe versie komt pas als je team weer werkt.</p>' : `<p class="verwachting">Je team pakt dit op ${esc(bijHetVolgende())}. Daarna staat de nieuwe versie bij Voor jou.</p>`}${fout}
       <div class="rijtje">${knop(ic("terug", "klein") + "Terug naar " + esc(deNaam(ag)), "sh-ok", "", "team")}${annuleer}</div>`);
     case "nee": return wrap("Nee, niet doen", `<p><b>${esc(a.titel)}</b></p><label class="lb" for="sh-tekst">Waarom niet? <span class="stil klein">(mag leeg)</span></label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: de marge is nu te laag.">${esc(sh.tekst || "")}</textarea><p class="klein stil">Je team leert hiervan.</p>${fout}<div class="rijtje">${knop("Niet doen", "sh-ok", "", "prim")}${annuleer}</div>`);
+    case "afsluiten": return wrap("Wat heb je gedaan?", `<p><b>${esc(a.titel)}</b></p><label class="sr" for="sh-tekst">Wat heb je gedaan?</label><textarea id="sh-tekst" data-sh="tekst" maxlength="2000" placeholder="Bijvoorbeeld: Piet gebeld, de offerte komt vrijdag.">${esc(sh.tekst || "")}</textarea><p class="klein stil">Mag leeg. Wat je schrijft, komt onderaan de toelichting met de datum van vandaag; je collega's en je team lezen het mee.</p>${fout}<div class="rijtje">${knop(ic("vink", "klein") + "Klaar", "sh-ok", "", "prim")}${annuleer}</div>`);
     case "zelf": return wrap("Zelf aangepast", `<label class="lb" for="sh-tekst">Wat heb je veranderd?</label><input type="text" id="sh-tekst" data-sh="tekst" value="${esc(sh.tekst || "")}" placeholder="Bijvoorbeeld: andere aanhef, prijs erbij"><p class="klein stil">Eén zin helpt je team leren.</p>${fout}<div class="rijtje">${knop("Opslaan en afronden", "sh-ok", "", "prim")}${annuleer}</div>`);
     case "later": return wrap(soortVan(a) === "wacht" ? "Datum verzetten" : "Later", `<p class="klein stil">Uit je lijst tot:</p><div class="keuzes">${datumKeuzesV2().map(([l, d]) => `<button class="keuze" data-act="sh-kies" data-v="datum:${d}">${esc(l)} <span class="mono klein stil">${esc(datumKort(d))}</span></button>`).join("")}</div>
       <label class="lb" for="sh-datum">Of kies een datum</label><div class="rijtje"><input type="date" id="sh-datum" data-sh="datum" value="${esc(sh.datum || "")}" style="width:auto">${knop("Opslaan", "sh-ok", "", "prim")}</div>${fout}`);
@@ -424,9 +425,16 @@ function markeerBezig() {
     }
   }
 }
+/* i91 — Klaar vraagt eerst wat je deed (mag leeg), tenzij er vandaag al iets
+ * bij staat: een gedateerd stuk in de Toelichting of een opmerking van vandaag. */
+function vandaagAlGenoteerd(a) {
+  return toelichtingStukken(tekstVan(a.rij, "Toelichting"), NU).stukken.some(s => zelfdeDag(s.datum, NU))
+    || a.opmerkingen.some(o => zelfdeDag(dt(o.op), NU));
+}
 async function uitvoeren(id, f, arg, btn) {
   const a = actie(id); if (!a || !kanSchrijven()) return;
   if (isBezig("actie:" + id)) return;
+  if (f === "klaar" && arg == null && !vandaagAlGenoteerd(a)) { S.sheet = { type: "afsluiten", id, tekst: "" }; render(); return; }
   if (NAAM_NODIG.includes(f) && !jij()) { vraagNaam(() => uitvoeren(id, f, arg)); return; }
   BEZIG.add("actie:" + id);
   try { await uitvoerenBinnen(a, id, f, arg, btn); } finally { BEZIG.delete("actie:" + id); render(); }
@@ -710,6 +718,7 @@ function bevestigSheet(btn) {
   switch (sh.type) {
     case "terug": if (!(sh.tekst || "").trim()) { sh.fout = "Schrijf in één zin wat anders moet."; S.focusNa = "#sh-tekst"; render(); return; } uitvoeren(id, "terug", { tekst: sh.tekst.trim() }, btn); return;
     case "nee": uitvoeren(id, "nee", { tekst: (sh.tekst || "").trim() }, btn); return;
+    case "afsluiten": uitvoeren(id, "klaar", { tekst: (sh.tekst || "").trim() }, btn); return;
     case "zelf": uitvoeren(id, "zelf", { tekst: (sh.tekst || "").trim() || "Zelf aangepast" }, btn); return;
     case "later": if (!sh.datum) { S.focusNa = "#sh-datum"; render(); return; } uitvoeren(id, "later", { datum: sh.datum }, btn); return;
     case "datum": if (!sh.datum) { S.focusNa = "#sh-datum"; render(); return; } uitvoeren(id, "nieuweDatum", { datum: sh.datum }, btn); return;
@@ -788,6 +797,7 @@ function opKlik(e) {
     case "tf": S.ui.team.filter = d.v || null; break;
     case "gf": S.ui.gegevens.filter = d.v || ""; break;
     case "meer-werk": S.ui.meerOpen[d.id] = !S.ui.meerOpen[d.id]; break;
+    case "volgorde": S.ui.toelichting = d.v === "nieuw" ? "nieuw" : "oud"; break;
     case "naar-stappen": S.ui.stappenDoel = d.doel || "start"; if (S.route !== "/team/klaar") go("/team/klaar"); S.scrollDoel = "stappenblad"; break;
     case "ronde-start": { const l = voorJouLijst(); if (!l.length) return; S.ronde = { ids: l.map(a => a.id), i: 0, start: Date.now(), naarTeam: [] }; S.toast = null; go("/voor-jou/een-voor-een"); S.focusNa = "#blad-titel"; break; }
     case "ronde-stop": S.ronde = null; go("/"); break;

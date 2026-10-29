@@ -55,6 +55,7 @@ const S = {
     team: { filter: null }, hulp: { zoek: "", open: {}, vb: "stil", stap: -1 },
     gegevens: { zoek: "", filter: "" }, bewerk: null, toevoegen: null,
     dismissed: {}, meerOpen: {}, det: {}, openCollega: false, stappenDoel: null,
+    toelichting: null, // i90: "nieuw" of "oud", voor alle items zolang het dashboard openstaat
   },
   sheet: null, toast: null, ronde: null, drag: null, terugNaar: null, thema: null,
   focusNa: null, scrollDoel: null, sheetOpener: null, vorigSheetType: null,
