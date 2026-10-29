@@ -277,6 +277,17 @@ function relatieKnop(h) {
   const kan = h.domein && h.id && toegang() !== "notion" && CTX.schema.datadomeinen[h.domein] && !(h.domein in DATA_NIET_IN_BUNDEL);
   return kan ? `<button class="relatie" data-act="go" data-r="/gegevens/${esc(h.domein)}/${esc(h.id)}">${esc(h.titel)}</button>` : `<span class="relatie">${esc(h.titel)}</span>`;
 }
+/* i90 — Staan er twee of meer gedateerde stukken in de Toelichting, dan kies
+ * je Oudste eerst of Nieuwste eerst. De keuze geldt voor elk item zolang het
+ * dashboard openstaat; onthouden doen we niet, want dat is een nieuwe
+ * opslagsleutel in de browser (zie de privacy-uitklap). */
+function werkInVolgorde(a) {
+  const log = a.werk ? toelichtingStukken(a.werk, NU) : null;
+  if (!log || log.stukken.length < 2) return { tekst: a.werk, knop: "" };
+  const v = S.ui.toelichting || (log.aflopend ? "nieuw" : "oud");
+  const knop = `<div class="seg" role="group" aria-label="Volgorde van de toelichting">${[["oud", "Oudste eerst"], ["nieuw", "Nieuwste eerst"]].map(([k, l]) => `<button data-act="volgorde" data-v="${k}" aria-pressed="${v === k}">${l}</button>`).join("")}</div>`;
+  return { tekst: toelichtingInVolgorde(a.werk, v === "nieuw", NU), knop };
+}
 function renderBlad(a, plek) {
   const s = soortVan(a); const ag = werkAgent(a); const b = beurt(a); const l = voorJouLijst(); const inLijst = l.some(x => x.id === a.id);
   const tab = tabVan(); const terug = S.terugNaar || (tab === "acties" ? "/acties" : "/");
@@ -287,7 +298,8 @@ function renderBlad(a, plek) {
       : a.door ? `${mensChip(a.door)}<span>zette dit op de lijst${a.aangemaakt ? ", " + esc(wanneer(a.aangemaakt)) : ""}.</span>`
         : a.aangemaakt ? `<span>Op de lijst sinds ${esc(wanneer(a.aangemaakt))}.</span>` : "";
   const opm1 = a.teruggestuurd && !hoortBijMens(a) ? `<p class="citaat">Jouw opmerking voor ${esc(deNaam(ag))}: ‘${esc(a.teruggestuurd)}’</p>` : "";
-  const werkTekst = a.werk ? a.werk : (s === "team" ? "Nog geen resultaat. Zodra " + deNaam(ag) + " klaar is, staat het werk hier." : "");
+  const vlg = werkInVolgorde(a);
+  const werkTekst = a.werk ? vlg.tekst : (s === "team" ? "Nog geen resultaat. Zodra " + deNaam(ag) + " klaar is, staat het werk hier." : "");
   const werkKop = !a.werk ? "Nog in de maak" : (vanTeam || (ag && a.status !== "Open")) ? "Wat je team maakte" : "Toelichting";
   const lang = werkTekst.split("\n").length > 12 || werkTekst.length > 900; const open = S.ui.meerOpen[a.id];
   const subs = S.data.acties.filter(x => x.onder === a.id);
@@ -301,7 +313,7 @@ function renderBlad(a, plek) {
     <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
     ${herk ? `<p class="herkomst">${herk}</p>` : ""}${opm1}
     ${a.hoort.length ? `<div class="hoortbij">Hoort bij: ${a.hoort.map(relatieKnop).join("")}</div>` : ""}
-    ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3>${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</div>
+    ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3><span class="rijtje">${vlg.knop}${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</span></div>
       <div class="werk ${lang && !open ? "ingekort" : ""}">${esc(werkTekst)}</div>${lang ? `<button class="link" data-act="meer-werk" data-id="${esc(a.id)}">${open ? "Toon minder" : "Toon alles"}</button>` : ""}</section>` : ""}
     ${a.bronLink && /^https:\/\//.test(a.bronLink) ? `<a class="link" href="${esc(a.bronLink)}" target="_blank" rel="noopener noreferrer">Bron bekijken ${ic("pijl-op", "klein")}</a>` : ""}
     ${s === "check-extern" ? `<p class="balkregel">${ic("slot", "klein")} Je team verstuurt niets zelf. Kopieer de tekst, ${a.kanaal === "post" ? "plaats" : "verstuur"} hem en druk dan op de knop.</p>` : ""}
@@ -379,14 +391,14 @@ function renderRonde() {
   else if (s === "check-extern") knoppen = knop(ic("kopieer", "klein") + "Kopieer de tekst", "kopieer", `data-id="${id}"`, "groot breed") + knop(esc(verstuurLabel(a)), "doe", `data-f="goedkeuren" data-id="${id}"`, "prim groot breed") + (ag ? knop("Terug naar " + esc(deNaam(ag)), "sheet", `data-type="terug" data-id="${id}"`, "team groot breed") : "") + later;
   else if (s === "check") knoppen = knop("Goedkeuren", "doe", `data-f="goedkeuren" data-id="${id}"`, "prim groot breed") + (ag ? knop("Terug naar " + esc(deNaam(ag)), "sheet", `data-type="terug" data-id="${id}"`, "team groot breed") : "") + later;
   else knoppen = knop("Klaar", "doe", `data-f="klaar" data-id="${id}"`, "prim groot breed") + knop("Nieuwe datum", "sheet", `data-type="${s === "weer" ? "later" : "datum"}" data-id="${id}"`, "groot breed") + knop("Geef aan je team", "sheet", `data-type="wie" data-doel="geef" data-id="${id}"`, "team groot breed");
-  const w = a.werk; const langW = w.split("\n").length > 8 || w.length > 600; const openW = S.ui.meerOpen[a.id];
+  const vlg = werkInVolgorde(a); const w = vlg.tekst; const langW = w.split("\n").length > 8 || w.length > 600; const openW = S.ui.meerOpen[a.id];
   return `<div class="inhoud ronde" style="max-width:680px">
     <div class="tussen"><h2 class="vakkop"><b>Eén voor één</b> · <span class="mono">nog ${new Set(r.ids.slice(r.i)).size}</span>${gedaan ? ` · ${gedaan} afgehandeld` : ""}</h2><button class="ikknop" data-act="ronde-stop" aria-label="Stoppen">${ic("sluit")}</button></div>
     <div class="voortgang" role="progressbar" aria-label="Voortgang" aria-valuemin="0" aria-valuemax="${r.ids.length}" aria-valuenow="${r.i}"><div style="width:${pct}%"></div></div>
     <section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel" id="blad-titel" tabindex="-1">${esc(a.titel)}</h2>
       <div class="rijtje"><span class="soort">${SOORT_LABEL[s].toUpperCase()}</span>${ag ? agChip(ag) : ""}<span class="mono klein stil">${esc(sindsTekst(a))}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
       ${a.opmerkingen.map(o => `<p class="citaat">${esc(voornaam(o.van))}, ${esc(wanneer(o.op))}: ‘${esc(o.tekst)}’</p>`).join("")}
-      ${w ? `<div class="papier"><div class="werk ${langW && !openW ? "kort8" : ""}">${esc(w)}</div>${langW ? `<button class="link" data-act="meer-werk" data-id="${id}">${openW ? "Toon minder" : "Toon alles"}</button>` : ""}</div>` : ""}
+      ${w ? `<div class="papier">${vlg.knop ? `<div class="rijtje" style="justify-content:flex-end">${vlg.knop}</div>` : ""}<div class="werk ${langW && !openW ? "kort8" : ""}">${esc(w)}</div>${langW ? `<button class="link" data-act="meer-werk" data-id="${id}">${openW ? "Toon minder" : "Toon alles"}</button>` : ""}</div>` : ""}
       ${a.hoort.length ? `<p class="hoortbij">Hoort bij: ${a.hoort.map(h => esc(h.titel)).join(" › ")}</p>` : ""}</section>
     <div class="kol" style="gap:8px">${knoppen}<button class="knop stil" data-act="ronde-over" style="align-self:flex-end">Sla over ${ic("chev", "klein")}</button></div></div>`;
 }

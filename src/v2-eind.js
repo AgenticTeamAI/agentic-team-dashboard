@@ -32,6 +32,8 @@ function v2HashGewijzigd() {
   opdrachtUitHash();
   const r = routeUitHash(window.location.hash);
   if (r !== S.route) {
+    // De terugknop van de browser is dezelfde stap als Terug in het dashboard (i92).
+    if (S.hist.length && S.hist[S.hist.length - 1] === r) S.hist.pop(); else S.hist.push(S.route);
     S.route = r; S.sheet = null; S.ui.bewerk = null;
     if (!itemRoute()) S.terugNaar = null;
     if (S.opdrachtVoor && kanSchrijven()) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
@@ -42,7 +44,7 @@ function v2Reset() {
   CTX = null; S.route = "/"; S.hist = []; S.data = null; S.dataCtx = null; S.nummers = {}; S.volgNr = 1; S.nummerBundel = null;
   S.sessie = { afgehandeld: [] }; S.sheet = null; S.toast = null; S.ronde = null; S.terugNaar = null; S.leeg = null; S.versieFout = null;
   S.ui.acties = { weergave: "lijst", van: "mij", toon: "open", zoek: "", baan: "jij" }; S.ui.team.filter = null; S.ui.gegevens = { zoek: "", filter: "" };
-  S.ui.bewerk = null; S.ui.dismissed = {}; S.ui.meerOpen = {}; S.ui.det = {}; S.ui.hulp = { zoek: "", open: {}, vb: "stil", stap: -1 };
+  S.ui.bewerk = null; S.ui.dismissed = {}; S.ui.meerOpen = {}; S.ui.det = {}; S.ui.hulp = { zoek: "", open: {}, vb: "stil", stap: -1 }; S.ui.toelichting = null;
   S.scrollMap = {}; S.laatsteSleutel = null; kcCache = null;
   zetThema(null);
 }

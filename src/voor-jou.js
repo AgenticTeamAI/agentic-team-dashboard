@@ -354,11 +354,118 @@ function afgerondPatch(rij, nu) {
   return patch;
 }
 
+/* ── i90/i91: de Toelichting als logboek ────────────────────────────────
+ *
+ * In de werkruimte staat alles wat bij een actie gebeurt in de Toelichting.
+ * Je team zet zijn resultaat eronder, onder een vaste kop ("## Resultaat —
+ * 2026-10-12 — Dealmaker", werkronde.md), en een mens zet er een regel met
+ * een datum onder. Het nieuwste staat dus onderaan.
+ *
+ * toelichtingStukken() knipt zo'n tekst in stukken die elk met een datum
+ * beginnen; wat ervóór staat, is de beschrijving. Een stuk begint bij:
+ * - een kop (#) met een datum erin;
+ * - een regel die met een datum begint, eventueel na een woord als "Update"
+ *   of een weekdag. Zonder jaartal of maandnaam moet er een leesteken achter
+ *   de datum staan ("12-10: belde"), zodat "3-4 weken" geen stuk begint;
+ * - nooit bij een datum die nog moet komen: een logboek kijkt terug, een
+ *   planning ("14-11: oplevering") vooruit.
+ * Heeft de tekst zulke koppen, dan begint een gewone regel alleen een stuk na
+ * een witregel. Een tijdlijn ín een resultaat blijft zo bij dat resultaat. */
+const VJ_MAANDEN = { jan: 0, januari: 0, feb: 1, febr: 1, februari: 1, mrt: 2, maart: 2, apr: 3, april: 3, mei: 4,
+  jun: 5, juni: 5, jul: 6, juli: 6, aug: 7, augustus: 7, sep: 8, sept: 8, september: 8, okt: 9, oktober: 9,
+  nov: 10, november: 10, dec: 11, december: 11 };
+const VJ_KOP = /^\s{0,3}#{1,6}\s/;
+// Wat vóór de datum mag staan: opsommingstekens en haken, een logwoord, een weekdag.
+const VJ_VOORLOOP = new RegExp("^[\\s>*_\\-–—•·\\[(]*"
+  + "(?:(?:update|notitie|opmerking|stand|status|voortgang|log|verslag|gesprek|contact|afgerond|gedaan|nb)\\b\\.?:?\\s*(?:(?:van|op|per)\\s+)?[(\\[]?)?"
+  + "(?:(?:maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|ma|di|wo|do|vr|za|zo)\\.?,?\\s+)?", "i");
+
+/* Een datum vooraan in s: {j, mnd, d, n (lengte), sterk (met jaartal of maandnaam)}. */
+function vjDatumVooraan(s) {
+  let m;
+  if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?!\d)/.exec(s))) return { j: +m[1], mnd: +m[2] - 1, d: +m[3], n: m[0].length, sterk: true };
+  if ((m = /^(\d{1,2})([-/.])(\d{1,2})\2(\d{4}|\d{2})(?!\d)/.exec(s))) return { j: m[4].length === 2 ? 2000 + +m[4] : +m[4], mnd: +m[3] - 1, d: +m[1], n: m[0].length, sterk: true };
+  if ((m = /^(\d{1,2})[-/](\d{1,2})(?![\d/-])/.exec(s))) return { j: null, mnd: +m[2] - 1, d: +m[1], n: m[0].length, sterk: false };
+  m = /^(\d{1,2})\s+([a-z]+)\.?(?:\s+(\d{4}))?(?![\da-z])/i.exec(s);
+  if (m && Object.prototype.hasOwnProperty.call(VJ_MAANDEN, m[2].toLowerCase())) return { j: m[3] ? +m[3] : null, mnd: VJ_MAANDEN[m[2].toLowerCase()], d: +m[1], n: m[0].length, sterk: true };
+  return null;
+}
+/* De dag die erbij hoort, of null: bestaat niet, of ligt na morgen. Zonder
+ * jaartal geldt dit jaar; in januari en februari is "28-12" vorig jaar. */
+function vjLogDag(v, nu) {
+  const vandaag = vjVandaag(nu); const morgen = new Date(vandaag.getFullYear(), vandaag.getMonth(), vandaag.getDate() + 1);
+  let j = v.j;
+  if (j === null) { j = vandaag.getFullYear(); if (new Date(j, v.mnd, v.d) > morgen && vandaag.getMonth() <= 1 && v.mnd >= 10) j -= 1; }
+  const dag = new Date(j, v.mnd, v.d);
+  if (dag.getMonth() !== v.mnd || dag.getDate() !== v.d) return null;
+  return dag > morgen ? null : dag;
+}
+/* De datum waarmee deze regel een stuk begint, of null. */
+function vjStukDatum(regel, nu) {
+  if (VJ_KOP.test(regel)) {
+    for (let i = 0; i < regel.length; i++) {
+      if (!/\d/.test(regel[i]) || (i > 0 && /\d/.test(regel[i - 1]))) continue;
+      const v = vjDatumVooraan(regel.slice(i));
+      if (v) return vjLogDag(v, nu);
+    }
+    return null;
+  }
+  const rest = regel.slice(VJ_VOORLOOP.exec(regel)[0].length);
+  const v = vjDatumVooraan(rest); if (!v) return null;
+  const na = rest.slice(v.n);
+  const ok = v.sterk ? /^(?:$|[\s:.,;)\]*_\-–—·|])/.test(na)
+    : /^(?:\s*(?:$|[:.,;)\]*_·|]|[-–—](?:\s|$))|\s+\d{1,2}[:.]\d{2})/.test(na);
+  return ok ? vjLogDag(v, nu) : null;
+}
+function toelichtingStukken(tekst, nu) {
+  const regels = String(tekst || "").replace(/\r\n?/g, "\n").split("\n");
+  const metKoppen = regels.some(r => VJ_KOP.test(r) && vjStukDatum(r, nu));
+  const begin = [];
+  regels.forEach((r, i) => {
+    if (metKoppen && !VJ_KOP.test(r) && i > 0 && regels[i - 1].trim() !== "") return;
+    const datum = vjStukDatum(r, nu);
+    if (datum) begin.push({ i, datum });
+  });
+  const deel = (van, tot) => regels.slice(van, tot).join("\n").replace(/\s+$/, "");
+  const stukken = begin.map((b, n) => ({
+    tekst: deel(b.i, n + 1 < begin.length ? begin[n + 1].i : regels.length),
+    datum: b.datum, naWitregel: b.i > 0 && regels[b.i - 1].trim() === "",
+  }));
+  return {
+    intro: deel(0, begin.length ? begin[0].i : regels.length), stukken,
+    aflopend: stukken.length >= 2 && stukken[0].datum > stukken[stukken.length - 1].datum,
+  };
+}
+/* De tekst met de stukken in de gevraagde volgorde. De beschrijving blijft
+ * bovenaan en de opgeslagen tekst verandert niet; minder dan twee stukken
+ * geeft de tekst zoals hij is. */
+function toelichtingInVolgorde(tekst, nieuwsteEerst, nu) {
+  const { intro, stukken, aflopend } = toelichtingStukken(tekst, nu);
+  if (stukken.length < 2) return String(tekst || "");
+  const lijst = aflopend === !!nieuwsteEerst ? stukken : stukken.slice().reverse();
+  const delen = lijst.map(s => s.tekst).join(stukken.slice(1).some(s => s.naWitregel) ? "\n\n" : "\n");
+  return intro.trim() ? intro + (stukken[0].naWitregel ? "\n\n" : "\n") + delen : delen;
+}
+/* i91: wat je bij Klaar opschrijft, als regel voor onderaan de Toelichting:
+ * datum en naam vooraan, zodat toelichtingStukken() hem als stuk herkent. */
+function afsluitRegel(tekst, c) {
+  const t = String(tekst || "").trim().replace(/\n\s*\n+/g, "\n");
+  if (!t) return "";
+  const d = vjVandaag(c.nu);
+  const datum = `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+  return `${datum}${c.ik ? " · " + c.ik : ""}: ${t}`;
+}
+
 /* De acties. Elke functie krijgt de rij en c = {ik, schema, nu, tekst, datum,
  * specialist} en geeft {patch, melding}. */
 const AFHANDEL = {
   goedkeuren: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Goedgekeurd." }),
-  klaar: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Afgerond." }),
+  klaar: (rij, c) => {
+    const patch = afgerondPatch(rij, c.nu);
+    const regel = afsluitRegel(c.tekst, c); const oud = vjTekst(rij, "Toelichting");
+    if (regel) patch.Toelichting = oud ? `${oud}\n\n${regel}` : regel;
+    return { patch, melding: regel ? "Afgerond, met je notitie." : "Afgerond." };
+  },
   gezien: (rij, c) => ({ patch: afgerondPatch(rij, c.nu), melding: "Gezien." }),
   terug: (rij, c) => {
     const sp = c.specialist || specialistVanRij(rij, c.schema);
@@ -505,5 +612,6 @@ if (typeof module !== "undefined") {
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
     opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }

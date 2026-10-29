@@ -331,6 +331,10 @@ describe("i81 end-to-end (dashboard v2) — de rij wordt ter plekke bijgewerkt",
 
     const verzoekenVoor = verzoeken.length;
     d.querySelector('.beslisbalk [data-act="doe"][data-f="klaar"]').click();
+    // i91: Klaar vraagt eerst wat je deed; leeg laten is gewoon afronden.
+    await tot(() => d.querySelector('.scrim [data-act="sh-ok"]'), "afsluitblad");
+    expect(verzoeken.length).toBe(verzoekenVoor);
+    d.querySelector('.scrim [data-act="sh-ok"]').click();
     await tot(() => opslag["a-1"].Status === "Klaar" && !d.querySelector("#blad-titel"), "afgerond en terug");
 
     expect(verzoeken.slice(verzoekenVoor)).toEqual(["PATCH /dashboard/entries/acties/a-1"]);
