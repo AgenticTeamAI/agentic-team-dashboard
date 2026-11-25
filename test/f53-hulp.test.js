@@ -224,7 +224,7 @@ describe("f53 — in het gebouwde dashboard", () => {
     expect(fouten).toEqual([]);
     expect(titel()).toBe("Log in om je team te zien");
     expect(q('#root .balk [data-act="login"]')).not.toBeNull();
-    expect(q("#root .balk").textContent).toContain("Je gegevens komen straks rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
+    expect(q("#root .balk").textContent).toContain("Je gegevens komen straks uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.");
     expect(q("#hulp-titel").textContent).toContain("Hoe werkt je team?");
   });
 

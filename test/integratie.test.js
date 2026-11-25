@@ -455,8 +455,9 @@ describe("Gegevens en navigatie in dashboard.html", () => {
     await d.geladen();
     const blok = d.q("details.privacy");
     expect(blok).not.toBeNull();
-    expect(blok.querySelector("summary").textContent).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.");
-    expect(blok.textContent).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
+    expect(blok.querySelector("summary").textContent).toContain("Je gegevens komen uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.");
+    expect(blok.textContent).toContain("Onderweg gaat het verkeer door een doorgeefluik van ons");
+    expect(blok.textContent).toContain("Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert.");
     // de oude, te absolute claim mag nergens meer staan
     expect(d.w.document.body.textContent).not.toMatch(/nooit naar agentic-team\.ai/i);
     expect(d.w.document.body.textContent).not.toMatch(/niets naar agentic-team\.ai/i);
