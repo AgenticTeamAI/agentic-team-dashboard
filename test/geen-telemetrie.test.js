@@ -146,8 +146,16 @@ describe("geen telemetrie — het gebouwde artefact", () => {
   });
 
   it("de goedgekeurde privacytekst staat letterlijk in het artefact", () => {
-    expect(HTML).toContain("Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser");
-    expect(HTML).toContain("Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd");
+    expect(HTML).toContain("Je gegevens komen uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.");
+    // Juristrapport 25-11 (punt C): al het verkeer loopt door de connector-router.
+    // Verdwijnt de zin over het doorgeefluik, dan belooft de tekst weer meer dan
+    // de route waarmaakt ("gaat niet langs onze servers").
+    expect(HTML).toContain("Onderweg gaat het verkeer door een doorgeefluik van ons in dezelfde EU-omgeving als je werkruimte, dat je gegevens niet bewaart");
+    expect(HTML).toContain("Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert.");
+    expect(HTML).toContain("Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik");
+    // De twee claims die de route niet waarmaakte, mogen niet terugkomen.
+    expect(HTML).not.toContain("gaan niet langs onze servers");
+    expect(HTML).not.toContain("wordt daarom nooit naar een server verstuurd");
     expect(HTML).toContain("De pagina zelf wordt wel van dashboard.agentic-team.ai geladen");
     // p10/B3: de inlogroute is een tweede manier om binnen te komen, en de
     // tekst moet allebei beschrijven. Verdwijnt deze zin, dan beschrijft de
