@@ -125,11 +125,17 @@ die regel schaalt de hele grafiek mee omlaag en wordt de astekst ~4px.
 ## Geen telemetrie — harde voorwaarde, geen voorkeur
 
 Dit dashboard belooft de bezoeker, **in de UI zelf op het moment dat de
-belofte wordt gedaan**, dat zijn bedrijfsdata niet langs onze servers komt en
-dat het dashboard zelf niets bewaart of verwerkt. Die tekst is woordelijk
-goedgekeurd in de juridische toets van 26-08-2026 en staat op één plek:
-`src/teksten.js` (`PRIVACY_REGEL` = de samenvatting, `PRIVACY_UITKLAP` = de
-juridische tekst). Wijzig ze niet zonder een nieuwe toets.
+belofte wordt gedaan**, dat zijn bedrijfsdata niet op onze centrale servers
+(licentie en website, agentic-team.ai) terechtkomt, en dat wij die data niet
+bewaren of gebruiken. Onderweg loopt het verkeer wél door de connector-router
+(`connector.agentic-team.ai`, zie b32 fase 2): een doorgeefluik in dezelfde
+EU-omgeving als de instanties, dat niets van de inhoud bewaart en per verzoek
+alleen methode, status en duur logt. De tekst noemt dat doorgeefluik met zoveel
+woorden. Hij is woordelijk goedgekeurd in de juridische toets van 26-08-2026,
+herzien op 28-08 (p10/B3) en op 25-11-2026 (juristrapport
+dashboardgebruik, punt C: de router stond er nog niet in), en staat op één
+plek: `src/teksten.js` (`PRIVACY_REGEL` = de samenvatting, `PRIVACY_UITKLAP` =
+de juridische tekst). Wijzig ze niet zonder een nieuwe toets.
 
 Daaruit volgt: **geen analytics, geen foutrapportage, geen enkele meting die
 naar ons gaat.** Zodra dat er wel is, is de tekst onjuist en moet hij mee
@@ -162,19 +168,18 @@ veranderen.
 Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
 niets naar agentic-team.ai": de pagina zelf komt van
 `dashboard.agentic-team.ai`, met de gebruikelijke technische gegevens die
-daarbij horen, en sinds p10 gaat de token-call daar ook heen. Het onderscheid
-dat wél klopt — bedrijfsdata gaat alleen browser ↔ eigen werkruimte-instantie,
-en het daglink-token staat achter het `#` en bereikt nooit een server — moet in
-de tekst blijven staan.
+daarbij horen, en sinds p10 gaat de token-call daar ook heen. Evenmin een
+claim als "gaat niet langs onze servers" of "het daglink-token bereikt nooit
+een server": al het dataverkeer, en het daglink-token als Bearer, gaat door de
+connector-router (juristrapport 25-11, punt C). Het onderscheid dat wél klopt —
+bedrijfsdata komt niet op onze centrale servers en wordt door ons niet bewaard,
+en het daglink-token gaat niet mee naar de server die de pagina levert — moet in
+de tekst blijven staan, samen met de zin over het doorgeefluik.
 
-> **Openstaand vóór de vlag naar een klant gaat.** `PRIVACY_UITKLAP` in
-> `src/teksten.js` beschrijft vandaag alleen de daglink. Die tekst is woordelijk
-> goedgekeurd in de juridische toets van 26-08-2026 en is hier bewust **niet**
-> gewijzigd: aanpassen vraagt een nieuwe toets. Zolang `OAUTH_DASHBOARD` uit
-> staat is de tekst juist (er is dan geen loginknop en geen token-call). Vóórdat
-> de vlag bij een klant aangaat moet er een zin bij over de login: dat er dan
-> één verzoek naar `www.agentic-team.ai` gaat, wat daar wel en niet in zit, en
-> dat de tokens in `sessionStorage` staan (tabblad dicht = weg).
+> **Afgerond: de loginzin.** Dit blok stond hier als voorwaarde vóór
+> `OAUTH_DASHBOARD` naar een klant ging. De zin over de login staat sinds
+> juristronde 3 (28-08, punt B3) in `PRIVACY_UITKLAP`, en de vlag staat in
+> productie aan (`<meta name="at-oauth" content="1">`, gecontroleerd 25-11).
 
 ## De panelen: KPI's, grafieken, ritme, tijdwinst
 
@@ -816,16 +821,21 @@ https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
 
 Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
 
-- **Het token staat in het `#fragment`** en wordt dus nooit naar een server
-  meegestuurd — het belandt in geen enkel access log, niet bij ons en niet
-  bij de hostingprovider. Bij het laden verhuist het naar `sessionStorage`
+- **Het token staat in het `#fragment`** en gaat dus niet mee naar de server
+  die de pagina levert — het belandt niet in het access log van
+  `dashboard.agentic-team.ai` of de hostingprovider. Daarna stuurt de loader
+  het wél als Bearer mee met elk dataverzoek via de router (zie hieronder); de
+  router logt geen headers. Bij het laden verhuist het naar `sessionStorage`
   (herladen = verversen, tabblad dicht = weg) en wordt het meteen uit de
   adresbalk gehaald (`history.replaceState`).
-- **De browser praat rechtstreeks met de instantie** (`/dashboard/overzicht`
-  en `/dashboard/entries?domein=…` op de instantie-URL, met het token als
-  Bearer) — de backend van agentic-team.ai zit er niet tussen, conform de
-  harde grens van f15: klantdata raakt onze servers nooit. De instantie
-  accepteert deze route alleen met CORS vanaf de dashboardpagina.
+- **De browser praat via de router met de instantie** (`/dashboard/overzicht`
+  en `/dashboard/entries?domein=…` op `connector.agentic-team.ai`, met het token
+  als Bearer; sinds b32 fase 2 wordt de `i`-parameter genegeerd, behalve
+  localhost). De router zoekt de instantie op via de sleutel-hash in het token
+  en stuurt door zonder iets van de inhoud te bewaren. De backend van
+  agentic-team.ai zit er niet tussen, conform de harde grens van f15: klantdata
+  komt niet op onze centrale servers. De instantie accepteert deze route alleen
+  met CORS vanaf de dashboardpagina.
 - **Het token kan alleen lezen en verloopt na 24 uur.** Een verlopen link
   geeft de melding "Vraag je Coördinator om een nieuwe"; er is geen
   alternatieve ingang. Dit is bewust een minimale voorloper van OAuth

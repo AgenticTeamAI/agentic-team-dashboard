@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-QgLGv7Dohbe7WxaXHutPq+Dh6vqmQbZ+JZhhbCbWuz8=' 'sha256-eb04r/mwdj678PCLM2WXJIt3Kp1CIiZP8JQr6wLhOuE='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-QgLGv7Dohbe7WxaXHutPq+Dh6vqmQbZ+JZhhbCbWuz8=' 'sha256-mIq1BJbc0f9PVRnfeDfZut6N82movrhdGR6dAywGRxs='">
 
 
 
@@ -3284,8 +3284,14 @@ window.AGENTIC_TEAM_SCHEMA = {
  * deze tekst onjuist en moet hij mee veranderen. Zie het hoofdstuk
  * "Geen telemetrie" in de README en test/geen-telemetrie.test.js. */
 
+/* Juristrapport 25-11-2026 (rapport-jurist-dashboardgebruik-2026-11-25.md,
+ * addendum punt C): sinds b32 fase 2 (24-08) loopt al het dashboardverkeer door
+ * de connector-router (connector.agentic-team.ai, wr-router, dezelfde EU-omgeving
+ * als de instanties). "Gaat niet langs onze servers" en "wordt nooit naar een
+ * server verstuurd" waren daardoor onjuist. Woordelijk de teksten uit het
+ * addendum; voor de daglink de voorkeursvariant met de sleutelzin. */
 const PRIVACY_REGEL =
-  "Je gegevens komen rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.";
+  "Je gegevens komen uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.";
 
 /* Herzien voor p10 (dashboard-login) — juristronde 3, 28-08-2026, punt B3.
  *
@@ -3307,7 +3313,7 @@ const PRIVACY_REGEL =
  * 28-08). PRIVACY_UITKLAP blijft de volledige tekst als één string — dat is de
  * versie die getoetst is en waarop de regressiecontrole staat. */
 const PRIVACY_UITKLAP_ALINEAS = [
-  "Je bedrijfsgegevens komen rechtstreeks uit je eigen werkruimte en gaan niet langs onze servers. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie.",
+  "Je bedrijfsgegevens komen uit je eigen werkruimte en komen niet terecht op onze centrale servers, waar je licentie en onze website staan. Alles wat je hier ziet, haalt je browser op bij jouw eigen werkruimte-instantie. Onderweg gaat het verkeer door een doorgeefluik van ons in dezelfde EU-omgeving als je werkruimte, dat je gegevens niet bewaart en alleen de methode, de status en de duur van een verzoek registreert.",
   /* i87 (oordeel jurist 1-10-2026, Juridisch Loket "Dashboard v2 —
    * metricsbestand"): met f54 staan bij klanten met een eigen bron niet meer
    * alleen tellingen in de werkruimte, maar ook de openstaande items. Gedekt
@@ -3323,7 +3329,7 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
-  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en wordt daarom nooit naar een server verstuurd; hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
    * door").
@@ -3356,13 +3362,13 @@ const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
  * dezelfde strekking en dezelfde grens als hierboven — twee varianten van
  * één belofte is op zichzelf al een risico. */
 const PRIVACY_LEGE_STAAT =
-  "Je gegevens komen straks rechtstreeks uit je eigen werkruimte en blijven in je browser — wij zien ze niet.";
+  "Je gegevens komen straks uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.";
 
 /* Feed-specifieke variant (f22-tab). Idem: geen absolute claim over al het
  * verkeer, wel de grens die wél klopt — bedrijfsdata gaat browser ↔ eigen
  * werkruimte. */
 const PRIVACY_FEED =
-  "Deze feed leest rechtstreeks uit je eigen werkruimte via de daglink; die berichten komen niet langs onze servers.";
+  "Deze feed leest uit je eigen werkruimte via de daglink. De berichten gaan niet naar onze website- of licentieserver en worden niet door ons bewaard.";
 
 if (typeof module !== "undefined") {
   module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
