@@ -155,7 +155,8 @@ function slugVanNaam(n) {
   if (!n) return null;
   const k = String(n);
   if (SLUG_CACHE.has(k)) return SLUG_CACHE.get(k);
-  const slug = SLUG_INDEX.get(normAgentNaam(k)) || null;
+  // check_license levert weergavenamen als "<emoji> <naam>"; de emoji telt niet mee.
+  const slug = SLUG_INDEX.get(normAgentNaam(k)) || SLUG_INDEX.get(normAgentNaam(k.replace(/^[^\p{L}\p{N}]+/u, ""))) || null;
   SLUG_CACHE.set(k, slug);
   return slug;
 }

@@ -85,7 +85,7 @@ function verhaalData() {
 }
 /* Het bericht van die post begint met "Dagstart van <naam>" (de actie ook,
  * maar feedVan houdt alleen de tekst over: bericht, anders actie). */
-function isDagstartPost(f) { return /^dagstart van\b/i.test(String((f && f.tekst) || "").trim()); }
+function isDagstartPost(f) { return /^dagstart\b/i.test(String((f && f.tekst) || "").trim()); }
 function verhaalZin(v) {
   const delen = [];
   if (v.zelf.length) delen.push("rondde je team <b>" + telwoord(v.zelf.length, "ding", "dingen") + "</b> zelf af");

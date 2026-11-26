@@ -171,6 +171,10 @@ describe("f62 — saneerDagplan: alleen het contract, begrensd, nooit een fout",
     expect(uit).toEqual(["Teams", "Jan Jansen en Tijmen", "Overleg", "Demo", "Zoom", "Bezet", "Bezet", "Afspraak", "Code review sprint 12, 10.00-11.00 op 2026-11-26"]);
     expect(JSON.stringify(uit)).not.toMatch(/https?:|@|teams\.microsoft|zoom\.us|www\.|123 456|98765432|4567/);
   });
+  it("agendatitels: de labels [link] en [e-mail] uit de werkruimte verdwijnen ook", () => {
+    const uit = g.saneerDagplan(plan({ agenda: [{ start: "10:00", titel: "Overleg [link]" }, { start: "11:00", titel: "[link]" }, { start: "12:00", titel: "[E-mail] en Jan" }] }), g.AGENTIC_TEAM_SCHEMA).agenda.map(a => a.titel);
+    expect(uit).toEqual(["Overleg", "Bezet", "en Jan"]);
+  });
 
   it("stuurtekens worden spaties; tekst blijft tekst", () => {
     const p = g.saneerDagplan(plan({ acuut: [{ titel: "regel\n\u0000twee drie" }] }), g.AGENTIC_TEAM_SCHEMA);
@@ -211,6 +215,15 @@ describe("f62 — kiesDagplan: alleen het jouwe", () => {
     const vandaag = entry("Sanne Verbeek", plan());
     expect(g.kiesDagplan(plannen([oud, vandaag, nieuw]), "Sanne Verbeek", VANDAAG)).toMatchObject({ datum: VANDAAG, vandaag: true });
     expect(g.kiesDagplan(plannen([oud, nieuw]), "Sanne Verbeek", VANDAAG)).toMatchObject({ entryId: "dagplan-nieuw", vandaag: false });
+  });
+  it("exacte naam en unieke voornaam tellen samen: het plan van vandaag wint", () => {
+    // De interne dagstart schrijft "Tijmen"; een oudere dagstart in een gesprek schreef "Tijmen Kip".
+    const oud = entry("Tijmen Kip", plan({ voor: "Tijmen Kip", datum: "2026-11-24" }));
+    const nu = entry("Tijmen", plan({ voor: "Tijmen" }));
+    expect(g.kiesDagplan(plannen([oud, nu]), "Tijmen Kip", VANDAAG)).toMatchObject({ persoon: "Tijmen", vandaag: true });
+    // twee verschillende Tijmens maken de voornaam dubbelzinnig: dan alleen de exacte naam
+    const ander = entry("Tijmen de Vries", plan({ voor: "Tijmen de Vries" }));
+    expect(g.kiesDagplan(plannen([oud, ander]), "Tijmen", VANDAAG)).toBeNull();
   });
   it("een entry zonder leesbaar plan valt weg", () => {
     const kapot = { entryId: "dagplan-sanne", data: { Persoon: "Sanne Verbeek", Inhoud: "{geen json" } };
@@ -304,6 +317,11 @@ describe("f62 — Notion-route: de werkbak volgens jouw dagstart", () => {
     expect($("#root").textContent).not.toContain("Iets van iedereen");
     expect($(".tabbalk .badge").textContent).toBe("2");
     expect($('.item a[href="https://www.notion.so/a"]')).not.toBeNull();
+  });
+  it("een specialist met emoji ervoor (zoals check_license hem noemt) krijgt toch zijn chip", () => {
+    const p = plan({ ter_goedkeuring: { totaal: 1, items: [{ nr: 1, titel: "Offerte", soort: "check", te_laat: false, specialist: "\u{1F91D} " + DM, sinds: null, deadline: null, url: null }] } });
+    open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", p)] }));
+    expect($(".item .imeta .ag")).not.toBeNull();
   });
   it("jouw plan van vandaag zonder items: niets voor jou, nooit de lijst van het team", () => {
     open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", plan({ ter_goedkeuring: { totaal: 0, items: [] } }))], metricsWerk: licentieBreed }));
@@ -445,6 +463,12 @@ describe("f62 — de feed: 'Dagstart van …' in beeld, maar geen werk van je te
     // Notion-route: geen 'specialisten aan het werk' door een dagstart
     open(maakCtx({ notion: true, teamfeed: feed(), metricsWerk: { voorJou: [], ritmetaken: null, gegenereerdOp: null } }));
     expect($(".verhaal").textContent).toContain("deed je team niets vanzelf");
+  });
+  it("ook een teamdagstart ('Dagstart afgerond: …') telt niet als werk van je team", () => {
+    const team = [post("f3", "2026-11-26T08:25:00", { Soort: "afgerond", Agent: "orchestrator", Actie: "Dagstart", Bericht: "Dagstart afgerond: 2 prioriteiten, 4 ter goedkeuring." })];
+    open(maakCtx({ acties: [], teamfeed: team }));
+    expect($(".verhaal").textContent).not.toMatch(/Coördinator/);
+    expect($$(".verhaal .chiprij .ag")).toHaveLength(0);
   });
 });
 

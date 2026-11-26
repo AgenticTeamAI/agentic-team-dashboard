@@ -71,6 +71,7 @@ function dpTelling(v) {
  * schraapt ze er zelf uit. Blijft er niets zinnigs over, dan "Bezet". */
 function dpAgendaTitel(v) {
   const t = dpTekst(v, 1000)
+    .replace(/\[(?:link|e-mail)\]/gi, " ")
     .replace(/\b(?:https?|ftp|mailto|tel|sip|sips|callto|msteams|zoommtg|facetime):\S*/gi, " ")
     .replace(/\bwww\.\S+/gi, " ")
     .replace(/[^\s@<>()[\]]+@[^\s@<>()[\]]+/g, " ")
@@ -172,22 +173,25 @@ function dagplannenUitEntries(entries, schema) {
 function dpVoornaam(n) { return String(n || "").trim().split(/\s+/)[0] || ""; }
 function dpEenWoord(n) { return String(n || "").trim().split(/\s+/).length === 1; }
 
-/* Het dagplan van `ik`: Persoon of voor is dezelfde naam (zoals naamGelijk).
- * Anders telt een voornaam, maar alleen als één van beide alleen een voornaam
- * is ("Tijmen" bij "Tijmen Kip") en er precies één zo'n persoon is. Van de
- * plannen van die persoon wint dat van vandaag, anders het nieuwste. */
+/* Het dagplan van `ik`: Persoon of voor is dezelfde naam (zoals naamGelijk),
+ * of een voornaam, als één van beide alleen een voornaam is ("Tijmen" bij
+ * "Tijmen Kip") en die voornaam bij precies één persoon hoort. Beide soorten
+ * kandidaten tellen samen: de interne dagstart schrijft "Tijmen", een
+ * dagstart in een gesprek kan "Tijmen Kip" schrijven, en dan moet het plan
+ * van vandaag winnen, niet het oudere met de exacte naam. Van de kandidaten
+ * wint het plan van vandaag, anders het nieuwste. */
 function kiesDagplan(plannen, ik, vandaagIso) {
   const lijst = Array.isArray(plannen) ? plannen : [];
   if (!ik || !lijst.length) return null;
   const naamVan = (p) => [p.persoon, p.plan && p.plan.voor].filter(Boolean);
-  let van = lijst.filter(p => naamVan(p).some(n => naamGelijk(n, ik)));
-  if (!van.length) {
-    const vn = dpVoornaam(ik);
-    const past = (n) => naamGelijk(dpVoornaam(n), vn) && (dpEenWoord(n) || dpEenWoord(ik));
-    const kandidaten = lijst.filter(p => naamVan(p).some(past));
-    const personen = new Set(kandidaten.map(p => normAgentNaam(p.persoon).replace(/\s+/g, " ")));
-    if (personen.size === 1) van = kandidaten;
-  }
+  const exact = lijst.filter(p => naamVan(p).some(n => naamGelijk(n, ik)));
+  const vn = dpVoornaam(ik);
+  const past = (n) => naamGelijk(dpVoornaam(n), vn) && (dpEenWoord(n) || dpEenWoord(ik));
+  const opVoornaam = lijst.filter(p => !exact.includes(p) && naamVan(p).some(past));
+  // Een voornaam telt alleen als hij naar één persoon wijst: twee collega's
+  // die Tijmen heten maken hem dubbelzinnig.
+  const personen = new Set(opVoornaam.map(p => normAgentNaam(p.persoon).replace(/\s+/g, " ")));
+  const van = exact.concat(personen.size === 1 ? opVoornaam : []);
   if (!van.length) return null;
   const sleutel = (p) => [p.datum || "", (p.plan && p.plan.gegenereerd_op) || "", p.bijgewerkt || ""].join("|");
   const gesorteerd = van.slice().sort((a, b) => sleutel(b).localeCompare(sleutel(a)));
