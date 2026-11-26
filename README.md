@@ -1110,7 +1110,7 @@ hier geen serverfunctie en geen rewrite bij.
 | inloggen | top-level navigatie naar `https://www.agentic-team.ai/api/dashboard/sessie/inloggen?terug=/&route=…` (`terug` is `/` of `/v2/`); geen PKCE en geen opslag hier |
 | terug | `#sessie=nieuw&r=<route>` of `#sessie=fout&reden=andere_poging\|afgebroken\|geweigerd\|storing`; nooit een token in de URL |
 | token | `POST /api/dashboard/sessie/token`, zonder body, met cookies → `{access_token, expires_in, sessie_tot}` |
-| uitloggen | `POST /api/dashboard/sessie/uitloggen`, idempotent |
+| uitloggen | `POST /api/dashboard/sessie/uitloggen`, idempotent; bij een fout één herhaling, en pas bij een 2xx "Je bent uitgelogd" |
 | overal uitloggen | eerst een vers token, dan `POST /dashboard/sessies/intrekken {}` op de eigen instantie, dan `POST /api/dashboard/sessie/uitloggen-overal` |
 | access-token | alleen in een modulevariabele (`sessieToegang`), nooit in `sessionStorage` of `localStorage` |
 | lokaal | alleen de markering `agentic-team-dashboard:sessie` = `{"tot": "<ISO>"}`, zonder token, seat of licentie |
@@ -1132,7 +1132,19 @@ vlag doen, en waarom zo:
 - **Vernieuwen.** Bij een verlopen token (`expires_in`) of een 401 van de
   instantie: één token-POST, gedeeld door de gelijktijdige verzoeken, en per
   verzoek één nieuwe poging. Een 503 van de token-route krijgt één herhaling na
-  min(`Retry-After`, 2) s, daarna de storingsmelding. Nooit een lus.
+  min(`Retry-After`, 2) s, daarna de storingsmelding. Nooit een lus. In de
+  praktijk is dat **altijd 2 s**: `Retry-After` is cross-origin alleen leesbaar
+  als de site hem in `Access-Control-Expose-Headers` zet, en dat doet ze (nog)
+  niet. Komt die header er, dan geldt vanzelf min(`Retry-After`, 2).
+- **Uitloggen.** Het geheugen gaat meteen leeg; dan `POST uitloggen` bij de
+  site. Lukt dat niet (geen 2xx of geen verbinding), dan één herhaling na
+  dezelfde wachttijd. Lukt het ook dan niet, dan heeft de site het cookie
+  laten staan (bij een storing doet ze dat bewust), en zou de volgende die op
+  Inloggen klikt zonder mail binnen zijn. Het dashboard zegt dan **niet** "Je
+  bent uitgelogd", maar "Uitloggen is niet gelukt", met "Uitloggen bij
+  agentic-team.ai is niet gelukt; je kunt in deze browser nog ingelogd raken.
+  Probeer het opnieuw." en een knop **Opnieuw uitloggen**. De markering blijft
+  dan staan, zodat de andere tabbladen kloppen.
 - **401 `{sessie: "beeindigd"}`.** De instantie zette een sessiegrens
   (rolwijziging, uitloggen overal, teamlid verwijderd). Vernieuwen helpt dan
   niet: het dashboard logt uit bij de site, wist markering en geheugen en zegt
@@ -1150,7 +1162,8 @@ vlag doen, en waarom zo:
 - **Uitloggen op alle apparaten** (accountmenu, met bevestiging, alleen met
   een sessie): vers token → intrekken op de instantie met dát token (een fout
   is niet fataal: dan "Open tabbladen elders stoppen uiterlijk binnen een
-  uur.") → uitloggen-overal bij de site → markering en geheugen weg. Bij
+  uur. Heeft je licentie afscherming (Business), dan verlopen de daglinks die
+  voor jou zijn gemaakt pas vanzelf.") → uitloggen-overal bij de site → markering en geheugen weg. Bij
   Business trekt de instantie ook je eigen daglinks in. De koppeling met je
   AI-assistent blijft.
 - **Teamlid verwijderen** (Beheer): na de geslaagde verwijdering bij de site
@@ -1170,7 +1183,11 @@ Bekende randen (handmatig te toetsen op een staging onder `agentic-team.ai`;
 het cookie niet): Safari kapt cookies uit een subresource-antwoord mogelijk af
 op 7 dagen; klokscheefheid tussen de site (`auth_time`) en de instantie (de
 grens) kan een herinlog binnen een paar seconden na uitloggen overal meteen
-opnieuw "beëindigd" geven.
+opnieuw "beëindigd" geven. En na een 401 "beeindigd" logt het dashboard bij de
+site uit zonder de identiteitspin te toetsen (na "beeindigd" wordt bewust
+nooit meer een token gehaald). Logde een ander tabblad in het afgelopen uur in
+met een ander account, dan nam dat het cookie over, en logt dit ook dát account
+uit: ongemak (opnieuw inloggen met mail), geen datalek.
 
 Getest in `test/s66-sessie-lege-staat.test.js`,
 `test/s66-sessie-geen-token-opslag.test.js`, `test/s66-sessie-flow.test.js`
