@@ -160,8 +160,14 @@ function hulpSecties() {
       <p class="klein stil">Welke velden er zijn, hangt af van je modules. Staan je gegevens in je eigen systeem, zoals een CRM, dan pas je ze daar aan.</p>${naar("Naar je gegevens", "/gegevens")}`],
     ["eigen-systeem", "Je werkdata staat in je eigen systeem", () => `
       <p>Werk je met je eigen systeem, zoals een CRM, dan staan je acties en vaste taken daar. Het dashboard leest ze niet rechtstreeks.</p>
-      <ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
-      <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`],
+      ${CTX && doorgevenMogelijk() ? `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
+      <li><b>Hier handel je af</b> als je bent ingelogd: goedkeuren of terugsturen, ja of nee op een voorstel, aan je team geven of later. Het dashboard verandert zelf niets in je eigen systeem: het geeft het door, en je team voert het uit bij het volgende werkmoment.</li>
+      <li><b>Tot dan</b> staat er ‘Doorgegeven’ bij het item, en kun je het nog ongedaan maken. Daarna zie je ‘Gedaan’, of ‘Niet gelukt’ met de reden, bijvoorbeeld als het item intussen al was afgehandeld.</li>
+      <li><b>Een nieuwe opdracht</b> geef je met ‘Opdracht geven’. Je team zet hem bij het volgende werkmoment in je eigen systeem en pakt hem het werkmoment daarna op.</li>
+      <li><b>In je eigen systeem doe je</b> de rest, zoals je vaste taken aanpassen. Of vraag het je team.</li></ul>
+      <p class="klein stil">Wat je doorgeeft, staat tot dertig dagen in je werkruimte, met je naam erbij, zodat je team weet van wie het komt.</p>`
+    : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
+      <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
     ["woorden", "Woorden die je team gebruikt", () => `
       <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(bron()))}</dd></dl>`],

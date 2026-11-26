@@ -63,6 +63,7 @@ const JS_MODULES = [
   "notion-werk.js",
   "modules-beheer.js",
   "team-beheer.js",
+  "opdrachten.js",
   "v2-prod.js",
   "v2-begin.js",
   "v2-basis.js",

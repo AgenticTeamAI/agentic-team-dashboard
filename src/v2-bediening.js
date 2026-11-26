@@ -82,6 +82,7 @@ function renderSheet() {
       <p class="klein stil">Gaat er geen mail open? Kopieer je tekst en mail hem naar <span class="mono" style="user-select:all;white-space:nowrap">${FEEDBACK_ADRES}</span>.</p>`);
   }
   const ag = a ? werkAgent(a) : null; const kc = klaarCheck();
+  if (sh.type && sh.type.startsWith("x-")) return renderDoorgeefSheet(sh, wrap, annuleer, fout);
   switch (sh.type) {
     case "terug": return wrap("Terug naar " + deNaam(ag), `<label class="lb" for="sh-tekst">Wat moet ${esc(deNaam(ag))} anders doen?</label><textarea id="sh-tekst" data-sh="tekst" placeholder="Bijvoorbeeld: korter, en noem de offerte van vorige week.">${esc(sh.tekst || "")}</textarea>
       <div class="keuzes">${["Korter", "Formeler", "Persoonlijker", "Andere insteek"].map(c => `<button class="keuze" data-act="sh-chip" data-t="${c}">${c}</button>`).join("")}</div>
@@ -121,6 +122,7 @@ function renderSheet() {
       <button class="regel" data-act="sh-naar" data-type="feedback"><span class="rl"><b>Feedback geven</b><span>Wat werkt niet, wat mis je?</span></span>${ic("chev")}</button>
       <button class="regel" data-act="uitloggen"><span class="rl"><b>Uitloggen</b><span>${toegang() === "notion" ? "Je werkdata blijft in je eigen systeem" : "Met een daglink kijk je daarna nog mee"}</span></span>${ic("chev")}</button></div>`);
     case "opdracht": {
+      if (!kanSchrijven() && kanDoorgeven()) return renderOpdrachtElders(sh, wrap, fout);
       const kan = kanSchrijven(); const top = specialistenVoor("opdracht").slice(0, 3);
       if (sh.ag && !top.includes(sh.ag)) top.unshift(sh.ag);
       const ander = specialistenVoor("opdracht").filter(s => !top.includes(s));
@@ -158,7 +160,51 @@ function renderSheet() {
   }
   return "";
 }
-function toastKnoppen(t) { return `${t.login ? `<button data-act="login">Inloggen</button>` : ""}${t.bekijk ? `<button data-act="toast-bekijk">Bekijk</button>` : ""}${t.undo && kanSchrijven() ? `<button data-act="undo">Ongedaan maken</button>` : ""}<button data-act="toast-dicht" aria-label="Melding sluiten">${ic("sluit", "klein")}</button>`; }
+/* f61 — de bladen bij doorgeven. Ze dragen geen actie uit je werkruimte maar
+ * de sleutel van het item uit je dagstart (sh.x); de opdracht zelf schrijft
+ * doorgeven() hieronder. */
+function doorgeefItem(sleutel) { return (werkbakUitDagstart() || []).find(it => it && it.url && externIdVanUrl(it.url) === sleutel) || null; }
+function specialistVanItem(it) { const s = it && slugVanNaam(it.specialist); return s && AGENTS[s] ? s : null; }
+function doorgeefVerwachting() {
+  const kc = klaarCheck(); const naam = naamElders("acties");
+  if (kc.stil) return `<p class="verwachting let">Let op: je team werkt nu niet vanzelf, dus dit blijft liggen tot je team weer werkt. <button class="hoe" data-act="go" data-r="/team/klaar">Zo regel je dat</button></p>`;
+  return `<p class="verwachting">Je team verwerkt dit ${esc(bijHetVolgende())} in ${esc(naam)}. Tot dan kun je het nog ongedaan maken.</p>`;
+}
+function renderDoorgeefSheet(sh, wrap, annuleer, fout) {
+  const it = doorgeefItem(sh.x);
+  if (!it) return wrap("Dit item is er niet (meer)", `<p class="stil">Misschien is het net afgehandeld of ververst. Kijk in je eigen systeem.</p><div class="rijtje">${annuleer}</div>`);
+  const titel = `<p><b>${esc(it.titel)}</b></p>`;
+  const sp = specialistVanItem(it);
+  switch (sh.type) {
+    case "x-terug": return wrap("Terug naar " + deNaam(sp), `${titel}<label class="lb" for="sh-tekst">Wat moet ${esc(deNaam(sp))} anders doen?</label><textarea id="sh-tekst" data-sh="tekst" maxlength="${OPDRACHT_TEKST_MAX}" placeholder="Bijvoorbeeld: korter, en noem de offerte van vorige week.">${esc(sh.tekst || "")}</textarea>
+      <div class="keuzes">${["Korter", "Formeler", "Persoonlijker", "Andere insteek"].map(c => `<button class="keuze" data-act="sh-chip" data-t="${c}">${c}</button>`).join("")}</div>
+      ${doorgeefVerwachting()}${fout}<div class="rijtje">${knop(ic("terug", "klein") + "Terug naar " + esc(deNaam(sp)), "sh-ok", "", "team")}${annuleer}</div>`);
+    case "x-nee": return wrap("Nee, niet doen", `${titel}<label class="lb" for="sh-tekst">Waarom niet? <span class="stil klein">(mag leeg)</span></label><textarea id="sh-tekst" data-sh="tekst" maxlength="${OPDRACHT_TEKST_MAX}" placeholder="Bijvoorbeeld: de marge is nu te laag.">${esc(sh.tekst || "")}</textarea><p class="klein stil">Je team leert hiervan.</p>${doorgeefVerwachting()}${fout}<div class="rijtje">${knop("Niet doen", "sh-ok", "", "prim")}${annuleer}</div>`);
+    case "x-later": return wrap("Later", `${titel}<p class="klein stil">Uit je lijst tot:</p><div class="keuzes">${datumKeuzesV2().map(([l, d]) => `<button class="keuze" data-act="sh-kies" data-v="datum:${d}">${esc(l)} <span class="mono klein stil">${esc(datumKort(d))}</span></button>`).join("")}</div>
+      <label class="lb" for="sh-datum">Of kies een datum</label><div class="rijtje"><input type="date" id="sh-datum" data-sh="datum" value="${esc(sh.datum || "")}" style="width:auto">${knop("Opslaan", "sh-ok", "", "prim")}</div>${doorgeefVerwachting()}${fout}`);
+    case "x-wie": { const specs = specialistenVoor("geef");
+      return wrap("Geef aan je team", `${titel}${specs.length ? '<p class="klein stil">Wie pakt het op?</p>' : ""}<div class="keuzes">${specs.map(s => `<button class="keuze" data-act="sh-kies" data-v="ag:${esc(s)}"><span aria-hidden="true">${esc(AGENTS[s].em)}</span> ${esc(AGENTS[s].naam)}</button>`).join("") || '<p class="klein stil">Er staan nog geen specialisten in je team.</p>'}</div>
+      ${doorgeefVerwachting()}${fout}`); }
+  }
+  return "";
+}
+/* Nieuwe opdracht als je acties in je eigen systeem staan: alleen een
+ * specialist (je team zet hem in je eigen systeem en pakt hem daarna op). */
+function renderOpdrachtElders(sh, wrap, fout) {
+  const specs = specialistenVoor("opdracht"); const top = specs.slice(0, 4);
+  if (sh.ag && !top.includes(sh.ag)) top.unshift(sh.ag);
+  const ander = specs.filter(s => !top.includes(s)); const kc = klaarCheck();
+  return wrap("Geef je team een opdracht", `
+    <label class="lb" for="sh-wat">Wat moet er gebeuren?</label><textarea id="sh-wat" data-sh="wat" maxlength="${OPDRACHT_TEKST_MAX}" placeholder="Bijvoorbeeld: zoek 10 installatiebedrijven in Utrecht die groeien">${esc(sh.wat || "")}</textarea>
+    <div role="group" aria-labelledby="lb-wie"><span class="lb" id="lb-wie">Wie pakt het op?</span><div class="keuzes">${top.map(s => `<button class="keuze" data-act="sh-set" data-k="ag" data-v="${esc(s)}" aria-pressed="${sh.ag === s}"><span aria-hidden="true">${esc(AGENTS[s].em)}</span> ${esc(AGENTS[s].naam)}</button>`).join("")}
+      ${ander.length ? `<select class="veld" id="sh-ander" data-change="sh-ander" style="width:auto" aria-label="Iemand anders"><option value="">Iemand anders…</option>${ander.map(s => `<option value="ag:${esc(s)}" ${sh.ag === s ? "selected" : ""}>${esc(AGENTS[s].naam)}</option>`).join("")}</select>` : ""}</div></div>
+    ${sh.ag ? (kc.stil ? `<p class="verwachting let">Let op: je team werkt nu niet vanzelf, dus dit blijft liggen tot je team weer werkt.</p>` : `<p class="verwachting">Je team zet dit ${esc(bijHetVolgende())} in ${esc(naamElders("acties"))}; het werkmoment daarna pakt ${esc(deNaam(sh.ag))} het op.</p>`) : ""}
+    <div role="group" aria-labelledby="lb-wanneer"><span class="lb" id="lb-wanneer">Voor wanneer?</span><div class="keuzes">${[["geen", "Geen haast"]].concat(datumKeuzesV2().slice(0, 2).map(([l, d]) => [d, l])).map(([v, l]) => `<button class="keuze mensk" data-act="sh-set" data-k="wanneer" data-v="${v}" aria-pressed="${sh.wanneer === v}">${esc(l)}</button>`).join("")}</div></div>
+    <details class="uitklap" ${det("opdracht-meer")}><summary>Meer: uitleg voor je team${ic("chev")}</summary><div class="binnen"><label class="lb" for="sh-uitleg">Uitleg voor je team</label><textarea id="sh-uitleg" data-sh="uitleg" maxlength="${OPDRACHT_TEKST_MAX}">${esc(sh.uitleg || "")}</textarea><p class="klein stil">Schrijf wat je een nieuwe collega zou appen: je team kan tijdens het werkmoment niets navragen.</p></div></details>
+    ${fout}
+    <button class="knop teamvol breed" data-act="sh-ok" ${sh.ag ? "" : "disabled"}>${esc(sh.ag ? "Geef aan " + deNaam(sh.ag) : "Kies eerst wie het oppakt")}</button>`, "lade");
+}
+function toastKnoppen(t) { return `${t.login ? `<button data-act="login">Inloggen</button>` : ""}${t.bekijk ? `<button data-act="toast-bekijk">Bekijk</button>` : ""}${t.undo && magOngedaan() ? `<button data-act="undo">Ongedaan maken</button>` : ""}<button data-act="toast-dicht" aria-label="Melding sluiten">${ic("sluit", "klein")}</button>`; }
 function renderToast(inline) {
   const t = S.toast; if (!t) return "";
   if (inline) return `<div class="toast-inline" data-toast><span>${ic("vink", "klein")} ${esc(t.tekst)}</span><span class="rijtje" style="gap:4px;flex-wrap:nowrap">${toastKnoppen(t)}</span></div>`;
@@ -211,7 +257,7 @@ function renderApp() {
     overlay = `<div class="scrim ${isDesk() ? "lade" : ""}" data-act="scrim-item" ${S.sheet ? "inert" : ""}><div class="sheet ${isDesk() ? "" : "vol"}" role="dialog" aria-modal="true" aria-labelledby="blad-titel" data-stop>${isDesk() ? "" : '<span class="greep" aria-hidden="true"></span>'}${inline ? renderToast(true) : ""}${a ? renderBlad(a, "sheet") : nietGevondenBlad()}</div></div>`;
   }
   const rondeInline = parts()[1] === "een-voor-een" && S.toast ? renderToast(true) : "";
-  const fab = kanSchrijven() && !isDesk() && t === "voorjou" && parts()[1] !== "een-voor-een" && toegang() !== "notion"
+  const fab = ((kanSchrijven() && toegang() !== "notion") || kanDoorgeven()) && !isDesk() && t === "voorjou" && parts()[1] !== "een-voor-een"
     ? `<button class="fab" data-act="sheet" data-type="opdracht">${ic("plus")}Opdracht</button>` : "";
   const achtergrondInert = (overlay || S.sheet) ? "inert" : "";
   return `<div class="app ${fab ? "met-fab" : ""}"><div ${achtergrondInert}>${kop}<main id="scroller">${rondeInline ? `<div class="inhoud" style="padding-bottom:0">${rondeInline}</div>` : ""}${main}</main></div>
@@ -376,7 +422,8 @@ function foutTekst(e) { return (e && e.message) || "Dat is niet gelukt."; }
 /* Een mislukte schrijfactie. Is de sessie verlopen, dan staat inloggen er
  * meteen bij: je komt daarna terug op dezelfde plek. */
 function meldFout(e) {
-  if (e && (e.oauthVerlopen || e.daglinkVerlopen)) toast(foutTekst(e), { fout: true, login: kanInloggen() });
+  if (e && e.eigenTekst) toast(e.message, { fout: true, login: !!(e.oauthVerlopen && kanInloggen()) });
+  else if (e && (e.oauthVerlopen || e.daglinkVerlopen)) toast(foutTekst(e), { fout: true, login: kanInloggen() });
   else if (e && e.status === 403) toast("Je sessie mag hier alleen lezen. Log opnieuw in om af te handelen.", { fout: true, login: kanInloggen() });
   else toast("Niet gelukt: " + foutTekst(e) + " Probeer het opnieuw.", { fout: true });
 }
@@ -520,6 +567,7 @@ async function nieuweOpdracht(sh, btn) {
 async function nieuweOpdrachtBinnen(sh, btn) {
   const wat = (sh.wat || "").trim();
   if (!wat) { sh.fout = "Schrijf eerst wat er moet gebeuren."; S.focusNa = "#sh-wat"; render(); return; }
+  if (!kanSchrijven() && kanDoorgeven()) return nieuweOpdrachtElders(sh, wat, btn);
   const wie = sh.ag ? { agent: AGENTS[sh.ag].naam } : { mens: sh.mens || jij() };
   if (!sh.ag && !wie.mens) { vraagNaam(() => { S.sheet = sh; render(); }); return; }
   const data = opdrachtData({ wat, uitleg: sh.uitleg, wie, deadline: sh.wanneer && sh.wanneer !== "geen" ? sh.wanneer : null, hoortBij: sh.hoort || "", ik: jij() || null, nu: NU });
@@ -535,6 +583,90 @@ async function nieuweOpdrachtBinnen(sh, btn) {
     render();
   } catch (e) { sh.fout = foutTekst(e) + " Je tekst staat er nog; probeer het opnieuw."; meldFout(e); render(); }
 }
+/* ---------- f61: doorgeven aan je team ----------
+ * Eén POST naar de opdrachtroute van je werkruimte; de instantie zet Status,
+ * wie het gaf en het bronsysteem. Het antwoord komt ter plekke in de lijst
+ * opdrachten van de bundel (geen rows-domein: dit is geen werkdata). Ongedaan
+ * maken is intrekken, en dat kan alleen zolang je team er nog niet aan begon. */
+function zetOpdracht(entry) {
+  if (!entry || !entry.entryId || !CTX || !CTX.bundle) return;
+  const o = CTX.bundle.opdrachten || (CTX.bundle.opdrachten = { entries: [] });
+  o.entries = [entry].concat((o.entries || []).filter(e => e && e.entryId !== entry.entryId));
+}
+function opdrachtFout(e) {
+  const err = new Error(opdrachtFoutTekst(e)); err.eigenTekst = true; err.status = e && e.status;
+  err.oauthVerlopen = !!(e && e.oauthVerlopen); err.code = e && e.body && e.body.fout;
+  return err;
+}
+async function intrekken(id) {
+  let res;
+  try { res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten/" + encodeURIComponent(id) + "/intrekken"); }
+  catch (e) {
+    // Al opgepakt: haal de stand op, zodat de kaart laat zien wat er nu gebeurt.
+    if (e && e.body && e.body.fout === "niet_meer_in_te_trekken" && CTX.herlaad) CTX.herlaad();
+    throw opdrachtFout(e);
+  }
+  zetOpdracht(res && res.entry);
+}
+function doorgeefMelding(handeling, opts) {
+  const sp = opts.ag && AGENTS[opts.ag] ? opts.ag : null;
+  const wat = { Goedkeuren: "Goedgekeurd.", Ja: "Akkoord.", Nee: "Niet doen.", Terugsturen: "Teruggestuurd" + (sp ? " naar " + deNaam(sp) : "") + ".",
+    Doorzetten: "Doorgegeven aan " + deNaam(sp) + ".", Later: "Later" + (opts.datum ? ": " + datumKort(opts.datum) : "") + ".", Nieuw: "Doorgegeven aan " + deNaam(sp) + "." }[handeling] || "Doorgegeven.";
+  const verder = klaarCheck().stil ? " Dit ligt stil tot je team weer vanzelf werkt." : " Je team verwerkt het " + bijHetVolgende() + " in " + naamElders("acties") + ".";
+  return wat + verder;
+}
+async function doorgeven(sleutel, handeling, opts, btn) {
+  if (!kanDoorgeven()) return;
+  const it = doorgeefItem(sleutel); if (!it) return;
+  const k = "door:" + sleutel; if (isBezig(k)) return;
+  if (opdrachtIsOpen(opdrachtVoorItem(CTX.bundle, it.url))) return; // er ligt al een opdracht
+  BEZIG.add(k);
+  try { await doorgevenBinnen(it, handeling, opts || {}, btn); } finally { BEZIG.delete(k); render(); }
+}
+async function doorgevenBinnen(it, handeling, opts, btn) {
+  const sp = opts.ag && AGENTS[opts.ag] ? AGENTS[opts.ag].naam : null;
+  const body = opdrachtBody(handeling, it, { tekst: opts.tekst, specialist: sp, datum: opts.datum });
+  const sheetVoor = S.sheet;
+  const nee = controleerOpdracht(body);
+  if (nee) { if (sheetVoor) sheetVoor.fout = nee; else toast(nee, { fout: true }); render(); return; }
+  zetBezig(btn);
+  let res;
+  try { res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", body); }
+  catch (e) {
+    const f = opdrachtFout(e);
+    if (S.sheet && S.sheet === sheetVoor) S.sheet.fout = f.message;
+    meldFout(f);
+    // Lag er al een opdracht (een ander tabblad, een collega): toon die stand.
+    if (f.code === "al_doorgegeven" && CTX.herlaad) { if (S.sheet === sheetVoor) S.sheet = null; CTX.herlaad(); }
+    render(); return;
+  }
+  if (S.sheet === sheetVoor) S.sheet = null;
+  const entry = res && res.entry; zetOpdracht(entry);
+  toast(doorgeefMelding(handeling, { ag: opts.ag, datum: opts.datum }), { undo: entry && entry.entryId ? () => intrekken(entry.entryId) : null });
+  S.focusNa = `[data-xkaart="${cssEsc(externIdVanUrl(it.url))}"] [data-act]|.werkbak-kop h2`;
+  render();
+}
+async function nieuweOpdrachtElders(sh, wat, btn) {
+  if (!sh.ag || !AGENTS[sh.ag]) { sh.fout = "Kies eerst wie het oppakt."; render(); return; }
+  const body = opdrachtVoorBron({ wat, uitleg: sh.uitleg, specialist: AGENTS[sh.ag].naam, deadline: sh.wanneer && sh.wanneer !== "geen" ? sh.wanneer : null });
+  const nee = controleerOpdracht(body);
+  if (nee) { sh.fout = nee; render(); return; }
+  zetBezig(btn);
+  try {
+    const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", body);
+    const entry = res && res.entry; zetOpdracht(entry);
+    if (S.sheet === sh) S.sheet = null;
+    toast(doorgeefMelding("Nieuw", { ag: sh.ag }), { undo: entry && entry.entryId ? () => intrekken(entry.entryId) : null });
+    render();
+  } catch (e) { const f = opdrachtFout(e); sh.fout = f.message + " Je tekst staat er nog."; meldFout(f); render(); }
+}
+async function intrekKnop(id, btn) {
+  const k = "intrek:" + id; if (isBezig(k) || !kanDoorgeven()) return; BEZIG.add(k); zetBezig(btn);
+  try { await intrekken(id); toast("Ongedaan gemaakt. Je kunt het opnieuw doorgeven."); }
+  catch (e) { meldFout(e); }
+  finally { BEZIG.delete(k); render(); }
+}
+
 async function opmerkingPlaatsen(sh, btn) {
   const sleutelB = "opmerking:" + sh.id; if (isBezig(sleutelB)) return; BEZIG.add(sleutelB);
   try { return await opmerkingPlaatsenBinnen(sh, btn); } finally { BEZIG.delete(sleutelB); }
@@ -692,6 +824,8 @@ function naarBaan(id, baan, btn) {
 }
 function kiesInSheet(v, btn) {
   const sh = S.sheet; const k = v.slice(0, v.indexOf(":")), val = v.slice(v.indexOf(":") + 1); const id = sh.id;
+  if (sh.type === "x-later" && k === "datum") { doorgeven(sh.x, "Later", { datum: val }, btn); return; }
+  if (sh.type === "x-wie" && k === "ag") { doorgeven(sh.x, "Doorzetten", { ag: val }, btn); return; }
   if (sh.type === "wie") {
     if (sh.doel === "toewijzen") {
       if (k !== "ag" && !val && !jij()) { vraagNaam(() => uitvoeren(id, "alleenEigenaar", jij())); return; }
@@ -716,6 +850,10 @@ function kiesInSheet(v, btn) {
 function bevestigSheet(btn) {
   const sh = S.sheet; const id = sh.id;
   switch (sh.type) {
+    case "x-terug": { if (!(sh.tekst || "").trim()) { sh.fout = "Schrijf in één zin wat anders moet."; S.focusNa = "#sh-tekst"; render(); return; }
+      const it = doorgeefItem(sh.x); doorgeven(sh.x, "Terugsturen", { tekst: sh.tekst.trim(), ag: specialistVanItem(it) }, btn); return; }
+    case "x-nee": doorgeven(sh.x, "Nee", { tekst: (sh.tekst || "").trim() }, btn); return;
+    case "x-later": if (!sh.datum) { S.focusNa = "#sh-datum"; render(); return; } doorgeven(sh.x, "Later", { datum: sh.datum }, btn); return;
     case "terug": if (!(sh.tekst || "").trim()) { sh.fout = "Schrijf in één zin wat anders moet."; S.focusNa = "#sh-tekst"; render(); return; } uitvoeren(id, "terug", { tekst: sh.tekst.trim() }, btn); return;
     case "nee": uitvoeren(id, "nee", { tekst: (sh.tekst || "").trim() }, btn); return;
     case "afsluiten": uitvoeren(id, "klaar", { tekst: (sh.tekst || "").trim() }, btn); return;
@@ -760,6 +898,9 @@ function opKlik(e) {
     case "sluit-blad": sluitBlad(); break;
     case "stap": { const l = voorJouLijst(); const cur = huidigItem(); const i = cur ? l.findIndex(x => x.id === cur.id) : -1; const n = l[i + Number(d.d)]; if (n) { go("/voor-jou/" + n.id); S.focusNa = "#blad-titel"; } break; }
     case "doe": uitvoeren(d.id, d.f, null, el); return;
+    case "x-doe": { const it = doorgeefItem(d.x); if (it) doorgeven(d.x, d.h, d.h === "Ja" ? { ag: specialistVanItem(it) } : {}, el); return; }
+    case "x-sheet": if (!kanDoorgeven() || !doorgeefItem(d.x)) return; S.sheetOpener = focusSleutel(el); S.sheet = { type: d.type, x: d.x, tekst: "", datum: "" }; break;
+    case "x-intrek": intrekKnop(d.o, el); return;
     case "ja": { const a = actie(d.id); const ag = a && werkAgent(a); if (ag) { uitvoeren(d.id, "ja", { ag }, el); return; } if (!jij()) { vraagNaam(() => { S.sheet = { type: "wie", id: d.id, doel: "ja" }; render(); }); return; } S.sheet = { type: "wie", id: d.id, doel: "ja" }; break; }
     case "sheet": {
       S.sheetOpener = focusSleutel(el);
@@ -777,7 +918,7 @@ function opKlik(e) {
     case "sh-set": S.sheet[d.k] = d.v; if (d.k === "ag") S.sheet.mens = null; if (d.k === "mens") S.sheet.ag = null; S.sheet.fout = ""; break;
     case "sh-kies": kiesInSheet(d.v, el); return;
     case "sh-ok": bevestigSheet(el); return;
-    case "undo": if (kanSchrijven() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return;
+    case "undo": if (magOngedaan() && S.toast && S.toast.undo) { const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return;
     case "toast-dicht": S.toast = null; break;
     case "toast-bekijk": if (S.toast && S.toast.bekijk) { const b = S.toast.bekijk; S.toast = null; if (!itemRoute()) S.terugNaar = S.route; const keep = S.terugNaar; go(b); S.terugNaar = keep; } break;
     case "undo-lijst": { if (!kanSchrijven()) return; const x = S.sessie.afgehandeld[Number(d.i)]; if (x && x.undo) { const u = x.undo; x.undo = null; Promise.resolve(u()).then(() => { S.sessie.afgehandeld = S.sessie.afgehandeld.filter(y => y !== x); toast("Ongedaan gemaakt: " + x.titel + "."); render(); }, (f) => { x.undo = u; meldFout(f); render(); }); } return; }
@@ -855,8 +996,9 @@ function opToets(e) {
   if (e.key === "Escape") { if (S.sheet) { S.sheet = null; render(); e.preventDefault(); return; } if (itemRoute() && !(isDesk() && parts()[0] === "voor-jou")) { sluitBlad(); render(); } return; }
   const tag = (e.target.tagName || "").toLowerCase(); if (["input", "textarea", "select"].includes(tag) || e.target.isContentEditable) return;
   if (e.repeat) return;
-  if (!CTX || S.sheet || toegang() === "notion") return;
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (kanSchrijven() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
+  if (!CTX || S.sheet) return;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { if (magOngedaan() && S.toast && S.toast.undo) { e.preventDefault(); const u = S.toast.undo; S.toast = null; render(); Promise.resolve(u()).then(() => { toast("Ongedaan gemaakt."); render(); }, (f) => { meldFout(f); render(); }); } return; }
+  if (toegang() === "notion") return;
   if (!isDesk() || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.target.closest && e.target.closest(".akop, .dtabs, .tabbalk")) return;
   // Alleen als je op een item staat (kaart, blad, één voor één) of nergens op:

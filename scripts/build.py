@@ -50,6 +50,8 @@ JS_MODULES_IN_ORDER = [
     "notion-werk.js",
     "modules-beheer.js",
     "team-beheer.js",
+    # f61: doorgeven aan je team als je acties in je eigen systeem staan.
+    "opdrachten.js",
     # Dashboard v2: de schermlaag, in één afgeschermde scope (v2-begin.js
     # opent hem, v2-eind.js sluit hem). Zie v2-prod.js.
     "v2-prod.js",

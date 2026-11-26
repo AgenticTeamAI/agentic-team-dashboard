@@ -23,7 +23,7 @@ function v2Toon(ctx) {
   // zonder eerst Voor jou te laten zien.
   const r = routeUitHash(window.location.hash);
   if (r !== S.route) { S.route = r; S.sheet = null; if (!itemRoute()) S.terugNaar = null; }
-  if (S.opdrachtVoor && kanSchrijven()) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
+  if (S.opdrachtVoor && (kanSchrijven() || kanDoorgeven())) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
   render();
 }
 function v2Leeg(o) { CTX = null; S.data = null; S.dataCtx = null; S.leeg = o || null; S.versieFout = null; S.route = routeUitHash(window.location.hash); render(); }
@@ -36,7 +36,7 @@ function v2HashGewijzigd() {
     if (S.hist.length && S.hist[S.hist.length - 1] === r) S.hist.pop(); else S.hist.push(S.route);
     S.route = r; S.sheet = null; S.ui.bewerk = null;
     if (!itemRoute()) S.terugNaar = null;
-    if (S.opdrachtVoor && kanSchrijven()) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
+    if (S.opdrachtVoor && (kanSchrijven() || kanDoorgeven())) { const o = S.opdrachtVoor; S.opdrachtVoor = null; startOpdrachtSheet({ ag: o.ag && isAgentSlug(o.ag) ? o.ag : null }); }
   }
   render();
 }

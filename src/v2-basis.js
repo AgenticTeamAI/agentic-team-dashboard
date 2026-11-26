@@ -101,6 +101,20 @@ function werkbakMoment() {
 }
 function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "je eigen systeem"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
+/* f61 — doorgeven aan je team, voor acties in je eigen systeem. Een eigen poort,
+ * los van kanSchrijven(): die blijft dicht voor acties die elders wonen, want
+ * zo'n rij kan het dashboard niet bijwerken. Doorgeven schrijft een opdracht in
+ * je werkruimte; je team voert hem uit bij het volgende werkmoment.
+ * - doorgevenMogelijk: de instantie kent het domein (bundle.opdrachten is er)
+ *   en de bronkoppeling zegt dat je acties elders wonen — precies wanneer de
+ *   instantie een opdracht aanneemt (anders 409 acties_in_werkruimte);
+ * - kanDoorgeven: en je bent ingelogd met dashboard:schrijf. Een daglink nooit.
+ * Of je rol het mag, beslist de instantie; een weigering tonen we als tekst. */
+function opdrachtenVanBundel() { return CTX && CTX.bundle && CTX.bundle.source === "werkruimte" ? opdrachtenLijst(CTX.bundle) : []; }
+function doorgevenMogelijk() { return !!(CTX && CTX.bundle && CTX.bundle.source === "werkruimte" && CTX.bundle.opdrachten && Array.isArray(CTX.bundle.opdrachten.entries) && woontElders("acties")); }
+function kanDoorgeven() { return doorgevenMogelijk() && ingelogd() && !!CTX.kanSchrijven; }
+/* Ongedaan maken in een melding: een werkruimte-actie, of een opdracht intrekken. */
+function magOngedaan() { return kanSchrijven() || kanDoorgeven(); }
 function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
 /* f62 — je dagplan (src/dagplan.js): het jouwe kiezen kan alleen als het
  * dashboard weet wie je bent (inloggen). Met een daglink dus nooit. */
