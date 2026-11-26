@@ -19,6 +19,8 @@
  * Van wie (vanMij, besluit 30-09 "per persoon"): wat op jouw naam staat, plus
  * wat op niemands naam staat ("voor iedereen"), plus een voorstel van een
  * specialist. Wat op naam van een collega staat, staat apart (bijCollegas).
+ * Sinds f62 bepaalt de eigenaarsketen (eigenaarVan, hieronder) op wiens naam
+ * iets staat: een actie zonder eigenaar bij Tijmens project is van Tijmen.
  * Weet het dashboard niet wie je bent (geen naam gekozen, of de daglink), dan
  * telt alles wat bij een mens hoort — liever een collega's stuk te veel in
  * beeld dan een stille berg.
@@ -154,12 +156,112 @@ function hoortBijMens(rij, namen, nu) {
   return false;
 }
 
-function vanMij(rij, ik, namen) {
+/* ── f62: de eigenaarsketen ────────────────────────────────────────────
+ *
+ * Van wie is een actie? Besluit 26-11-2026: de eerste treffer wint.
+ *   1. de Eigenaar van de actie, als dat een mens is;
+ *   2. de Eigenaar van het gekoppelde Project;
+ *   3. de Eigenaar van de gekoppelde Deal (sales_funnel);
+ *   4. de Eigenaar van de gekoppelde Organisatie (direct, of via de
+ *      Organisatie van de gekoppelde Contactpersoon);
+ *   5. wie verantwoordelijk is voor de Agent van de actie — alleen als een
+ *      bron dat zegt (opties.agentMens); het dashboard kent die koppeling
+ *      zelf niet, en dan slaat het deze stap over;
+ *   6. niemand: "onverdeeld", en dat ziet iedereen.
+ * Belt Tijmens relatie, dan doet Yoram de sales niet, ook al zijn de
+ * sales-agents "van hem" (Yoram). Een agent als Eigenaar blijft voor de
+ * status "je team is aan zet" (soortVan, hoortBijMens, ongewijzigd); bij een
+ * Voorstel op naam van een agent zoekt de keten vanaf stap 2 de mens die moet
+ * beslissen.
+ *
+ * Relaties staan in een rij als {id, titel} (of een lijst daarvan). Een
+ * afgeschermde relatie komt als de tekst "[afgeschermd]" binnen, en van een
+ * domein dat je niet mag lezen zijn er geen rijen: alleen objecten met een id
+ * tellen. Eigenaar is op projecten, deals en organisaties van het type
+ * mensen: een lijst namen, of één tekst met komma's. */
+const VJ_AFGESCHERMD = /^\[afgeschermd\]$/i;
+const VJ_KETEN_DOMEINEN = ["projecten", "sales_funnel", "organisaties", "contactpersonen"];
+
+/* Opzoektabel per domein (entryId → rij), één keer per bundel per aanroep. */
+function eigenaarIndex(bundle) {
+  const index = {};
+  for (const d of VJ_KETEN_DOMEINEN) {
+    const m = new Map();
+    const lijst = bundle && bundle.domains ? rows(bundle, d) : null;
+    for (const r of lijst || []) if (r && r.__entryId) m.set(String(r.__entryId), r);
+    index[d] = m;
+  }
+  return index;
+}
+
+/* De mensen in een Eigenaar-waarde, zonder agents en zonder afgeschermd. */
+function vjMensenIn(waarde, namen) {
+  const ruw = Array.isArray(waarde) ? waarde : (waarde === undefined || waarde === null ? [] : [waarde]);
+  const uit = [];
+  for (const w of ruw) {
+    if (typeof w !== "string" && typeof w !== "number") continue;
+    for (const deel of String(w).split(",")) {
+      const n = deel.trim();
+      if (!n || VJ_AFGESCHERMD.test(n) || vjIsAgent(n, namen)) continue;
+      if (!uit.some(x => naamGelijk(x, n))) uit.push(n);
+    }
+  }
+  return uit;
+}
+
+function vjRelatieRij(rij, veld, index, domein) {
+  const w = getField(rij, veld);
+  const v = Array.isArray(w) ? w.find(x => x && typeof x === "object" && x.id) : w;
+  if (!v || typeof v !== "object" || !v.id) return null; // "[afgeschermd]" of los tekst: telt niet
+  const m = index && index[domein];
+  return (m && m.get(String(v.id))) || null;
+}
+
+/* Wie is eigenaar? Een tekst (meerdere mensen met ", " ertussen), of "" voor
+ * onverdeeld. o = {namen, index? of bundle?, agentMens?(agentWaarde) → naam}. */
+function eigenaarVan(rij, o) {
+  const ctx = o || {};
+  const namen = ctx.namen;
+  const eigen = vjMensenIn(vjTekst(rij, "Eigenaar"), namen);
+  if (eigen.length) return eigen.join(", ");
+  const index = ctx.index || (ctx.bundle ? eigenaarIndex(ctx.bundle) : null);
+  if (index) {
+    const uit = (r) => (r ? vjMensenIn(getField(r, "Eigenaar"), namen) : []);
+    for (const [veld, domein] of [["Project", "projecten"], ["Deal", "sales_funnel"], ["Organisatie", "organisaties"]]) {
+      const l = uit(vjRelatieRij(rij, veld, index, domein));
+      if (l.length) return l.join(", ");
+    }
+    const cp = vjRelatieRij(rij, "Contactpersoon", index, "contactpersonen");
+    const l = uit(cp ? vjRelatieRij(cp, "Organisatie", index, "organisaties") : null);
+    if (l.length) return l.join(", ");
+  }
+  if (typeof ctx.agentMens === "function") {
+    const agent = vjTekst(rij, "Agent");
+    const l = agent ? vjMensenIn(ctx.agentMens(agent), namen) : [];
+    if (l.length) return l.join(", ");
+  }
+  return "";
+}
+
+/* Hoort `ik` bij deze eigenaar(s)? */
+function isEigenaar(wie, ik) {
+  if (!wie || !ik) return false;
+  return String(wie).split(",").some(n => naamGelijk(n.trim(), ik));
+}
+
+/* Mag een rij überhaupt bij een mens horen? Een agent als Eigenaar is "je
+ * team is aan zet", behalve bij een Voorstel: daar beslist een mens. */
+function vjBijAgent(rij, namen) {
   const eigenaar = vjTekst(rij, "Eigenaar");
-  if (!eigenaar) return true; // voor iedereen
-  if (vjIsAgent(eigenaar, namen)) return vjTekst(rij, "Status") === VJ_VOORSTEL;
+  return !!eigenaar && vjIsAgent(eigenaar, namen) && vjTekst(rij, "Status") !== VJ_VOORSTEL;
+}
+
+function vanMij(rij, ik, namen, keten) {
+  if (vjBijAgent(rij, namen)) return false;
   if (!ik) return true; // onbekend wie je bent: niets verstoppen
-  return naamGelijk(eigenaar, ik);
+  const wie = eigenaarVan(rij, Object.assign({}, keten, { namen }));
+  if (!wie) return true; // onverdeeld: voor iedereen
+  return isEigenaar(wie, ik);
 }
 
 /* Sinds wanneer ligt het er? Voor "Wacht" de wektijd; anders de stempel van
@@ -198,19 +300,23 @@ function aanJouZet(bundle, schema, opties) {
   const namen = agentNamen(schema);
   if (!namen) return null;
   const nu = o.nu || new Date();
-  return sorteerVoorJou(acties.filter(r => hoortBijMens(r, namen, nu) && vanMij(r, o.ik, namen)), namen, nu);
+  const keten = { index: eigenaarIndex(bundle), agentMens: o.agentMens };
+  return sorteerVoorJou(acties.filter(r => hoortBijMens(r, namen, nu) && vanMij(r, o.ik, namen, keten)), namen, nu);
 }
 
 /* De andere banen van Acties rekenen met dezelfde bouwstenen, zodat een rij
- * nooit in twee banen tegelijk staat of in geen enkele verdwijnt. */
+ * nooit in twee banen tegelijk staat of in geen enkele verdwijnt. Een
+ * collega is eigenaar via de keten (f62), niet alleen via het veld zelf. */
 function bijCollegas(bundle, schema, opties) {
   const o = opties || {};
   const acties = rows(bundle, "acties");
   const namen = agentNamen(schema);
   if (!acties || !namen || !o.ik) return [];
+  const keten = { namen, index: eigenaarIndex(bundle), agentMens: o.agentMens };
   return acties.filter(r => {
-    const eigenaar = vjTekst(r, "Eigenaar");
-    return vjTekst(r, "Status") !== VJ_KLAAR && eigenaar && !vjIsAgent(eigenaar, namen) && !naamGelijk(eigenaar, o.ik);
+    if (vjTekst(r, "Status") === VJ_KLAAR || vjBijAgent(r, namen)) return false;
+    const wie = eigenaarVan(r, keten);
+    return !!wie && !isEigenaar(wie, o.ik);
   });
 }
 
@@ -254,11 +360,12 @@ function baanVan(rij, o) {
   const soort = soortVan(rij, o.namen, o.nu);
   if (soort === "klopt-niet") return "klopt-niet";
   if (soort === "wacht" || (status !== VJ_WACHT && wachtInToekomst(rij, o.nu))) return "wacht";
-  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen)) return "jij";
+  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen, o)) return "jij";
   if (soort === "team") return "team";
-  const eigenaar = vjTekst(rij, "Eigenaar");
-  if (!eigenaar) return "zonder";
-  if (!o.ik || naamGelijk(eigenaar, o.ik)) return "jij-later";
+  // f62: van wie het is, volgt de eigenaarsketen (project, deal, organisatie).
+  const wie = eigenaarVan(rij, o);
+  if (!wie) return "zonder";
+  if (!o.ik || isEigenaar(wie, o.ik)) return "jij-later";
   return "collega";
 }
 
@@ -271,7 +378,7 @@ function banenVan(bundle, schema, opties) {
   const namen = agentNamen(schema);
   if (!namen) return null;
   const nu = o.nu || new Date();
-  const ctx = { ik: o.ik, namen, nu };
+  const ctx = { ik: o.ik, namen, nu, index: eigenaarIndex(bundle), agentMens: o.agentMens };
   const banen = {};
   for (const b of BANEN) banen[b] = [];
   for (const r of acties) banen[baanVan(r, ctx)].push(r);

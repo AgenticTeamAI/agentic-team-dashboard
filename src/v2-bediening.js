@@ -798,6 +798,7 @@ function opKlik(e) {
     case "gf": S.ui.gegevens.filter = d.v || ""; break;
     case "meer-werk": S.ui.meerOpen[d.id] = !S.ui.meerOpen[d.id]; break;
     case "volgorde": S.ui.toelichting = d.v === "nieuw" ? "nieuw" : "oud"; break;
+    case "naar-werkbak": S.scrollDoel = "werkbak"; S.focusNa = "#werkbak"; break;
     case "naar-stappen": S.ui.stappenDoel = d.doel || "start"; if (S.route !== "/team/klaar") go("/team/klaar"); S.scrollDoel = "stappenblad"; break;
     case "ronde-start": { const l = voorJouLijst(); if (!l.length) return; S.ronde = { ids: l.map(a => a.id), i: 0, start: Date.now(), naarTeam: [] }; S.toast = null; go("/voor-jou/een-voor-een"); S.focusNa = "#blad-titel"; break; }
     case "ronde-stop": S.ronde = null; go("/"); break;

@@ -66,7 +66,7 @@ function baanLeeg(k) {
 function laterGroep(B) { return B.later.length ? `<details class="uitklap" ${det("acties-later")}><summary>Later op je lijst (${B.later.length})${ic("chev")}</summary><div class="binnen">${B.later.map(rij).join("")}</div></details>` : ""; }
 function renderActies() {
   if (toegang() === "notion") {
-    const n = (werkbakUitDagstart() || []).length; const naam = naamElders("acties");
+    const n = werkbakIsPersoonlijk() ? (werkbakUitDagstart() || []).length : 0; const naam = naamElders("acties");
     return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team.</p>
     <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section></div>`;
   }

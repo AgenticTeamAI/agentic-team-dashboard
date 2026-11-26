@@ -31,6 +31,7 @@ JS_MODULES_IN_ORDER = [
     "zones.js",
     "voor-jou.js",
     "metrics-sanitize.js",
+    "dagplan.js",
     "metrics.js",
     "render.js",
     "charts.js",
