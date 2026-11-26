@@ -28,7 +28,9 @@ function aantalVoorJou() {
 }
 function tabs() {
   const n = CTX ? aantalVoorJou() : 0;
-  return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]];
+  const team = !CTX || werkrondeLoopt();
+  return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]]
+    .filter(([k]) => k !== "team" || team);
 }
 /* Licht of donker: standaard de systeeminstelling. De knop in de kop wisselt;
  * een keuze die afwijkt van het systeem onthoudt de browser (THEMA_KEY, in de
@@ -93,7 +95,9 @@ function renderBovenkaart() {
     return `<section class="bovenkaart" aria-label="Werkt je team nog vanzelf?"><div class="tussen"><h3>Werkt je team nog vanzelf?</h3><button class="ikknop" data-act="dismiss" data-k="stil" aria-label="Sluiten">${ic("sluit")}</button></div>
       <p>${esc(r.tekst)}</p><div class="rijtje"><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button>${hoe("vanzelf-werken")}</div></section>`;
   }
-  if (kc.stil && !S.ui.dismissed.stil) {
+  // Zonder werkronde is "je team werkt nog niet vanzelf" geen alarm maar de
+  // afgesproken stand (vaste taken komen pas in fase 4): dan geen rode kaart.
+  if (kc.stil && !S.ui.dismissed.stil && werkrondeLoopt()) {
     const r = kc.regels.find(x => (x.id === "aan" || x.id === "werkt") && (x.k === "nee" || x.k === "let")) || { tekst: "" };
     const geenTaken = !S.data.taken.length && toegang() !== "notion";
     return `<section class="bovenkaart stil-rood" aria-label="Je team staat stil"><div class="tussen"><h3>${geenTaken ? "Je team werkt nog niet vanzelf" : "Je team staat stil"}</h3></div>
@@ -151,9 +155,11 @@ function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
   const opdrachtKnop = isDesk() && kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Opdracht geven</button>` : "";
   if (!n) {
-    const tekst = kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
+    const loopt = werkrondeLoopt();
+    const tekst = !loopt ? "Vraag je team iets in je AI-assistent. Wat het voor je klaarzet, staat daarna hier."
+      : kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
     return `<section class="leeg" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
-    <div class="rijtje">${kc.stil ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
+    <div class="rijtje">${kc.stil && loopt ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
   }
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
   const min = Math.max(1, Math.round(n * 0.75));

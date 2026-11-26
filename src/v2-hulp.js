@@ -137,7 +137,7 @@ function hulpSecties() {
     ["werkt-niet", "Het werkt niet zoals je verwacht", () => `
       <div class="kol" style="gap:10px">
       <div><b>Mijn team deed vannacht niets.</b><p class="stil">Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in je AI-assistent niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</p></div>
-      <div><b>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</b><p class="stil">Die zetten wij per team aan. Mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>, dan regelen we het.</p></div>
+      <div><b>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</b><p class="stil">Je vaste taken gaan open zodra je eerste gesprek met de Gids en je welkomstpakket klaar zijn: typ <i>Hoe gebruik ik mijn team?</i> in je AI-assistent. Staan die er al en zegt je team het toch? Mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>, dan zoeken we het uit.</p></div>
       <div><b>Ik kan niet op de knoppen drukken.</b><p class="stil">Je kijkt met je daglink: die is alleen om te lezen. Log in met je e-mailadres; je komt terug waar je was.</p></div>
       <div><b>Een actie staat bij een collega.</b><p class="stil">Onder Acties staat ‘Bij collega's’. Open het item en kies bij Alle gegevens op wiens naam het staat.</p></div>
       <div><b>Mijn team reageert niet in mijn AI-assistent, of ik zie geen tools meer.</b><p class="stil">Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw bij de koppelingen (connectors) van je AI-assistent.</p></div>

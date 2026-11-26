@@ -181,7 +181,7 @@ function hulpSecties(ctx) {
     ["werkt-niet", "Het werkt niet zoals je verwacht", () => `
       <dl class="hulp-vragen">
         <dt>Mijn team deed vannacht niets.</dt><dd>Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in Claude niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</dd>
-        <dt>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</dt><dd>Die zetten wij per team aan. Mail <span class="hulp-adres">support@agentic-team.ai</span>, dan regelen we het.</dd>
+        <dt>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</dt><dd>Je vaste taken gaan open zodra je eerste gesprek met de Gids en je welkomstpakket klaar zijn: typ <i>Hoe gebruik ik mijn team?</i> in je AI-assistent. Staan die er al en zegt je team het toch? Mail <span class="hulp-adres">support@agentic-team.ai</span>, dan zoeken we het uit.</dd>
         <dt>Ik kan niet op de knoppen drukken.</dt><dd>Je kijkt met je daglink: die is alleen om te lezen. Log in met je e-mailadres; je komt terug waar je was.</dd>
         <dt>Een actie staat bij een collega.</dt><dd>Onder Acties staat ‘Bij collega's’. Wil je hem zelf doen, kies dan ‘Zet bij mij’.</dd>
         <dt>Mijn team reageert niet in Claude, of ik zie geen tools meer.</dt><dd>Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw in Claude (Instellingen › Connectors).</dd>

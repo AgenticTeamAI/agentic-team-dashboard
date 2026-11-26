@@ -100,6 +100,18 @@ function wanneerSpoor(d) {
   return wanneer(d);
 }
 function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneerSpoor(l) + ")" : ""); }
+/* Team laat zien wat je team zelfstandig deed: de feed van de werkrondes, de
+ * vaste taken en het resultaat. Zonder werkronde staat daar niets, en in de
+ * bootcamp komt die pas in fase 4 ("AI als systeem"). Tot dan is het dashboard
+ * je actielijst (Voor jou, Acties, Gegevens) en blijft de Team-tab weg.
+ * Bewijs dat de werkronde loopt: een vaste taak die aan staat, of een
+ * "werkronde gestart" in de teamfeed. Alleen de feed is te mager: een ronde
+ * zonder geclaimde acties post geen rondestart (werkronde.md, stap 2). De
+ * adressen onder #/team blijven werken; alleen het menu en de rode
+ * aansporing op Voor jou wachten tot het zover is. */
+function werkrondeLoopt() {
+  return S.data.taken.some(t => t.actief) || S.data.feed.some(f => f.soort === "rondestart");
+}
 const KC_LABEL = { start: "Zo regel je het in 2 minuten", vaker: "Laat je team vaker werken", ronde: "Loop ze één voor één door", login: "Inloggen" };
 let kcCache = null;
 function klaarCheck() {
