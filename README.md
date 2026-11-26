@@ -185,6 +185,21 @@ de tekst blijven staan, samen met de zin over het doorgeefluik.
 > juristronde 3 (28-08, punt B3) in `PRIVACY_UITKLAP`, en de vlag staat in
 > productie aan (`<meta name="at-oauth" content="1">`, gecontroleerd 25-11).
 
+## Rollen in Beheer → "Wie werkt er mee" (f60)
+
+Het rollenregister staat in de eigen werkruimte-instantie (`_systeem~rollen`,
+s57, contract p10 §2b), niet op de site. `team-beheer.js` leest het met
+`GET /dashboard/rollen` en zet een rol met `PUT /dashboard/rollen` `{seat, rol}`
+(terug naar de standaardrol = `rol: null`), beide via `schrijfWerkruimte`: geen
+nieuwe fetch-plek. Wijzigen is voorstel → bevestig; de keuze begint op de
+huidige rol en Bevestigen gaat pas aan bij een andere rol. Welke knop er staat, spiegelt
+de toetsen van §2b; de instantie toetst zelf en haar weigering staat letterlijk
+in beeld. Zonder register (404/403/503, daglink, Obeya, oudere image) is het
+paneel ongewijzigd. Een rol bepaalt vandaag alleen wie er rollen zet, en dat
+zegt de tekst ook. De namen en adressen komen van de site (`/api/dashboard/team`),
+en die geeft ze alleen aan het aankoopadres: een beheerder ziet dus zijn rol,
+maar nog geen teamlijst.
+
 ## De panelen: KPI's, grafieken, ritme, tijdwinst
 
 De panelen tonen, verdeeld over de Vandaag- en Prestaties-tab:

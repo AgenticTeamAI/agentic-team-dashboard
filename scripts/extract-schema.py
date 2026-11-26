@@ -50,6 +50,19 @@ def git_commit(repo_path):
 PUBLIEKE_VELDSLEUTELS = ("naam", "type", "opties", "opties_dynamisch", "opties_meta", "format", "naar", "meervoud", "crossModuleBedoeld")
 
 
+# Sleutels op domeinniveau die NIET in het publieke dashboardschema horen.
+# `rechtengroepen` (f59): de registry zegt zelf dat wie dit veld aan klanten
+# doorgeeft (get_datadomeinen, het dashboardschema) het weglaat zolang de
+# licentie geen afscherming heeft, zodat "uit" byte-gelijk blijft. Het
+# dashboard is één artefact voor iedereen en handhaaft niets: de grens trekt de
+# instantie. Dus nooit in dit schema.
+NIET_PUBLIEKE_DOMEINSLEUTELS = ("rechtengroepen",)
+
+
+def publiek_domein(domein):
+    return {k: v for k, v in domein.items() if k not in NIET_PUBLIEKE_DOMEINSLEUTELS}
+
+
 def publiek_veld(veld):
     return {k: v for k, v in veld.items() if k in PUBLIEKE_VELDSLEUTELS}
 
@@ -111,7 +124,7 @@ def main():
         # domein, telt niet mee in breedte/volledigheid. werkruimte-loader.js
         # heeft daarnaast een eigen slug-skip als tweede vangrail.
         "datadomeinen": {
-            slug: {**domein, "velden": [publiek_veld(v) for v in domein.get("velden", [])]}
+            slug: {**publiek_domein(domein), "velden": [publiek_veld(v) for v in domein.get("velden", [])]}
             for slug, domein in registry.get("datadomeinen", {}).items()
             if domein.get("opslag") != "werkruimte"
         },
