@@ -239,7 +239,10 @@ describe("f62 — Jouw dag op Voor jou", () => {
     expect(kaart).not.toBeNull();
     expect($(".inhoud .kol").firstElementChild === kaart || $(".inhoud").children[0] === kaart).toBe(true);
     expect(kaart.querySelector("h2").textContent).toBe("Jouw dag");
-    expect(kaart.querySelector("[data-jouwdag-stand]").textContent).toBe("stand van je dagstart 08:12");
+    // De tijd staat in de tijdzone van de kijker (CI draait in UTC): reken hem hier net zo uit.
+    const d = new Date("2026-11-26T08:12:00+01:00");
+    const hhmm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    expect(kaart.querySelector("[data-jouwdag-stand]").textContent).toBe("stand van je dagstart " + hhmm);
     const koppen = [...kaart.querySelectorAll(".jd-sectie h3")].map(h => h.textContent);
     expect(koppen).toEqual(["Vandaag acuut", "Agenda", "Je agents vandaag", "Ter goedkeuring", "Bij collega’s", "Samen afstemmen", "Later deze week"]);
     expect(kaart.textContent).toContain("Offerte Van Dam vandaag de deur uit");
