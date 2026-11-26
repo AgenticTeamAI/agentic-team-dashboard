@@ -180,6 +180,8 @@ function laadBeheer() {
   const hadModules = moduleOverzichtBeschikbaar();
   void laadModuleOverzicht(huidigeBron).then((overzicht) => { if (overzicht || hadModules) route(); });
   void laadTeam(huidigeBron).then((t) => { if (t) route(); });
+  // f60: je rol en (eigenaar/beheerder) die van je team, uit de eigen instantie.
+  void laadRollen(huidigeBron).then((r) => { if (r) route(); });
 }
 
 function renderAll() {
@@ -233,6 +235,7 @@ function uitloggen() {
   window.__dashboardCtx = undefined;
   void laadModuleOverzicht(null);
   void laadTeam(null);
+  void laadRollen(null);
   const daglink = restoreDaglink();
   if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
