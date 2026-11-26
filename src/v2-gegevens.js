@@ -102,7 +102,7 @@ function renderLijst(k) {
     const deals = k === "organisaties" ? dealsBij(id).filter(dealLoopt) : [];
     const som = deals.reduce((s, x) => s + dealWaarde(x), 0);
     return `<button class="regel orgrij" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(id))}"><span class="orglogo klein" aria-hidden="true">${esc(initialen(detailTitel(d, r)))}</span>
-      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}</span></span>
+      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}${doorHtml(doorVan(r), rijMeta(k, r) ? " · " : "")}</span></span>
       <span class="rechts">${aanJou ? `<span class="pil jij">● ${aanJou} wacht op jou</span>` : ""}${deals.length ? `<span class="klein stil">${telwoord(deals.length, "deal", "deals")}${som ? " · " + euro(som) : ""}</span>` : ""}</span>${ic("chev")}</button>`;
   }).join("");
   return `<div class="inhoud">${renderBalk()}<button class="link" data-act="go" data-r="/gegevens">${ic("links", "klein")} Gegevens</button>
@@ -203,13 +203,13 @@ function renderRijPagina2(k, id) {
       ${l.length ? `<div class="lijstje">${l.slice(0, 25).map(x => lijstjeRij(slug, x)).join("")}</div>${l.length > 25 ? `<p class="klein stil">… en nog ${l.length - 25}</p>` : ""}` : `<p class="bordleeg">Nog geen ${esc(domeinLabel(slug).toLowerCase())}.</p>`}
       ${slug === "interacties" ? '<p class="klein stil">Een gesprek komt erbij als je je team vertelt hoe het ging.</p>' : ""}</section>`).join("")
     + (notitieInfo ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><div class="tussen"><h2 class="vakkop">Notities</h2>${magSchrijven("notities") ? `<button class="knop klein-knop" data-act="sheet" data-type="notitie" data-k="${esc(k)}" data-id="${esc(id)}">${ic("plus", "klein")}Notitie</button>` : ""}</div>
-      ${notities.map(n => `<div class="opm"><small>${esc([tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "))}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`).join("")}
+      ${notities.map(n => { const kop = [tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "); return `<div class="opm"><small>${esc(kop)}${doorHtml(doorVan(n), kop ? " · " : "")}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`; }).join("")}
       ${!notities.length ? '<p class="bordleeg">Nog geen notities.</p>' : ""}<p class="klein stil">Notities zijn voor jou en je collega's.</p></section>` : "");
   const samen = `<div class="chiprij">${aanJou.length ? `<button class="pil jij knoppil" data-act="open" data-id="${esc(aanJou[0].id)}">● ${aanJou.length} wacht op jou</button>` : ""}${bijTeamL.length ? `<span class="pil team">◐ ${bijTeamL.length} bij je team</span>` : ""}${lopend.length ? `<span class="pil">${telwoord(lopend.length, "deal loopt", "deals lopen")}${lopend.reduce((s, x) => s + dealWaarde(x), 0) ? " · " + euro(lopend.reduce((s, x) => s + dealWaarde(x), 0)) : ""}</span>` : ""}${eig && !isAgentNaam(eig) ? mensChip(eig) : ""}</div>`;
   const slot = toegang() === "daglink" ? `<div class="slotregel">${ic("slot", "klein")}<span>Wijzigen kan na inloggen.</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>`
     : !kan && magDomeinBewerken(CTX, k).reden ? `<div class="slotregel">${ic("slot", "klein")}<span>${esc(magDomeinBewerken(CTX, k).reden)}</span></div>` : "";
   return `<div class="inhoud">${renderBalk()}${terug}
-    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}</p></div>
+    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}${doorHtml(doorVan(r), " · ")}</p></div>
       ${kan ? `<button class="knop stil" data-act="sheet" data-type="rij-meer" data-k="${esc(k)}" data-id="${esc(id)}">${ic("meer", "klein")}Meer</button>` : ""}</section>
     ${samen}${slot}
     <div class="twee"><div class="kol">${links}</div><div class="kol">${rechts}</div></div></div>`;

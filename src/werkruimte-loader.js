@@ -379,10 +379,23 @@ function rijVanEntry(e) {
   // f46: de stempels van de instantie reizen mee onder één sleutel. Niet als
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
-  return Object.assign({}, e && e.data, {
-    __entryId: e && e.entryId,
-    __stempels: { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null },
-  });
+  const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij in het
+  // werkgeheugen met de rol van de schrijver, als meta-veld naast het entryId
+  // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
+  // dan is de rij precies zoals vóór s64.
+  if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
+}
+
+/* s64 — welke stempel krijgt een label "door …". Alleen de vier rollen van
+ * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) en
+ * "onbekend" (een rij van vóór de stempel) tonen we niet, net als alles wat
+ * de instantie niet hoort te sturen. De tekst komt uit deze tabel, nooit uit
+ * de waarde zelf. */
+const SCHRIJVER_ROL_LABEL = Object.freeze({ eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" });
+function schrijverLabel(waarde) {
+  return typeof waarde === "string" && Object.prototype.hasOwnProperty.call(SCHRIJVER_ROL_LABEL, waarde) ? SCHRIJVER_ROL_LABEL[waarde] : null;
 }
 
 function maxBijgewerkt(entries) {
@@ -664,7 +677,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader,

@@ -229,11 +229,22 @@ function afgerondMoment(a) {
 }
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
+/* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
+ * schrijver stempelde (alleen met AFSCHERMING=aan). Zonder stempel, of met
+ * "sleutel" of "onbekend", is er geen label en is de html precies die van
+ * vóór s64. De tekst komt uit een vaste tabel (schrijverLabel), niet uit de
+ * werkruimte. `voor` is het scheidingsteken als het label achter tekst staat. */
+function doorVan(rij) { return rij && rij.__stempels ? rij.__stempels.door : undefined; }
+function doorHtml(waarde, voor = "") {
+  const label = typeof schrijverLabel === "function" ? schrijverLabel(waarde) : null;
+  return label ? `${voor}<span class="door">door ${esc(label)}</span>` : "";
+}
+
 function opmerkingenBij(id) {
   if (typeof notitiesBij !== "function") return [];
   return notitiesBij(CTX, "acties", id).map(n => ({
     id: n.__entryId, van: tekstVan(n, "Auteur") || "iemand", op: getField(n, "Datum") || (n.__stempels && n.__stempels.aangemaakt),
-    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"),
+    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"), door: doorVan(n),
   })).reverse();
 }
 
@@ -255,7 +266,7 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null, door: f.door }))
     .filter(f => f.tekst);
 }
 

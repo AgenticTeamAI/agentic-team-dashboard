@@ -225,7 +225,7 @@ function renderVoorJouNotion() {
   const v = verhaalData(); const feed = v.feed;
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
-  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
+  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
   const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
   const verhaal = feed.length
@@ -327,7 +327,7 @@ function renderBlad(a, plek) {
       ${a.opdracht ? `<details class="uitklap" ${det("u-" + a.id + "-opd")}><summary>De opdracht <span class="stil klein">(${a.opdracht.van ? "van " + esc(voornaam(a.opdracht.van)) + ", " : ""}${esc(datumKort(a.opdracht.op))})</span>${ic("chev")}</summary><div class="binnen"><p style="white-space:pre-line">${esc(a.opdracht.tekst)}</p></div></details>` : ""}
       ${magSchrijven("notities") || opm.length ? `<details class="uitklap" ${det("u-" + a.id + "-opm")}><summary>Opmerkingen (${opm.length})${ic("chev")}</summary><div class="binnen">
         <p class="leeglabel">${opmLabel}</p>
-        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}</small><p>${esc(o.tekst)}</p></div>`).join("")}
+        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
         ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}

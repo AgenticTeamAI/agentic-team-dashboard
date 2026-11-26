@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-JiOiWz70TcKdf6pY5GIwQfv2fiPcm2VGPZK51EpPMBc='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-Hm004k3EcpqYFR//tVKD8bdQaemL1grsqoOGjucsDZU='">
 
 
 
@@ -362,6 +362,8 @@ dd.inline-edit input,dd.inline-edit select,dd.inline-edit textarea{flex:1 1 170p
 .balkregel .ic{vertical-align:-2px}
 .opm{display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--line);padding-bottom:8px}
 .opm small{color:var(--muted);font-size:12.5px}
+/* s64: wie een rij in het werkgeheugen schreef (alleen met afscherming aan); rustig, nooit een pil. */
+.door{color:var(--muted);font-size:12.5px;font-weight:400;white-space:nowrap}
 .opm p{white-space:pre-line}
 .leeglabel{font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px}
 .fout{color:var(--rood);font-size:13.5px;font-weight:650}
@@ -3883,10 +3885,23 @@ function rijVanEntry(e) {
   // f46: de stempels van de instantie reizen mee onder één sleutel. Niet als
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
-  return Object.assign({}, e && e.data, {
-    __entryId: e && e.entryId,
-    __stempels: { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null },
-  });
+  const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij in het
+  // werkgeheugen met de rol van de schrijver, als meta-veld naast het entryId
+  // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
+  // dan is de rij precies zoals vóór s64.
+  if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
+}
+
+/* s64 — welke stempel krijgt een label "door …". Alleen de vier rollen van
+ * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) en
+ * "onbekend" (een rij van vóór de stempel) tonen we niet, net als alles wat
+ * de instantie niet hoort te sturen. De tekst komt uit deze tabel, nooit uit
+ * de waarde zelf. */
+const SCHRIJVER_ROL_LABEL = Object.freeze({ eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" });
+function schrijverLabel(waarde) {
+  return typeof waarde === "string" && Object.prototype.hasOwnProperty.call(SCHRIJVER_ROL_LABEL, waarde) ? SCHRIJVER_ROL_LABEL[waarde] : null;
 }
 
 function maxBijgewerkt(entries) {
@@ -4168,7 +4183,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader,
@@ -7409,6 +7424,8 @@ function normaliseerFeed(entries, schema, agentLookup) {
       bericht,
       link: saneerHttpsUrl(getField(e.data, "Link")),
       openLus: false,
+      // s64: de rol van wie de regel schreef, alleen als de instantie hem meestuurt.
+      ...(typeof e.geschreven_door === "string" ? { door: e.geschreven_door } : {}),
     });
   }
   items.sort((a, b) => b.tijd.getTime() - a.tijd.getTime());
@@ -14417,11 +14434,22 @@ function afgerondMoment(a) {
 }
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
+/* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
+ * schrijver stempelde (alleen met AFSCHERMING=aan). Zonder stempel, of met
+ * "sleutel" of "onbekend", is er geen label en is de html precies die van
+ * vóór s64. De tekst komt uit een vaste tabel (schrijverLabel), niet uit de
+ * werkruimte. `voor` is het scheidingsteken als het label achter tekst staat. */
+function doorVan(rij) { return rij && rij.__stempels ? rij.__stempels.door : undefined; }
+function doorHtml(waarde, voor = "") {
+  const label = typeof schrijverLabel === "function" ? schrijverLabel(waarde) : null;
+  return label ? `${voor}<span class="door">door ${esc(label)}</span>` : "";
+}
+
 function opmerkingenBij(id) {
   if (typeof notitiesBij !== "function") return [];
   return notitiesBij(CTX, "acties", id).map(n => ({
     id: n.__entryId, van: tekstVan(n, "Auteur") || "iemand", op: getField(n, "Datum") || (n.__stempels && n.__stempels.aangemaakt),
-    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"),
+    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"), door: doorVan(n),
   })).reverse();
 }
 
@@ -14443,7 +14471,7 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null, door: f.door }))
     .filter(f => f.tekst);
 }
 
@@ -14836,7 +14864,7 @@ function renderVoorJouNotion() {
   const v = verhaalData(); const feed = v.feed;
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
-  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
+  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
   const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
   const verhaal = feed.length
@@ -14938,7 +14966,7 @@ function renderBlad(a, plek) {
       ${a.opdracht ? `<details class="uitklap" ${det("u-" + a.id + "-opd")}><summary>De opdracht <span class="stil klein">(${a.opdracht.van ? "van " + esc(voornaam(a.opdracht.van)) + ", " : ""}${esc(datumKort(a.opdracht.op))})</span>${ic("chev")}</summary><div class="binnen"><p style="white-space:pre-line">${esc(a.opdracht.tekst)}</p></div></details>` : ""}
       ${magSchrijven("notities") || opm.length ? `<details class="uitklap" ${det("u-" + a.id + "-opm")}><summary>Opmerkingen (${opm.length})${ic("chev")}</summary><div class="binnen">
         <p class="leeglabel">${opmLabel}</p>
-        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}</small><p>${esc(o.tekst)}</p></div>`).join("")}
+        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
         ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
@@ -15178,7 +15206,7 @@ function renderTeam() {
   let dag = null; let lijst = "";
   feed.forEach(x => {
     const l = dagLabel(x.t); if (l !== dag) { dag = l; lijst += `<div class="dagkop">${esc(l)}</div>`; }
-    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}</div><p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
+    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}${doorHtml(x.door)}</div><p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
   });
   const leden = teamLeden();
   const gebruikt = new Set([...S.data.feed.map(x => x.ag), ...S.data.acties.map(werkAgent), ...S.data.taken.filter(t => t.actief).map(t => t.agent)].filter(Boolean));
@@ -15215,7 +15243,7 @@ function renderAgent(slug) {
     ${wacht.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Wacht op jou (${wacht.length})</h2>${wacht.map(rij).join("")}</section>` : ""}
     ${onder.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Onder handen (${onder.length})</h2>${onder.map(rij).join("")}</section>` : ""}
     ${taken.length ? `<section class="vak"><h2 class="vakkop">Vaste taken</h2>${taken.map(taakRij).join("")}</section>` : ""}
-    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}</span></div></div>`).join("")}</section>` : ""}</div>`;
+    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}${doorHtml(x.door, " · ")}</span></div></div>`).join("")}</section>` : ""}</div>`;
 }
 
 /* ---------- Vaste taken ---------- */
@@ -15493,7 +15521,7 @@ function renderLijst(k) {
     const deals = k === "organisaties" ? dealsBij(id).filter(dealLoopt) : [];
     const som = deals.reduce((s, x) => s + dealWaarde(x), 0);
     return `<button class="regel orgrij" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(id))}"><span class="orglogo klein" aria-hidden="true">${esc(initialen(detailTitel(d, r)))}</span>
-      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}</span></span>
+      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}${doorHtml(doorVan(r), rijMeta(k, r) ? " · " : "")}</span></span>
       <span class="rechts">${aanJou ? `<span class="pil jij">● ${aanJou} wacht op jou</span>` : ""}${deals.length ? `<span class="klein stil">${telwoord(deals.length, "deal", "deals")}${som ? " · " + euro(som) : ""}</span>` : ""}</span>${ic("chev")}</button>`;
   }).join("");
   return `<div class="inhoud">${renderBalk()}<button class="link" data-act="go" data-r="/gegevens">${ic("links", "klein")} Gegevens</button>
@@ -15594,13 +15622,13 @@ function renderRijPagina2(k, id) {
       ${l.length ? `<div class="lijstje">${l.slice(0, 25).map(x => lijstjeRij(slug, x)).join("")}</div>${l.length > 25 ? `<p class="klein stil">… en nog ${l.length - 25}</p>` : ""}` : `<p class="bordleeg">Nog geen ${esc(domeinLabel(slug).toLowerCase())}.</p>`}
       ${slug === "interacties" ? '<p class="klein stil">Een gesprek komt erbij als je je team vertelt hoe het ging.</p>' : ""}</section>`).join("")
     + (notitieInfo ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><div class="tussen"><h2 class="vakkop">Notities</h2>${magSchrijven("notities") ? `<button class="knop klein-knop" data-act="sheet" data-type="notitie" data-k="${esc(k)}" data-id="${esc(id)}">${ic("plus", "klein")}Notitie</button>` : ""}</div>
-      ${notities.map(n => `<div class="opm"><small>${esc([tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "))}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`).join("")}
+      ${notities.map(n => { const kop = [tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "); return `<div class="opm"><small>${esc(kop)}${doorHtml(doorVan(n), kop ? " · " : "")}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`; }).join("")}
       ${!notities.length ? '<p class="bordleeg">Nog geen notities.</p>' : ""}<p class="klein stil">Notities zijn voor jou en je collega's.</p></section>` : "");
   const samen = `<div class="chiprij">${aanJou.length ? `<button class="pil jij knoppil" data-act="open" data-id="${esc(aanJou[0].id)}">● ${aanJou.length} wacht op jou</button>` : ""}${bijTeamL.length ? `<span class="pil team">◐ ${bijTeamL.length} bij je team</span>` : ""}${lopend.length ? `<span class="pil">${telwoord(lopend.length, "deal loopt", "deals lopen")}${lopend.reduce((s, x) => s + dealWaarde(x), 0) ? " · " + euro(lopend.reduce((s, x) => s + dealWaarde(x), 0)) : ""}</span>` : ""}${eig && !isAgentNaam(eig) ? mensChip(eig) : ""}</div>`;
   const slot = toegang() === "daglink" ? `<div class="slotregel">${ic("slot", "klein")}<span>Wijzigen kan na inloggen.</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>`
     : !kan && magDomeinBewerken(CTX, k).reden ? `<div class="slotregel">${ic("slot", "klein")}<span>${esc(magDomeinBewerken(CTX, k).reden)}</span></div>` : "";
   return `<div class="inhoud">${renderBalk()}${terug}
-    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}</p></div>
+    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}${doorHtml(doorVan(r), " · ")}</p></div>
       ${kan ? `<button class="knop stil" data-act="sheet" data-type="rij-meer" data-k="${esc(k)}" data-id="${esc(id)}">${ic("meer", "klein")}Meer</button>` : ""}</section>
     ${samen}${slot}
     <div class="twee"><div class="kol">${links}</div><div class="kol">${rechts}</div></div></div>`;
