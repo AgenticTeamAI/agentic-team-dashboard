@@ -269,6 +269,25 @@ describe("f61 — de loader", () => {
     expect(bundle.waarschuwingen).toEqual([]);
   });
 
+  it("de foutpaden van het ophalen: een 403 op de opdrachtroute is stil null, een verlopen sessie of daglink gaat door", async () => {
+    const antwoord = (status, body) => ({ ok: status < 400, status, json: async () => body, headers: new Map() });
+    const met = (status, body) => vi.spyOn(globalThis, "fetch").mockImplementation(async () => antwoord(status, body));
+    const NU2 = new Date(2026, 8, 29);
+    met(403, { fout: "insufficient_scope" });
+    expect(await g.haalOpdrachten({ instantieUrl: "https://instantie.test", token: "t", oauth: true }, NU2)).toBeNull();
+    vi.restoreAllMocks();
+    met(500, { fout: "stuk" });
+    expect(await g.haalOpdrachten({ instantieUrl: "https://instantie.test", token: "t", oauth: true }, NU2)).toBeNull();
+    vi.restoreAllMocks();
+    // 401 met OAuth: vernieuwen lukt niet (geen sessie), dan geldt het voor het hele dashboard.
+    g.resetOauthVernieuwing();
+    met(401, { fout: "verlopen" });
+    await expect(g.haalOpdrachten({ instantieUrl: "https://instantie.test", token: "t", oauth: true }, NU2)).rejects.toMatchObject({ oauthVerlopen: true });
+    vi.restoreAllMocks(); g.resetOauthVernieuwing();
+    met(401, { fout: "Deze dashboardlink is verlopen." });
+    await expect(g.haalOpdrachten({ instantieUrl: "https://instantie.test", token: "t" }, NU2)).rejects.toMatchObject({ daglinkVerlopen: true });
+  });
+
   it("een opdrachtrij is geen werkdata: een metricsbestand van gisteren blijft winnen", async () => {
     const gisteren = new Date(Date.now() - 36 * 3600 * 1000).toISOString();
     zetFetch({ domeinen: [{ domein: "dashboard_metrics", aantal: 1 }, { domein: "bronkoppeling", aantal: 1 }, { domein: "dashboard_opdrachten", aantal: 5 }], metrics: gisteren });
@@ -318,6 +337,41 @@ describe("f61 — wie knoppen krijgt", () => {
     expect($("#root").textContent).not.toContain("Doorgegeven");
     // De poort voor acties zelf blijft dicht: die rijen woont elders.
     expect(g.magDomeinBewerken(ctxMet(), "acties").ok).toBe(false);
+  });
+});
+
+describe("f61 — een werkruimte-klant op een instantie die doorgeven al kent", () => {
+  it("metricsroute, acties in de werkruimte: geen doorgeefknoppen, geen blok, hulp zoals hij was", () => {
+    const ctx = ctxMet({ acties: "werkruimte", opdrachten: [opdracht("o1", { Actie: "Offerte nakijken", Handeling: "Goedkeuren", Status: "Doorgegeven", "Extern ID": ID1 })] });
+    expect(ctx.bundle.opdrachten.entries).toHaveLength(1);
+    open(ctx);
+    expect($$('[data-act^="x-"]')).toEqual([]);
+    expect($$("[data-xkaart]")).toEqual([]);
+    expect($("[data-doorgegeven]")).toBeNull();
+    expect($("[data-opdracht-status]")).toBeNull();
+    expect($('[data-type="opdracht"]')).toBeNull();
+    open(ctx, "#/hulp/eigen-systeem");
+    expect($("#h-eigen-systeem").textContent).toContain("In je eigen systeem doe je het afhandelen");
+  });
+
+  it("rows-route met acties in de werkruimte: de gewone Voor jou-knoppen en het gewone opdrachtformulier", () => {
+    const ctx = ctxMet({ acties: "werkruimte", opdrachten: [opdracht("o1", { Actie: "x", Handeling: "Ja", Status: "Doorgegeven", "Extern ID": ID1 })] });
+    ctx.bundle.kind = "rows";
+    ctx.bundle.domains = { acties: { rows: [
+      { __entryId: "a1", __bijgewerkt: "2026-09-29T02:18:00", Actie: "Offerte Van Dam", Status: "Wacht op review", Eigenaar: "Sanne Verbeek", Agent: DM, "Aangemaakt door": DM, Toelichting: "De offerte." },
+      { __entryId: "a3", __bijgewerkt: "2026-09-28T02:11:00", Actie: "15% korting De Vries?", Status: "Voorstel", Eigenaar: DM, Agent: DM, "Aangemaakt door": DM },
+    ] } };
+    ctx.bundle.instantieDomeinen = ["acties", "dashboard_opdrachten"];
+    delete ctx.metricsWerk;
+    open(ctx);
+    expect($$('[data-act^="x-"]')).toEqual([]);
+    expect($("[data-doorgegeven]")).toBeNull();
+    expect($('[data-act="doe"][data-f="goedkeuren"][data-id="a1"]')).not.toBeNull();
+    expect($('[data-act="ja"][data-id="a3"]')).not.toBeNull();
+    const fab = $('.fab[data-type="opdracht"]'); expect(fab).not.toBeNull();
+    fab.click();
+    // Het gewone formulier kent Ikzelf; de elders-tak niet.
+    expect($(".scrim").textContent).toContain("Ikzelf");
   });
 });
 
