@@ -57,6 +57,8 @@ src/                     → bronbestanden waaruit dashboard.html gebouwd wordt
                              hieronder): werkdata-rijen -> metrics (hergebruikt
                              zones.js) én kant-en-klaar metricsbestand uit het domein
                              dashboard_metrics -> metrics (inclusief de versiecontrole)
+  opdrachten.js           → f61: doorgeven aan je team als je acties in je eigen
+                             systeem staan (veldnamen, sleutel, body, foutteksten)
   render.js               → tekent de vijf zoneberekeningen naar DOM (nu: detail-inhoud),
                              plus de "onbekende versie"-melding
   charts.js                → inline-SVG-grafiekbouwers (gestapelde staaf, horizontale staaf) — puur, geen DOM
@@ -223,6 +225,41 @@ beide via `schrijfWerkruimte`: geen nieuwe fetch-plek, `connect-src` gelijk.
   zelf (werkruimte #261); het blok beslist nergens over.
 - Het blok staat er ook met de modus uit (`afscherming` `uit`), want de
   instantie geeft de route dan ook. Of dat zo blijft, ligt bij Tijmen (PR #134).
+
+## Doorgeven aan je team als je acties elders staan (f61)
+
+Staan je acties volgens de bronkoppeling in je eigen systeem (Systeem `notion`,
+`crm`, …), dan kan het dashboard ze niet bijwerken: het praat alleen met de
+eigen werkruimte. Kent de instantie het domein `dashboard_opdrachten`
+(opslag=werkruimte, rechtengroep open), dan krijgen de kaarten op Voor jou
+toch knoppen: een check keur je goed of stuur je terug, op een voorstel zeg je
+ja of nee, de rest geef je aan je team of zet je op later. Een klik is één
+`POST /dashboard/opdrachten` (via `schrijfWerkruimte`, geen nieuwe fetch-plek);
+het volgende werkmoment voert de opdracht uit in het eigen systeem en zet hem
+op Uitgevoerd of Mislukt. Ongedaan maken is
+`POST /dashboard/opdrachten/<id>/intrekken`, en kan alleen zolang de status
+Doorgegeven is.
+
+- **Poort.** `kanDoorgeven()` (v2-basis.js) staat los van `kanSchrijven()`:
+  ingelogd met `dashboard:schrijf`, een bundel uit de werkruimte, de instantie
+  kent het domein (`bundle.opdrachten` is er) en de acties wonen elders. Een
+  daglink krijgt een inlogregel, nooit knoppen. Rollen handhaaft de instantie;
+  een weigering (403/409) staat in gewone taal in beeld (`opdrachtFoutTekst`).
+- **Sleutel.** Alleen een item met een https-link krijgt knoppen. Extern ID is
+  het page-id van 32 tekens aan het eind van het pad, anders de link zelf
+  (`externIdVanUrl`).
+- **Stand.** De opdrachten van de laatste 30 dagen komen mee met de bundel
+  (`GET /dashboard/opdrachten?sinds=…`, alleen als het overzicht het domein met
+  rijen noemt). Op de kaart staat "Doorgegeven — wordt bij het volgende
+  werkmoment verwerkt", "Wordt verwerkt", "Gedaan" of "Niet gelukt: <reden>";
+  zolang er een open opdracht ligt, is er geen tweede knop. Het blok
+  "Doorgegeven aan je team" toont ze ook als het item uit de dagstart verdween.
+- **Geen werkdata.** `werkruimteDomeinen()` sluit het domein altijd uit, ook als
+  het gebakken schema het nog niet kent: één opdrachtrij mag een metricsbestand
+  van gisteren niet verdringen.
+- **Veldnamen.** Het domein staat niet in `schema.datadomeinen`; de namen en
+  keuzes staan één keer in `src/opdrachten.js`, en `test/f61-opdrachten.test.js`
+  houdt ze gelijk aan het contract.
 
 ## De panelen: KPI's, grafieken, ritme, tijdwinst
 
