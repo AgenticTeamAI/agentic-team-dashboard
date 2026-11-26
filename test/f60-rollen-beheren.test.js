@@ -79,6 +79,12 @@ async function paneel({ team = TEAM, rollen } = {}) {
   return el;
 }
 
+/* Kiezen zoals een mens dat doet: waarde zetten én het change-event. */
+function kies(keuze, waarde) {
+  keuze.value = waarde;
+  keuze.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 const rijVan = (el, seat) => el.querySelector(`[data-team-seat="${seat}"]`).closest("tr");
 const rolTekst = (el, seat) => rijVan(el, seat).querySelector(".team-rol").textContent.replace(/\s+/g, " ").trim();
 
@@ -87,21 +93,33 @@ beforeEach(() => {
   delete g.schrijfWerkruimte;
 });
 
+/* De render van main vóór f60, vastgelegd (test/fixtures/f60-teampaneel-main.json,
+ * zie "herkomst" daarin). Vergelijken met de eigen render zonder register zou
+ * alleen bewijzen dat de foutpaden gelijk zijn aan elkaar, niet aan main. */
+const MAIN = JSON.parse(readFileSync(join(ROOT, "test/fixtures/f60-teampaneel-main.json"), "utf8"));
+const ZONDER_EIGENAARVLAG = TEAM.map(({ eigenaar, ...r }) => r);
+
 describe("zonder rollenregister: byte-gelijk aan vóór f60", () => {
+  it("het paneel is byte voor byte de render van main, met en zonder beheer", async () => {
+    expect((await paneel()).innerHTML).toBe(MAIN.metBeheer);
+    g._resetTeam();
+    expect((await paneel({ team: ZONDER_EIGENAARVLAG })).innerHTML).toBe(MAIN.zonderBeheer);
+  });
+
   it("een 404, 403 of 503 van de instantie verandert niets aan het paneel", async () => {
-    const voor = (await paneel()).innerHTML;
     for (const status of [404, 403, 503]) {
       g._resetTeam();
       const fout = Object.assign(new Error("x"), { status });
-      const na = (await paneel({ rollen: fout })).innerHTML;
-      expect(na).toBe(voor);
+      expect((await paneel({ rollen: fout })).innerHTML).toBe(MAIN.metBeheer);
+      g._resetTeam();
+      expect((await paneel({ team: ZONDER_EIGENAARVLAG, rollen: fout })).innerHTML).toBe(MAIN.zonderBeheer);
     }
-    expect(voor).not.toContain("Rol");
-    expect(voor).not.toContain("data-team-jouw-rol");
+    expect(MAIN.metBeheer).not.toContain("Rol");
+    expect(MAIN.metBeheer).not.toContain("data-team-jouw-rol");
   });
 
   it("een antwoord dat geen rollenantwoord is, telt als geen register", async () => {
-    const voor = (await paneel()).innerHTML;
+    const voor = MAIN.metBeheer;
     for (const raar of [null, {}, { jij: { seat: "kort", rol: "eigenaar" } }, { jij: { seat: EIG, rol: "koning" } }, { jij: { seat: EIG, rol: "constructor" } }, { jij: { seat: EIG, rol: "__proto__" } }, "tekst"]) {
       g._resetTeam();
       expect((await paneel({ rollen: raar })).innerHTML).toBe(voor);
@@ -203,9 +221,9 @@ describe("voorstel → bevestig", () => {
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
     expect(g.schrijfWerkruimte).not.toHaveBeenCalled();
     const keuze = el.querySelector(`[data-rol-keuze="${JAN}"]`);
-    expect(Array.from(keuze.options).map((o) => o.value)).toEqual(["beheerder", "viewer"]);
+    expect(Array.from(keuze.options).map((o) => o.value)).toEqual(["beheerder", "medewerker", "viewer"]);
     expect(document.activeElement).toBe(keuze);
-    keuze.value = "viewer";
+    kies(keuze, "viewer");
 
     g.schrijfWerkruimte = vi.fn(async () => ({ seat: JAN, rol: "viewer" }));
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
@@ -218,6 +236,36 @@ describe("voorstel → bevestig", () => {
     expect(rolTekst(el, JAN)).toBe("Viewer Wijzigen");
     expect(el.querySelector("[data-team-melding]").textContent).toBe("janine@klant.nl heeft nu de rol Viewer.");
     expect(document.activeElement).toBe(el.querySelector(`[data-rol-wijzig="${JAN}"]`));
+  });
+
+  it("na Wijzigen staat de huidige rol gekozen, niet Beheerder; zo bevestigen doet niets", async () => {
+    const el = await paneel({ rollen: ALS_EIGENAAR });
+    for (const [seat, huidig] of [[JAN, "medewerker"], [PIET, "viewer"], [BEH2, "beheerder"]]) {
+      el.querySelector(`[data-rol-wijzig="${seat}"]`).click();
+      const keuze = el.querySelector(`[data-rol-keuze="${seat}"]`);
+      expect(keuze.value).toBe(huidig);
+      const bevestig = el.querySelector(`[data-rol-bevestig="${seat}"]`);
+      expect(bevestig.disabled).toBe(true);
+      bevestig.click();
+      await g.wijzigRol(el, seat, huidig);
+      expect(g.schrijfWerkruimte).not.toHaveBeenCalled();
+      // Een andere rol kiezen zet Bevestigen aan; terug naar de huidige zet hem weer uit.
+      const ander = g.rolKeuzesVoor(seat)[0];
+      kies(keuze, ander);
+      expect(bevestig.disabled).toBe(false);
+      kies(keuze, huidig);
+      expect(bevestig.disabled).toBe(true);
+      el.querySelector(`[data-rol-annuleer="${seat}"]`).click();
+    }
+  });
+
+  it("als beheerder: de huidige rol staat gekozen en Beheerder staat er niet tussen", async () => {
+    const el = await paneel({ rollen: rollenAntwoord({ seat: BEH2, rol: "beheerder" }, ALS_EIGENAAR.rollen) });
+    el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    const keuze = el.querySelector(`[data-rol-keuze="${JAN}"]`);
+    expect(Array.from(keuze.options).map((o) => o.value)).toEqual(["medewerker", "viewer"]);
+    expect(keuze.value).toBe("medewerker");
+    expect(el.querySelector(`[data-rol-bevestig="${JAN}"]`).disabled).toBe(true);
   });
 
   it("Annuleren sluit het voorstel zonder iets te versturen", async () => {
@@ -236,8 +284,12 @@ describe("voorstel → bevestig", () => {
     const optie = document.createElement("option");
     optie.value = "eigenaar";
     keuze.append(optie);
-    keuze.value = "eigenaar";
-    el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
+    kies(keuze, "eigenaar");
+    // Wie de select manipuleert, zet ook de knop aan; de toets in wijzigRol vangt het.
+    const bevestig = el.querySelector(`[data-rol-bevestig="${JAN}"]`);
+    expect(bevestig.disabled).toBe(true);
+    bevestig.disabled = false;
+    bevestig.click();
     await tick();
     expect(g.schrijfWerkruimte).not.toHaveBeenCalled();
   });
@@ -245,6 +297,7 @@ describe("voorstel → bevestig", () => {
   it("een weigering van de instantie komt letterlijk in beeld; de rol blijft staan", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "beheerder");
     g.schrijfWerkruimte = vi.fn(async (b, methode) => {
       if (methode === "GET") return ALS_EIGENAAR; // opnieuw lezen na de weigering
       throw Object.assign(new Error("Alleen de eigenaar geeft of neemt de rol beheerder."), { status: 403 });
@@ -260,6 +313,7 @@ describe("voorstel → bevestig", () => {
   it("een antwoord voor een andere seat telt niet als gelukt", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     g.schrijfWerkruimte = vi.fn(async () => ({ seat: PIET, rol: "beheerder" }));
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
     await tick();
@@ -271,6 +325,7 @@ describe("voorstel → bevestig", () => {
   it("één wijziging tegelijk: tijdens de aanvraag staan de knoppen uit en doet een tweede klik niets", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     let los;
     g.schrijfWerkruimte = vi.fn(() => new Promise((r) => { los = r; }));
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
@@ -288,6 +343,7 @@ describe("voorstel → bevestig", () => {
   it("wisselt de sessie tijdens de aanvraag naar een daglink, dan gaat het paneel dicht", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     g.schrijfWerkruimte = vi.fn(async () => {
       g.huidigeBron = { token: "daglink" };
       return { seat: JAN, rol: "viewer" };
@@ -309,7 +365,7 @@ describe("voorstel → bevestig", () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${PIET}"]`).click();
     const keuze = el.querySelector(`[data-rol-keuze="${PIET}"]`);
-    keuze.value = "medewerker";
+    kies(keuze, "medewerker");
     g.schrijfWerkruimte = vi.fn(async () => ({ seat: PIET, rol: "medewerker" }));
     el.querySelector(`[data-rol-bevestig="${PIET}"]`).click();
     await tick();
@@ -320,7 +376,7 @@ describe("voorstel → bevestig", () => {
   it("de melding volgt de rol die de instantie teruggeeft", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
-    el.querySelector(`[data-rol-keuze="${JAN}"]`).value = "viewer";
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     g.schrijfWerkruimte = vi.fn(async () => ({ seat: JAN, rol: "beheerder" }));
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
     await tick();
@@ -332,8 +388,7 @@ describe("voorstel → bevestig", () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
     const keuze = el.querySelector(`[data-rol-keuze="${JAN}"]`);
-    keuze.value = "viewer";
-    keuze.dispatchEvent(new Event("change", { bubbles: true }));
+    kies(keuze, "viewer");
     g.renderTeamPanel(el);
     expect(el.querySelector(`[data-rol-keuze="${JAN}"]`).value).toBe("viewer");
     // Na een storing (503) blijft het voorstel open mét de keuze.
@@ -349,6 +404,7 @@ describe("voorstel → bevestig", () => {
   it("na een weigering (403/409) leest het paneel de rollen opnieuw", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     const nieuw = rollenAntwoord({ seat: EIG, rol: "eigenaar" }, [{ seat: JAN, rol: "viewer" }]);
     g.schrijfWerkruimte = vi.fn(async (b, methode) => {
       if (methode === "PUT") throw Object.assign(new Error("geweigerd"), { status: 409 });
@@ -364,6 +420,7 @@ describe("voorstel → bevestig", () => {
   it("een 404 tijdens het wijzigen geeft een leesbare tekst, geen routenaam", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    kies(el.querySelector(`[data-rol-keuze="${JAN}"]`), "viewer");
     g.schrijfWerkruimte = vi.fn(async () => { throw Object.assign(new Error("Onbekende dashboardroute"), { status: 404 }); });
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
     await tick();

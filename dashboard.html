@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-SB2RS/H/8zYK+PyD5+znbDDJe3U46RnIplseIjefuNA=' 'sha256-lUkpVf+xLNZ2bPjTSyvuWGwYcfmVeIzNT6/2OpPqVbM='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-SB2RS/H/8zYK+PyD5+znbDDJe3U46RnIplseIjefuNA=' 'sha256-FjORNFh9pmsxYmzqPppqucqEB11jKeoS1/SQy37gCrM='">
 
 
 
@@ -13640,11 +13640,19 @@ function rolCelHtml(r) {
   if (!keuzes.length) return esc(label);
   const uit = rolBezigSeat !== null || teamBezigSeat !== null ? " disabled" : "";
   if (rolVoorstelSeat === seat) {
+    // De selector begint op de huidige rol, niet op de eerste uit `toewijsbaar`:
+    // die levert de instantie als ['beheerder', …], en wie dan meteen op
+    // Bevestigen klikt, maakt iemand per ongeluk beheerder. Zolang de huidige
+    // rol gekozen staat, doet Bevestigen niets (de knop staat uit).
+    const gekozen = keuzes.includes(rolKeuzeWaarde) ? rolKeuzeWaarde : huidig;
+    const opties = rollenInfo.toewijsbaar.filter((k) => k === huidig || keuzes.includes(k));
+    if (!opties.includes(huidig)) opties.unshift(huidig);
+    const bevestigUit = uit || (gekozen === huidig ? " disabled" : "");
     return `<div class="team-bevestig" role="group" aria-label="Rol van ${esc(r.adres)} wijzigen">
       <label class="bedien-veld"><span>Nieuwe rol voor ${esc(r.adres)}</span>
-        <select data-rol-keuze="${esc(seat)}"${uit}>${keuzes.map((k) => `<option value="${k}"${k === rolKeuzeWaarde ? " selected" : ""}>${ROL_LABEL[k]}</option>`).join("")}</select></label>
-      <span>Nu: ${esc(ROL_LABEL[huidig])}. Bevestig om de rol te wijzigen.</span>
-      <button type="button" data-rol-bevestig="${esc(seat)}"${uit}>Bevestigen</button>
+        <select data-rol-keuze="${esc(seat)}"${uit}>${opties.map((k) => `<option value="${k}"${k === gekozen ? " selected" : ""}>${ROL_LABEL[k]}</option>`).join("")}</select></label>
+      <span>Nu: ${esc(ROL_LABEL[huidig])}. Kies een andere rol en bevestig om de rol te wijzigen.</span>
+      <button type="button" data-rol-bevestig="${esc(seat)}"${bevestigUit}>Bevestigen</button>
       <button type="button" class="knop-secundair" data-rol-annuleer="${esc(seat)}"${uit}>Annuleren</button>
     </div>`;
   }
@@ -13812,14 +13820,16 @@ function teamActieHtml(r) {
       aria-label="${esc(r.adres)} verwijderen"${uit}>Verwijderen</button>`;
 }
 
+/* De rolcel staat op dezelfde regel als de statuscel: zonder register is de
+ * interpolatie leeg, en dan is de rij byte voor byte die van vóór f60 (geen
+ * extra regelovergang; test/f60-rollen-beheren.test.js vergelijkt met main). */
 function teamRijHtml(r, beheer) {
   const wachtNog = !r.aanvaardOp;
   return `<tr>
     <td><input class="team-naam" type="text" maxlength="80" value="${esc(r.naam || "")}"
         data-team-seat="${esc(r.seat)}" aria-label="Weergavenaam van ${esc(r.adres)}"></td>
     <td class="footnote">${esc(r.adres)}</td>
-    <td class="footnote">${wachtNog ? "uitgenodigd, nog niet ingelogd" : "actief"}</td>
-    ${rollenBeheer() ? `<td class="team-rol">${rolCelHtml(r)}</td>` : ""}
+    <td class="footnote">${wachtNog ? "uitgenodigd, nog niet ingelogd" : "actief"}</td>${rollenBeheer() ? `<td class="team-rol">${rolCelHtml(r)}</td>` : ""}
     ${beheer ? `<td class="team-actie">${teamActieHtml(r)}</td>` : ""}
   </tr>`;
 }
@@ -14039,6 +14049,13 @@ function wireTeamPanel(sectieEl) {
     const rolKeuze = e.target.closest && e.target.closest("[data-rol-keuze]");
     if (rolKeuze) {
       rolKeuzeWaarde = rolKeuze.value;
+      // Bevestigen gaat pas aan als er een andere rol dan de huidige gekozen is.
+      // Direct op de knop, geen hertekening: die zou de focus uit de selector halen.
+      const seat = rolKeuze.getAttribute("data-rol-keuze");
+      const bevestig = teamKnopVoor(sectieEl, "data-rol-bevestig", seat);
+      if (bevestig && rolBezigSeat === null && teamBezigSeat === null) {
+        bevestig.disabled = !rolKeuzesVoor(seat).includes(rolKeuze.value);
+      }
       return;
     }
     const melding = sectieEl.querySelector("[data-team-melding]");
