@@ -12,7 +12,7 @@ export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 /* Dezelfde volgorde als JS_MODULES_IN_ORDER in scripts/build.py (zonder app.js). */
 export const MODULES = [
   "teksten.js", "schema-helpers.js", "werkruimte-loader.js", "oauth-client.js", "zones.js", "voor-jou.js",
-  "metrics-sanitize.js", "metrics.js", "render.js", "charts.js", "feed.js", "homepage.js", "databrowser.js",
+  "metrics-sanitize.js", "dagplan.js", "metrics.js", "render.js", "charts.js", "feed.js", "homepage.js", "databrowser.js",
   "data-bewerken.js", "item-blad.js", "voor-jou-scherm.js", "acties-tab.js", "vaste-taken.js", "catalogus.js",
   "hulp.js", "opdracht.js", "rijpagina.js", "notion-werk.js", "modules-beheer.js", "team-beheer.js",
 ];

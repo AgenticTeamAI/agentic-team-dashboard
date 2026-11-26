@@ -82,11 +82,35 @@ function isNotion() {
   return CTX.bundle && CTX.bundle.kind === "metrics" && !rows(CTX.bundle, "acties");
 }
 function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
-/* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
-function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
+/* De werkbak uit de dagstart, ook als er verdwaalde acties-rijen zijn. f62:
+ * heeft jouw dagplan van vandaag items ter goedkeuring, dan zijn dát de items
+ * (met dezelfde nummers als in je chat); anders het voor_jou-blok van metrics
+ * v3, dat voor de hele licentie hetzelfde is. Badge en lijst tellen hiermee. */
+function werkbakUitDagplan() { const d = dagplanVanMij(); return d && d.vandaag && d.plan.ter_goedkeuring.items.length ? d : null; }
+function werkbakUitDagstart() {
+  const d = werkbakUitDagplan(); if (d) return d.plan.ter_goedkeuring.items;
+  const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null;
+}
+function werkbakMoment() {
+  const d = werkbakUitDagplan(); const w = (CTX && CTX.metricsWerk) || {};
+  const g = d ? d.plan.gegenereerd_op : w.gegenereerdOp; return g ? dt(g) : null;
+}
 function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "je eigen systeem"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
 function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
+/* f62 — je dagplan (src/dagplan.js): het jouwe kiezen kan alleen als het
+ * dashboard weet wie je bent (inloggen). Met een daglink dus nooit. */
+function dagplanEntries() { const d = CTX && CTX.bundle && CTX.bundle.dagplannen; return d && Array.isArray(d.entries) ? d.entries : null; }
+let DP = { entries: null, ik: null, dag: null, schema: null, plan: null };
+function dagplanVanMij() {
+  const wie = jij(); const entries = dagplanEntries();
+  if (!CTX || !wie || !entries || !entries.length) return null;
+  const dag = isoDag(NU);
+  if (DP.entries !== entries || DP.ik !== wie || DP.dag !== dag || DP.schema !== CTX.schema) {
+    DP = { entries, ik: wie, dag, schema: CTX.schema, plan: kiesDagplan(dagplannenUitEntries(entries, CTX.schema), wie, dag) };
+  }
+  return DP.plan;
+}
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }
 function bedrijf() { return (CTX && CTX.bundle && CTX.bundle.klant) || ""; }
 
@@ -255,7 +279,7 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, actie: f.actie || "", tekst: f.bericht || f.actie || "", link: f.link || null }))
     .filter(f => f.tekst);
 }
 

@@ -265,6 +265,19 @@ button.knoppil{cursor:pointer;min-height:40px}
 .drie span{font-size:12.5px;color:var(--muted)}
 @media (max-width:380px){.drie{grid-template-columns:1fr}}
 
+/* f62: Jouw dag */
+.jouwdag{display:flex;flex-direction:column;gap:12px}
+.jd-sectie{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.jd-lijst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.jd-lijst li{display:flex;flex-direction:column;gap:2px;font-size:14.5px;overflow-wrap:anywhere}
+.jd-lijst li span{font-size:13px}
+.jd-agents{gap:6px}
+.jd-agent{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px;min-width:0}
+.jd-taak{overflow-wrap:anywhere;min-width:0}
+.jouwdag .post{padding:6px 0}
+.jouwdag-login{padding:0 2px}
+.post-actie{font-size:14.5px}
+
 /* Werkbak */
 .werkbak-kop{display:flex;flex-direction:column;gap:10px}
 .stapel{display:flex;flex-direction:column;gap:10px}
@@ -439,6 +452,7 @@ label.lb,.lb{font-weight:650;font-size:14.5px;display:block;margin-bottom:6px}
 .teller{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:10px;display:flex;flex-direction:column;gap:2px}
 .teller b{font-size:24px;font-family:var(--mono);line-height:1.1}
 .teller span{font-size:12.5px;color:var(--muted)}
+.jd-tellers{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 .kopieerblok{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
 .kopieerblok code{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere;user-select:all}
 .kopieerblok .knop{min-height:40px;padding:6px 10px;font-size:13px}

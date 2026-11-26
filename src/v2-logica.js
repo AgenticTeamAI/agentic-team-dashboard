@@ -8,10 +8,19 @@ function actie(id) { return S.data && S.data.perId ? S.data.perId.get(id) : null
 function ik() { return jij() || undefined; }
 /* Per tekenbeurt onthouden: honderden rijen maal tientallen aanroepen. */
 let RC = new Map();
-function nieuweTekenbeurt() { RC = new Map(); }
+let KETEN = null;
+function nieuweTekenbeurt() { RC = new Map(); KETEN = null; }
 function onthoud(soort, a, fn) { const k = soort + "|" + a.id; if (!RC.has(k)) RC.set(k, fn()); return RC.get(k); }
+/* f62: de eigenaarsketen (voor-jou.js) kijkt in projecten, deals en
+ * organisaties; die opzoektabel één keer per tekenbeurt. */
+function keten() {
+  const b = CTX && CTX.bundle;
+  if (!KETEN || KETEN.bundle !== b) KETEN = { bundle: b, namen: namen(), index: P.eigenaarIndex(b) };
+  return KETEN;
+}
 function hoortBijMens(a) { return onthoud("mens", a, () => P.hoortBijMens(a.rij, namen(), NU)); }
-function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen())); }
+function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen(), keten())); }
+function eigenaarVanActie(a) { return onthoud("eig", a, () => P.eigenaarVan(a.rij, keten())); }
 function isTeLaat(a) { return P.isTeLaat(a.rij, namen(), NU); }
 function sindsVan(a) { return P.sindsVan(a.rij) || dt(a.aangemaakt) || NU; }
 function viaIds(rijen) { return (rijen || []).map(r => actie(r.__entryId)).filter(Boolean); }
@@ -67,11 +76,14 @@ function verhaalData() {
   const klaar = klaarAlle.filter(vanMij); const klaarAnder = klaarAlle.filter(a => !vanMij(a));
   const begon = A.filter(a => a.status === "Bezig" && isAgentNaam(a.eigenaar) && na(a.bezigSinds));
   // 's Ochtends telt alleen wat een werkmoment deed (de start en het slot van
-  // een ronde, en wat er 's nachts verscheen) — niet je eigen dagstart om 08:30.
-  const feed = S.data.feed.filter(f => f.t > van && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
+  // een ronde, en wat er 's nachts verscheen). Een dagstart is geen werk van
+  // je team (f62: de Coördinator post "Dagstart van <naam>" als afgerond), dus
+  // die telt nooit mee — ook die van een collega niet.
+  const feed = S.data.feed.filter(f => f.t > van && !isDagstartPost(f) && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
   const agents = [...new Set([...klaar.map(werkAgent), ...zelf.map(a => a.afgerondDoor), ...begon.map(werkAgent), ...feed.map(f => f.ag)].filter(isAgentSlug))];
   return { titel, zelf, klaar, klaarAnder, begon, agents, van, feed };
 }
+function isDagstartPost(f) { return /^dagstart\b/i.test(String((f && f.actie) || "").trim()); }
 function verhaalZin(v) {
   const delen = [];
   if (v.zelf.length) delen.push("rondde je team <b>" + telwoord(v.zelf.length, "ding", "dingen") + "</b> zelf af");

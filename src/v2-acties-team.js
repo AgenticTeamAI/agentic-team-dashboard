@@ -136,6 +136,9 @@ function teamLeden() {
   gezien.delete("gids");
   return [...gezien].filter(isAgentSlug);
 }
+/* f62: de actie van een post (bv. "Dagstart van Tijmen") als vette eerste
+ * regel, als hij iets anders zegt dan de tekst zelf. */
+function postActie(x) { return x.actie && x.actie !== x.tekst ? `<p class="post-actie"><b>${esc(x.actie)}</b></p>` : ""; }
 function renderTeam() {
   const p = parts();
   const kop = `<div class="tussen"><h2 class="titel">Je team</h2>${teamSeg()}</div>`;
@@ -148,7 +151,7 @@ function renderTeam() {
   let dag = null; let lijst = "";
   feed.forEach(x => {
     const l = dagLabel(x.t); if (l !== dag) { dag = l; lijst += `<div class="dagkop">${esc(l)}</div>`; }
-    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}</div><p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
+    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}</div>${postActie(x)}<p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
   });
   const leden = teamLeden();
   const gebruikt = new Set([...S.data.feed.map(x => x.ag), ...S.data.acties.map(werkAgent), ...S.data.taken.filter(t => t.actief).map(t => t.agent)].filter(Boolean));
@@ -185,7 +188,7 @@ function renderAgent(slug) {
     ${wacht.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Wacht op jou (${wacht.length})</h2>${wacht.map(rij).join("")}</section>` : ""}
     ${onder.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Onder handen (${onder.length})</h2>${onder.map(rij).join("")}</section>` : ""}
     ${taken.length ? `<section class="vak"><h2 class="vakkop">Vaste taken</h2>${taken.map(taakRij).join("")}</section>` : ""}
-    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}</span></div></div>`).join("")}</section>` : ""}</div>`;
+    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb">${postActie(x)}<p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}</span></div></div>`).join("")}</section>` : ""}</div>`;
 }
 
 /* ---------- Vaste taken ---------- */

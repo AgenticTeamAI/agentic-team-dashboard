@@ -447,6 +447,23 @@ async function haalTeamfeed(bron, vandaag) {
   }
 }
 
+/* f62: de dagplannen (domein `dagplannen`, opslag=werkruimte, registry
+ * 1.94.0) — per mens één entry van zijn laatste dagstart. Net als de
+ * teamfeed: nooit een rows-domein, alleen ophalen als de instantie het domein
+ * kent, en fail-open (geen dagplan = geen kaart "Jouw dag"). De entries gaan
+ * ongelezen op de bundel; saneerDagplan (src/dagplan.js) leest ze pas bij het
+ * tekenen, en vertrouwt niets. */
+const DAGPLAN_LIMIET = 50;
+async function haalDagplannen(bron) {
+  try {
+    const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=dagplannen&limiet=" + DAGPLAN_LIMIET);
+    return { entries: Array.isArray(body && body.entries) ? body.entries : [] };
+  } catch (e) {
+    if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
+    return null;
+  }
+}
+
 function isVanVandaag(isoTekst, vandaag) {
   const dt = isoTekst ? new Date(isoTekst) : null;
   if (!dt || isNaN(dt.getTime())) return false;
@@ -461,8 +478,10 @@ function isVanVandaag(isoTekst, vandaag) {
 async function haalMetricsEntry(bron, bundle) {
   const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
-  const entry = entries.find(e => e.entryId === "metrics")
-    || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
+  // Alleen de entry "metrics". Vroeger viel dit terug op de nieuwste entry
+  // van het domein; dan zou elke andere entry daar (een losse notitie, een
+  // verdwaald dagplan) als metricsbestand gelezen worden (f62).
+  const entry = entries.find(e => e && e.entryId === "metrics");
   if (!entry) return null;
   let payload;
   try {
@@ -484,7 +503,7 @@ async function haalMetricsEntry(bron, bundle) {
  * voor een artefact dat tegen een nieuwere registry praat. */
 function werkruimteDomeinen(schema) {
   const uitSchema = schema.werkruimteDomeinen || [];
-  return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
+  return uitSchema.concat([METRICS_DOMEIN, "dagplannen"].filter(d => uitSchema.indexOf(d) === -1));
 }
 
 async function loadWerkruimteBundle(bron) {
@@ -515,6 +534,10 @@ async function loadWerkruimteBundle(bron) {
   // actief op deze werkruimte".
   bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
     ? await haalTeamfeed(bron, new Date())
+    : null;
+  // f62: idem voor de dagplannen ("Jouw dag" op Voor jou).
+  bundle.dagplannen = (overzicht.domeinen || []).some(d => d && d.domein === "dagplannen")
+    ? await haalDagplannen(bron)
     : null;
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een

@@ -44,6 +44,7 @@ const JS_MODULES = [
   "zones.js",
   "voor-jou.js",
   "metrics-sanitize.js",
+  "dagplan.js",
   "metrics.js",
   "render.js",
   "charts.js",
