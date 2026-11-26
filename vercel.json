@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 scripts/build.py ${DASHBOARD_NOINDEX:+--noindex} ${OAUTH_DASHBOARD:+--oauth} && python3 scripts/publiceer.py",
+  "buildCommand": "python3 scripts/build.py ${DASHBOARD_NOINDEX:+--noindex} ${OAUTH_DASHBOARD:+--oauth} ${DASHBOARD_SESSIE:+--sessie} && python3 scripts/publiceer.py",
   "outputDirectory": "out",
   "headers": [
     {
