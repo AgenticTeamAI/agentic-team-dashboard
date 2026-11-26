@@ -323,7 +323,12 @@ const SITE_POST_URLS = Object.freeze({
 
 /* Een 503 van de sessie-token-route (een rotatie die nog onderweg is, of een
  * storing) is één herhaling waard, na min(Retry-After, 2) seconden. Nooit een
- * lus, en nooit bij de andere bestemmingen. */
+ * lus. (Uitloggen kent dezelfde ene herhaling, in sessieUitloggen.)
+ *
+ * Let op: Retry-After is cross-origin alleen leesbaar als de site hem in
+ * Access-Control-Expose-Headers zet, en dat doet ze (nog) niet. In een echte
+ * browser geeft get() dan null, en is het in de praktijk dus altijd 2 s. Komt
+ * de expose-header er, dan geldt vanzelf min(Retry-After, 2). */
 const SESSIE_HERHAAL_MAX_MS = 2000;
 
 function herhaalNaMs(res) {
@@ -681,23 +686,63 @@ function sessieBron(token) {
 
 /* ── uitloggen ─────────────────────────────────────────────────────────── */
 
-/** POST uitloggen bij de site (idempotent), daarna markering en geheugen weg.
- *  Gooit nooit: uitloggen in dit tabblad lukt altijd. */
-function sessieUitloggen() {
-  vergeetSessieMarkering();
+/** De voetnoot bij uitloggen overal als stap 2 (de instantie) mislukte. */
+const SESSIE_OVERAL_ZONDER_INSTANTIE_TEKST = "Open tabbladen elders stoppen uiterlijk binnen een uur. Heeft je licentie afscherming (Business), dan verlopen de daglinks die voor jou zijn gemaakt pas vanzelf.";
+
+/** De tekst als de site het cookie niet wiste (zie sessieUitloggen). */
+const SESSIE_UITLOG_MISLUKT_TEKST = "Uitloggen bij agentic-team.ai is niet gelukt; je kunt in deze browser nog ingelogd raken. Probeer het opnieuw.";
+
+/* Eén POST uitloggen: true alleen bij een 2xx. Een netwerkfout is false. */
+function siteUitloggenEens() {
+  return sitePost("uitloggen").then((res) => ({ ok: !!(res && res.ok), res }), () => ({ ok: false, res: null }));
+}
+
+/**
+ * POST uitloggen bij de site (idempotent). Het geheugen gaat altijd meteen
+ * leeg. Lukt het niet (geen 2xx, of een netwerkfout), dan één herhaling na
+ * min(Retry-After, 2) s, zoals bij de token-route; nooit een lus.
+ *
+ * De site wist het cookie alleen als ze de familie ook echt introk (een 503
+ * laat het cookie bewust staan). Daarom gaat de markering pas weg als het
+ * uitloggen lukte: mislukt het ook na de herhaling, dan is er in deze browser
+ * nog een levende sessie, en dan klopt "ingelogd" voor de andere tabbladen en
+ * voor de loginknop (die hervat het cookie zonder mail). De aanroeper zegt dan
+ * niet "Je bent uitgelogd".
+ *
+ * `markeringMeteenWeg` (na een 401 'beeindigd'): de markering gaat vóór het
+ * verzoek weg; de sessie is dan al voorbij bij de instantie.
+ *
+ * Levert true of false; gooit nooit. Inloggen wacht tot dit klaar is.
+ */
+function sessieUitloggen({ markeringMeteenWeg = false } = {}) {
+  if (markeringMeteenWeg) vergeetSessieMarkering();
   vergeetSessieGeheugen();
-  const p = sitePost("uitloggen").then((res) => res.ok, () => false);
+  const p = (async () => {
+    let poging = await siteUitloggenEens();
+    if (!poging.ok) {
+      await wachtMs(herhaalNaMs(poging.res));
+      poging = await siteUitloggenEens();
+    }
+    if (poging.ok) vergeetSessieMarkering();
+    return poging.ok;
+  })();
   houdInloggenTegen(p);
   return p;
 }
 
 /* Na een 401 met {sessie: "beeindigd"} van de instantie: één keer uitloggen
  * bij de site (ook als er meer verzoeken tegelijk die 401 kregen), en het
- * einde melden. */
+ * einde melden.
+ *
+ * Bekende rand (bewust zo, zie README §Ingelogd blijven): dit uitloggen toetst
+ * de identiteitspin niet, want na 'beeindigd' wordt nooit meer een token
+ * gehaald. Logde een ander tabblad in het afgelopen uur in met een ander
+ * account (dat nam het cookie over), dan logt dit ook dát account uit. Dat is
+ * ongemak (opnieuw inloggen met mail), geen datalek. */
 let sessieBeeindigdBezig = null;
 function sessieIsBeeindigd() {
   if (!sessieBeeindigdBezig) {
-    sessieBeeindigdBezig = sessieUitloggen().finally(() => { sessieBeeindigdBezig = null; });
+    sessieBeeindigdBezig = sessieUitloggen({ markeringMeteenWeg: true }).finally(() => { sessieBeeindigdBezig = null; });
     meldSessieEinde("Je sessie is beëindigd", SESSIE_BEEINDIGD_TEKST);
   }
   return sessieBeeindigdBezig;
@@ -757,7 +802,10 @@ async function sessieUitloggenOveral() {
     return {
       gelukt: true,
       instantie,
-      tekst: "Je bent op alle apparaten uitgelogd." + (instantie ? "" : " Open tabbladen elders stoppen uiterlijk binnen een uur."),
+      // Zonder stap 2 zijn ook de daglinks van deze seat (Business) niet
+      // ingetrokken; de bevestiging beloofde dat voorwaardelijk, dus hier
+      // dezelfde voorwaarde.
+      tekst: "Je bent op alle apparaten uitgelogd." + (instantie ? "" : " " + SESSIE_OVERAL_ZONDER_INSTANTIE_TEKST),
     };
   })();
   houdInloggenTegen(werk);
@@ -775,6 +823,7 @@ if (typeof module !== "undefined") {
     SITE_POST_URLS, sitePost, herhaalNaMs, SESSIE_HERHAAL_MAX_MS,
     SESSIE_INLOG_URL, SESSIE_TOKEN_URL, SESSIE_UITLOG_URL, SESSIE_UITLOG_OVERAL_URL, SESSIE_LS_KEY,
     SESSIE_ANDER_ACCOUNT_TEKST, SESSIE_BEEINDIGD_TEKST, SESSIE_FOUT_TEKST,
+    SESSIE_UITLOG_MISLUKT_TEKST, SESSIE_OVERAL_ZONDER_INSTANTIE_TEKST,
     sessieAan, sessieFlowAan, sessieIdentiteit, sessiePinVan, vergeetSessieGeheugen, sessieTokenBijnaVerlopen,
     leesSessieMarkering, zetSessieMarkering, vergeetSessieMarkering, vergeetOudeOauthOpslag,
     bijSessieEinde, wachtOpSessieAfsluiten, parseSessieFragment, sessieInlogUrl, startSessieLogin,

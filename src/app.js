@@ -247,12 +247,40 @@ function wisIngelogdeStaat() {
  * je daarmee verder mee; anders terug naar het begin. */
 function uitloggen() {
   // s66: met de vlag eerst uitloggen bij de site (het cookie weg), dan pas
-  // de lege staat. Inloggen wacht daar ook op (wachtOpSessieAfsluiten).
-  if (sessieFlowAan()) void sessieUitloggen();
+  // "Je bent uitgelogd". Inloggen wacht daar ook op (wachtOpSessieAfsluiten).
+  if (sessieFlowAan()) return uitloggenMetSessie();
   wisIngelogdeStaat();
+  naUitloggen();
+}
+
+function naUitloggen() {
   const daglink = restoreDaglink();
   if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
+}
+
+/* s66: wist de site het cookie niet (een storing, of geen verbinding, ook na
+ * één herhaling), dan is er in deze browser nog een levende sessie: wie hierna
+ * op Inloggen klikt, is zonder mail weer binnen. Dan dus niet "Je bent
+ * uitgelogd", maar een fout met "Opnieuw uitloggen"; de markering blijft staan
+ * (zie sessieUitloggen). Eén keer tegelijk. */
+let uitlogBezig = false;
+async function uitloggenMetSessie() {
+  if (uitlogBezig) return;
+  uitlogBezig = true;
+  wisIngelogdeStaat();
+  toonLegeStaat("Bezig met uitloggen…", "", { login: false });
+  let gelukt = false;
+  try {
+    gelukt = await sessieUitloggen();
+  } finally {
+    uitlogBezig = false;
+  }
+  if (!gelukt) {
+    toonLegeStaat("Uitloggen is niet gelukt", SESSIE_UITLOG_MISLUKT_TEKST, { opnieuwUitloggen: true });
+    return;
+  }
+  naUitloggen();
 }
 
 /* s66: de sessie stopt buiten dit tabblad om — een 401 'beeindigd' van de
@@ -318,8 +346,14 @@ function wireNavigatie() {
 /* Zolang er geen werkruimte is: wat er aan de hand is, met inloggen erbij als
  * dat kan. Daaronder staat de Hulp — die werkt zonder login en zonder data. */
 let eindToestand = false; // er staat al een melding met inlogknop (bv. een mislukte login)
-function toonLegeStaat(titel, tekst, { login = null } = {}) {
+function toonLegeStaat(titel, tekst, { login = null, opnieuwUitloggen = false } = {}) {
   if (currentBundle) return;
+  if (opnieuwUitloggen) {
+    // s66: in plaats van de loginknop "Opnieuw uitloggen" (zie uitloggenMetSessie).
+    eindToestand = true;
+    V2.leeg({ titel, tekst, bezig: false, fout: true, opnieuwUitloggen: true });
+    return;
+  }
   eindToestand = login === true;
   V2.leeg({ titel, tekst, bezig: login === false, fout: /niet|verlopen|onvolledig/i.test(titel) && login === true });
 }
