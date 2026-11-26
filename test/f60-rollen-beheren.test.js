@@ -416,3 +416,11 @@ describe("tekst", () => {
     expect(zichtbaar).not.toMatch(/afscherm/);
   });
 });
+
+describe("het publieke schema", () => {
+  it("draagt geen rechtengroepen (registry f59: weglaten zolang de licentie geen afscherming heeft)", () => {
+    const schema = readFileSync(join(ROOT, "schema/schema.generated.js"), "utf8");
+    expect(schema).not.toContain("rechtengroepen");
+    expect(readFileSync(join(ROOT, "dashboard.html"), "utf8")).not.toContain("rechtengroepen");
+  });
+});
