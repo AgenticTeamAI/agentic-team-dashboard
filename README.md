@@ -200,6 +200,30 @@ zegt de tekst ook. De namen en adressen komen van de site (`/api/dashboard/team`
 en die geeft ze alleen aan het aankoopadres: een beheerder ziet dus zijn rol,
 maar nog geen teamlijst.
 
+## Teamkanaal in Beheer (s65)
+
+Het teamkanaal is het eigen Slack-, Teams- of Discordkanaal van de klant
+(teamfeed-webhook, f26). Zo'n kanaal kent geen rollen. Daarom zet de eigenaar,
+en alleen de eigenaar, in Beheer per agent aan of uit wat er naar het kanaal
+gaat. Geen filter per soort. `team-beheer.js` leest de instelling met
+`GET /dashboard/teamkanaal` en zet een agent met `PUT /dashboard/teamkanaal`
+`{agents: {<slug>: true | false | null}}` (`null` = terug naar de standaard),
+beide via `schrijfWerkruimte`: geen nieuwe fetch-plek, `connect-src` gelijk.
+
+- Het dashboard vraagt de instelling pas op als `GET /dashboard/rollen` zegt dat
+  jij de eigenaar bent, en alleen vanuit een ingelogde sessie. Een beheerder,
+  medewerker, viewer of daglink stuurt geen verzoek en ziet geen blok.
+- Geeft `GET` iets anders dan 200 met een leesbare stand (404: geen eigenaar
+  bekend, Obeya of een instantie van vóór s65; 403; 503), dan is Beheer byte
+  voor byte wat het was.
+- Is er geen kanaal gekoppeld (`kanaal.ingesteld` false), dan staat er alleen
+  dat er geen kanaal is, zonder schakelaars. Vooraf instellen kan dan niet.
+- Een weigering van de instantie staat letterlijk in beeld; bij 403 of 404 leest
+  het dashboard de rol en de instelling opnieuw. De instantie handhaaft alles
+  zelf (werkruimte #261); het blok beslist nergens over.
+- Het blok staat er ook met de modus uit (`afscherming` `uit`), want de
+  instantie geeft de route dan ook. Of dat zo blijft, ligt bij Tijmen (PR #134).
+
 ## De panelen: KPI's, grafieken, ritme, tijdwinst
 
 De panelen tonen, verdeeld over de Vandaag- en Prestaties-tab:

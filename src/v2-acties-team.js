@@ -345,15 +345,19 @@ function renderResultaat() {
       ${gebruik.map(x => `<div class="tussen">${agKnop(x.slug)}<span class="mono">${x.value}×</span></div>`).join("")}</section>` : ""}`;
 }
 
-/* ---------- Beheer: modules en wie er meewerkt (bestaande panelen) ---------- */
+/* ---------- Beheer: modules en wie er meewerkt (bestaande panelen) ----------
+ * s65: daaronder het teamkanaal per agent, alleen voor de eigenaar
+ * (team-beheer.js). Voor ieder ander is teamkanaalSectieHtml() leeg. */
 function renderBeheer() {
   return `<div class="inhoud"><button class="link" data-act="go" data-r="__terug">${ic("links", "klein")} Terug</button><h2 class="titel">Beheer</h2>
     <section class="vak beheer" id="beheer-modules"><h3>Je modules</h3><div id="beheer-modules-body"></div></section>
-    <section class="vak beheer" id="panel-team-namen"><h3>Wie werkt er mee</h3><div id="panel-team-namen-body"></div></section></div>`;
+    <section class="vak beheer" id="panel-team-namen"><h3>Wie werkt er mee</h3><div id="panel-team-namen-body"></div></section>${teamkanaalSectieHtml()}</div>`;
 }
 function vulBeheer() {
   const m = document.getElementById("beheer-modules-body");
   if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`; }
   const t = document.getElementById("panel-team-namen");
   if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`); }
+  const k = document.getElementById("beheer-teamkanaal");
+  if (k) renderTeamkanaal(k);
 }

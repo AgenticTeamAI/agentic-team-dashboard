@@ -41,6 +41,7 @@ function _resetTeam() {
   rolBezigSeat = null;
   rolKeuzeWaarde = null;
   rollenGeneratie++;
+  kanaalLeeg();
 }
 
 /* f60 — rollen per teamlid (contract p10 §2b, het rollenregister van s57).
@@ -108,6 +109,7 @@ async function laadRollen(bron) {
     rolVoorstelSeat = null;
     rolKeuzeWaarde = null;
     rollenGeneratie++;
+    kanaalLeeg();
     return null;
   }
   if (rollenVoorToken === bron.token) return rollenInfo;
@@ -307,7 +309,11 @@ function teamSluitZonderSessie(sectieEl) {
   rollenInfo = null;
   rollenVoorToken = null;
   rolVoorstelSeat = null;
+  kanaalLeeg();
   renderTeamPanel(sectieEl);
+  // s65: het teamkanaal hoort bij dezelfde ingelogde sessie; dicht met de rest.
+  const kanaalEl = document.getElementById("beheer-teamkanaal");
+  if (kanaalEl) renderTeamkanaal(kanaalEl);
 }
 
 /* Kan de site uitnodigen en verwijderen? Een site van vóór die routes zet geen
@@ -687,5 +693,260 @@ function wireTeamPanel(sectieEl) {
     // Stap 2: pas hier gaat er iets naar de site.
     const ja = doel.closest("[data-team-verwijder-ja]");
     if (ja) void verwijderTeamlid(sectieEl, ja.getAttribute("data-team-verwijder-ja"));
+  });
+}
+
+/* s65 — wat er per agent naar het teamkanaal gaat (besluit Tijmen 26-11-2026).
+ *
+ * Het teamkanaal is het eigen Slack-, Teams- of Discordkanaal van de klant
+ * (teamfeed-webhook, f26). Zo'n kanaal kent geen rollen: wie erin zit, leest
+ * alles wat erheen gaat. Daarom gaat met AFSCHERMING=aan standaard alleen een
+ * post door die elke rol in de werkruimte mag lezen; met de modus uit gaat
+ * alles. De eigenaar, en alleen de eigenaar, zet hier per agent aan of uit wat
+ * er naar het kanaal gaat. Geen filter per soort.
+ *
+ * Wie wat mag, beslist de instantie (`GET`/`PUT /dashboard/teamkanaal`,
+ * werkruimte #261), nooit dit blok. Het dashboard vraagt de instelling alleen
+ * op als de instantie zelf zei dat jij de eigenaar bent (`rollenInfo.jij.rol`,
+ * f60), en alleen vanuit een ingelogde sessie: een daglink, een beheerder, een
+ * medewerker of een viewer stuurt geen verzoek en ziet niets. Geen eigenaar
+ * bekend (rollen op zonder_eigenaar), Obeya of een instantie van vóór s65: de
+ * instantie zegt 404, en Beheer is byte voor byte wat het was
+ * (test/s65-teamkanaal.test.js vergelijkt met een opname van vóór s65).
+ *
+ * Het verkeer loopt over schrijfWerkruimte: geen nieuwe fetch-plek
+ * (test/geen-telemetrie.test.js telt ze). */
+let kanaalInfo = null; // {ingesteld, soort, afscherming, agents:[…]} of null
+let kanaalVoorToken = null;
+let kanaalGeneratie = 0; // elk laadTeamkanaal telt op; een laat antwoord van een oudere aanvraag telt niet
+let kanaalBezig = null; // slug waarvan de wijziging nu onderweg is
+let kanaalMelding = null; // {tekst, fout} onder de lijst; blijft staan bij hertekenen
+
+const KANAAL_SOORT = { slack: "Slack", teams: "Teams", discord: "Discord" };
+const KANAAL_SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+function kanaalLeeg() {
+  kanaalInfo = null;
+  kanaalVoorToken = null;
+  kanaalBezig = null;
+  kanaalMelding = null;
+  kanaalGeneratie++;
+}
+
+/* Alleen wat we kennen komt binnen. De naam en het emoji gaan door esc; de
+ * slug moet de vorm van een registry-slug hebben, want hij gaat terug in een
+ * PUT. Een antwoord dat er niet op lijkt, telt als geen instelling. */
+function saneerKanaal(b) {
+  if (!b || typeof b !== "object" || Array.isArray(b)) return null;
+  const k = b.kanaal;
+  if (!k || typeof k !== "object" || typeof k.ingesteld !== "boolean") return null;
+  if (b.afscherming !== "aan" && b.afscherming !== "uit") return null;
+  if (!Array.isArray(b.agents)) return null;
+  const soort = k.ingesteld && typeof k.soort === "string" && Object.prototype.hasOwnProperty.call(KANAAL_SOORT, k.soort) ? k.soort : null;
+  const gezien = new Set();
+  const agents = [];
+  for (const a of b.agents) {
+    if (!a || typeof a !== "object" || typeof a.slug !== "string" || !KANAAL_SLUG.test(a.slug) || gezien.has(a.slug)) continue;
+    if (typeof a.standaard !== "boolean") continue;
+    gezien.add(a.slug);
+    const keuze = a.keuze === true || a.keuze === false ? a.keuze : null;
+    const naam = typeof a.naam === "string" && a.naam.trim() ? a.naam.trim().slice(0, 80) : a.slug;
+    const emoji = typeof a.emoji === "string" ? Array.from(a.emoji).slice(0, 8).join("") : ""; // tekens, geen halve surrogaten
+    agents.push({ slug: a.slug, naam, emoji, keuze, standaard: a.standaard, effectief: typeof a.effectief === "boolean" ? a.effectief : keuze === null ? a.standaard : keuze });
+  }
+  return { ingesteld: k.ingesteld, soort, afscherming: b.afscherming, agents };
+}
+
+function isEigenaarVolgensInstantie() {
+  return !!(rollenInfo && rollenInfo.jij && rollenInfo.jij.rol === "eigenaar");
+}
+
+/* Na laadRollen: alleen de eigenaar vraagt de instelling op. */
+async function laadTeamkanaal(bron) {
+  if (!bron || !bron.oauth || !bron.token || !bron.instantieUrl || typeof schrijfWerkruimte !== "function" || !isEigenaarVolgensInstantie()) {
+    kanaalLeeg();
+    return null;
+  }
+  if (kanaalVoorToken === bron.token) return kanaalInfo;
+  kanaalVoorToken = bron.token;
+  const generatie = ++kanaalGeneratie;
+  let info = null;
+  try {
+    info = saneerKanaal(await schrijfWerkruimte(bron, "GET", "/dashboard/teamkanaal"));
+  } catch (e) {
+    // 404 = geen eigenaar bekend, Obeya of een instantie van vóór s65; 403/503 =
+    // nu niet te lezen. Afwezig is geen fout: Beheer blijft dan wat het was.
+    info = null;
+  }
+  if (generatie !== kanaalGeneratie) return kanaalInfo;
+  kanaalInfo = info;
+  kanaalVoorToken = bron.token; // schrijfWerkruimte kan het token onderweg vernieuwen
+  return kanaalInfo;
+}
+
+/* Staat het blok in beeld? Alleen met een instelling, als eigenaar, in een ingelogde sessie. */
+function teamkanaalZichtbaar() {
+  return !!(kanaalInfo && isEigenaarVolgensInstantie() && teamSessieToken());
+}
+
+/* De lege sectie voor Beheer; vulBeheer vult hem. Leeg zonder instelling, zodat
+ * Beheer voor ieder ander byte voor byte gelijk blijft. */
+function teamkanaalSectieHtml() {
+  if (!teamkanaalZichtbaar()) return "";
+  return `
+    <section class="vak beheer" id="beheer-teamkanaal"><h3>Teamkanaal</h3><div id="beheer-teamkanaal-body"></div></section>`;
+}
+
+const aanUit = (b) => (b ? "aan" : "uit");
+
+function kanaalUitlegHtml(info) {
+  const soort = info.soort ? ` (${KANAAL_SOORT[info.soort]})` : "";
+  const standaard = info.afscherming === "aan"
+    ? "Daarom gaat een agent waarvan niet iedereen in je team het werk mag lezen, standaard niet door."
+    : "Je werkruimte schermt niets af, dus standaard gaat alles door.";
+  return `<p class="footnote">Je agents melden in je teamkanaal${soort} wat ze doen. Het kanaal kent geen rollen: iedereen die erin zit, leest alles wat erheen gaat. ${standaard}</p>
+      <p class="footnote">Zet per agent aan of uit wat er naar het kanaal gaat. In je werkruimte blijft alles staan, ook wat niet doorgaat.</p>`;
+}
+
+function kanaalAgentHtml(a, uit, magSchrijven) {
+  const dis = uit || !magSchrijven ? " disabled" : "";
+  const regel = a.keuze === null
+    ? `<span>Volgt de standaard: ${aanUit(a.standaard)}</span>`
+    : `<span>Jouw keuze · standaard: ${aanUit(a.standaard)}</span><button type="button" class="link" data-kanaal-standaard="${esc(a.slug)}"${dis}>Terug naar de standaard</button>`;
+  return `<div class="taak${a.effectief ? "" : " uit"}"><button type="button" class="schakel" role="switch" id="kanaal-${esc(a.slug)}" aria-checked="${a.effectief}"
+        aria-label="${esc(a.naam)} naar het teamkanaal" data-kanaal-agent="${esc(a.slug)}"${dis}></button>
+      <div class="kol" style="gap:3px"><span class="tnaam">${a.emoji ? `<span aria-hidden="true">${esc(a.emoji)}</span> ` : ""}${esc(a.naam)}</span>
+        <div class="tregel">${regel}</div></div></div>`;
+}
+
+function kanaalMeldingHtml() {
+  const m = kanaalMelding;
+  return `<p class="footnote team-melding" data-kanaal-melding aria-live="polite">${m && !m.fout ? esc(m.tekst) : ""}</p>
+      <p class="bewerk-fout team-melding" data-kanaal-fout role="alert">${m && m.fout ? esc(m.tekst) : ""}</p>`;
+}
+
+function renderTeamkanaal(sectieEl) {
+  if (!sectieEl) return;
+  const body = sectieEl.querySelector("#beheer-teamkanaal-body");
+  if (!teamkanaalZichtbaar()) {
+    // Intussen geen eigenaar meer, of de route is weg: zeg waarom, zonder schakelaars.
+    if (kanaalMelding && kanaalMelding.fout && teamSessieToken() && body) {
+      body.innerHTML = kanaalMeldingHtml();
+      return;
+    }
+    sectieEl.style.display = "none";
+    if (body) body.innerHTML = "";
+    return;
+  }
+  sectieEl.style.display = "";
+  const info = kanaalInfo;
+  if (!info.ingesteld) {
+    body.innerHTML = `<p class="footnote" data-kanaal-geen>Er is geen teamkanaal gekoppeld. Koppel je een kanaal in Slack, Teams of Discord, dan stel je hier per agent in wat erheen gaat.</p>`;
+    return;
+  }
+  const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
+  const magSchrijven = typeof bronKanSchrijven === "function" ? bronKanSchrijven(bron) : true;
+  const uit = kanaalBezig !== null;
+  body.innerHTML = `${kanaalUitlegHtml(info)}
+      ${magSchrijven ? "" : `<p class="footnote warn" data-kanaal-alleen-lezen>Je sessie mag alleen lezen. Log opnieuw in om dit aan te passen.</p>`}
+      <div class="kanaal-agents" data-kanaal-lijst>${info.agents.map((a) => kanaalAgentHtml(a, uit, magSchrijven)).join("")}</div>
+      ${kanaalMeldingHtml()}`;
+  wireTeamkanaal(sectieEl);
+}
+
+/* De sectie die nu in beeld is. Beheer kan tijdens een aanvraag opnieuw
+ * getekend zijn (een toast die verloopt, laadTeam of laadModuleOverzicht die
+ * binnenkomt, heen en terug); dan hangt de sectie van de klik los en hoort het
+ * antwoord in de nieuwe. */
+function kanaalSectieNu(sectieEl) {
+  return sectieEl && sectieEl.isConnected ? sectieEl : document.getElementById("beheer-teamkanaal");
+}
+
+/* Geen ingelogde sessie meer: "Wie werkt er mee" en dit blok dicht, zoals f60.
+ * teamSluitZonderSessie wil de sectie van het teampaneel, niet die van het kanaal. */
+function kanaalSluitZonderSessie() {
+  teamSluitZonderSessie(document.getElementById("panel-team-namen"));
+}
+
+/* `waarde` is true (naar het kanaal), false (niet) of null (terug naar de standaard). */
+async function zetKanaal(sectieEl, slug, waarde) {
+  if (kanaalBezig !== null || !teamkanaalZichtbaar()) return;
+  const agent = kanaalInfo.agents.find((a) => a.slug === slug);
+  if (!agent || (waarde !== true && waarde !== false && waarde !== null)) return;
+  const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
+  if (!bron || !bron.oauth || !bron.token) {
+    kanaalSluitZonderSessie();
+    return;
+  }
+  kanaalBezig = slug;
+  kanaalMelding = { tekst: "Opslaan…", fout: false };
+  renderTeamkanaal(sectieEl); // schakelaars uit tijdens de aanvraag
+  let melding;
+  let opnieuwLezen = false;
+  try {
+    const nieuw = saneerKanaal(await schrijfWerkruimte(bron, "PUT", "/dashboard/teamkanaal", { agents: { [slug]: waarde } }));
+    const na = nieuw && nieuw.agents.find((a) => a.slug === slug);
+    if (na) {
+      kanaalInfo = nieuw;
+      melding = {
+        fout: false,
+        tekst: waarde === null
+          ? `${na.naam} volgt weer de standaard: ${na.effectief ? "gaat naar het kanaal" : "gaat niet naar het kanaal"}.`
+          : na.effectief ? `${na.naam} gaat nu naar het teamkanaal.` : `${na.naam} gaat nu niet meer naar het teamkanaal.`,
+      };
+    } else {
+      melding = { fout: true, tekst: "Je werkruimte gaf een onverwacht antwoord. Ververs de pagina om te zien wat er nu staat." };
+    }
+  } catch (err) {
+    // De instantie zegt zelf waarom (alleen_eigenaar, ongeldige_agent, een
+    // storing, een verlopen sessie); die tekst tonen we letterlijk.
+    melding = {
+      fout: true,
+      tekst: err && err.status === 404
+        // De route is er niet meer: geen eigenaar meer bekend, of een andere instantie.
+        ? "Het teamkanaal is op deze werkruimte nu niet in te stellen."
+        : (err && err.message) || "Niet opgeslagen. Probeer het zo opnieuw.",
+    };
+    // 403 of 404: je bent intussen geen eigenaar meer, of de instelling bestaat
+    // hier niet meer. Lees opnieuw, zodat er geen schakelaar blijft staan die
+    // toch geweigerd wordt.
+    opnieuwLezen = !!err && (err.status === 403 || err.status === 404);
+  } finally {
+    kanaalBezig = null;
+  }
+  if (opnieuwLezen && teamSessieToken()) {
+    rollenVoorToken = null;
+    await laadRollen(huidigeBron);
+    kanaalVoorToken = null;
+    await laadTeamkanaal(huidigeBron);
+  }
+  if (!teamSessieToken()) {
+    kanaalSluitZonderSessie();
+    return;
+  }
+  kanaalMelding = melding;
+  const el = kanaalSectieNu(sectieEl);
+  if (!el) return; // Beheer is niet meer in beeld; de melding staat bij de volgende keer klaar
+  renderTeamkanaal(el);
+  const terug = teamKnopVoor(el, "data-kanaal-agent", slug);
+  if (terug) terug.focus();
+}
+
+/* Eén keer binden per sectie (Beheer tekent de sectie bij elke render opnieuw). */
+function wireTeamkanaal(sectieEl) {
+  if (sectieEl.dataset.bedraad === "1") return;
+  sectieEl.dataset.bedraad = "1";
+  sectieEl.addEventListener("click", (e) => {
+    const doel = e.target;
+    if (!doel || !doel.closest) return;
+    const knop = doel.closest("[data-kanaal-agent], [data-kanaal-standaard]");
+    if (!knop || knop.disabled || kanaalBezig !== null || !kanaalInfo) return;
+    if (knop.hasAttribute("data-kanaal-standaard")) {
+      void zetKanaal(sectieEl, knop.getAttribute("data-kanaal-standaard"), null);
+      return;
+    }
+    const slug = knop.getAttribute("data-kanaal-agent");
+    const agent = kanaalInfo.agents.find((a) => a.slug === slug);
+    if (agent) void zetKanaal(sectieEl, slug, !agent.effectief);
   });
 }
