@@ -602,8 +602,10 @@ async function intrekken(id) {
   let res;
   try { res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten/" + encodeURIComponent(id) + "/intrekken"); }
   catch (e) {
-    // Al opgepakt: haal de stand op, zodat de kaart laat zien wat er nu gebeurt.
-    if (e && e.body && e.body.fout === "niet_meer_in_te_trekken" && CTX.herlaad) CTX.herlaad();
+    // Al opgepakt, of intussen opgeruimd (404 niet_gevonden): haal de stand op,
+    // zodat de kaart laat zien wat er nu gebeurt en de knop verdwijnt.
+    const code = e && e.body && e.body.fout;
+    if ((code === "niet_meer_in_te_trekken" || code === "niet_gevonden") && CTX.herlaad) CTX.herlaad();
     throw opdrachtFout(e);
   }
   zetOpdracht(res && res.entry);

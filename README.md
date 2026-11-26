@@ -244,7 +244,9 @@ Doorgegeven is.
   ingelogd met `dashboard:schrijf`, een bundel uit de werkruimte, de instantie
   kent het domein (`bundle.opdrachten` is er) en de acties wonen elders. Een
   daglink krijgt een inlogregel, nooit knoppen. Rollen handhaaft de instantie;
-  een weigering (403/409) staat in gewone taal in beeld (`opdrachtFoutTekst`).
+  een weigering (`{ fout, melding }`) staat in gewone taal in beeld
+  (`opdrachtFoutTekst`): een paar codes vertaalt het dashboard zelf, anders de
+  `melding` van de instantie, behalve als daar een merknaam in staat.
 - **Sleutel.** Alleen een item met een https-link krijgt knoppen. Extern ID is
   het page-id van 32 tekens aan het eind van het pad, anders de link zelf
   (`externIdVanUrl`).

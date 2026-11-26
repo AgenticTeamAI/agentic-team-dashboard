@@ -55,11 +55,13 @@ function ctxMet({ schrijven = true, daglink = false, opdrachten = [], items = IT
   };
 }
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-/* Een nep-instantie met de opdrachtroutes van het contract. */
+/* Een nep-instantie met de opdrachtroutes van het contract, in de vorm van de
+ * echte server (agentic-team-werkruimte src/http.ts opdrachtFout): een
+ * weigering is altijd { fout: <code>, melding: <zin> }. */
 function nepInstantie({ fout = null } = {}) {
   let n = 0;
   const opgeslagen = new Map();
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (url, o = {}) => {
+  const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, o = {}) => {
     const u = new URL(String(url));
     if (u.pathname === "/dashboard/opdrachten" && o.method === "POST") {
       if (fout) return json(fout.body, fout.status);
@@ -72,12 +74,15 @@ function nepInstantie({ fout = null } = {}) {
     const m = u.pathname.match(/^\/dashboard\/opdrachten\/([^/]+)\/intrekken$/);
     if (m && o.method === "POST") {
       const e = opgeslagen.get(decodeURIComponent(m[1]));
-      if (!e) return json({ fout: "niet_meer_in_te_trekken" }, 409);
+      if (!e) return json({ fout: "niet_gevonden", melding: "Deze opdracht bestaat niet (meer)." }, 404);
+      if (e.data.Status !== "Doorgegeven") return json({ fout: "niet_meer_in_te_trekken", melding: "Deze opdracht wordt al verwerkt of is afgerond.", status: e.data.Status }, 409);
       const nieuw = { ...e, data: { ...e.data, Status: "Ingetrokken" }, bijgewerkt: "2026-09-29T07:44:00" };
       return json({ entry: nieuw });
     }
     return json({ fout: "onbekend" }, 404);
   });
+  spy.opgeslagen = opgeslagen;
+  return spy;
 }
 const posts = (spy) => spy.mock.calls.filter(c => (c[1] || {}).method === "POST").map(c => ({ pad: new URL(String(c[0])).pathname, body: c[1].body ? JSON.parse(c[1].body) : undefined }));
 const $ = (sel) => document.querySelector(sel);
@@ -162,15 +167,31 @@ describe("f61 — het domein volgt het contract", () => {
     expect(g.controleerOpdracht(b)).toBeNull();
   });
 
-  it("weigeringen in gewone taal", () => {
-    const f = (status, fout) => g.opdrachtFoutTekst(Object.assign(new Error(fout), { status, body: { fout } }));
-    expect(f(409, "al_doorgegeven")).toMatch(/al doorgegeven/);
-    expect(f(409, "niet_meer_in_te_trekken")).toMatch(/al mee bezig/);
-    expect(f(409, "acties_in_werkruimte")).toMatch(/in je werkruimte/);
-    expect(f(404, "domein_onbekend")).toMatch(/nog niet/);
+  it("weigeringen in gewone taal, in de vorm van de echte instantie ({ fout, melding })", () => {
+    const f = (status, fout, melding) => g.opdrachtFoutTekst(Object.assign(new Error(fout), { status, body: melding === undefined ? { fout } : { fout, melding } }));
+    expect(f(409, "al_doorgegeven", "Hiervoor ligt al een opdracht klaar voor het volgende werkmoment.")).toMatch(/al doorgegeven/);
+    expect(f(409, "niet_meer_in_te_trekken", "Deze opdracht wordt al verwerkt of is afgerond.")).toMatch(/al mee bezig/);
+    expect(f(404, "niet_gevonden", "Deze opdracht bestaat niet (meer).")).toMatch(/bestaat niet meer/);
+    expect(f(409, "acties_in_werkruimte", "De acties van dit team staan in de werkruimte; het dashboard handelt ze daar direct af.")).toMatch(/in je werkruimte/);
+    expect(f(404, "domein_onbekend", "Deze werkruimte kent nog geen dashboardopdrachten.")).toMatch(/nog niet/);
+    // 403 met de rol als oorzaak, en 403 zonder persoon: dat is geen rechtenvraag.
+    expect(f(403, "alleen_lezen", "Je rol mag dit domein niet wijzigen.")).toMatch(/rol/);
+    const geenPersoon = f(403, "geen_persoon", "Een opdracht geef of trek je in vanuit een ingelogde sessie met je eigen account.");
+    expect(geenPersoon).toMatch(/eigen account/);
+    expect(geenPersoon).not.toMatch(/rechten/);
+    // Een andere weigering: de zin van de instantie, niet een lege 'probeer opnieuw'.
+    expect(f(422, "ongeldig", "Aan wie geef je dit? (specialist)")).toBe("Aan wie geef je dit? (specialist)");
+    expect(f(409, "niet_bij_te_werken", "Deze rij kun je hier niet bijwerken.")).toBe("Deze rij kun je hier niet bijwerken.");
+    expect(f(403, "iets_nieuws", "Dit mag je hier niet.")).toBe("Dit mag je hier niet.");
+    // Een merknaam in de melding komt nooit in beeld.
+    const merk = f(422, "ongeldig", "'bron_link' moet een link naar een Notion-pagina zijn.");
+    expect(merk).not.toMatch(/Notion/);
+    expect(merk).toMatch(/keurde de gegevens af/);
+    // Zonder melding: een code valt terug op een eigen zin, een 403 op de rol.
     expect(f(403, "geen_schrijfrechten")).toMatch(/rol/);
-    expect(f(403, "Je rol Viewer mag hier niet schrijven.")).toBe("Je rol Viewer mag hier niet schrijven.");
-    expect(f(422, "Tekst is te lang.")).toBe("Tekst is te lang.");
+    expect(f(409, "bronkoppeling")).toMatch(/Ververs/);
+    // Een route die nog een zin in `fout` stuurt (weigerScope e.d.): die zin.
+    expect(f(403, "Dit token mag het dashboard lezen maar niet bewerken.")).toBe("Dit token mag het dashboard lezen maar niet bewerken.");
   });
 });
 
@@ -369,16 +390,38 @@ describe("f61 — doorgeven, de stand op de kaart, en ongedaan maken", () => {
     expect(blok.textContent).toContain("Oud item");
     expect(blok.textContent).toContain("1 nog te verwerken");
     expect(blok.textContent).not.toContain("Ingetrokken item");
-    // Intrekken vanuit het blok; de nep-instantie kent deze niet: dan een eerlijke melding.
+    // Intrekken vanuit het blok; de nep-instantie kent deze niet meer (opgeruimd):
+    // 404 niet_gevonden, een eerlijke melding en de actuele stand ophalen.
     blok.querySelector('[data-act="x-intrek"]').click();
     await wacht(() => expect($("[data-toast]")).not.toBeNull());
     expect(posts(spy)[0].pad).toBe("/dashboard/opdrachten/weg-1/intrekken");
-    expect($("[data-toast]").textContent).toContain("Je team is er al mee bezig");
+    expect($("[data-toast]").textContent).toContain("Deze opdracht bestaat niet meer");
+  });
+
+  it("intrekken: al opgepakt (409) of opgeruimd (404) haalt allebei de stand op", async () => {
+    let ctx = ctxMet({ opdrachten: [opdracht("weg-1", { Actie: "Oud item", Handeling: "Doorzetten", Status: "Doorgegeven", "Extern ID": "ffffffffffffffffffffffffffffffff" })] });
+    nepInstantie();
+    open(ctx);
+    $('[data-doorgegeven] [data-act="x-intrek"]').click();
+    await wacht(() => expect(ctx.herlaad).toHaveBeenCalled());
+    vi.restoreAllMocks();
+    g.V2._reset(); document.body.innerHTML = '<div id="root"></div><div id="melding" hidden></div><div id="live"></div>';
+    ctx = ctxMet();
+    const spy = nepInstantie();
+    open(ctx);
+    kaart(1).querySelector('[data-h="Goedkeuren"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    // De werkronde claimt hem intussen; daarna komt het intrekken te laat.
+    spy.opgeslagen.get("op-1").data.Status = "In uitvoering";
+    await wacht(() => expect(kaart(1).querySelector('[data-act="x-intrek"]')).not.toBeNull());
+    kaart(1).querySelector('[data-act="x-intrek"]').click();
+    await wacht(() => expect($("[data-toast]").textContent).toContain("Je team is er al mee bezig"));
+    expect(ctx.herlaad).toHaveBeenCalled();
   });
 
   it("al doorgegeven (409) of geen recht (403): in gewone taal, en bij 409 de stand ophalen", async () => {
     let ctx = ctxMet();
-    let spy = nepInstantie({ fout: { status: 409, body: { fout: "al_doorgegeven", entryId: "x" } } });
+    let spy = nepInstantie({ fout: { status: 409, body: { fout: "al_doorgegeven", melding: "Hiervoor ligt al een opdracht klaar voor het volgende werkmoment.", entryId: "x" } } });
     open(ctx);
     kaart(1).querySelector('[data-h="Goedkeuren"]').click();
     await wacht(() => expect($("[data-toast]")).not.toBeNull());
@@ -387,7 +430,7 @@ describe("f61 — doorgeven, de stand op de kaart, en ongedaan maken", () => {
     await new Promise(r => setTimeout(r, 20));
     vi.restoreAllMocks();
     g.V2._reset(); document.body.innerHTML = '<div id="root"></div><div id="live"></div>';
-    ctx = ctxMet(); spy = nepInstantie({ fout: { status: 403, body: { fout: "geen_schrijfrechten" } } });
+    ctx = ctxMet(); spy = nepInstantie({ fout: { status: 403, body: { fout: "alleen_lezen", melding: "Je rol mag dit domein niet wijzigen." } } });
     open(ctx);
     kaart(3).querySelector('[data-type="x-later"]').click();
     $('.scrim [data-act="sh-kies"][data-v^="datum:"]').click();

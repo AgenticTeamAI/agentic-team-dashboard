@@ -132,20 +132,31 @@ function opdrachtBody(handeling, item, { tekst, specialist, datum } = {}) {
   return b;
 }
 
-/* Een weigering van de instantie in gewone taal. De codes komen uit het
- * f61-contract; een andere tekst van de instantie tonen we zoals hij is. */
+/* Een weigering van de instantie in gewone taal. De instantie antwoordt met
+ * { fout: <code>, melding: <zin> }. Een paar codes vertalen we zelf (ze vragen
+ * een eigen uitleg of een andere stap); bij de rest tonen we de melding van de
+ * instantie, behalve als daar een merknaam in staat (die laten we nooit in
+ * beeld). Oudere routes sturen een zin in `fout`: die tonen we zoals hij is. */
+const MERKNAAM = /notion|claude|anthropic/i;
 function opdrachtFoutTekst(e) {
-  const code = (e && e.body && e.body.fout) || (e && e.message) || "";
+  const body = (e && e.body) || {};
+  const code = typeof body.fout === "string" ? body.fout : "";
+  const melding = typeof body.melding === "string" && body.melding.trim() && !MERKNAAM.test(body.melding) ? body.melding.trim() : "";
+  const isCode = /^[a-z_]+$/.test(code);
   if (code === "al_doorgegeven") return "Dit is al doorgegeven. Je team verwerkt het bij het volgende werkmoment.";
   if (code === "niet_meer_in_te_trekken") return "Je team is er al mee bezig, dus intrekken kan niet meer.";
+  if (code === "niet_gevonden") return "Deze opdracht bestaat niet meer. Ververs het dashboard voor de actuele stand.";
   if (code === "acties_in_werkruimte") return "Je acties staan in je werkruimte. Ververs het dashboard en handel het hier direct af.";
   if (code === "domein_onbekend") return "Je werkruimte kent doorgeven nog niet. Probeer het later opnieuw.";
+  if (code === "geen_persoon") return "Doorgeven kan alleen als je bent ingelogd met je eigen account. Log opnieuw in en probeer het dan.";
+  if (code === "alleen_lezen") return "Je mag dit niet doorgeven met je rol in deze werkruimte. Vraag de eigenaar van je werkruimte om meer rechten.";
   if (e && (e.oauthVerlopen || e.daglinkVerlopen)) return e.message;
-  if (e && e.status === 403) return /^[a-z_]+$/.test(code) || !code
-    ? "Je mag dit niet doorgeven met je rol in deze werkruimte. Vraag de eigenaar van je werkruimte om meer rechten."
-    : code;
-  if (/^[a-z_]+$/.test(code)) return "Je werkruimte weigerde dit. Probeer het opnieuw.";
-  return code || "Dat is niet gelukt.";
+  if (melding) return melding;
+  if (code && !isCode) return code;
+  if (e && e.status === 403) return "Je mag dit niet doorgeven met je rol in deze werkruimte. Vraag de eigenaar van je werkruimte om meer rechten.";
+  if (code === "ongeldig") return "Je werkruimte keurde de gegevens af. Opnieuw proberen helpt niet; vraag je team om hulp.";
+  if (isCode) return "Je werkruimte weigerde dit. Ververs het dashboard en probeer het opnieuw.";
+  return (e && e.message && !MERKNAAM.test(e.message) && e.message) || "Dat is niet gelukt.";
 }
 
 if (typeof module !== "undefined") {
