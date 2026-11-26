@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-QgLGv7Dohbe7WxaXHutPq+Dh6vqmQbZ+JZhhbCbWuz8=' 'sha256-mIq1BJbc0f9PVRnfeDfZut6N82movrhdGR6dAywGRxs='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-QgLGv7Dohbe7WxaXHutPq+Dh6vqmQbZ+JZhhbCbWuz8=' 'sha256-o5M//X4Yr8HYJPeOaCMUGhfU3WBG9ue0ivrzDR6fHN0='">
 
 
 
@@ -3290,6 +3290,11 @@ window.AGENTIC_TEAM_SCHEMA = {
  * als de instanties). "Gaat niet langs onze servers" en "wordt nooit naar een
  * server verstuurd" waren daardoor onjuist. Woordelijk de teksten uit het
  * addendum; voor de daglink de voorkeursvariant met de sleutelzin. */
+/* Juristrapport 25-11-2026, punten A en B (variant A+B), met de correctie uit
+ * het addendum: een token vernieuwt pas bij het eerste verzoek na een uur, niet
+ * "af en toe". Vervangt ook "eenmalig", dat sinds b43 (stille vernieuwing) al
+ * niet meer klopte. Deze tekst moet live staan vóór DASHBOARD_TELLER=aan op de
+ * site (art. 13 lid 3 AVG). */
 const PRIVACY_REGEL =
   "Je gegevens komen uit je eigen werkruimte en blijven in je browser. Wij bewaren ze niet en gebruiken ze niet.";
 
@@ -3329,7 +3334,7 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
-  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser eenmalig een inlogcode om bij agentic-team.ai voor een inlogtoken. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen — wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer.",
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
    * door").

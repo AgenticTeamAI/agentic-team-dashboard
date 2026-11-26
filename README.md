@@ -137,9 +137,13 @@ dashboardgebruik, punt C: de router stond er nog niet in), en staat op één
 plek: `src/teksten.js` (`PRIVACY_REGEL` = de samenvatting, `PRIVACY_UITKLAP` =
 de juridische tekst). Wijzig ze niet zonder een nieuwe toets.
 
-Daaruit volgt: **geen analytics, geen foutrapportage, geen enkele meting die
-naar ons gaat.** Zodra dat er wel is, is de tekst onjuist en moet hij mee
-veranderen.
+Daaruit volgt: **geen analytics, geen foutrapportage, geen meting vanuit de
+browser.** Wat wij server-side zien bij het uitgeven of vernieuwen van een
+token staat in de privacytekst; verandert dat, dan verandert de tekst mee.
+(Herschreven op advies van de jurist, 25-11-2026: sinds de dashboardteller op
+de site telt agentic-team.ai per licentie per dag de uitgegeven en vernieuwde
+dashboard-tokens. Dat is geen extra verzoek vanuit de browser, dus de
+fetch-grenzen hieronder blijven gelijk.)
 
 - `test/geen-telemetrie.test.js` bewaakt het gebouwde artefact: verboden
   patronen (sendBeacon, gtag, `_vercel/insights`, Sentry, PostHog, …), precies
