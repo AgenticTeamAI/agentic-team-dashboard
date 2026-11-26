@@ -411,6 +411,95 @@ describe("uitloggen", () => {
     expect(w.eval("sessieToegang")).toBeNull();
     expect(credentialsAlleenNaarSessie(verzoeken)).toBe(true);
   });
+
+  /* Nafix #138: de site laat het cookie bij een storing bewust staan. Dan is er
+   * in deze browser nog een levende sessie, en hervat de loginknop die zonder
+   * mail. "Je bent uitgelogd" zou dan liegen. */
+  const uitlogSite = (uitlogAntwoorden) => {
+    const rij = uitlogAntwoorden.slice();
+    return (naam) => {
+      if (naam === "token") return tokenOk(A);
+      if (naam === "uitloggen") return rij.length > 1 ? rij.shift() : rij[0];
+      return { status: 404, body: {} };
+    };
+  };
+  const STORING = { status: 503, body: { error: "temporarily_unavailable" }, headers: { "Retry-After": "0" } };
+
+  it("een 503, ook na één herhaling: niet 'Je bent uitgelogd', wel de fout met Opnieuw uitloggen; de markering blijft", async () => {
+    const antwoorden = [STORING, STORING, { status: 204 }];
+    const { heeftTabs, tot, verzoeken, w, markeringNu, titel, uitleg, q } = await open({ markering: true, site: uitlogSite(antwoorden), geldig: [A] });
+    await tot(() => heeftTabs(), "dashboard geladen");
+    await w.eval("uitloggen()");
+    expect(verzoeken.filter((v) => v.url === URLS.uitloggen)).toHaveLength(2);
+    expect(titel()).toBe("Uitloggen is niet gelukt");
+    expect(titel()).not.toBe("Je bent uitgelogd");
+    expect(uitleg()).toBe(w.eval("SESSIE_UITLOG_MISLUKT_TEKST"));
+    expect(uitleg()).toContain("je kunt in deze browser nog ingelogd raken");
+    expect(markeringNu()).toBe(JSON.stringify({ tot: TOT }));
+    expect(w.eval("sessieToegang")).toBeNull();
+    expect(w.eval("huidigeBron")).toBeNull();
+    // In plaats van de loginknop (die het levende cookie zou hervatten).
+    expect(q('#root .balk [data-act="login"]')).toBeNull();
+    const knop = q('#root .balk [data-act="uitloggen"]');
+    expect(knop && knop.textContent).toBe("Opnieuw uitloggen");
+    // Opnieuw: nu lukt het wel.
+    knop.click();
+    await tot(() => titel() === "Je bent uitgelogd", "uitgelogd");
+    expect(verzoeken.filter((v) => v.url === URLS.uitloggen)).toHaveLength(3);
+    expect(markeringNu()).toBeNull();
+    expect(credentialsAlleenNaarSessie(verzoeken)).toBe(true);
+  });
+
+  it("een 503 gevolgd door een 204: één herhaling, dan gewoon uitgelogd", async () => {
+    const { heeftTabs, tot, verzoeken, w, markeringNu, titel } = await open({ markering: true, site: uitlogSite([STORING, { status: 204 }]), geldig: [A] });
+    await tot(() => heeftTabs(), "dashboard geladen");
+    await w.eval("uitloggen()");
+    expect(verzoeken.filter((v) => v.url === URLS.uitloggen)).toHaveLength(2);
+    expect(titel()).toBe("Je bent uitgelogd");
+    expect(markeringNu()).toBeNull();
+  });
+
+  it("geen verbinding, ook na één herhaling: dezelfde fout, en inloggen wacht tot het klaar is", async () => {
+    const { heeftTabs, tot, verzoeken, w, markeringNu, titel } = await open({ markering: true, site: uitlogSite([{ status: 204 }]), geldig: [A] });
+    await tot(() => heeftTabs(), "dashboard geladen");
+    const echteFetch = w.fetch;
+    let pogingen = 0;
+    w.fetch = async (u, o) => {
+      if (String(u) === URLS.uitloggen) { pogingen++; throw new TypeError("Failed to fetch"); }
+      return echteFetch(u, o);
+    };
+    const bezig = w.eval("uitloggen()");
+    expect(titel()).toBe("Bezig met uitloggen…");
+    let klaar = false;
+    const wacht = w.eval("wachtOpSessieAfsluiten()").then(() => { klaar = true; });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(klaar).toBe(false);
+    await bezig;
+    await wacht;
+    expect(pogingen).toBe(2);
+    expect(titel()).toBe("Uitloggen is niet gelukt");
+    expect(markeringNu()).toBe(JSON.stringify({ tot: TOT }));
+    expect(verzoeken.filter((v) => v.url === URLS.uitloggen)).toEqual([]);
+  }, 10000);
+
+  it("na 'beeindigd' blijft de markering meteen weg, ook als het uitloggen bij de site mislukt", async () => {
+    let grens = false;
+    const { heeftTabs, tot, verzoeken, w, titel, markeringNu } = await open({
+      markering: true,
+      site: uitlogSite([STORING]),
+      geldig: [A],
+      instantie: () => (grens ? { status: 401, body: { sessie: "beeindigd" } } : undefined),
+    });
+    await tot(() => heeftTabs(), "dashboard geladen");
+    grens = true;
+    await w.eval("laadWerkruimte(huidigeBron, { behoudRoute: true })");
+    await tot(() => !heeftTabs(), "lege staat");
+    await w.eval("wachtOpSessieAfsluiten()");
+    expect(titel()).toBe("Je sessie is beëindigd");
+    expect(markeringNu()).toBeNull();
+    expect(verzoeken.filter((v) => v.url === URLS.uitloggen)).toHaveLength(2);
+    expect(verzoeken.filter((v) => v.url === URLS.token)).toHaveLength(1);
+  });
 });
 
 describe("uitloggen op alle apparaten", () => {
@@ -460,7 +549,9 @@ describe("uitloggen op alle apparaten", () => {
     await w.eval("uitloggenOveral()");
     // `eenmalig`: geen vernieuwing en geen tweede poging bij de instantie.
     expect(na(verzoeken, voor)).toEqual([URLS.token, "instantie /dashboard/sessies/intrekken", URLS.overal]);
-    expect(uitleg()).toBe("Je bent op alle apparaten uitgelogd. Open tabbladen elders stoppen uiterlijk binnen een uur.");
+    // Nafix #138: zonder stap 2 zijn ook de Business-daglinks niet ingetrokken;
+    // de voetnoot zegt dat nu, met dezelfde voorwaarde als de bevestiging.
+    expect(uitleg()).toBe("Je bent op alle apparaten uitgelogd. Open tabbladen elders stoppen uiterlijk binnen een uur. Heeft je licentie afscherming (Business), dan verlopen de daglinks die voor jou zijn gemaakt pas vanzelf.");
   });
 
   it("een 401 van de instantie wordt niet vernieuwd (eenmalig)", async () => {
@@ -475,6 +566,7 @@ describe("uitloggen op alle apparaten", () => {
     await w.eval("uitloggenOveral()");
     expect(na(verzoeken, voor)).toEqual([URLS.token, "instantie /dashboard/sessies/intrekken", URLS.overal]);
     expect(uitleg()).toContain("uiterlijk binnen een uur");
+    expect(uitleg()).toContain("verlopen de daglinks die voor jou zijn gemaakt pas vanzelf");
   });
 
   it("breekt af bij een andere identiteit: geen verzoek naar de instantie of de site", async () => {
