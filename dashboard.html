@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-G5IFuMEJwVSJjfVKhfKdkYBrTdi9JVmEqnOeEynBey8='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-n+QF9ShocbjL50V6j4Lty59rzjH14UtyGckknKBgnw0=' 'sha256-2fE/KKbWvt3wRBwjieM7otycd9DeorI96kYFSMy4MK0='">
 
 
 
-<meta name="at-schema" content="1.93.0 · 2026-11-26">
+<meta name="at-schema" content="1.94.0 · 2026-11-26">
 <title>Je team</title>
 <style>
 /* Dashboard v2 — "Voor jou: je team werkt, jij beslist".
@@ -277,6 +277,18 @@ button.knoppil{cursor:pointer;min-height:40px}
 .drie span{font-size:12.5px;color:var(--muted)}
 @media (max-width:380px){.drie{grid-template-columns:1fr}}
 
+/* f62: Jouw dag */
+.jouwdag{display:flex;flex-direction:column;gap:12px}
+.jd-sectie{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.jd-lijst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.jd-lijst li{display:flex;flex-direction:column;gap:2px;font-size:14.5px;overflow-wrap:anywhere}
+.jd-lijst li span{font-size:13px}
+.jd-agents{gap:6px}
+.jd-agent{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px;min-width:0}
+.jd-taak{overflow-wrap:anywhere;min-width:0}
+.jouwdag .post{padding:6px 0}
+.jouwdag-login{padding:0 2px}
+
 /* Werkbak */
 .werkbak-kop{display:flex;flex-direction:column;gap:10px}
 .stapel{display:flex;flex-direction:column;gap:10px}
@@ -453,6 +465,7 @@ label.lb,.lb{font-weight:650;font-size:14.5px;display:block;margin-bottom:6px}
 .teller{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:10px;display:flex;flex-direction:column;gap:2px}
 .teller b{font-size:24px;font-family:var(--mono);line-height:1.1}
 .teller span{font-size:12.5px;color:var(--muted)}
+.jd-tellers{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
 .kopieerblok{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
 .kopieerblok code{flex:1;min-width:0;font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere;user-select:all}
 .kopieerblok .knop{min-height:40px;padding:6px 10px;font-size:13px}
@@ -697,20 +710,20 @@ tr:last-child td{border-bottom:0}
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.93.0
-//   registry updated: 2026-09-30
-//   bron-commit     : 652e5452ac8e81702b3b201f1dbc036a06d2a133
-//   geextraheerd op : 2026-11-26T09:31:20Z
+//   registryVersion : 1.94.0
+//   registry updated: 2026-11-26
+//   bron-commit     : 3866a0fdf13badd0c97631fa3cf2b9e47db936f9
+//   geextraheerd op : 2026-11-26T18:29:39Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.93.0",
-  "registryUpdated": "2026-09-30",
-  "sourceCommit": "652e5452ac8e81702b3b201f1dbc036a06d2a133",
-  "extractedAt": "2026-11-26T09:31:20Z",
+  "registryVersion": "1.94.0",
+  "registryUpdated": "2026-11-26",
+  "sourceCommit": "3866a0fdf13badd0c97631fa3cf2b9e47db936f9",
+  "extractedAt": "2026-11-26T18:29:39Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -3265,6 +3278,7 @@ window.AGENTIC_TEAM_SCHEMA = {
   },
   "werkruimteDomeinen": [
     "bronkoppeling",
+    "dagplannen",
     "dashboard_metrics",
     "teamfeed"
   ]
@@ -3989,6 +4003,44 @@ async function haalTeamfeed(bron, vandaag) {
   }
 }
 
+/* f62: de dagplannen (domein `dagplannen`, opslag=werkruimte, registry
+ * 1.94.0) — per mens één entry van zijn laatste dagstart. Net als de
+ * teamfeed: nooit een rows-domein, alleen ophalen als de instantie het domein
+ * kent, en fail-open (geen dagplan = geen kaart "Jouw dag"). De entries gaan
+ * ongelezen op de bundel; saneerDagplan (src/dagplan.js) leest ze pas bij het
+ * tekenen, en vertrouwt niets. */
+const DAGPLAN_LIMIET = 50;
+async function haalDagplannen(bron) {
+  try {
+    const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=dagplannen&limiet=" + DAGPLAN_LIMIET);
+    const entries = Array.isArray(body && body.entries) ? body.entries : [];
+    return { entries, aantal: entries.length };
+  } catch (e) {
+    if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
+    return null;
+  }
+}
+/* Een daglink is een url die wordt doorgestuurd, en met een daglink toont het
+ * dashboard geen dagplan (het weet niet wie je bent). Dan halen we de plannen
+ * ook niet op: alleen het aantal uit het overzicht, voor de regel "Log in om
+ * je eigen dag te zien". */
+function dagplannenVoor(bron, overzicht) {
+  const d = (overzicht.domeinen || []).find(x => x && x.domein === "dagplannen");
+  if (!d) return Promise.resolve(null);
+  if (!bron || !bron.oauth) {
+    const n = Number(d.aantal);
+    return Promise.resolve({ entries: [], aantal: Number.isFinite(n) && n > 0 ? Math.round(n) : 0 });
+  }
+  return haalDagplannen(bron);
+}
+/* Inhoud die zich als dagplan aandient (type "dagplan"), ongeacht het domein. */
+function isDagplanEntry(e) {
+  const inhoud = e && e.data && e.data.Inhoud;
+  if (inhoud && typeof inhoud === "object") return inhoud.type === "dagplan";
+  if (typeof inhoud !== "string" || inhoud.indexOf("dagplan") === -1) return false;
+  try { const o = JSON.parse(inhoud); return !!o && o.type === "dagplan"; } catch (err) { return false; }
+}
+
 function isVanVandaag(isoTekst, vandaag) {
   const dt = isoTekst ? new Date(isoTekst) : null;
   if (!dt || isNaN(dt.getTime())) return false;
@@ -4003,8 +4055,12 @@ function isVanVandaag(isoTekst, vandaag) {
 async function haalMetricsEntry(bron, bundle) {
   const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
-  const entry = entries.find(e => e.entryId === "metrics")
-    || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
+  // De entry "metrics", anders de nieuwste (oudere producers gebruikten een
+  // andere id). f62: een dagplan dat per ongeluk in dit domein belandde, is
+  // geen metricsbestand en telt bij die terugval niet mee.
+  const entry = entries.find(e => e && e.entryId === "metrics")
+    || entries.filter(e => e && !isDagplanEntry(e))
+      .sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
   if (!entry) return null;
   let payload;
   try {
@@ -4026,7 +4082,7 @@ async function haalMetricsEntry(bron, bundle) {
  * voor een artefact dat tegen een nieuwere registry praat. */
 function werkruimteDomeinen(schema) {
   const uitSchema = schema.werkruimteDomeinen || [];
-  return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
+  return uitSchema.concat([METRICS_DOMEIN, "dagplannen"].filter(d => uitSchema.indexOf(d) === -1));
 }
 
 async function loadWerkruimteBundle(bron) {
@@ -4058,6 +4114,8 @@ async function loadWerkruimteBundle(bron) {
   bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
     ? await haalTeamfeed(bron, new Date())
     : null;
+  // f62: idem voor de dagplannen ("Jouw dag" op Voor jou).
+  bundle.dagplannen = await dagplannenVoor(bron, overzicht);
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
   // domein dat volgens de bronkoppeling ergens ánders woont (notion,
@@ -5682,6 +5740,8 @@ if (typeof module !== "undefined") {
  * Van wie (vanMij, besluit 30-09 "per persoon"): wat op jouw naam staat, plus
  * wat op niemands naam staat ("voor iedereen"), plus een voorstel van een
  * specialist. Wat op naam van een collega staat, staat apart (bijCollegas).
+ * Sinds f62 bepaalt de eigenaarsketen (eigenaarVan, hieronder) op wiens naam
+ * iets staat: een actie zonder eigenaar bij Tijmens project is van Tijmen.
  * Weet het dashboard niet wie je bent (geen naam gekozen, of de daglink), dan
  * telt alles wat bij een mens hoort — liever een collega's stuk te veel in
  * beeld dan een stille berg.
@@ -5817,12 +5877,112 @@ function hoortBijMens(rij, namen, nu) {
   return false;
 }
 
-function vanMij(rij, ik, namen) {
+/* ── f62: de eigenaarsketen ────────────────────────────────────────────
+ *
+ * Van wie is een actie? Besluit 26-11-2026: de eerste treffer wint.
+ *   1. de Eigenaar van de actie, als dat een mens is;
+ *   2. de Eigenaar van het gekoppelde Project;
+ *   3. de Eigenaar van de gekoppelde Deal (sales_funnel);
+ *   4. de Eigenaar van de gekoppelde Organisatie (direct, of via de
+ *      Organisatie van de gekoppelde Contactpersoon);
+ *   5. wie verantwoordelijk is voor de Agent van de actie — alleen als een
+ *      bron dat zegt (opties.agentMens); het dashboard kent die koppeling
+ *      zelf niet, en dan slaat het deze stap over;
+ *   6. niemand: "onverdeeld", en dat ziet iedereen.
+ * Belt Tijmens relatie, dan doet Yoram de sales niet, ook al zijn de
+ * sales-agents "van hem" (Yoram). Een agent als Eigenaar blijft voor de
+ * status "je team is aan zet" (soortVan, hoortBijMens, ongewijzigd); bij een
+ * Voorstel op naam van een agent zoekt de keten vanaf stap 2 de mens die moet
+ * beslissen.
+ *
+ * Relaties staan in een rij als {id, titel} (of een lijst daarvan). Een
+ * afgeschermde relatie komt als de tekst "[afgeschermd]" binnen, en van een
+ * domein dat je niet mag lezen zijn er geen rijen: alleen objecten met een id
+ * tellen. Eigenaar is op projecten, deals en organisaties van het type
+ * mensen: een lijst namen, of één tekst met komma's. */
+const VJ_AFGESCHERMD = /^\[afgeschermd\]$/i;
+const VJ_KETEN_DOMEINEN = ["projecten", "sales_funnel", "organisaties", "contactpersonen"];
+
+/* Opzoektabel per domein (entryId → rij), één keer per bundel per aanroep. */
+function eigenaarIndex(bundle) {
+  const index = {};
+  for (const d of VJ_KETEN_DOMEINEN) {
+    const m = new Map();
+    const lijst = bundle && bundle.domains ? rows(bundle, d) : null;
+    for (const r of lijst || []) if (r && r.__entryId) m.set(String(r.__entryId), r);
+    index[d] = m;
+  }
+  return index;
+}
+
+/* De mensen in een Eigenaar-waarde, zonder agents en zonder afgeschermd. */
+function vjMensenIn(waarde, namen) {
+  const ruw = Array.isArray(waarde) ? waarde : (waarde === undefined || waarde === null ? [] : [waarde]);
+  const uit = [];
+  for (const w of ruw) {
+    if (typeof w !== "string" && typeof w !== "number") continue;
+    for (const deel of String(w).split(",")) {
+      const n = deel.trim();
+      if (!n || VJ_AFGESCHERMD.test(n) || vjIsAgent(n, namen)) continue;
+      if (!uit.some(x => naamGelijk(x, n))) uit.push(n);
+    }
+  }
+  return uit;
+}
+
+function vjRelatieRij(rij, veld, index, domein) {
+  const w = getField(rij, veld);
+  const v = Array.isArray(w) ? w.find(x => x && typeof x === "object" && x.id) : w;
+  if (!v || typeof v !== "object" || !v.id) return null; // "[afgeschermd]" of los tekst: telt niet
+  const m = index && index[domein];
+  return (m && m.get(String(v.id))) || null;
+}
+
+/* Wie is eigenaar? Een tekst (meerdere mensen met ", " ertussen), of "" voor
+ * onverdeeld. o = {namen, index? of bundle?, agentMens?(agentWaarde) → naam}. */
+function eigenaarVan(rij, o) {
+  const ctx = o || {};
+  const namen = ctx.namen;
+  const eigen = vjMensenIn(vjTekst(rij, "Eigenaar"), namen);
+  if (eigen.length) return eigen.join(", ");
+  const index = ctx.index || (ctx.bundle ? eigenaarIndex(ctx.bundle) : null);
+  if (index) {
+    const uit = (r) => (r ? vjMensenIn(getField(r, "Eigenaar"), namen) : []);
+    for (const [veld, domein] of [["Project", "projecten"], ["Deal", "sales_funnel"], ["Organisatie", "organisaties"]]) {
+      const l = uit(vjRelatieRij(rij, veld, index, domein));
+      if (l.length) return l.join(", ");
+    }
+    const cp = vjRelatieRij(rij, "Contactpersoon", index, "contactpersonen");
+    const l = uit(cp ? vjRelatieRij(cp, "Organisatie", index, "organisaties") : null);
+    if (l.length) return l.join(", ");
+  }
+  if (typeof ctx.agentMens === "function") {
+    const agent = vjTekst(rij, "Agent");
+    const l = agent ? vjMensenIn(ctx.agentMens(agent), namen) : [];
+    if (l.length) return l.join(", ");
+  }
+  return "";
+}
+
+/* Hoort `ik` bij deze eigenaar(s)? */
+function isEigenaar(wie, ik) {
+  if (!wie || !ik) return false;
+  return String(wie).split(",").some(n => naamGelijk(n.trim(), ik));
+}
+
+/* Mag een rij überhaupt bij een mens horen? Een agent als Eigenaar is "je
+ * team is aan zet", behalve bij een Voorstel: daar beslist een mens. */
+function vjBijAgent(rij, namen) {
   const eigenaar = vjTekst(rij, "Eigenaar");
-  if (!eigenaar) return true; // voor iedereen
-  if (vjIsAgent(eigenaar, namen)) return vjTekst(rij, "Status") === VJ_VOORSTEL;
+  return !!eigenaar && vjIsAgent(eigenaar, namen) && vjTekst(rij, "Status") !== VJ_VOORSTEL;
+}
+
+function vanMij(rij, ik, namen, keten) {
+  if (vjBijAgent(rij, namen)) return false;
   if (!ik) return true; // onbekend wie je bent: niets verstoppen
-  return naamGelijk(eigenaar, ik);
+  const wie = eigenaarVan(rij, Object.assign({}, keten, { namen }));
+  if (!wie) return true; // onverdeeld: voor iedereen
+  return isEigenaar(wie, ik);
 }
 
 /* Sinds wanneer ligt het er? Voor "Wacht" de wektijd; anders de stempel van
@@ -5861,19 +6021,23 @@ function aanJouZet(bundle, schema, opties) {
   const namen = agentNamen(schema);
   if (!namen) return null;
   const nu = o.nu || new Date();
-  return sorteerVoorJou(acties.filter(r => hoortBijMens(r, namen, nu) && vanMij(r, o.ik, namen)), namen, nu);
+  const keten = { index: eigenaarIndex(bundle), agentMens: o.agentMens };
+  return sorteerVoorJou(acties.filter(r => hoortBijMens(r, namen, nu) && vanMij(r, o.ik, namen, keten)), namen, nu);
 }
 
 /* De andere banen van Acties rekenen met dezelfde bouwstenen, zodat een rij
- * nooit in twee banen tegelijk staat of in geen enkele verdwijnt. */
+ * nooit in twee banen tegelijk staat of in geen enkele verdwijnt. Een
+ * collega is eigenaar via de keten (f62), niet alleen via het veld zelf. */
 function bijCollegas(bundle, schema, opties) {
   const o = opties || {};
   const acties = rows(bundle, "acties");
   const namen = agentNamen(schema);
   if (!acties || !namen || !o.ik) return [];
+  const keten = { namen, index: eigenaarIndex(bundle), agentMens: o.agentMens };
   return acties.filter(r => {
-    const eigenaar = vjTekst(r, "Eigenaar");
-    return vjTekst(r, "Status") !== VJ_KLAAR && eigenaar && !vjIsAgent(eigenaar, namen) && !naamGelijk(eigenaar, o.ik);
+    if (vjTekst(r, "Status") === VJ_KLAAR || vjBijAgent(r, namen)) return false;
+    const wie = eigenaarVan(r, keten);
+    return !!wie && !isEigenaar(wie, o.ik);
   });
 }
 
@@ -5917,11 +6081,12 @@ function baanVan(rij, o) {
   const soort = soortVan(rij, o.namen, o.nu);
   if (soort === "klopt-niet") return "klopt-niet";
   if (soort === "wacht" || (status !== VJ_WACHT && wachtInToekomst(rij, o.nu))) return "wacht";
-  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen)) return "jij";
+  if (hoortBijMens(rij, o.namen, o.nu) && vanMij(rij, o.ik, o.namen, o)) return "jij";
   if (soort === "team") return "team";
-  const eigenaar = vjTekst(rij, "Eigenaar");
-  if (!eigenaar) return "zonder";
-  if (!o.ik || naamGelijk(eigenaar, o.ik)) return "jij-later";
+  // f62: van wie het is, volgt de eigenaarsketen (project, deal, organisatie).
+  const wie = eigenaarVan(rij, o);
+  if (!wie) return "zonder";
+  if (!o.ik || isEigenaar(wie, o.ik)) return "jij-later";
   return "collega";
 }
 
@@ -5934,7 +6099,7 @@ function banenVan(bundle, schema, opties) {
   const namen = agentNamen(schema);
   if (!namen) return null;
   const nu = o.nu || new Date();
-  const ctx = { ik: o.ik, namen, nu };
+  const ctx = { ik: o.ik, namen, nu, index: eigenaarIndex(bundle), agentMens: o.agentMens };
   const banen = {};
   for (const b of BANEN) banen[b] = [];
   for (const r of acties) banen[baanVan(r, ctx)].push(r);
@@ -6696,6 +6861,209 @@ function agentVoorSleutel(agents, sleutel) {
 
 if (typeof module !== "undefined") {
   module.exports = { saneerMetricsPayload, METRICS_MAX, ERNST_TOEGESTAAN, saneerVoorJouBlok, saneerRitmeBlok };
+}
+
+
+/* f62 — het persoonlijke dagplan uit de dagstart ("Jouw dag").
+ *
+ * "Start mijn dag" is voor wie het vraagt. De Coördinator schrijft per mens
+ * één entry in het werkruimte-domein `dagplannen` (registry 1.94.0), met
+ * entry_id "dagplan-<naam>" en in Inhoud een JSON-string (contract v1). Het
+ * domein is gedeeld zoals het logboek (rechtengroep werkgeheugen): geen seat,
+ * geen afscherming per rij. Wie ingelogd is, ziet hier zijn eigen plan; van
+ * collega's alleen tellingen, en die staan al zo in het plan.
+ *
+ * Alles hieronder is onbetrouwbare invoer (een agent onder prompt-injection,
+ * of wie er maar mag schrijven): zelfde regels als metrics-sanitize.js. Een
+ * NIEUW object met alleen de bekende velden, elk in het verwachte type en
+ * begrensd; onbekende velden vallen weg; nooit een uitzondering. De
+ * schermlaag escapet daarbovenop alles.
+ *
+ * De items onder ter_goedkeuring hebben precies de vorm en betekenis van het
+ * voor_jou-blok van metrics v3, dus die gaan door saneerVoorJouBlok. */
+
+const DAGPLAN_DOMEIN = "dagplannen";
+const DAGPLAN_VERSIE = 1;
+const DAGPLAN_MAX = {
+  bytes: 64 * 1024,
+  naam: 80, context: 200, titel: 120, toelichting: 300,
+  acuut: 10, agenda: 30, agents: 15, later: 10, collegas: 20, samen: 5, met: 10,
+  telling: 99999,
+};
+
+function dpIsObject(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+
+/* Platte tekst: geen stuurtekens, witruimte samengevouwen, begrensd. */
+function dpTekst(v, max) {
+  if (typeof v !== "string") return "";
+  // eslint-disable-next-line no-control-regex
+  return v.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, max).trim();
+}
+function dpTekstOfNull(v, max) { const t = dpTekst(v, max); return t || null; }
+
+/* JJJJ-MM-DD, en dan ook een echte dag (rondreis: geen 31 februari). */
+function dpDag(v) {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const d = new Date(v + "T00:00:00Z");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v ? v : null;
+}
+
+/* HH:MM (lokale tijd, Europe/Amsterdam). "9:05" wordt "09:05". */
+function dpTijd(v) {
+  if (typeof v !== "string") return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v.trim());
+  if (!m) return null;
+  const u = Number(m[1]), mi = Number(m[2]);
+  return u <= 23 && mi <= 59 ? String(u).padStart(2, "0") + ":" + m[2] : null;
+}
+
+/* Een ISO-tijdstempel (met offset), zoals saneerDatum in metrics-sanitize.js. */
+function dpMoment(v) {
+  if (typeof v !== "string" || v.length > 40) return null;
+  if (!/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/.test(v)) return null;
+  return Number.isNaN(Date.parse(v.replace(/([+-]\d{2})(\d{2})$/, "$1:$2"))) ? null : v;
+}
+
+/* Een hele, niet-negatieve telling; onbruikbaar = 0. */
+function dpTelling(v) {
+  const n = naarGetal(v);
+  return n === null || n < 0 ? 0 : Math.min(DAGPLAN_MAX.telling, Math.round(n));
+}
+
+/* De titel van een afspraak, zonder wat besluit 6 nooit in beeld wil:
+ * vergaderlinks en andere urls, e-mailadressen en inbel- of pincodes. Het
+ * contract kent die niet, maar een agendatitel is vrije tekst ("Teams
+ * https://…", "Jan <jan@x.nl> en Tijmen", "PIN 123 456"), dus de consument
+ * schraapt ze er zelf uit. Blijft er niets zinnigs over, dan "Bezet". */
+function dpAgendaTitel(v) {
+  const t = dpTekst(v, 1000)
+    .replace(/\[(?:link|e-mail)\]/gi, " ")
+    .replace(/\b(?:https?|ftp|mailto|tel|sip|sips|callto|msteams|zoommtg|facetime):\S*/gi, " ")
+    .replace(/\bwww\.\S+/gi, " ")
+    .replace(/[^\s@<>()[\]]+@[^\s@<>()[\]]+/g, " ")
+    .replace(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\/\S*/gi, " ")
+    .replace(/\b(?:pin|pincode|passcode|password|wachtwoord|toegangscode|inbelcode|vergadercode|code|id|meeting\s*id|vergadering-id)\s*[:#=]?\s*(?=[\w-]*\d)[\w-]+(?:[ .-]\d+)*#?/gi, " ")
+    .replace(/\+?\d[\d \-]*\d#?/g, (m) => (m.replace(/\D/g, "").length >= 6 && !/^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}-\d{1,2}-\d{4})$/.test(m) ? " " : m))
+    .replace(/[<([{][\s,;:.\-]*[>)\]}]/g, " ")
+    .replace(/\s+/g, " ").trim()
+    .replace(/^[\s,;:|·\-–—]+|[\s,;:|·\-–—]+$/g, "");
+  return /[\p{L}\p{N}]/u.test(t) ? dpTekst(t, DAGPLAN_MAX.titel) : "Bezet";
+}
+
+function dpLijst(v, max) { return Array.isArray(v) ? v.slice(0, max).filter(dpIsObject) : []; }
+
+/* entry_id volgens de afspraak: "dagplan-" + de naam in kleine letters,
+ * zonder accenten, alles buiten [a-z0-9] als één "-", hooguit 40 tekens. */
+function dagplanEntryId(persoon) {
+  const slug = String(persoon || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/g, "");
+  return slug ? "dagplan-" + slug : null;
+}
+
+/* Inhoud (JSON-string of object) → gesaneerd dagplan, of null als het geen
+ * dagplan v1 is. Gooit nooit. `schema` levert de agent-slugs. */
+function saneerDagplan(raw, schema) {
+  try {
+    let o = raw;
+    if (typeof raw === "string") {
+      if (raw.length > DAGPLAN_MAX.bytes) return null;
+      o = JSON.parse(raw);
+    } else if (dpIsObject(raw) && JSON.stringify(raw).length > DAGPLAN_MAX.bytes) return null;
+    if (!dpIsObject(o) || naarGetal(o.versie) !== DAGPLAN_VERSIE || o.type !== "dagplan") return null;
+
+    const s = schema || (typeof AGENTIC_TEAM_SCHEMA !== "undefined" ? AGENTIC_TEAM_SCHEMA : null);
+    const slugs = new Set(((s && s.agents) || []).map(a => a && a.slug).filter(Boolean));
+
+    const agenda = dpLijst(o.agenda, DAGPLAN_MAX.agenda)
+      .map(it => ({ start: dpTijd(it.start), eind: dpTijd(it.eind), titel: dpAgendaTitel(it.titel) }))
+      .filter(it => it.start)
+      .sort((a, b) => a.start.localeCompare(b.start));
+
+    const tg = dpIsObject(o.ter_goedkeuring) ? o.ter_goedkeuring : {};
+    const blok = saneerVoorJouBlok({ items: Array.isArray(tg.items) ? tg.items : [] }, maakContext());
+    const items = blok ? blok.items : [];
+
+    return {
+      versie: DAGPLAN_VERSIE,
+      type: "dagplan",
+      datum: dpDag(o.datum),
+      gegenereerd_op: dpMoment(o.gegenereerd_op),
+      voor: dpTekst(o.voor, DAGPLAN_MAX.naam),
+      context: dpTekstOfNull(o.context, DAGPLAN_MAX.context),
+      acuut: dpLijst(o.acuut, DAGPLAN_MAX.acuut)
+        .map(it => ({ titel: dpTekst(it.titel, DAGPLAN_MAX.titel), toelichting: dpTekstOfNull(it.toelichting, DAGPLAN_MAX.toelichting) }))
+        .filter(it => it.titel),
+      agenda,
+      agents_vandaag: dpLijst(o.agents_vandaag, DAGPLAN_MAX.agents)
+        .map(it => ({ agent: typeof it.agent === "string" ? it.agent.trim().toLowerCase() : "", taak: dpTekst(it.taak, DAGPLAN_MAX.titel) }))
+        .filter(it => slugs.has(it.agent)),
+      later: dpLijst(o.later, DAGPLAN_MAX.later)
+        .map(it => ({ titel: dpTekst(it.titel, DAGPLAN_MAX.titel) }))
+        .filter(it => it.titel),
+      ter_goedkeuring: { totaal: Math.max(dpTelling(tg.totaal), items.length), items },
+      collegas: dpLijst(o.collegas, DAGPLAN_MAX.collegas)
+        .map(it => ({ naam: dpTekst(it.naam, DAGPLAN_MAX.naam), wachtend: dpTelling(it.wachtend) }))
+        .filter(it => it.naam),
+      onverdeeld: dpTelling(o.onverdeeld),
+      samen: dpLijst(o.samen, DAGPLAN_MAX.samen)
+        .map(it => ({
+          titel: dpTekst(it.titel, DAGPLAN_MAX.titel),
+          met: (Array.isArray(it.met) ? it.met : []).slice(0, DAGPLAN_MAX.met).map(n => dpTekst(n, DAGPLAN_MAX.naam)).filter(Boolean),
+        }))
+        .filter(it => it.titel),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/* De entries uit /dashboard/entries?domein=dagplannen → gesaneerde plannen.
+ * Een entry zonder leesbaar plan valt weg. */
+function dagplannenUitEntries(entries, schema) {
+  const uit = [];
+  for (const e of Array.isArray(entries) ? entries : []) {
+    if (!dpIsObject(e) || !dpIsObject(e.data)) continue;
+    const plan = saneerDagplan(e.data.Inhoud, schema);
+    if (!plan) continue;
+    uit.push({
+      entryId: typeof e.entryId === "string" ? e.entryId.slice(0, 80) : "",
+      persoon: dpTekst(e.data.Persoon, DAGPLAN_MAX.naam) || plan.voor,
+      datum: dpDag(e.data.Datum) || plan.datum,
+      bijgewerkt: dpMoment(e.bijgewerkt),
+      plan,
+    });
+  }
+  return uit;
+}
+
+function dpVoornaam(n) { return String(n || "").trim().split(/\s+/)[0] || ""; }
+function dpEenWoord(n) { return String(n || "").trim().split(/\s+/).length === 1; }
+
+/* Het dagplan van `ik`: Persoon of voor is dezelfde naam (zoals naamGelijk),
+ * of een voornaam, als één van beide alleen een voornaam is ("Tijmen" bij
+ * "Tijmen Kip") en die voornaam bij precies één persoon hoort. Beide soorten
+ * kandidaten tellen samen: de interne dagstart schrijft "Tijmen", een
+ * dagstart in een gesprek kan "Tijmen Kip" schrijven, en dan moet het plan
+ * van vandaag winnen, niet het oudere met de exacte naam. Van de kandidaten
+ * wint het plan van vandaag, anders het nieuwste. */
+function kiesDagplan(plannen, ik, vandaagIso) {
+  const lijst = Array.isArray(plannen) ? plannen : [];
+  if (!ik || !lijst.length) return null;
+  const naamVan = (p) => [p.persoon, p.plan && p.plan.voor].filter(Boolean);
+  const exact = lijst.filter(p => naamVan(p).some(n => naamGelijk(n, ik)));
+  const vn = dpVoornaam(ik);
+  const past = (n) => naamGelijk(dpVoornaam(n), vn) && (dpEenWoord(n) || dpEenWoord(ik));
+  const opVoornaam = lijst.filter(p => !exact.includes(p) && naamVan(p).some(past));
+  // Een voornaam telt alleen als hij naar één persoon wijst: twee collega's
+  // die Tijmen heten maken hem dubbelzinnig.
+  const personen = new Set(opVoornaam.map(p => normAgentNaam(p.persoon).replace(/\s+/g, " ")));
+  const van = exact.concat(personen.size === 1 ? opVoornaam : []);
+  if (!van.length) return null;
+  const sleutel = (p) => [p.datum || "", (p.plan && p.plan.gegenereerd_op) || "", p.bijgewerkt || ""].join("|");
+  const gesorteerd = van.slice().sort((a, b) => sleutel(b).localeCompare(sleutel(a)));
+  const vandaag = vandaagIso ? gesorteerd.find(p => p.datum === vandaagIso) : null;
+  const gekozen = vandaag || gesorteerd[0];
+  return Object.assign({}, gekozen, { vandaag: !!vandaag });
 }
 
 
@@ -14322,6 +14690,7 @@ function wireTeamPanel(sectieEl) {
 const V2_PROD = Object.freeze({
   soortVan, hoortBijMens, vanMij, isTeLaat, sindsVan, aanJouZet, bijCollegas, bijTeam, kloptNiet,
   datumKeuzes, klaarCheck, taakStatus, weekTelling, werkmomentSporen, werkdagenNa, naamGelijk, isAgentNaam,
+  eigenaarVan, eigenaarIndex, isEigenaar,
 });
 
 
@@ -14414,11 +14783,45 @@ function isNotion() {
   return CTX.bundle && CTX.bundle.kind === "metrics" && !rows(CTX.bundle, "acties");
 }
 function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
-/* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
-function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
+/* De werkbak uit de dagstart, ook als er verdwaalde acties-rijen zijn. f62:
+ * heb je een dagplan van vandaag, dan zijn de items daaruit jouw werkbak (met
+ * dezelfde nummers als in je chat), ook als die lijst leeg is: dan wacht er
+ * volgens je dagstart niets op jou. Pas zonder dagplan van vandaag valt dit
+ * terug op het voor_jou-blok van metrics v3. Dat is de werkbak van het hele
+ * team (licentiebreed, genummerd 1 t/m N): die heet dan ook zo, telt niet als
+ * "voor jou" in de badge en claimt niet de nummers uit je chat. */
+function werkbakUitDagplan() { const d = dagplanVanMij(); return d && d.vandaag ? d : null; }
+function werkbakIsPersoonlijk() { return !!werkbakUitDagplan(); }
+function werkbakUitDagstart() {
+  const d = werkbakUitDagplan(); if (d) return d.plan.ter_goedkeuring.items;
+  const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null;
+}
+function werkbakMoment() {
+  const d = werkbakUitDagplan(); const w = (CTX && CTX.metricsWerk) || {};
+  const g = d ? d.plan.gegenereerd_op : w.gegenereerdOp; return g ? dt(g) : null;
+}
 function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "je eigen systeem"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
 function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
+/* f62 — je dagplan (src/dagplan.js): het jouwe kiezen kan alleen als het
+ * dashboard weet wie je bent (inloggen). Met een daglink dus nooit. */
+function dagplanEntries() { const d = CTX && CTX.bundle && CTX.bundle.dagplannen; return d && Array.isArray(d.entries) ? d.entries : null; }
+/* Hoeveel dagplannen er zijn. Met een daglink haalt de loader de plannen zelf
+ * niet op (alleen het aantal uit het overzicht), dus dan telt dat. */
+function dagplannenAantal() {
+  const d = CTX && CTX.bundle && CTX.bundle.dagplannen; if (!d) return 0;
+  return typeof d.aantal === "number" && d.aantal > 0 ? d.aantal : (Array.isArray(d.entries) ? d.entries.length : 0);
+}
+let DP = { entries: null, ik: null, dag: null, schema: null, plan: null };
+function dagplanVanMij() {
+  const wie = jij(); const entries = dagplanEntries();
+  if (!CTX || !wie || !entries || !entries.length) return null;
+  const dag = isoDag(NU);
+  if (DP.entries !== entries || DP.ik !== wie || DP.dag !== dag || DP.schema !== CTX.schema) {
+    DP = { entries, ik: wie, dag, schema: CTX.schema, plan: kiesDagplan(dagplannenUitEntries(entries, CTX.schema), wie, dag) };
+  }
+  return DP.plan;
+}
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }
 function bedrijf() { return (CTX && CTX.bundle && CTX.bundle.klant) || ""; }
 
@@ -14453,7 +14856,8 @@ function slugVanNaam(n) {
   if (!n) return null;
   const k = String(n);
   if (SLUG_CACHE.has(k)) return SLUG_CACHE.get(k);
-  const slug = SLUG_INDEX.get(normAgentNaam(k)) || null;
+  // check_license levert weergavenamen als "<emoji> <naam>"; de emoji telt niet mee.
+  const slug = SLUG_INDEX.get(normAgentNaam(k)) || SLUG_INDEX.get(normAgentNaam(k.replace(/^[^\p{L}\p{N}]+/u, ""))) || null;
   SLUG_CACHE.set(k, slug);
   return slug;
 }
@@ -14627,10 +15031,19 @@ function actie(id) { return S.data && S.data.perId ? S.data.perId.get(id) : null
 function ik() { return jij() || undefined; }
 /* Per tekenbeurt onthouden: honderden rijen maal tientallen aanroepen. */
 let RC = new Map();
-function nieuweTekenbeurt() { RC = new Map(); }
+let KETEN = null;
+function nieuweTekenbeurt() { RC = new Map(); KETEN = null; }
 function onthoud(soort, a, fn) { const k = soort + "|" + a.id; if (!RC.has(k)) RC.set(k, fn()); return RC.get(k); }
+/* f62: de eigenaarsketen (voor-jou.js) kijkt in projecten, deals en
+ * organisaties; die opzoektabel één keer per tekenbeurt. */
+function keten() {
+  const b = CTX && CTX.bundle;
+  if (!KETEN || KETEN.bundle !== b) KETEN = { bundle: b, namen: namen(), index: P.eigenaarIndex(b) };
+  return KETEN;
+}
 function hoortBijMens(a) { return onthoud("mens", a, () => P.hoortBijMens(a.rij, namen(), NU)); }
-function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen())); }
+function vanMij(a) { return onthoud("mij", a, () => P.vanMij(a.rij, ik(), namen(), keten())); }
+function eigenaarVanActie(a) { return onthoud("eig", a, () => P.eigenaarVan(a.rij, keten())); }
 function isTeLaat(a) { return P.isTeLaat(a.rij, namen(), NU); }
 function sindsVan(a) { return P.sindsVan(a.rij) || dt(a.aangemaakt) || NU; }
 function viaIds(rijen) { return (rijen || []).map(r => actie(r.__entryId)).filter(Boolean); }
@@ -14686,11 +15099,16 @@ function verhaalData() {
   const klaar = klaarAlle.filter(vanMij); const klaarAnder = klaarAlle.filter(a => !vanMij(a));
   const begon = A.filter(a => a.status === "Bezig" && isAgentNaam(a.eigenaar) && na(a.bezigSinds));
   // 's Ochtends telt alleen wat een werkmoment deed (de start en het slot van
-  // een ronde, en wat er 's nachts verscheen) — niet je eigen dagstart om 08:30.
-  const feed = S.data.feed.filter(f => f.t > van && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
+  // een ronde, en wat er 's nachts verscheen). Een dagstart is geen werk van
+  // je team (f62: de Coördinator post "Dagstart van <naam>" als afgerond), dus
+  // die telt nooit mee — ook die van een collega niet.
+  const feed = S.data.feed.filter(f => f.t > van && !isDagstartPost(f) && (!ochtend || f.t.getHours() < 6 || f.soort === "rondestart" || f.soort === "afgerond"));
   const agents = [...new Set([...klaar.map(werkAgent), ...zelf.map(a => a.afgerondDoor), ...begon.map(werkAgent), ...feed.map(f => f.ag)].filter(isAgentSlug))];
   return { titel, zelf, klaar, klaarAnder, begon, agents, van, feed };
 }
+/* Het bericht van die post begint met "Dagstart van <naam>" (de actie ook,
+ * maar feedVan houdt alleen de tekst over: bericht, anders actie). */
+function isDagstartPost(f) { return /^dagstart\b/i.test(String((f && f.tekst) || "").trim()); }
 function verhaalZin(v) {
   const delen = [];
   if (v.zelf.length) delen.push("rondde je team <b>" + telwoord(v.zelf.length, "ding", "dingen") + "</b> zelf af");
@@ -14791,7 +15209,8 @@ function loginKnop(label, cls) { return kanInloggen() ? knop(esc(ingelogd() && !
 
 /* ---------- Kop, tabs, balken ---------- */
 function aantalVoorJou() {
-  if (toegang() === "notion") { const m = werkbakUitDagstart(); return m ? m.length : 0; }
+  // f62: alleen jouw eigen werkbak telt; de teambrede lijst is niet "voor jou".
+  if (toegang() === "notion") { const m = werkbakIsPersoonlijk() ? werkbakUitDagstart() : null; return m ? m.length : 0; }
   return aanJouZet().length;
 }
 function tabs() {
@@ -14877,6 +15296,46 @@ function renderBovenkaart() {
     <div class="rijtje"><button class="knop" data-act="go" data-r="/hulp/in-een-minuut">Laat zien hoe het werkt</button><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button></div></section>`;
   return "";
 }
+/* ---------- f62: Jouw dag ----------
+ * De stand van jouw dagstart, bovenaan Voor jou. Alleen jouw dag: van je
+ * collega's alleen tellingen, en de agenda alleen met tijd en titel. Het
+ * contract kent geen links, adressen of inbelcodes, en wat er toch in een
+ * titel staat haalt saneerDagplan eruit (src/dagplan.js). Met een daglink
+ * weet het dashboard niet wie je bent: dan geen kaart, wel de vraag om in te
+ * loggen. */
+/* Een voornaam is genoeg zolang hij op de kaart maar bij één naam hoort; twee
+ * Marks heten voluit. */
+function korteNamen(namen) {
+  const norm = (x) => normAgentNaam(x).replace(/\s+/g, " "); const per = new Map();
+  for (const n of namen) { const v = norm(voornaam(n)); if (!per.has(v)) per.set(v, new Set()); per.get(v).add(norm(n)); }
+  return (n) => (per.get(norm(voornaam(n))) || new Set()).size > 1 ? n : voornaam(n);
+}
+function renderJouwDag() {
+  if (!CTX) return "";
+  if (!ingelogd()) return dagplannenAantal() ? `<p class="klein stil jouwdag-login" data-jouwdag-login>Log in om je eigen dag te zien.</p>` : "";
+  const d = dagplanVanMij(); if (!d) return "";
+  const p = d.plan; const g = p.gegenereerd_op ? dt(p.gegenereerd_op) : null; const datum = d.datum || p.datum;
+  const stand = d.vandaag ? "stand van je dagstart" + (g ? " " + hhmm(g) : "") : (datum ? "van " + datumKort(datum) : "van een eerdere dag");
+  const kort = korteNamen([p.voor || d.persoon, ...p.collegas.map(c => c.naam), ...p.samen.flatMap(x => x.met)].filter(Boolean));
+  const sec = (titel, html) => `<div class="jd-sectie"><h3 class="vakkop">${esc(titel)}</h3>${html}</div>`;
+  const delen = [];
+  if (p.acuut.length) delen.push(sec("Vandaag acuut", `<ul class="jd-lijst">${p.acuut.map(x => `<li><b>${esc(x.titel)}</b>${x.toelichting ? `<span class="stil">${esc(x.toelichting)}</span>` : ""}</li>`).join("")}</ul>`));
+  if (p.agenda.length) delen.push(sec("Agenda", p.agenda.map(x => `<div class="post"><span class="t">${esc(x.start)}</span><div class="pb"><p class="${x.titel === "Bezet" ? "stil" : ""}">${esc(x.titel)}</p>${x.eind ? `<span class="klein stil">tot ${esc(x.eind)}</span>` : ""}</div></div>`).join("")));
+  const ags = p.agents_vandaag.filter(x => AGENTS[x.agent]);
+  if (ags.length) delen.push(sec("Je agents vandaag", `<div class="kol jd-agents">${ags.map(x => `<div class="jd-agent">${agChip(x.agent, { kort: true })}${x.taak ? `<span class="jd-taak">${esc(x.taak)}</span>` : ""}</div>`).join("")}</div>`));
+  const tg = p.ter_goedkeuring;
+  if (tg.totaal) {
+    const laat = tg.items.filter(i => i.te_laat).length;
+    delen.push(sec("Ter goedkeuring", `<div class="tussen"><p><b>${esc(tg.totaal)}</b> ${tg.totaal === 1 ? "wacht" : "wachten"} op jou volgens je dagstart${laat ? `, waarvan <b>${esc(laat)}</b> te laat` : ""}.</p><button class="link" data-act="naar-werkbak">Naar je werkbak ${ic("chev", "klein")}</button></div>`));
+  }
+  if (p.collegas.length || p.onverdeeld) {
+    delen.push(sec("Bij collega’s", `<div class="tellers jd-tellers">${p.collegas.map(c => `<div class="teller" title="${esc(c.naam)}"><b>${esc(c.wachtend)}</b><span>bij ${esc(kort(c.naam))}</span></div>`).join("")}${p.onverdeeld ? `<div class="teller"><b>${esc(p.onverdeeld)}</b><span>onverdeeld, voor iedereen</span></div>` : ""}</div>`));
+  }
+  if (p.samen.length) delen.push(sec("Samen afstemmen", `<ul class="jd-lijst">${p.samen.map(x => `<li><b>${esc(x.titel)}</b>${x.met.length ? `<span class="stil">met ${esc(lijstZin(x.met.map(kort)))}</span>` : ""}</li>`).join("")}</ul>`));
+  if (p.later.length) delen.push(sec("Later deze week", `<ul class="jd-lijst">${p.later.map(x => `<li>${esc(x.titel)}</li>`).join("")}</ul>`));
+  return `<section class="vak jouwdag" aria-label="Jouw dag" data-jouwdag><div class="tussen"><div class="kol" style="gap:2px"><h2 class="vakkop"><b>Jouw dag</b></h2><span class="klein ${d.vandaag ? "" : "stil"}" data-jouwdag-stand>${esc(stand)}</span></div>${hoe("jouw-dag")}</div>
+    ${p.context ? `<p>${esc(p.context)}</p>` : ""}${delen.join("") || `<p class="stil">Je dagstart zette niets bijzonders voor je klaar.</p>`}</section>`;
+}
 function renderVerhaal() {
   const v = verhaalData(); const zin = verhaalZin(v); const kc = klaarCheck();
   let body;
@@ -14926,7 +15385,7 @@ function renderWerkbak(gekozenId) {
     const loopt = werkrondeLoopt();
     const tekst = !loopt ? "Vraag je team iets in je AI-assistent. Wat het voor je klaarzet, staat daarna hier."
       : kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
-    return `<section class="leeg" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
+    return `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
     <div class="rijtje">${kc.stil && loopt ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
   }
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
@@ -14937,7 +15396,7 @@ function renderWerkbak(gekozenId) {
   const vol = l.slice(0, 5).map(a => itemKaart(a, a.id === gekozenId)).join("");
   const comp = l.slice(5, 10).map(a => compactItem(a, a.id === gekozenId)).join("");
   const rest = n > 10 ? `<button class="regel" data-act="acties-baan" data-baan="jij"><span class="rl"><b>Nog ${n - 10} op jouw lijst</b><span>Alles staat bij Acties, in de baan Jij</span></span>${ic("chev")}</button>` : "";
-  return `<section class="werkbak-kop" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
+  return `<section class="werkbak-kop" id="werkbak" tabindex="-1" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
     ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b>${oudsteBoven ? " Het staat nu bovenaan." : ""} Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
     <button class="knop breed" data-act="ronde-start">Loop ze één voor één door ${ic("pijl", "klein")}</button></section>
     <div class="stapel">${vol}${comp}${rest}</div>`;
@@ -14957,7 +15416,8 @@ function renderOnderregels() {
   const B = banenVan(CTX.bundle, CTX.schema, { ik: ik(), nu: NU }) || {};
   const bt = viaIds(B.team); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
   const col = viaIds(B.collega);
-  const perCol = {}; col.forEach(a => { const k = voornaam(a.eigenaar); perCol[k] = (perCol[k] || 0) + 1; });
+  // f62: op wiens naam, volgens de eigenaarsketen (ook via project, deal of organisatie).
+  const perCol = {}; col.forEach(a => { const k = voornaam(eigenaarVanActie(a).split(",")[0]) || "een collega"; perCol[k] = (perCol[k] || 0) + 1; });
   const teamRegel = kc.stil ? `<b>Bij je team: ${bt.length} ${bt.length === 1 ? "ligt" : "liggen"} stil</b><span>Tot je team weer vanzelf werkt</span>`
     : `<b>Bij je team: ${bezig} bezig · ${volg} voor het volgende werkmoment</b><span>Werk dat je team oppakt zonder dat jij iets hoeft te doen</span>`;
   return `<div class="kol" style="gap:8px">
@@ -14975,7 +15435,7 @@ function renderVoorJou() {
   const p = parts(); let gekozen = p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een" ? p[1] : null;
   const l = voorJouLijst();
   if (isDesk() && !gekozen && l[0]) gekozen = l[0].id;
-  const links = `${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
+  const links = `${renderJouwDag()}${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
   if (!isDesk()) return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${links}</div>`;
   const a = gekozen && actie(gekozen);
   const rechts = a ? `<div class="vak paneel">${renderBlad(a, "paneel")}</div>`
@@ -15008,7 +15468,7 @@ function renderVoorJouNotion() {
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
-  const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
+  const g = werkbakMoment(); const eigen = werkbakIsPersoonlijk();
   const verhaal = feed.length
     ? `<p class="zin">${esc(v.titel)} ${ags.length ? `${ags.length === 1 ? "was" : "waren"} <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
        <div class="tussen"><div class="chiprij">${ags.map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>`
@@ -15020,12 +15480,12 @@ function renderVoorJouNotion() {
       <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
       <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
   };
-  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderJouwDag()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
-    ${!blok ? `<section class="leeg" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
-    : `<section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
-    <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
-    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}`}
+    ${!blok ? `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
+    : `<section class="werkbak-kop" id="werkbak" tabindex="-1" data-werkbak="${eigen ? "jij" : "team"}"><div class="tussen"><h2 class="vakkop"><b>${eigen ? "Volgens je dagstart" : "Werkbak van je team"} ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
+    <p class="klein stil">${eigen ? "De nummers zijn dezelfde als in je dagstart." : `Alles wat bij je team op een mens wacht, niet alleen wat op jou wacht. ${ingelogd() ? "Na je eigen dagstart staat hier alleen het jouwe." : "Log in om alleen het jouwe te zien."}`} Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
+    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : eigen ? `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>` : `<section class="leeg"><h3>Niets in de werkbak van je team.</h3><p class="stil">Zodra een dagstart iets klaarzet, staat het hier.</p></section>`}`}
     ${renderOnderregels()}${privacyHtml()}</div>`;
 }
 
@@ -15266,7 +15726,7 @@ function baanLeeg(k) {
 function laterGroep(B) { return B.later.length ? `<details class="uitklap" ${det("acties-later")}><summary>Later op je lijst (${B.later.length})${ic("chev")}</summary><div class="binnen">${B.later.map(rij).join("")}</div></details>` : ""; }
 function renderActies() {
   if (toegang() === "notion") {
-    const n = (werkbakUitDagstart() || []).length; const naam = naamElders("acties");
+    const n = werkbakIsPersoonlijk() ? (werkbakUitDagstart() || []).length : 0; const naam = naamElders("acties");
     return `<div class="inhoud">${renderBalk()}<section class="vak" style="display:flex;flex-direction:column;gap:10px"><h2 class="titel">Je acties staan in ${esc(naam)}</h2><p class="stil">${n ? `Volgens je dagstart wachten er ${telwoord(n, "ding", "dingen")} op je. Die zie je bij Voor jou; afhandelen` : "Afhandelen"} doe je in ${esc(naam)}, of vraag het je team.</p>
     <div class="rijtje"><button class="knop prim" data-act="go" data-r="/">Naar Voor jou</button>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section></div>`;
   }
@@ -15872,6 +16332,14 @@ function hulpSecties() {
       <li><b>Later</b>: het verdwijnt uit je lijst tot de dag die jij kiest.</li></ul>
       <p>Vergist? Na elke knop kun je het ongedaan maken, ook later nog onder ‘Vandaag afgehandeld’. Veel tegelijk? Kies <b>Loop ze één voor één door</b>.</p>
       <p class="klein stil">Op een computer: 1 t/m 9 opent dat nummer, G keurt goed of zegt ja, T stuurt terug, J en K gaan naar het volgende of vorige item, Ctrl/Cmd+Z maakt ongedaan, Esc sluit.</p>${naar("Naar Voor jou", "/")}`],
+    ["jouw-dag", "Jouw dag: je eigen dagstart", () => `
+      <p>Zeg je in je AI-assistent <b>‘Start mijn dag’</b>, dan zet de Coördinator jouw dag klaar. Bovenaan Voor jou staat daarvan de stand: wat vandaag acuut is, je agenda, wat je agents vandaag doen, wat op jouw goedkeuring wacht en wat later deze week komt.</p>
+      <ul><li><b>Jouw dag.</b> De kaart toont het dagplan van de naam waaronder je werkt (die staat bij je account). Van je collega’s staat er alleen hoeveel er bij hen ligt. Wat van niemand is, heet onverdeeld: dat ziet iedereen.</li>
+      <li><b>Gedeeld, niet op slot.</b> De dagplannen staan net als het logboek in het gedeelde geheugen van je team. Dit dashboard laat alleen het jouwe zien, maar afgeschermd per persoon zijn ze niet.</li>
+      <li><b>Van wie is iets?</b> Staat er geen mens als eigenaar op een actie, dan telt de eigenaar van het project, de deal of de organisatie waar hij bij hoort. Hoort hij nergens bij, dan legt je dagstart hem bij wie verantwoordelijk is voor de specialist. Dat weet dit dashboard niet: hier staat zo’n actie bij iedereen. Je werkbak kan daardoor iets meer tonen dan je dagstart telt.</li>
+      <li><b>Je agenda</b> staat er alleen met tijd en titel. Een afspraak die je niet deelt, heet ‘Bezet’.</li>
+      <li><b>Ingelogd.</b> Jouw dag zie je als je bent ingelogd. Met een daglink weet het dashboard niet wie je bent.</li></ul>
+      <p>Het is de stand van je laatste dagstart. Is die niet van vandaag, dan staat de datum erbij. Voor een nieuwe zeg je:</p>${k("Start mijn dag.")}${naar("Naar Voor jou", "/")}`],
     ["wie-aan-zet", "Wie is aan zet?", () => `
       <p>Elk item zegt wie aan zet is. Dezelfde kleuren zie je overal: <b class="kleur-jij">oranje</b> ben jij, <b class="kleur-team">teal</b> is je team.</p>
       <div class="banenuitleg">
@@ -16781,6 +17249,7 @@ function opKlik(e) {
     case "gf": S.ui.gegevens.filter = d.v || ""; break;
     case "meer-werk": S.ui.meerOpen[d.id] = !S.ui.meerOpen[d.id]; break;
     case "volgorde": S.ui.toelichting = d.v === "nieuw" ? "nieuw" : "oud"; break;
+    case "naar-werkbak": S.scrollDoel = "werkbak"; S.focusNa = "#werkbak"; break;
     case "naar-stappen": S.ui.stappenDoel = d.doel || "start"; if (S.route !== "/team/klaar") go("/team/klaar"); S.scrollDoel = "stappenblad"; break;
     case "ronde-start": { const l = voorJouLijst(); if (!l.length) return; S.ronde = { ids: l.map(a => a.id), i: 0, start: Date.now(), naarTeam: [] }; S.toast = null; go("/voor-jou/een-voor-een"); S.focusNa = "#blad-titel"; break; }
     case "ronde-stop": S.ronde = null; go("/"); break;

@@ -23,7 +23,8 @@ function loginKnop(label, cls) { return kanInloggen() ? knop(esc(ingelogd() && !
 
 /* ---------- Kop, tabs, balken ---------- */
 function aantalVoorJou() {
-  if (toegang() === "notion") { const m = werkbakUitDagstart(); return m ? m.length : 0; }
+  // f62: alleen jouw eigen werkbak telt; de teambrede lijst is niet "voor jou".
+  if (toegang() === "notion") { const m = werkbakIsPersoonlijk() ? werkbakUitDagstart() : null; return m ? m.length : 0; }
   return aanJouZet().length;
 }
 function tabs() {
@@ -109,6 +110,46 @@ function renderBovenkaart() {
     <div class="rijtje"><button class="knop" data-act="go" data-r="/hulp/in-een-minuut">Laat zien hoe het werkt</button><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button></div></section>`;
   return "";
 }
+/* ---------- f62: Jouw dag ----------
+ * De stand van jouw dagstart, bovenaan Voor jou. Alleen jouw dag: van je
+ * collega's alleen tellingen, en de agenda alleen met tijd en titel. Het
+ * contract kent geen links, adressen of inbelcodes, en wat er toch in een
+ * titel staat haalt saneerDagplan eruit (src/dagplan.js). Met een daglink
+ * weet het dashboard niet wie je bent: dan geen kaart, wel de vraag om in te
+ * loggen. */
+/* Een voornaam is genoeg zolang hij op de kaart maar bij één naam hoort; twee
+ * Marks heten voluit. */
+function korteNamen(namen) {
+  const norm = (x) => normAgentNaam(x).replace(/\s+/g, " "); const per = new Map();
+  for (const n of namen) { const v = norm(voornaam(n)); if (!per.has(v)) per.set(v, new Set()); per.get(v).add(norm(n)); }
+  return (n) => (per.get(norm(voornaam(n))) || new Set()).size > 1 ? n : voornaam(n);
+}
+function renderJouwDag() {
+  if (!CTX) return "";
+  if (!ingelogd()) return dagplannenAantal() ? `<p class="klein stil jouwdag-login" data-jouwdag-login>Log in om je eigen dag te zien.</p>` : "";
+  const d = dagplanVanMij(); if (!d) return "";
+  const p = d.plan; const g = p.gegenereerd_op ? dt(p.gegenereerd_op) : null; const datum = d.datum || p.datum;
+  const stand = d.vandaag ? "stand van je dagstart" + (g ? " " + hhmm(g) : "") : (datum ? "van " + datumKort(datum) : "van een eerdere dag");
+  const kort = korteNamen([p.voor || d.persoon, ...p.collegas.map(c => c.naam), ...p.samen.flatMap(x => x.met)].filter(Boolean));
+  const sec = (titel, html) => `<div class="jd-sectie"><h3 class="vakkop">${esc(titel)}</h3>${html}</div>`;
+  const delen = [];
+  if (p.acuut.length) delen.push(sec("Vandaag acuut", `<ul class="jd-lijst">${p.acuut.map(x => `<li><b>${esc(x.titel)}</b>${x.toelichting ? `<span class="stil">${esc(x.toelichting)}</span>` : ""}</li>`).join("")}</ul>`));
+  if (p.agenda.length) delen.push(sec("Agenda", p.agenda.map(x => `<div class="post"><span class="t">${esc(x.start)}</span><div class="pb"><p class="${x.titel === "Bezet" ? "stil" : ""}">${esc(x.titel)}</p>${x.eind ? `<span class="klein stil">tot ${esc(x.eind)}</span>` : ""}</div></div>`).join("")));
+  const ags = p.agents_vandaag.filter(x => AGENTS[x.agent]);
+  if (ags.length) delen.push(sec("Je agents vandaag", `<div class="kol jd-agents">${ags.map(x => `<div class="jd-agent">${agChip(x.agent, { kort: true })}${x.taak ? `<span class="jd-taak">${esc(x.taak)}</span>` : ""}</div>`).join("")}</div>`));
+  const tg = p.ter_goedkeuring;
+  if (tg.totaal) {
+    const laat = tg.items.filter(i => i.te_laat).length;
+    delen.push(sec("Ter goedkeuring", `<div class="tussen"><p><b>${esc(tg.totaal)}</b> ${tg.totaal === 1 ? "wacht" : "wachten"} op jou volgens je dagstart${laat ? `, waarvan <b>${esc(laat)}</b> te laat` : ""}.</p><button class="link" data-act="naar-werkbak">Naar je werkbak ${ic("chev", "klein")}</button></div>`));
+  }
+  if (p.collegas.length || p.onverdeeld) {
+    delen.push(sec("Bij collega’s", `<div class="tellers jd-tellers">${p.collegas.map(c => `<div class="teller" title="${esc(c.naam)}"><b>${esc(c.wachtend)}</b><span>bij ${esc(kort(c.naam))}</span></div>`).join("")}${p.onverdeeld ? `<div class="teller"><b>${esc(p.onverdeeld)}</b><span>onverdeeld, voor iedereen</span></div>` : ""}</div>`));
+  }
+  if (p.samen.length) delen.push(sec("Samen afstemmen", `<ul class="jd-lijst">${p.samen.map(x => `<li><b>${esc(x.titel)}</b>${x.met.length ? `<span class="stil">met ${esc(lijstZin(x.met.map(kort)))}</span>` : ""}</li>`).join("")}</ul>`));
+  if (p.later.length) delen.push(sec("Later deze week", `<ul class="jd-lijst">${p.later.map(x => `<li>${esc(x.titel)}</li>`).join("")}</ul>`));
+  return `<section class="vak jouwdag" aria-label="Jouw dag" data-jouwdag><div class="tussen"><div class="kol" style="gap:2px"><h2 class="vakkop"><b>Jouw dag</b></h2><span class="klein ${d.vandaag ? "" : "stil"}" data-jouwdag-stand>${esc(stand)}</span></div>${hoe("jouw-dag")}</div>
+    ${p.context ? `<p>${esc(p.context)}</p>` : ""}${delen.join("") || `<p class="stil">Je dagstart zette niets bijzonders voor je klaar.</p>`}</section>`;
+}
 function renderVerhaal() {
   const v = verhaalData(); const zin = verhaalZin(v); const kc = klaarCheck();
   let body;
@@ -158,7 +199,7 @@ function renderWerkbak(gekozenId) {
     const loopt = werkrondeLoopt();
     const tekst = !loopt ? "Vraag je team iets in je AI-assistent. Wat het voor je klaarzet, staat daarna hier."
       : kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
-    return `<section class="leeg" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
+    return `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
     <div class="rijtje">${kc.stil && loopt ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
   }
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
@@ -169,7 +210,7 @@ function renderWerkbak(gekozenId) {
   const vol = l.slice(0, 5).map(a => itemKaart(a, a.id === gekozenId)).join("");
   const comp = l.slice(5, 10).map(a => compactItem(a, a.id === gekozenId)).join("");
   const rest = n > 10 ? `<button class="regel" data-act="acties-baan" data-baan="jij"><span class="rl"><b>Nog ${n - 10} op jouw lijst</b><span>Alles staat bij Acties, in de baan Jij</span></span>${ic("chev")}</button>` : "";
-  return `<section class="werkbak-kop" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
+  return `<section class="werkbak-kop" id="werkbak" tabindex="-1" aria-label="Voor jou"><div class="tussen"><h2 class="vakkop"><b>Voor jou ${n}</b> · ${oud} · ±${min} ${min === 1 ? "minuut" : "minuten"}</h2><div class="rijtje">${hoe("voor-jou")}${opdrachtKnop}</div></div>
     ${berg ? `<p class="klein" style="color:var(--rood)"><b>Het oudste werk ligt er al ${dagen} dagen.</b>${oudsteBoven ? " Het staat nu bovenaan." : ""} Alles doorlopen kost je ongeveer ${min} minuten.</p>` : ""}
     <button class="knop breed" data-act="ronde-start">Loop ze één voor één door ${ic("pijl", "klein")}</button></section>
     <div class="stapel">${vol}${comp}${rest}</div>`;
@@ -189,7 +230,8 @@ function renderOnderregels() {
   const B = banenVan(CTX.bundle, CTX.schema, { ik: ik(), nu: NU }) || {};
   const bt = viaIds(B.team); const bezig = bt.filter(a => a.status === "Bezig").length; const volg = bt.length - bezig;
   const col = viaIds(B.collega);
-  const perCol = {}; col.forEach(a => { const k = voornaam(a.eigenaar); perCol[k] = (perCol[k] || 0) + 1; });
+  // f62: op wiens naam, volgens de eigenaarsketen (ook via project, deal of organisatie).
+  const perCol = {}; col.forEach(a => { const k = voornaam(eigenaarVanActie(a).split(",")[0]) || "een collega"; perCol[k] = (perCol[k] || 0) + 1; });
   const teamRegel = kc.stil ? `<b>Bij je team: ${bt.length} ${bt.length === 1 ? "ligt" : "liggen"} stil</b><span>Tot je team weer vanzelf werkt</span>`
     : `<b>Bij je team: ${bezig} bezig · ${volg} voor het volgende werkmoment</b><span>Werk dat je team oppakt zonder dat jij iets hoeft te doen</span>`;
   return `<div class="kol" style="gap:8px">
@@ -207,7 +249,7 @@ function renderVoorJou() {
   const p = parts(); let gekozen = p[0] === "voor-jou" && p[1] && p[1] !== "een-voor-een" ? p[1] : null;
   const l = voorJouLijst();
   if (isDesk() && !gekozen && l[0]) gekozen = l[0].id;
-  const links = `${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
+  const links = `${renderJouwDag()}${renderBovenkaart()}${renderVerhaal()}${renderWerkbak(gekozen)}${renderAfgehandeld()}${renderOnderregels()}${privacyHtml()}`;
   if (!isDesk()) return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${links}</div>`;
   const a = gekozen && actie(gekozen);
   const rechts = a ? `<div class="vak paneel">${renderBlad(a, "paneel")}</div>`
@@ -240,7 +282,7 @@ function renderVoorJouNotion() {
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
-  const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
+  const g = werkbakMoment(); const eigen = werkbakIsPersoonlijk();
   const verhaal = feed.length
     ? `<p class="zin">${esc(v.titel)} ${ags.length ? `${ags.length === 1 ? "was" : "waren"} <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
        <div class="tussen"><div class="chiprij">${ags.map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>`
@@ -252,12 +294,12 @@ function renderVoorJouNotion() {
       <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
       <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
   };
-  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderBovenkaart()}
+  return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderJouwDag()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
-    ${!blok ? `<section class="leeg" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
-    : `<section class="werkbak-kop"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
-    <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
-    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}`}
+    ${!blok ? `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
+    : `<section class="werkbak-kop" id="werkbak" tabindex="-1" data-werkbak="${eigen ? "jij" : "team"}"><div class="tussen"><h2 class="vakkop"><b>${eigen ? "Volgens je dagstart" : "Werkbak van je team"} ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
+    <p class="klein stil">${eigen ? "De nummers zijn dezelfde als in je dagstart." : `Alles wat bij je team op een mens wacht, niet alleen wat op jou wacht. ${ingelogd() ? "Na je eigen dagstart staat hier alleen het jouwe." : "Log in om alleen het jouwe te zien."}`} Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
+    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : eigen ? `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>` : `<section class="leeg"><h3>Niets in de werkbak van je team.</h3><p class="stil">Zodra een dagstart iets klaarzet, staat het hier.</p></section>`}`}
     ${renderOnderregels()}${privacyHtml()}</div>`;
 }
 

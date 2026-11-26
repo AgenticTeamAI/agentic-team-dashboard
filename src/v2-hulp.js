@@ -80,6 +80,14 @@ function hulpSecties() {
       <li><b>Later</b>: het verdwijnt uit je lijst tot de dag die jij kiest.</li></ul>
       <p>Vergist? Na elke knop kun je het ongedaan maken, ook later nog onder ‘Vandaag afgehandeld’. Veel tegelijk? Kies <b>Loop ze één voor één door</b>.</p>
       <p class="klein stil">Op een computer: 1 t/m 9 opent dat nummer, G keurt goed of zegt ja, T stuurt terug, J en K gaan naar het volgende of vorige item, Ctrl/Cmd+Z maakt ongedaan, Esc sluit.</p>${naar("Naar Voor jou", "/")}`],
+    ["jouw-dag", "Jouw dag: je eigen dagstart", () => `
+      <p>Zeg je in je AI-assistent <b>‘Start mijn dag’</b>, dan zet de Coördinator jouw dag klaar. Bovenaan Voor jou staat daarvan de stand: wat vandaag acuut is, je agenda, wat je agents vandaag doen, wat op jouw goedkeuring wacht en wat later deze week komt.</p>
+      <ul><li><b>Jouw dag.</b> De kaart toont het dagplan van de naam waaronder je werkt (die staat bij je account). Van je collega’s staat er alleen hoeveel er bij hen ligt. Wat van niemand is, heet onverdeeld: dat ziet iedereen.</li>
+      <li><b>Gedeeld, niet op slot.</b> De dagplannen staan net als het logboek in het gedeelde geheugen van je team. Dit dashboard laat alleen het jouwe zien, maar afgeschermd per persoon zijn ze niet.</li>
+      <li><b>Van wie is iets?</b> Staat er geen mens als eigenaar op een actie, dan telt de eigenaar van het project, de deal of de organisatie waar hij bij hoort. Hoort hij nergens bij, dan legt je dagstart hem bij wie verantwoordelijk is voor de specialist. Dat weet dit dashboard niet: hier staat zo’n actie bij iedereen. Je werkbak kan daardoor iets meer tonen dan je dagstart telt.</li>
+      <li><b>Je agenda</b> staat er alleen met tijd en titel. Een afspraak die je niet deelt, heet ‘Bezet’.</li>
+      <li><b>Ingelogd.</b> Jouw dag zie je als je bent ingelogd. Met een daglink weet het dashboard niet wie je bent.</li></ul>
+      <p>Het is de stand van je laatste dagstart. Is die niet van vandaag, dan staat de datum erbij. Voor een nieuwe zeg je:</p>${k("Start mijn dag.")}${naar("Naar Voor jou", "/")}`],
     ["wie-aan-zet", "Wie is aan zet?", () => `
       <p>Elk item zegt wie aan zet is. Dezelfde kleuren zie je overal: <b class="kleur-jij">oranje</b> ben jij, <b class="kleur-team">teal</b> is je team.</p>
       <div class="banenuitleg">
