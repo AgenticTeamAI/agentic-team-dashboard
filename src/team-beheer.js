@@ -38,6 +38,8 @@ function _resetTeam() {
   rollenVoorToken = null;
   rolVoorstelSeat = null;
   rolBezigSeat = null;
+  rolKeuzeWaarde = null;
+  rollenGeneratie++;
 }
 
 /* f60 — rollen per teamlid (contract p10 §2b, het rollenregister van s57).
@@ -64,6 +66,8 @@ let rollenInfo = null; // {jij:{seat,rol}, beheer, eigenaar, standaard, toewijsb
 let rollenVoorToken = null;
 let rolVoorstelSeat = null; // seat waarvan het rolvoorstel openstaat
 let rolBezigSeat = null; // seat waarvan de rolwijziging nu onderweg is
+let rolKeuzeWaarde = null; // wat er in de open selector gekozen is (blijft staan bij hertekenen)
+let rollenGeneratie = 0; // elk laadRollen telt op; een laat antwoord van een oudere aanvraag telt niet
 
 const ROL_LABEL = { eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" };
 const SEAT_VORM = /^[0-9a-f]{64}$/;
@@ -101,17 +105,28 @@ async function laadRollen(bron) {
     rollenInfo = null;
     rollenVoorToken = null;
     rolVoorstelSeat = null;
+    rolKeuzeWaarde = null;
+    rollenGeneratie++;
     return null;
   }
   if (rollenVoorToken === bron.token) return rollenInfo;
   rollenVoorToken = bron.token;
+  const generatie = ++rollenGeneratie;
+  let info = null;
   try {
-    rollenInfo = saneerRollen(await schrijfWerkruimte(bron, "GET", "/dashboard/rollen"));
+    info = saneerRollen(await schrijfWerkruimte(bron, "GET", "/dashboard/rollen"));
   } catch (e) {
     // 404 = geen register op deze instantie; 403/503 = nu geen rol te lezen.
     // Afwezig is geen fout: het paneel blijft dan wat het was.
-    rollenInfo = null;
+    info = null;
   }
+  // Intussen uitgelogd, naar een daglink of naar een andere sessie gewisseld:
+  // dan hoort dit antwoord bij niemand meer en laat het de nieuwe stand staan.
+  if (generatie !== rollenGeneratie) return rollenInfo;
+  rollenInfo = info;
+  // schrijfWerkruimte kan het token onderweg vernieuwen (401 → refresh); de
+  // cache hoort bij het token dat nu geldt, anders vraagt elke render opnieuw.
+  rollenVoorToken = bron.token;
   return rollenInfo;
 }
 
@@ -153,7 +168,7 @@ function rolCelHtml(r) {
   if (rolVoorstelSeat === seat) {
     return `<div class="team-bevestig" role="group" aria-label="Rol van ${esc(r.adres)} wijzigen">
       <label class="bedien-veld"><span>Nieuwe rol voor ${esc(r.adres)}</span>
-        <select data-rol-keuze="${esc(seat)}"${uit}>${keuzes.map((k) => `<option value="${k}">${ROL_LABEL[k]}</option>`).join("")}</select></label>
+        <select data-rol-keuze="${esc(seat)}"${uit}>${keuzes.map((k) => `<option value="${k}"${k === rolKeuzeWaarde ? " selected" : ""}>${ROL_LABEL[k]}</option>`).join("")}</select></label>
       <span>Nu: ${esc(ROL_LABEL[huidig])}. Bevestig om de rol te wijzigen.</span>
       <button type="button" data-rol-bevestig="${esc(seat)}"${uit}>Bevestigen</button>
       <button type="button" class="knop-secundair" data-rol-annuleer="${esc(seat)}"${uit}>Annuleren</button>
@@ -166,7 +181,10 @@ function rolCelHtml(r) {
 /* Eén regel boven de lijst: wat ben jij hier. Leeg zonder register. */
 function rolRegelHtml() {
   if (!rollenInfo) return "";
-  return `<p class="footnote" data-team-jouw-rol>Je rol: <strong>${ROL_LABEL[rollenInfo.jij.rol]}</strong>.</p>`;
+  // Eerlijk over wat een rol vandaag doet (contract §2b: een rol bepaalt nog
+  // alleen wie er rollen zet), zonder iets te beloven over wat komt.
+  return `<p class="footnote" data-team-jouw-rol>Je rol: <strong>${ROL_LABEL[rollenInfo.jij.rol]}</strong>.
+    Een rol bepaalt nu alleen wie er rollen mag wijzigen; wat iemand in je werkruimte kan lezen of bijwerken, verandert er nog niet door.</p>`;
 }
 
 async function wijzigRol(sectieEl, seat, rol) {
@@ -184,20 +202,40 @@ async function wijzigRol(sectieEl, seat, rol) {
   teamMeld(sectieEl, "Rol wijzigen…");
   let gelukt = false;
   let fout = null;
+  let nieuw = rol;
+  let opnieuwLezen = false;
   try {
-    const uit = await schrijfWerkruimte(bron, "PUT", "/dashboard/rollen", { seat, rol });
+    // Terug naar de standaardrol is `null` (§2b): de rij verdwijnt, zodat de
+    // seat de standaard volgt als die later anders wordt (werkhypothese §14 #52).
+    const naarStandaard = rol === rollenInfo.standaard;
+    const uit = await schrijfWerkruimte(bron, "PUT", "/dashboard/rollen", { seat, rol: naarStandaard ? null : rol });
     if (uit && uit.seat === seat && isRol(uit.rol) && rollenInfo && rollenInfo.beheer) {
-      rollenInfo.rollen = rollenInfo.rollen.filter((r) => r.seat !== seat).concat([{ seat, rol: uit.rol }]);
+      nieuw = uit.rol;
+      rollenInfo.rollen = rollenInfo.rollen.filter((r) => r.seat !== seat)
+        .concat(naarStandaard ? [] : [{ seat, rol: nieuw }]);
       rolVoorstelSeat = null;
+      rolKeuzeWaarde = null;
       gelukt = true;
     } else {
       fout = "De rol is niet gewijzigd. Probeer het zo opnieuw.";
     }
   } catch (err) {
     // De instantie zegt zelf waarom (eigen_rol, eigenaar_vast, alleen_eigenaar, …).
-    fout = (err && err.message) || "De rol is niet gewijzigd. Probeer het zo opnieuw.";
+    fout = err && err.status === 404
+      // Het register staat intussen niet meer aan op deze werkruimte.
+      ? "Rollen zijn op deze werkruimte nu niet te wijzigen."
+      : (err && err.message) || "De rol is niet gewijzigd. Probeer het zo opnieuw.";
+    // Een weigering betekent meestal dat de rollen intussen anders liggen
+    // (iemand anders wijzigde iets): lees ze opnieuw, zodat de knoppen weer
+    // kloppen met wat de instantie toestaat.
+    opnieuwLezen = err && (err.status === 403 || err.status === 409);
   } finally {
     rolBezigSeat = null;
+  }
+  if (opnieuwLezen && teamSessieToken()) {
+    rollenVoorToken = null;
+    await laadRollen(huidigeBron);
+    if (!rolKeuzesVoor(seat).length) { rolVoorstelSeat = null; rolKeuzeWaarde = null; }
   }
   if (!teamSessieToken()) {
     teamSluitZonderSessie(sectieEl);
@@ -205,7 +243,7 @@ async function wijzigRol(sectieEl, seat, rol) {
   }
   renderTeamPanel(sectieEl);
   if (gelukt) {
-    teamMeld(sectieEl, `${wie} heeft nu de rol ${ROL_LABEL[rol]}.`);
+    teamMeld(sectieEl, `${wie} heeft nu de rol ${ROL_LABEL[nieuw]}.`);
     const terug = teamKnopVoor(sectieEl, "data-rol-wijzig", seat);
     if (terug) terug.focus();
   } else {
@@ -522,6 +560,13 @@ function wireTeamPanel(sectieEl) {
   if (sectieEl.dataset.bedraad === "1") return;
   sectieEl.dataset.bedraad = "1";
   sectieEl.addEventListener("change", async (e) => {
+    // f60: de keuze in een open rolvoorstel onthouden, zodat een hertekening
+    // (een fout, een ander paneel dat binnenkomt) hem niet terugzet.
+    const rolKeuze = e.target.closest && e.target.closest("[data-rol-keuze]");
+    if (rolKeuze) {
+      rolKeuzeWaarde = rolKeuze.value;
+      return;
+    }
     const melding = sectieEl.querySelector("[data-team-melding]");
     const veld = e.target.closest && e.target.closest("[data-team-seat]");
     if (!veld) return;
@@ -573,6 +618,7 @@ function wireTeamPanel(sectieEl) {
       if (rolBezigSeat !== null || teamBezigSeat !== null || rolKnop.disabled) return;
       if (rolKnop.hasAttribute("data-rol-wijzig")) {
         rolVoorstelSeat = rolKnop.getAttribute("data-rol-wijzig");
+        rolKeuzeWaarde = null;
         teamMeld(sectieEl, "");
         renderTeamPanel(sectieEl);
         const keuze = teamKnopVoor(sectieEl, "data-rol-keuze", rolVoorstelSeat);
@@ -582,6 +628,7 @@ function wireTeamPanel(sectieEl) {
       if (rolKnop.hasAttribute("data-rol-annuleer")) {
         const seat = rolKnop.getAttribute("data-rol-annuleer");
         rolVoorstelSeat = null;
+        rolKeuzeWaarde = null;
         renderTeamPanel(sectieEl);
         const terug = teamKnopVoor(sectieEl, "data-rol-wijzig", seat);
         if (terug) terug.focus();

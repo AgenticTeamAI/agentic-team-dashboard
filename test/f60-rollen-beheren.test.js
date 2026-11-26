@@ -139,7 +139,10 @@ describe("de rollen lezen", () => {
     expect(rolTekst(el, JAN)).toBe("Medewerker Wijzigen");
     expect(rolTekst(el, PIET)).toBe("Viewer Wijzigen");
     expect(rolTekst(el, BEH2)).toBe("Beheerder Wijzigen");
-    expect(el.querySelector("[data-team-jouw-rol]").textContent).toBe("Je rol: Eigenaar.");
+    const regel = el.querySelector("[data-team-jouw-rol]").textContent.replace(/\s+/g, " ");
+    expect(regel).toContain("Je rol: Eigenaar.");
+    // Eerlijk: een rol verandert vandaag niets aan lezen of bijwerken.
+    expect(regel).toContain("verandert er nog niet door");
   });
 
   it("filtert rijen met een onbekende rol, een eigenaarrij of een seat die geen seat is", async () => {
@@ -159,7 +162,7 @@ describe("de rollen lezen", () => {
   it("een medewerker krijgt alleen zijn eigen rol te zien, geen kolom", async () => {
     const el = await paneel({ rollen: { jij: { seat: JAN, rol: "medewerker" } } });
     expect(el.querySelector(".team-rol")).toBeNull();
-    expect(el.querySelector("[data-team-jouw-rol]").textContent).toBe("Je rol: Medewerker.");
+    expect(el.querySelector("[data-team-jouw-rol]").textContent).toContain("Je rol: Medewerker.");
   });
 });
 
@@ -242,7 +245,8 @@ describe("voorstel → bevestig", () => {
   it("een weigering van de instantie komt letterlijk in beeld; de rol blijft staan", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
     el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
-    g.schrijfWerkruimte = vi.fn(async () => {
+    g.schrijfWerkruimte = vi.fn(async (b, methode) => {
+      if (methode === "GET") return ALS_EIGENAAR; // opnieuw lezen na de weigering
       throw Object.assign(new Error("Alleen de eigenaar geeft of neemt de rol beheerder."), { status: 403 });
     });
     el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
@@ -301,9 +305,103 @@ describe("voorstel → bevestig", () => {
     expect(g.schrijfWerkruimte).not.toHaveBeenCalled();
   });
 
-  it("de seat gaat niet in een selector: een rare seat breekt het paneel niet", async () => {
+  it("terug naar de standaardrol stuurt null: de rij verdwijnt", async () => {
     const el = await paneel({ rollen: ALS_EIGENAAR });
-    expect(() => el.querySelector(`[data-rol-wijzig="${JAN}"]`).click()).not.toThrow();
+    el.querySelector(`[data-rol-wijzig="${PIET}"]`).click();
+    const keuze = el.querySelector(`[data-rol-keuze="${PIET}"]`);
+    keuze.value = "medewerker";
+    g.schrijfWerkruimte = vi.fn(async () => ({ seat: PIET, rol: "medewerker" }));
+    el.querySelector(`[data-rol-bevestig="${PIET}"]`).click();
+    await tick();
+    expect(g.schrijfWerkruimte.mock.calls[0][3]).toEqual({ seat: PIET, rol: null });
+    expect(rolTekst(el, PIET)).toBe("Medewerker Wijzigen");
+  });
+
+  it("de melding volgt de rol die de instantie teruggeeft", async () => {
+    const el = await paneel({ rollen: ALS_EIGENAAR });
+    el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    el.querySelector(`[data-rol-keuze="${JAN}"]`).value = "viewer";
+    g.schrijfWerkruimte = vi.fn(async () => ({ seat: JAN, rol: "beheerder" }));
+    el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
+    await tick();
+    expect(rolTekst(el, JAN)).toBe("Beheerder Wijzigen");
+    expect(el.querySelector("[data-team-melding]").textContent).toContain("de rol Beheerder");
+  });
+
+  it("de gekozen rol blijft gekozen als het paneel hertekent (fout of ander paneel)", async () => {
+    const el = await paneel({ rollen: ALS_EIGENAAR });
+    el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    const keuze = el.querySelector(`[data-rol-keuze="${JAN}"]`);
+    keuze.value = "viewer";
+    keuze.dispatchEvent(new Event("change", { bubbles: true }));
+    g.renderTeamPanel(el);
+    expect(el.querySelector(`[data-rol-keuze="${JAN}"]`).value).toBe("viewer");
+    // Na een storing (503) blijft het voorstel open mét de keuze.
+    g.schrijfWerkruimte = vi.fn(async () => { throw Object.assign(new Error("De rollen zijn nu niet te lezen of te wijzigen."), { status: 503 }); });
+    el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
+    await tick();
+    expect(el.querySelector(`[data-rol-keuze="${JAN}"]`).value).toBe("viewer");
+    expect(g.schrijfWerkruimte).toHaveBeenCalledTimes(1);
+    // Een naamwijziging-handler pakt de selector niet op.
+    expect(g.modulesFetch).not.toHaveBeenCalled();
+  });
+
+  it("na een weigering (403/409) leest het paneel de rollen opnieuw", async () => {
+    const el = await paneel({ rollen: ALS_EIGENAAR });
+    el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    const nieuw = rollenAntwoord({ seat: EIG, rol: "eigenaar" }, [{ seat: JAN, rol: "viewer" }]);
+    g.schrijfWerkruimte = vi.fn(async (b, methode) => {
+      if (methode === "PUT") throw Object.assign(new Error("geweigerd"), { status: 409 });
+      return nieuw;
+    });
+    el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
+    await tick(); await tick();
+    expect(g.schrijfWerkruimte.mock.calls.map((c) => c[1])).toEqual(["PUT", "GET"]);
+    expect(g.rolVanSeat(JAN)).toBe("viewer");
+    expect(g.rolVanSeat(PIET)).toBe("medewerker");
+  });
+
+  it("een 404 tijdens het wijzigen geeft een leesbare tekst, geen routenaam", async () => {
+    const el = await paneel({ rollen: ALS_EIGENAAR });
+    el.querySelector(`[data-rol-wijzig="${JAN}"]`).click();
+    g.schrijfWerkruimte = vi.fn(async () => { throw Object.assign(new Error("Onbekende dashboardroute"), { status: 404 }); });
+    el.querySelector(`[data-rol-bevestig="${JAN}"]`).click();
+    await tick();
+    expect(el.querySelector("[data-team-fout]").textContent).toBe("Rollen zijn op deze werkruimte nu niet te wijzigen.");
+  });
+});
+
+describe("late antwoorden en tokenwissels", () => {
+  it("een GET die binnenkomt na uitloggen, zet de oude rol niet terug", async () => {
+    let los;
+    g.schrijfWerkruimte = vi.fn(() => new Promise((r) => { los = r; }));
+    const bezig = g.laadRollen({ ...BRON });
+    await g.laadRollen(null); // uitgelogd
+    los(ALS_EIGENAAR);
+    await bezig;
+    expect(g.rolVanSeat(JAN)).toBeNull();
+    expect(g.rolRegelHtml()).toBe("");
+  });
+
+  it("het antwoord van sessie A wint niet van dat van sessie B", async () => {
+    const wacht = {};
+    g.schrijfWerkruimte = vi.fn((b) => new Promise((r) => { wacht[b.token] = r; }));
+    const a = g.laadRollen({ ...BRON, token: "A" });
+    const b = g.laadRollen({ ...BRON, token: "B" });
+    wacht.B({ jij: { seat: JAN, rol: "medewerker" } });
+    await b;
+    wacht.A(ALS_EIGENAAR);
+    await a;
+    expect(g.rolRegelHtml()).toContain("Medewerker");
+    expect(g.rollenBeheer()).toBe(false);
+  });
+
+  it("een token dat onderweg vernieuwd wordt, is daarna de cachesleutel", async () => {
+    const bron = { ...BRON, token: "oud" };
+    g.schrijfWerkruimte = vi.fn(async (b) => { b.token = "nieuw"; return ALS_EIGENAAR; });
+    await g.laadRollen(bron);
+    await g.laadRollen(bron);
+    expect(g.schrijfWerkruimte).toHaveBeenCalledTimes(1);
   });
 });
 
