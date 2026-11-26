@@ -160,13 +160,20 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     // p10/B3: de inlogroute is een tweede manier om binnen te komen, en de
     // tekst moet allebei beschrijven. Verdwijnt deze zin, dan beschrijft de
     // verklaring nog maar de helft van wat het dashboard doet.
-    expect(HTML).toContain("wisselt je browser eenmalig een inlogcode om bij agentic-team.ai");
+    expect(HTML).toContain("wisselt je browser een inlogcode om bij agentic-team.ai");
+    // Juristrapport 25-11 (A+B): de site telt uitgegeven en vernieuwde
+    // dashboard-tokens per licentie per dag. Die zin moet hier staan zolang de
+    // teller aan kan; zonder hem belooft de tekst minder dan we doen.
+    expect(HTML).toContain("Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen.");
+    expect(HTML).toContain("Dat bekijken we per licentie en niet per persoon.");
+    expect(HTML).not.toContain("eenmalig een inlogcode");
     expect(HTML).toContain("In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad");
     // B3-toets: zonder deze zin kan een lezer opmaken dat inloggen spoorloos
     // is. Dat is het niet — de inlogwissel legt vast wélke licentie inlogt en
     // wanneer, en het privacyblok op de site vertelt dat ook. Valt deze zin
     // weg, dan spreken twee eigen teksten elkaar tegen.
-    expect(HTML).toContain("wel zien wij daarbij dat er met jouw licentie is ingelogd, en wanneer");
+    // Sinds 25-11 (A+B) "ingelogd of vernieuwd": ook de stille vernieuwing is zichtbaar voor ons.
+    expect(HTML).toContain("Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer.");
     // Dashboard v2: wat de browser erbij bewaart en wat er bij feedback naar ons gaat.
     expect(HTML).toContain("je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling");
     expect(HTML).toContain("Geef je ingelogd feedback via de knop Feedback geven, dan sturen we je tekst");
