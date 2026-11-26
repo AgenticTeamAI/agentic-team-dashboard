@@ -441,6 +441,28 @@ describe("f61 — je naam gaat mee met een opdracht (B2)", () => {
     expect(g.opdrachtNaam(null)).toBe("");
   });
 
+  it("afkappen op code points: 59 tekens plus een emoji blijft heel", () => {
+    const n = g.opdrachtNaam("a".repeat(59) + "\u{1F600}" + "bbb");
+    expect(n).toBe("a".repeat(59) + "\u{1F600}");
+    expect(Array.from(n)).toHaveLength(60);
+    expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(n)).toBe(false);
+    expect(g.opdrachtNaam("a".repeat(60) + "\u{1F600}")).toBe("a".repeat(60));
+  });
+
+  it("brede en andere Unicode-haakjes vallen weg, net als op de server", () => {
+    expect(g.opdrachtNaam("Sanne \uFF08Eigenaar\uFF09")).toBe("Sanne Eigenaar");
+    expect(g.opdrachtNaam("Sanne \u3010Eigenaar\u3011 \u300Cx\u300D \u2045y\u2046 \u27E8z\u27E9")).toBe("Sanne Eigenaar x y z");
+    expect(g.opdrachtNaam("\uFF3B\uFF3D\uFF5B\uFF5D")).toBe("");
+  });
+
+  it("zero-width, bidi-overrides en losse surrogaten vallen weg; Zl/Zp en stuurtekens worden een spatie", () => {
+    expect(g.opdrachtNaam("San\u200Bne\u200D Ver\uFEFFbeek")).toBe("Sanne Verbeek");
+    expect(g.opdrachtNaam("\u202ESanne\u202C")).toBe("Sanne");
+    expect(g.opdrachtNaam("Sanne\uD800 Verbeek\uDC00")).toBe("Sanne Verbeek");
+    expect(g.opdrachtNaam("Sanne\u2028Verbeek\u2029x\u0085y")).toBe("Sanne Verbeek x y");
+    expect(g.opdrachtNaam("\u200B\u200B")).toBe("");
+  });
+
   it("met een naam: elke opdracht draagt hem in 'naam'; intrekken niet", async () => {
     const spy = nepInstantie();
     open(ctxMet());

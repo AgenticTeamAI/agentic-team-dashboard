@@ -14,10 +14,11 @@
  * (core/agents.json in agent-architecture).
  *
  * Schrijven loopt via de eigen route van de instantie:
- *   POST /dashboard/opdrachten               {handeling, actie, extern_id?, bron_link?, tekst?, specialist?, datum?}
+ *   POST /dashboard/opdrachten               {handeling, actie, extern_id?, bron_link?, tekst?, specialist?, datum?, naam?}
  *   POST /dashboard/opdrachten/<id>/intrekken
- * De server zet Status, "Gegeven door" (uit je login) en "Bronsysteem" zelf;
- * die stuurt het dashboard dus nooit mee.
+ * De server zet Status, "Bronsysteem" en "Gegeven door" zelf; dat laatste
+ * als '<naam> (<rol>)': de naam komt uit de body, de server zet de rol (uit
+ * je login). Status, rol en Bronsysteem stuurt het dashboard dus nooit mee.
  *
  * Wat hier van de mens komt, is alleen de keuze: Handeling, Specialist en
  * Datum (en bij Terugsturen, Nee en Nieuw de Tekst die hij zelf typte). Actie,
@@ -93,14 +94,27 @@ function linkPastBijSysteem(url, systeem) {
 }
 
 /* De naam die met een opdracht meegaat: de naam die je zelf opgaf (jij()).
- * De instantie zet Gegeven door op '<naam> (<rol>)' en saneert zelf ook; hier
- * dezelfde regels, zodat een naam nooit een weigering geeft: geen regeleinden
- * of stuurtekens, geen haakjes (de rol tussen haakjes zet de instantie), hooguit
- * 60 tekens. Leeg: dan gaat er geen naam mee en staat er alleen je rol. */
+ * De instantie zet Gegeven door op '<naam> (<rol>)' en saneert zelf ook
+ * (naamUit in src/opdrachten.ts van agentic-team-werkruimte); hier dezelfde
+ * regels, zodat wat je ziet ook is wat er komt te staan: stuurtekens en
+ * regel- en alinea-einden (Cc, Zl, Zp) worden een spatie, onzichtbare
+ * opmaaktekens (Cf: zero-width, bidi-overrides) en losse surrogaten (Cs)
+ * vallen weg, en elk haakje (Ps, Pe: ook [ ] { } en de brede varianten)
+ * verdwijnt, want de rol tussen haakjes zet de instantie. Daarna witruimte
+ * samengevouwen, getrimd en afgekapt op 60 tekens als code points, zodat een
+ * emoji nooit doormidden gaat. Leeg: dan gaat er geen naam mee en staat er
+ * alleen je rol. */
 const OPDRACHT_NAAM_MAX = 60;
 function opdrachtNaam(naam) {
-  const s = String(naam || "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").replace(/[()[\]{}]/g, "").replace(/\s+/g, " ").trim();
-  return s.slice(0, OPDRACHT_NAAM_MAX).trim();
+  const s = String(naam || "")
+    .normalize("NFC")
+    .replace(/\p{Cs}/gu, "")
+    .replace(/[\p{Cc}\p{Zl}\p{Zp}]/gu, " ")
+    .replace(/\p{Cf}/gu, "")
+    .replace(/[\p{Ps}\p{Pe}]/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return Array.from(s).slice(0, OPDRACHT_NAAM_MAX).join("").trim();
 }
 
 /* De sleutel van een kaart in de DOM en in de bladen: de link zelf, los van
