@@ -1,6 +1,7 @@
 /* s64 — één vaste werkruimte met rijen in het werkgeheugen (teamfeed,
- * notities, lessen_inzichten, dagverslagen) plus een actie en een organisatie
- * waar notities aan hangen. Dezelfde scenario's dienen voor de opname van main
+ * notities, lessen_inzichten, dagverslagen) plus rijen in andere domeinen
+ * (besluit f van 26-11: de stempel staat op elke rij die iemand schrijft):
+ * twee acties, een vaste taak, een organisatie en een contactpersoon. Dezelfde scenario's dienen voor de opname van main
  * (test/fixtures/s64-herkomst-main.json) en voor de test die daarmee vergelijkt
  * (test/s64-herkomst.test.js); daarom staat het hier apart.
  *
@@ -20,6 +21,12 @@ export const ROUTES = [
   "/gegevens/lessen_inzichten",
   "/gegevens/lessen_inzichten/l1",
   "/gegevens/dagverslagen/d1",
+  // Besluit f: ook buiten het werkgeheugen.
+  "/",
+  "/acties",
+  "/team/vaste-taken",
+  "/gegevens/contactpersonen",
+  "/gegevens/contactpersonen/c1",
 ];
 
 const b64 = (o) => btoa(JSON.stringify(o)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -39,7 +46,11 @@ export function entries(g, door = () => undefined) {
   const e = (domein, id, data, tijd) => entry(domein, id, data, tijd, door(id));
   return {
     acties: [
-      e("acties", "a1", { Actie: "Offerte Van Dam", Status: "Wacht op review", Eigenaar: "Sanne Verbeek", Agent: DM, "Aangemaakt door": DM, Toelichting: "De offerte." }, "2026-11-26T02:18:00"),
+      e("acties", "a1", { Actie: "Offerte Van Dam", Status: "Wacht op review", Eigenaar: "Sanne Verbeek", Agent: DM, "Aangemaakt door": DM, Toelichting: "De offerte.", Organisatie: [{ domein: "organisaties", id: "o1", titel: "Van Dam Bouw" }] }, "2026-11-26T02:18:00"),
+      e("acties", "a2", { Actie: "Prijs nakijken", Status: "Open", Eigenaar: DM, Agent: DM, "Aangemaakt door": "Sanne Verbeek", "Bovenliggende actie": [{ domein: "acties", id: "a1", titel: "Offerte Van Dam" }] }, "2026-11-25T16:00:00"),
+    ],
+    contactpersonen: [
+      e("contactpersonen", "c1", { Naam: "Peter van Dam", Functie: "Directeur", Organisatie: [{ domein: "organisaties", id: "o1", titel: "Van Dam Bouw" }] }, "2026-11-21T10:00:00"),
     ],
     organisaties: [
       e("organisaties", "o1", { Naam: "Van Dam Bouw", Fase: "Klant", Vestigingsplaats: "Utrecht" }, "2026-11-20T10:00:00"),
@@ -71,7 +82,7 @@ export function entries(g, door = () => undefined) {
 
 export function maakCtx(g, ents, { notion = false } = {}) {
   const domains = {};
-  for (const k of ["acties", "organisaties", "ritmetaken", "notities", "lessen_inzichten", "dagverslagen"]) {
+  for (const k of ["acties", "organisaties", "contactpersonen", "ritmetaken", "notities", "lessen_inzichten", "dagverslagen"]) {
     domains[k] = { rows: ents[k].map((x) => g.rijVanEntry(x)) };
   }
   const teamfeed = { entries: ents.teamfeed, opgehaaldOp: "2026-11-26T09:30:00" };
