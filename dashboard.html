@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-n+QF9ShocbjL50V6j4Lty59rzjH14UtyGckknKBgnw0=' 'sha256-1zPDq6g93Hdpi6+qP/55ARLMYhsqR86ak80P9P7tzv0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-n+QF9ShocbjL50V6j4Lty59rzjH14UtyGckknKBgnw0=' 'sha256-zo5RLggrmSw3JCJl1sprAwxnx243WGNljHnCKPjxn9k='">
 
 
 
@@ -3345,6 +3345,13 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * naar keuze van de klant" vraagt dat we het zeggen. Woordelijk het voorstel
    * van de jurist, inclusief het back-upvenster: niet "direct weg". */
   "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
+  /* f61 (juristtoets 26-11-2026, rapport-jurist-f61-dashboardopdrachten-2026-11-26.md,
+   * punt 1; woordelijk de eindtekst, akkoord Tijmen): doorgeven aan je team
+   * bij acties in een eigen bron. "Minstens 30 dagen", niet "tot": de
+   * werkruimte ruimt alleen op bij een nieuwe opdracht of een intrekking.
+   * Er draait géén detectie op bijzondere persoonsgegevens over deze tekst;
+   * beweer dat nergens. */
+  "Ben je ingelogd, dan kun je zo'n item vanaf Voor jou aan je team doorgeven, of je team een nieuwe opdracht geven. Je browser stuurt dan via ons doorgeefluik naar je eigen werkruimte wat er moet gebeuren: de titel en de link van het item, wat je zelf typt, de specialist of datum die je kiest en de naam waaronder je werkt. Je werkruimte zet je rol erbij. Iedereen die je werkruimte kan lezen, ook met een daglink, ziet die opdracht. Bij het volgende werkmoment voert je team hem uit in je eigen bron. Wat je typte komt daar bij de actie te staan, en je naam komt erbij waar de bron een persoonsveld heeft. Wij slaan zo'n opdracht niet op en gebruiken hem niet. Een afgeronde of ingetrokken opdracht blijft minstens 30 dagen in je werkruimte staan. Daarna ruimt je werkruimte hem op, maar dat gebeurt pas als iemand in je team een nieuwe opdracht geeft of er een intrekt. Gebeurt dat niet, dan blijft hij langer staan. Een opdracht die nog loopt, blijft ook staan. Is een opdracht opgeruimd, dan verdwijnt hij daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
   /* Juristtoets 26-11-2026 (rapport-jurist-business-v1-2026-11-26.md, punt 3;
    * besluit Tijmen C5): "verloopt na 24 uur" was onwaar zodra afscherming aan
@@ -17028,6 +17035,7 @@ function hulpSecties() {
       <p>Kies <b>Opdracht geven</b>: het vraagt alleen wat er moet gebeuren, wie het oppakt en voor wanneer. Bij het volgende werkmoment pakt de specialist het op; het resultaat zie je bij Voor jou.</p>
       <p>Of zeg het in je AI-assistent:</p>${k("Zet een actie klaar voor de Researcher: zoek tien installatiebedrijven in Utrecht die groeien.")}
       <p class="contextregel"><b>Vuistregel:</b> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
+      <p class="klein stil">Schrijf er geen gevoelige gegevens bij, zoals over gezondheid of geloof: je team neemt je tekst letterlijk over.</p>
       <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <b>Geef aan je team</b>.</p>${naar("Naar Acties", "/acties")}`],
     ["daglink", "Daglink of inloggen?", () => `
       <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
@@ -17069,7 +17077,7 @@ function hulpSecties() {
       <li><b>Tot dan</b> staat er ‘Doorgegeven’ bij het item, en kun je het nog ongedaan maken. Daarna zie je ‘Gedaan’, of ‘Niet gelukt’ met de reden, bijvoorbeeld als het item intussen al was afgehandeld.</li>
       <li><b>Een nieuwe opdracht</b> geef je met ‘Opdracht geven’. Je team zet hem bij het volgende werkmoment in je eigen systeem en pakt hem het werkmoment daarna op.</li>
       <li><b>In je eigen systeem doe je</b> de rest, zoals je vaste taken aanpassen. Of vraag het je team.</li></ul>
-      <p class="klein stil">Wat je doorgeeft, staat tot dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
+      <p class="klein stil">Wat je doorgeeft, staat minstens dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
     : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],

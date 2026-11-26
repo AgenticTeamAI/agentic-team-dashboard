@@ -22,7 +22,9 @@
  * gemaakt op main d8e0731, met alleen C5 en D2 erop. Na de merge van main
  * 6706df4 (f62, #136) is de opname op dezelfde manier opnieuw gemaakt op
  * 6706df4, met alleen C5 en D2 erop; dat is de huidige basis (zie `bron` en
- * `herkomst` in de fixture). */
+ * `herkomst` in de fixture). f61 (juristtoets 26-11-2026) voegt in beide
+ * opnames alleen de privacy-alinea over doorgeven toe, direct na i87, en in de
+ * Hulp de zin over gevoelige gegevens. */
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

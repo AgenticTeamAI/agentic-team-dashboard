@@ -54,6 +54,13 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * naar keuze van de klant" vraagt dat we het zeggen. Woordelijk het voorstel
    * van de jurist, inclusief het back-upvenster: niet "direct weg". */
   "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
+  /* f61 (juristtoets 26-11-2026, rapport-jurist-f61-dashboardopdrachten-2026-11-26.md,
+   * punt 1; woordelijk de eindtekst, akkoord Tijmen): doorgeven aan je team
+   * bij acties in een eigen bron. "Minstens 30 dagen", niet "tot": de
+   * werkruimte ruimt alleen op bij een nieuwe opdracht of een intrekking.
+   * Er draait géén detectie op bijzondere persoonsgegevens over deze tekst;
+   * beweer dat nergens. */
+  "Ben je ingelogd, dan kun je zo'n item vanaf Voor jou aan je team doorgeven, of je team een nieuwe opdracht geven. Je browser stuurt dan via ons doorgeefluik naar je eigen werkruimte wat er moet gebeuren: de titel en de link van het item, wat je zelf typt, de specialist of datum die je kiest en de naam waaronder je werkt. Je werkruimte zet je rol erbij. Iedereen die je werkruimte kan lezen, ook met een daglink, ziet die opdracht. Bij het volgende werkmoment voert je team hem uit in je eigen bron. Wat je typte komt daar bij de actie te staan, en je naam komt erbij waar de bron een persoonsveld heeft. Wij slaan zo'n opdracht niet op en gebruiken hem niet. Een afgeronde of ingetrokken opdracht blijft minstens 30 dagen in je werkruimte staan. Daarna ruimt je werkruimte hem op, maar dat gebeurt pas als iemand in je team een nieuwe opdracht geeft of er een intrekt. Gebeurt dat niet, dan blijft hij langer staan. Een opdracht die nog loopt, blijft ook staan. Is een opdracht opgeruimd, dan verdwijnt hij daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
   /* Juristtoets 26-11-2026 (rapport-jurist-business-v1-2026-11-26.md, punt 3;
    * besluit Tijmen C5): "verloopt na 24 uur" was onwaar zodra afscherming aan

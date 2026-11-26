@@ -124,6 +124,7 @@ function hulpSecties() {
       <p>Kies <b>Opdracht geven</b>: het vraagt alleen wat er moet gebeuren, wie het oppakt en voor wanneer. Bij het volgende werkmoment pakt de specialist het op; het resultaat zie je bij Voor jou.</p>
       <p>Of zeg het in je AI-assistent:</p>${k("Zet een actie klaar voor de Researcher: zoek tien installatiebedrijven in Utrecht die groeien.")}
       <p class="contextregel"><b>Vuistregel:</b> schrijf wat je een nieuwe collega zou appen. Tijdens het werkmoment kan je team niets navragen: er zit niemand aan het toetsenbord.</p>
+      <p class="klein stil">Schrijf er geen gevoelige gegevens bij, zoals over gezondheid of geloof: je team neemt je tekst letterlijk over.</p>
       <p>Staat er al een taak op jouw naam die je team kan doen? Kies bij het item <b>Geef aan je team</b>.</p>${naar("Naar Acties", "/acties")}`],
     ["daglink", "Daglink of inloggen?", () => `
       <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
@@ -165,7 +166,7 @@ function hulpSecties() {
       <li><b>Tot dan</b> staat er ‘Doorgegeven’ bij het item, en kun je het nog ongedaan maken. Daarna zie je ‘Gedaan’, of ‘Niet gelukt’ met de reden, bijvoorbeeld als het item intussen al was afgehandeld.</li>
       <li><b>Een nieuwe opdracht</b> geef je met ‘Opdracht geven’. Je team zet hem bij het volgende werkmoment in je eigen systeem en pakt hem het werkmoment daarna op.</li>
       <li><b>In je eigen systeem doe je</b> de rest, zoals je vaste taken aanpassen. Of vraag het je team.</li></ul>
-      <p class="klein stil">Wat je doorgeeft, staat tot dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
+      <p class="klein stil">Wat je doorgeeft, staat minstens dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
     : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
