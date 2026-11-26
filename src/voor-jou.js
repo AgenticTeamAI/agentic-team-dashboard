@@ -595,10 +595,12 @@ function afhandelKnoppen(rij, schema, nu) {
  * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
  * die tekst zou anders met het gezag van de eigenaar bij de specialist
  * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
- * bovenliggende actie; de agent leest daar zelf de herkomst. Sinds besluit A
- * (26-11, avond) doet het werkmoment dat ook: de werkronde geeft de
- * bovenliggende rij met haar `geschreven_door` mee (agent-architecture,
- * core/served/werkronde.md).
+ * bovenliggende actie; de agent leest daar in een sessie zelf de herkomst.
+ * Voor het werkmoment is besluit A (26-11, avond) genomen: de werkronde geeft
+ * de bovenliggende rij met haar `geschreven_door` mee. Dat hoort bij
+ * agent-architecture #284 (core/served/werkronde.md), niet bij dit dashboard.
+ * Tot die werkronde live is, krijgt de specialist op het werkmoment alleen
+ * de neutrale zin.
  *
  * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
  * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van

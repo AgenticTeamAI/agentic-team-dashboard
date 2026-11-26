@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-3x04uR9PwlnoUn3PE40Xu0tKZfQ2vxVeXSJ9ccTuW3s='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-Xi6dvNELSDMxrcb225LbVQKAAPHn87DySfF5envf/20='">
 
 
 
@@ -6260,10 +6260,12 @@ function afhandelKnoppen(rij, schema, nu) {
  * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
  * die tekst zou anders met het gezag van de eigenaar bij de specialist
  * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
- * bovenliggende actie; de agent leest daar zelf de herkomst. Sinds besluit A
- * (26-11, avond) doet het werkmoment dat ook: de werkronde geeft de
- * bovenliggende rij met haar `geschreven_door` mee (agent-architecture,
- * core/served/werkronde.md).
+ * bovenliggende actie; de agent leest daar in een sessie zelf de herkomst.
+ * Voor het werkmoment is besluit A (26-11, avond) genomen: de werkronde geeft
+ * de bovenliggende rij met haar `geschreven_door` mee. Dat hoort bij
+ * agent-architecture #284 (core/served/werkronde.md), niet bij dit dashboard.
+ * Tot die werkronde live is, krijgt de specialist op het werkmoment alleen
+ * de neutrale zin.
  *
  * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
  * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van
