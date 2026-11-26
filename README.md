@@ -167,7 +167,7 @@ fetch-grenzen hieronder blijven gelijk.)
   wordt door dezelfde test op **zeven** sleutels vastgepind. Sinds i77 is de
   weergavenaam daarvan een terugvalkopie en niet meer de bron: die hoort bij je
   seat en staat versleuteld bij je licentie, zodat een tweede apparaat hem kent
-  en je beheerder hem kan rechtzetten.
+  en de eigenaar (het aankoopadres) hem kan rechtzetten.
 
 Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
 niets naar agentic-team.ai": de pagina zelf komt van

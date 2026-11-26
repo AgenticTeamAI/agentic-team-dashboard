@@ -353,7 +353,7 @@ function renderBeheer() {
 }
 function vulBeheer() {
   const m = document.getElementById("beheer-modules-body");
-  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de beheerder van je licentie.</p>`; }
+  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`; }
   const t = document.getElementById("panel-team-namen");
-  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de beheerder van je licentie.</p>`); }
+  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`); }
 }
