@@ -165,7 +165,7 @@ function hulpSecties(ctx) {
     ["daglink", "Daglink of inloggen?", () => `
       <table class="hulp-tabel"><thead><tr><th></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
         <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-        <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+        <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(ctx && ctx.bron))}</td><td>Tot je dit tabblad sluit</td></tr>
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
@@ -202,7 +202,7 @@ function hulpSecties(ctx) {
       <dl class="hulp-woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in Claude</dd><dt>Vaste taak</dt><dd>ritmetaak</dd>
       <dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd>
       <dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd>
-      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(ctx && ctx.bron))}</dd></dl>`],
   ];
 }
 

@@ -87,7 +87,8 @@ describe("s64 — de melding op de gebouwde pagina", () => {
     expect(await verlopen("testtoken")).toContain(VOOR_S64);
   });
 
-  // De Hulp onder de melding noemt de standaard van 24 uur nog (zie de PR).
+  // De Hulp onder de melding (lege staat, zonder daglink) zegt sinds de nafix
+  // "standaard 24 uur, in een afgeschermd team korter" (s64-hulp-daglink.test.js).
   it("een Business-link van 4 uur zegt in de melding 4 uur, niet 24 uur", async () => {
     const tekst = await verlopen(daglink({ iat: IAT, exp: IAT + 4 * 3600, seat: "s1", groepen: ["werkgeheugen"] }));
     expect(tekst).toContain(MELDING + " Daglinks zijn 4 uur geldig.");

@@ -2,7 +2,8 @@
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
  *   https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
- * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
+ * Het token is kortlevend (standaard 24 uur, in een afgeschermd team korter;
+ * zie daglinkGeldigheid) en kan alleen lezen; het staat in het
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
@@ -684,11 +685,39 @@ function daglinkDuurTekst(seconden) {
  * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
  * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
 const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
-function daglinkGeldigTekst(token) {
+/* De duur zelf ("24 uur", "4 uur"), of null bij een waarde langer dan een
+ * week. Eén rekensom voor de melding en de Hulp. */
+function daglinkGeldigDuur(token) {
   const s = daglinkGeldigheid(token);
-  if (s === null) return DAGLINK_GELDIG_STANDAARD;
-  if (s > 7 * 24 * 3600) return "Een daglink is maar een beperkte tijd geldig.";
-  return "Daglinks zijn " + daglinkDuurTekst(s) + " geldig.";
+  if (s === null) return "24 uur";
+  if (s > 7 * 24 * 3600) return null;
+  return daglinkDuurTekst(s);
+}
+function daglinkGeldigTekst(token) {
+  if (daglinkGeldigheid(token) === null) return DAGLINK_GELDIG_STANDAARD;
+  const duur = daglinkGeldigDuur(token);
+  return duur ? "Daglinks zijn " + duur + " geldig." : "Een daglink is maar een beperkte tijd geldig.";
+}
+/* s64 nafix (besluit 26-11) — de Hulp en de woordenlijst zeiden vast "24
+ * uur". Kijk je met een daglink, dan staat er de duur van die link, met
+ * dezelfde rekensom als de melding hierboven (een link van 24 uur, of een
+ * zonder `iat`, geeft dus precies de tekst van vóór s64). Zonder daglink
+ * (ingelogd, of de lege staat) weet het dashboard niet hoe lang een link van
+ * dit team geldig is: dan een neutrale zin. `bron` mag null zijn. */
+function daglinkVanBron(bron) {
+  return bron && !bron.oauth && typeof bron.token === "string" && bron.token ? bron.token : null;
+}
+/* Voor de cel "Hoe lang" in de tabel Daglink of inloggen. */
+function daglinkHulpDuur(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "Standaard 24 uur, in een afgeschermd team korter";
+  return daglinkGeldigDuur(token) || "Een beperkte tijd";
+}
+/* Voor de woordenlijst: "de link …, <dit>". */
+function daglinkHulpWoord(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "standaard 24 uur geldig, in een afgeschermd team korter";
+  return (daglinkGeldigDuur(token) || "een beperkte tijd") + " geldig";
 }
 
 /* Welke bron gebruikt deze pagina?
@@ -722,6 +751,6 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }

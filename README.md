@@ -860,7 +860,12 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   melding "Vraag je Coördinator om een nieuwe", met de geldigheid die het
   dashboard uit `exp` en `iat` in het token leest (s64; zonder die velden de
   vaste zin "Daglinks zijn 24 uur geldig."). Er is geen alternatieve ingang. Dit is bewust een minimale voorloper van OAuth
-  (p10, GA-voorwaarde) — geen weggegooid werk.
+  (p10, GA-voorwaarde) — geen weggegooid werk. De Hulp (tabel "Daglink of
+  inloggen?" en de woordenlijst) volgt dezelfde rekensom: kijk je met een
+  daglink, dan staat er de duur van die link; ingelogd of zonder bron staat er
+  "standaard 24 uur, in een afgeschermd team korter" (besluit 26-11; de daglink
+  faseert later uit, s66). De privacytekst (`src/teksten.js`) noemt nog 24 uur:
+  die wacht op de jurist.
 - **Zelfde interne vorm.** De loader levert een gewone rows-bundel
   (entries → `rows`, `bijgewerkt` → `staleAt`, bedrijfscontext-entries →
   het zone 2-object); alles stroomafwaarts weet niet dat de data live is.
@@ -880,6 +885,21 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   Het domein zelf staat bewust níet in het dashboard-schema
   (`opslag: "werkruimte"`-filter in `extract-schema.py`) en wordt nooit
   als rows-domein getekend.
+- **Wie schreef een rij (s64).** Met `AFSCHERMING=aan` stempelt de instantie
+  elke rij met de rol van de schrijver (`geschreven_door`, meta-veld naast het
+  entryId). Het dashboard toont dat als "door <Rol>" of "herkomst onbekend";
+  zonder stempel, of met `sleutel`, is elk scherm byte voor byte wat het was.
+  **Opvolgen:** komt een signaal van een medewerker, een viewer of `onbekend`,
+  dan neemt "Laat je team opvolgen" de titel niet over als opdracht. Het
+  tekstvak begint met "Pak de volgende stap op bij de bovenliggende actie.", en
+  de nieuwe actie krijgt alleen de relatie Bovenliggende actie (geen
+  Organisatie, Deal, Project of Contactpersoon); de agent leest de herkomst
+  daar zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon mee. Zonder
+  stempel, of met eigenaar, beheerder of sleutel, is opvolgen ongewijzigd.
+  **Bekende grens:** "Ongedaan maken" na een afhandeling is een PATCH die de
+  oude velden terugzet. Was die oude tekst van een lagere rol, dan staat hij
+  daarna weer in de rij terwijl het stempel `eigenaar` blijft (de eigenaar
+  schreef de PATCH).
 - **Interne tegels.** `/dashboard/overzicht` levert `intern: true` wanneer
   de instantie met `DASHBOARD_INTERN=1` draait (FFG, Greenhive-test). Alleen
   dan toont het dashboard de KPI-tegel "Correctievrij (4 wk)" met de

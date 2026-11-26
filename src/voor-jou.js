@@ -590,15 +590,34 @@ function afhandelKnoppen(rij, schema, nu) {
   }
 }
 
+/* s64 nafix (besluit 26-11) — schreef een medewerker of viewer de bronrij,
+ * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
+ * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
+ * die tekst zou anders met het gezag van de eigenaar bij de specialist
+ * belanden. De nieuwe actie verwijst dan alleen naar de bovenliggende actie,
+ * met een neutrale tekst; de agent leest daar zelf de herkomst. Zonder
+ * stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
+const OPVOLG_ZONDER_TITEL = ["medewerker", "viewer", "onbekend"];
+const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+function opvolgZonderTitel(rij) {
+  const door = rij && rij.__stempels ? rij.__stempels.door : undefined;
+  return OPVOLG_ZONDER_TITEL.indexOf(door) !== -1;
+}
+/* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
+function opvolgVoorstel(rij, titel) {
+  return opvolgZonderTitel(rij) ? OPVOLG_NEUTRAAL : "Pak de volgende stap op: " + titel;
+}
+
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Bij een
+ * bronrij van een lagere rol alleen het verband met het origineel. */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
     Status: VJ_OPEN, Type: "Taak", Eigenaar: c.specialist, Agent: c.specialist,
     Toelichting: c.tekst, "Bovenliggende actie": rij.__entryId,
   };
-  for (const veld of ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
+  for (const veld of opvolgZonderTitel(rij) ? [] : ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
     const w = getField(rij, veld);
     if (w && (typeof w !== "object" || w.id)) data[veld] = w;
   }
@@ -611,7 +630,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }
