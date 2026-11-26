@@ -231,14 +231,15 @@ function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.d
 
 /* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
  * schrijver stempelde (alleen met AFSCHERMING=aan; elk datadomein, dus ook
- * acties, vaste taken en klantgegevens). Zonder stempel, of met
- * "sleutel" of "onbekend", is er geen label en is de html precies die van
- * vóór s64. De tekst komt uit een vaste tabel (schrijverLabel), niet uit de
- * werkruimte. `voor` is het scheidingsteken als het label achter tekst staat. */
+ * acties, vaste taken en klantgegevens), en "herkomst onbekend" bij
+ * "onbekend". Zonder stempel, of met "sleutel", is er geen label en is de
+ * html precies die van vóór s64. De tekst komt uit een vaste tabel
+ * (herkomstTekst), niet uit de werkruimte. `voor` is het scheidingsteken als
+ * het label achter tekst staat. */
 function doorVan(rij) { return rij && rij.__stempels ? rij.__stempels.door : undefined; }
 function doorHtml(waarde, voor = "") {
-  const label = typeof schrijverLabel === "function" ? schrijverLabel(waarde) : null;
-  return label ? `${voor}<span class="door">door ${esc(label)}</span>` : "";
+  const tekst = typeof herkomstTekst === "function" ? herkomstTekst(waarde) : null;
+  return tekst ? `${voor}<span class="door">${esc(tekst)}</span>` : "";
 }
 
 function opmerkingenBij(id) {

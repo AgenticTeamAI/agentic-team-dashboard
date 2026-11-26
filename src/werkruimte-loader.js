@@ -390,13 +390,23 @@ function rijVanEntry(e) {
 }
 
 /* s64 — welke stempel krijgt een label "door …". Alleen de vier rollen van
- * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) en
- * "onbekend" (een rij van vóór de stempel) tonen we niet, net als alles wat
- * de instantie niet hoort te sturen. De tekst komt uit deze tabel, nooit uit
- * de waarde zelf. */
+ * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) tonen we
+ * niet, net als alles wat de instantie niet hoort te sturen. De tekst komt uit
+ * deze tabel, nooit uit de waarde zelf. */
 const SCHRIJVER_ROL_LABEL = Object.freeze({ eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" });
 function schrijverLabel(waarde) {
   return typeof waarde === "string" && Object.prototype.hasOwnProperty.call(SCHRIJVER_ROL_LABEL, waarde) ? SCHRIJVER_ROL_LABEL[waarde] : null;
+}
+/* s64 nafix (review #133) — de volledige labeltekst. "onbekend" (een rij van
+ * vóór de stempel, of een rij die iemand daarna bijwerkte terwijl er oude
+ * tekst bleef staan) krijgt "herkomst onbekend". Zonder label zag zo'n rij er
+ * hetzelfde uit als werk van de sleutel, en bleef het witwaspad naar
+ * "onbekend" (besluit d) open voor wie het dashboard leest. "onbekend" komt
+ * alleen met AFSCHERMING=aan, dus met de modus uit verandert er niets. */
+function herkomstTekst(waarde) {
+  if (waarde === "onbekend") return "herkomst onbekend";
+  const label = schrijverLabel(waarde);
+  return label ? "door " + label : null;
 }
 
 function maxBijgewerkt(entries) {
@@ -709,7 +719,7 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst,

@@ -8,8 +8,10 @@
  *    (test/fixtures/s64-herkomst-main.json, opgenomen op main vóór s64);
  *  - met eigenaar/beheerder/medewerker/viewer staat er een rustig label
  *    "door <Rol>", en wie dat label weghaalt, houdt precies main over;
- *  - "sleutel", "onbekend" en alles wat de instantie niet hoort te sturen,
- *    geven geen label: ook dan byte-gelijk aan main;
+ *  - "sleutel" en alles wat de instantie niet hoort te sturen, geven geen
+ *    label: ook dan byte-gelijk aan main;
+ *  - "onbekend" geeft "herkomst onbekend" (nafix review #133: anders lijkt
+ *    zo'n rij werk van de sleutel); wie dat label weghaalt, houdt main over;
  *  - de labeltekst komt uit een vaste tabel, nooit uit de waarde (XSS);
  *  - het meta-veld gaat nooit terug in een schrijfactie. */
 import { describe, expect, it, beforeAll, afterAll, afterEach, vi } from "vitest";
@@ -51,16 +53,28 @@ describe("s64 — zonder geschreven_door: byte-gelijk aan main", () => {
     for (const [sleutel] of ALLE) expect(nu[sleutel], sleutel).toBe(MAIN.routes[sleutel]);
   });
 
-  it("'sleutel' en 'onbekend' geven geen label: ook dan byte-gelijk", () => {
-    for (const waarde of ["sleutel", "onbekend"]) {
-      const nu = tekenAlles(() => waarde);
-      for (const [sleutel] of ALLE) expect(nu[sleutel], `${waarde} ${sleutel}`).toBe(MAIN.routes[sleutel]);
+  it("'sleutel' geeft geen label: ook dan byte-gelijk", () => {
+    const nu = tekenAlles(() => "sleutel");
+    for (const [sleutel] of ALLE) expect(nu[sleutel], sleutel).toBe(MAIN.routes[sleutel]);
+  });
+
+  // Nafix review #133: deze test legde eerst vast dat ook "onbekend" geen label
+  // gaf. Bewust aangepast: een rij met herkomst "onbekend" mag er niet uitzien
+  // als werk van de sleutel (besluit d: "onbekend" telt als medewerker).
+  it("'onbekend' geeft 'herkomst onbekend' op precies de plekken van een rol; weghalen geeft main", () => {
+    const ONBEKEND = /( · )?<span class="door">herkomst onbekend<\/span>/g;
+    const nu = tekenAlles(() => "onbekend");
+    const metRol = tekenAlles(rolVan);
+    for (const [sleutel] of ALLE) {
+      expect(nu[sleutel], sleutel).not.toMatch(LABEL);
+      expect((nu[sleutel].match(ONBEKEND) || []).length, sleutel).toBe(metRol[sleutel].match(LABEL).length);
+      expect(nu[sleutel].replace(ONBEKEND, ""), sleutel).toBe(MAIN.routes[sleutel]);
     }
   });
 
   it("wat de instantie niet hoort te sturen, geeft geen label (ook geen html uit de waarde)", () => {
     const raar = ["", "Eigenaar", " eigenaar", "EIGENAAR", "__proto__", "constructor", "toString", "hasOwnProperty",
-      '<img src=x onerror="alert(1)">', '"><script>alert(1)</script>', "eigenaar<b>", 1, true, null, {}, ["eigenaar"]];
+      '<img src=x onerror="alert(1)">', '"><script>alert(1)</script>', "eigenaar<b>", "Onbekend", " onbekend", "onbekend ", 1, true, null, {}, ["eigenaar"]];
     for (const waarde of raar) {
       const nu = tekenAlles(() => waarde);
       for (const [sleutel] of ALLE) expect(nu[sleutel], `${JSON.stringify(waarde)} ${sleutel}`).toBe(MAIN.routes[sleutel]);
@@ -154,6 +168,10 @@ describe("s64 — met geschreven_door: een rustig label 'door <Rol>'", () => {
     expect(rij.querySelector(".rmeta .door").textContent).toBe("door Eigenaar");
     render(g, maakCtx(g, entries(g, () => "onbekend")), "/acties");
     document.querySelector('[data-act="av"][data-k="toon"][data-v="klaargezet"]').click();
+    const oud = [...document.querySelectorAll(".rij")].find((x) => x.textContent.includes("Offerte Van Dam"));
+    expect(oud.querySelector(".rmeta .door").textContent).toBe("herkomst onbekend");
+    render(g, maakCtx(g, entries(g, () => "sleutel")), "/acties");
+    document.querySelector('[data-act="av"][data-k="toon"][data-v="klaargezet"]').click();
     expect(document.querySelector("#root .door")).toBeNull();
   });
 
@@ -181,6 +199,12 @@ describe("s64 — de stempel in de rij en in de feed", () => {
   it("schrijverLabel: alleen de vier rollen van een mens", () => {
     expect(ROLLEN.map(g.schrijverLabel)).toEqual(["Eigenaar", "Beheerder", "Medewerker", "Viewer"]);
     for (const w of ["sleutel", "onbekend", "", "Viewer", "__proto__", "constructor", undefined, null, 3]) expect(g.schrijverLabel(w)).toBeNull();
+  });
+
+  it("herkomstTekst: 'door <Rol>', 'herkomst onbekend' bij onbekend, verder niets", () => {
+    expect(ROLLEN.map(g.herkomstTekst)).toEqual(["door Eigenaar", "door Beheerder", "door Medewerker", "door Viewer"]);
+    expect(g.herkomstTekst("onbekend")).toBe("herkomst onbekend");
+    for (const w of ["sleutel", "Onbekend", " onbekend", "", "__proto__", "constructor", undefined, null, 3, {}]) expect(g.herkomstTekst(w)).toBeNull();
   });
 
   it("normaliseerFeed: 'door' alleen als de instantie hem meestuurt", () => {
