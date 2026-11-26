@@ -295,9 +295,9 @@ describe("f61 — de loader", () => {
     const bundle = await g.loadWerkruimteBundle(BRON);
     expect(bundle.kind).toBe("metrics");
     expect(bundle.waarschuwingen.join(" ")).not.toMatch(/genegeerd/);
-    expect(g.werkruimteDomeinen({ werkruimteDomeinen: ["teamfeed"] })).toEqual(["teamfeed", "dashboard_metrics", "dashboard_opdrachten"]);
+    expect(g.werkruimteDomeinen({ werkruimteDomeinen: ["teamfeed"] })).toEqual(["teamfeed", "dashboard_metrics", "dagplannen", "dashboard_opdrachten"]);
     // Na de registry-sync staat hij in het schema; dan niet dubbel.
-    expect(g.werkruimteDomeinen({ werkruimteDomeinen: ["dashboard_opdrachten", "dashboard_metrics"] })).toEqual(["dashboard_opdrachten", "dashboard_metrics"]);
+    expect(g.werkruimteDomeinen({ werkruimteDomeinen: ["dashboard_opdrachten", "dashboard_metrics"] })).toEqual(["dashboard_opdrachten", "dashboard_metrics", "dagplannen"]);
   });
 });
 
