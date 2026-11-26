@@ -201,6 +201,7 @@ let oauthVernieuwingKlaar = false;
 function resetOauthVernieuwing() {
   oauthVernieuwing = null;
   oauthVernieuwingKlaar = false;
+  sessieVernieuwing = null;
 }
 
 function eenmaligVernieuwen() {
@@ -213,10 +214,82 @@ function eenmaligVernieuwen() {
   return oauthVernieuwing;
 }
 
-async function fetchWerkruimte(bron, pad) {
-  let res = await doeVerzoek(bron, pad);
+/* s66 — een verzoek met een token van de dashboardsessie (bron.sessie).
+ *
+ * Anders dan de oude tabbladflow is een sessietoken elk uur opnieuw te halen:
+ * de site roteert het vervangingstoken in het cookie bij elk gebruik. De regel
+ * blijft "per verzoek hooguit één vernieuwing, nooit een lus":
+ *  - een 401 met {sessie: "beeindigd"} (de instantie zette een sessiegrens:
+ *    rolwijziging, uitloggen overal) wordt nooit vernieuwd — vernieuwen geeft
+ *    een token met hetzelfde inlogmoment, dat de instantie ook weigert. Dan
+ *    uitloggen bij de site en de lege staat;
+ *  - een andere 401: één POST naar de sessie-token-route, gedeeld door alle
+ *    verzoeken die met hetzelfde token een 401 kregen, en daarna één nieuwe
+ *    poging;
+ *  - is het token volgens expires_in (bijna) verlopen, dan eerst vernieuwen.
+ * `eenmalig` (uitloggen overal): geen vernieuwing en geen tweede poging. */
+let sessieVernieuwing = null; // {voor: token, belofte}
 
-  if (res.status === 401 && bron.oauth) {
+function sessieLaadFout(fout) {
+  const err = new Error((fout && fout.message) || "Je sessie is verlopen. Log opnieuw in met je licentie.");
+  const soort = fout && fout.soort;
+  // Een storing of een netwerkfout is geen verlopen sessie: dan blijft wat je
+  // zag staan, met een melding.
+  if (soort !== "storing" && soort !== "netwerk") err.oauthVerlopen = true;
+  if (soort === "ander_account") { err.sessieEinde = true; err.sessieAnderAccount = true; }
+  return err;
+}
+
+function vernieuwSessieVoor(bron, gebruikt) {
+  // Een ander verzoek heeft al vernieuwd: dan het nieuwe token gebruiken.
+  if (bron.token !== gebruikt) return Promise.resolve(bron.token);
+  if (!sessieVernieuwing || sessieVernieuwing.voor !== gebruikt) {
+    const belofte = haalSessieToken().then(
+      (t) => { if (bron.token === gebruikt) bron.token = t.access_token; return bron.token; },
+      (fout) => { throw sessieLaadFout(fout); },
+    );
+    sessieVernieuwing = { voor: gebruikt, belofte };
+  }
+  return sessieVernieuwing.belofte;
+}
+
+async function isSessieBeeindigd(res) {
+  if (!res || res.status !== 401 || typeof res.clone !== "function") return false;
+  try {
+    const body = await res.clone().json();
+    return !!body && body.sessie === "beeindigd";
+  } catch (e) {
+    return false;
+  }
+}
+
+function sessieBeeindigdFout() {
+  void sessieIsBeeindigd();
+  const err = new Error(SESSIE_BEEINDIGD_TEKST);
+  err.oauthVerlopen = true;
+  err.sessieEinde = true;
+  err.sessieBeeindigd = true;
+  return err;
+}
+
+async function metSessie(bron, doe) {
+  if (!bron.eenmalig && sessieTokenBijnaVerlopen(bron.token)) await vernieuwSessieVoor(bron, bron.token);
+  const gebruikt = bron.token;
+  let res = await doe();
+  // `eenmalig` hoort bij uitloggen overal, dat zelf al uitlogt: geen tweede
+  // afhandeling van een 401 hier.
+  if (res.status !== 401 || bron.eenmalig) return res;
+  if (await isSessieBeeindigd(res)) throw sessieBeeindigdFout();
+  await vernieuwSessieVoor(bron, gebruikt);
+  res = await doe();
+  if (await isSessieBeeindigd(res)) throw sessieBeeindigdFout();
+  return res;
+}
+
+async function fetchWerkruimte(bron, pad) {
+  let res = bron.sessie ? await metSessie(bron, () => doeVerzoek(bron, pad)) : await doeVerzoek(bron, pad);
+
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       // Het bron-object is gedeeld met alle lopende verzoeken: het nieuwe
@@ -276,8 +349,8 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
       tl.klaar();
     }
   };
-  let res = await doe();
-  if (res.status === 401 && bron.oauth) {
+  let res = bron.sessie ? await metSessie(bron, doe) : await doe();
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       bron.token = nieuw.access_token;
@@ -318,8 +391,9 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
  * uit serverinvoer letterlijk in `a.download` zetten.
  */
 async function downloadExport(bron, formaat) {
-  let res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
-  if (res.status === 401 && bron.oauth) {
+  const doe = () => doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+  let res = bron.sessie ? await metSessie(bron, doe) : await doe();
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       bron.token = nieuw.access_token;
@@ -835,6 +909,7 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties, haalOpdrachten, werkruimteDomeinen,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
+    tokenPayloadDeel, metSessie, isSessieBeeindigd,
     downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }

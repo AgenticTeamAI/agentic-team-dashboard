@@ -247,7 +247,7 @@ function renderOnderregels() {
 /* De privacybelofte, woordelijk uit teksten.js (juridisch getoetst), met de
  * volledige tekst direct uitklapbaar op dezelfde plek — niet op een andere pagina. */
 function privacyHtml() {
-  return `<details class="privacy uitklap kaal" ${det("privacy")}><summary>${ic("slot", "klein")}<span style="flex:1">${esc(PRIVACY_REGEL)}</span>${ic("chev", "klein")}</summary><div class="binnen">${PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")}</div></details>`;
+  return `<details class="privacy uitklap kaal" ${det("privacy")}><summary>${ic("slot", "klein")}<span style="flex:1">${esc(PRIVACY_REGEL)}</span>${ic("chev", "klein")}</summary><div class="binnen">${privacyAlineas().map(a => `<p>${esc(a)}</p>`).join("")}</div></details>`;
 }
 function renderVoorJou() {
   if (toegang() === "notion") return renderVoorJouNotion();

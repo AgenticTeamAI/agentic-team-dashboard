@@ -530,12 +530,14 @@ async function verwijderTeamlid(sectieEl, seat) {
   renderTeamPanel(sectieEl); // tekent de knoppen uitgeschakeld
   teamMeld(sectieEl, "Verwijderen…");
   let gelukt = false;
+  let sessieVoetnoot = false;
   try {
     const uit = await modulesFetch("/api/dashboard/team/verwijderen", { seat }, token);
     if (uit && uit.status === 200 && uit.body && Array.isArray(uit.body.team)) {
       teamLijst = uit.body.team;
       if (teamBevestigSeat === seat) teamBevestigSeat = null;
       gelukt = true;
+      sessieVoetnoot = !(await trekSessiesInVan(seat));
     } else {
       teamFout(sectieEl, teamFoutTekst(uit, "Verwijderen lukte niet. Probeer het zo opnieuw."));
     }
@@ -554,12 +556,34 @@ async function verwijderTeamlid(sectieEl, seat) {
   // een vaste plek in plaats van <body>: na succes het adresveld bovenaan, na
   // een fout de veilige keuze in de bevestiging die openblijft.
   if (gelukt) {
-    teamMeld(sectieEl, `${adres} is verwijderd en kan niet meer inloggen.`);
+    teamMeld(sectieEl, `${adres} is verwijderd en kan niet meer inloggen.` + (sessieVoetnoot ? " " + TEAM_SESSIE_VOETNOOT : ""));
     const veld = sectieEl.querySelector("[data-team-uitnodig-adres]");
     if (veld) veld.focus();
   } else {
     const annuleer = teamKnopVoor(sectieEl, "data-team-verwijder-nee", seat);
     if (annuleer) annuleer.focus();
+  }
+}
+
+/* s66 — na een geslaagde verwijdering ook de open dashboardsessies van die
+ * persoon stoppen, via de eigen instantie (POST /dashboard/sessies/intrekken
+ * {seat}, contract 2.17.0 §7g). De site trok de koppeling al in, dus een
+ * volgende vernieuwing faalt sowieso; dit zet een sessiegrens zodat een
+ * access-token dat al onderweg is meteen stopt, ook bij een lid met de
+ * standaardrol. Alleen met de vlag DASHBOARD_SESSIE en een sessie.
+ *
+ * Een 403, 404 of 503 (of geen verbinding) is geen fout van de verwijdering:
+ * dan stopt een open sessie uiterlijk als haar token verloopt, binnen een uur.
+ * Geeft true bij een 200 (geen voetnoot), anders false. */
+const TEAM_SESSIE_VOETNOOT = "Een open sessie van deze persoon stopt uiterlijk binnen een uur.";
+async function trekSessiesInVan(seat) {
+  const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
+  if (typeof sessieFlowAan !== "function" || !sessieFlowAan() || !bron || !bron.sessie) return true;
+  try {
+    await schrijfWerkruimte(bron, "POST", "/dashboard/sessies/intrekken", { seat });
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 

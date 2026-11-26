@@ -227,9 +227,8 @@ async function startExport(formaat) {
   }
 }
 
-/* Uitloggen: de sessie weg. Staat er nog een daglink in dit tabblad, dan kijk
- * je daarmee verder mee; anders terug naar het begin. */
-function uitloggen() {
+/* Alles van de ingelogde sessie in dit tabblad weg, zonder netwerk. */
+function wisIngelogdeStaat() {
   vergeetOauthSessie();
   resetOauthVernieuwing();
   naamBijLadenGedaan = null;
@@ -242,12 +241,58 @@ function uitloggen() {
   void laadTeam(null);
   void laadRollen(null);
   void laadTeamkanaal(null);
+}
+
+/* Uitloggen: de sessie weg. Staat er nog een daglink in dit tabblad, dan kijk
+ * je daarmee verder mee; anders terug naar het begin. */
+function uitloggen() {
+  // s66: met de vlag eerst uitloggen bij de site (het cookie weg), dan pas
+  // de lege staat. Inloggen wacht daar ook op (wachtOpSessieAfsluiten).
+  if (sessieFlowAan()) void sessieUitloggen();
+  wisIngelogdeStaat();
   const daglink = restoreDaglink();
   if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
 }
 
+/* s66: de sessie stopt buiten dit tabblad om — een 401 'beeindigd' van de
+ * instantie, een token van een ander account, of de markering die in een
+ * ander tabblad verdween. Zonder netwerk: geheugen leeg, de lege staat. */
+function sessieGestopt(titel, tekst) {
+  vergeetSessieGeheugen();
+  wisIngelogdeStaat();
+  toonLegeStaat(titel, tekst, { login: true });
+}
+
+/* s66: uitloggen op alle apparaten (zie sessieUitloggenOveral). Eén keer
+ * tegelijk; inloggen kan pas weer als het antwoord van de instantie er is. */
+let overalBezig = false;
+async function uitloggenOveral() {
+  if (overalBezig || !sessieFlowAan()) return;
+  overalBezig = true;
+  V2.meld("Bezig met uitloggen op alle apparaten…");
+  let uit;
+  try {
+    uit = await sessieUitloggenOveral();
+  } finally {
+    overalBezig = false;
+  }
+  // Een storing bij het ophalen van het verse token: er is niets veranderd.
+  if (uit.behoud) { V2.meld(uit.tekst, { fout: true }); return; }
+  // Een ander account: sessieGestopt heeft de lege staat al gezet.
+  if (uit.afgebroken) return;
+  sessieGestopt("Je bent uitgelogd", uit.tekst);
+}
+
 function startLogin() {
+  if (sessieFlowAan()) {
+    if (overalBezig) return;
+    startSessieLogin().catch((err) => {
+      console.error(err);
+      meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
+    });
+    return;
+  }
   startOauthLogin().catch((err) => {
     console.error(err);
     meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
@@ -305,10 +350,18 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
       return false;
     }
     currentBundle = null;
+    // s66: een sessie die buiten dit tabblad om stopte, heeft de lege staat
+    // met haar eigen melding al gezet (sessieGestopt).
+    if (err.sessieEinde) {
+      huidigeBron = null;
+      toonLegeStaat(err.sessieAnderAccount ? "Ander account" : "Je sessie is beëindigd", err.message, { login: true });
+      return;
+    }
     if (err.oauthVerlopen) {
       // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
       // knop er meteen bij in plaats van een doodlopende melding.
       vergeetOauthSessie();
+      if (bron && bron.sessie) vergeetSessieGeheugen();
       resetOauthVernieuwing();
       toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
       return;
@@ -345,31 +398,93 @@ async function verwerkOauthRedirect() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  restoreMinuten();
-  V2.start({
-    login: startLogin,
-    uitloggen,
-    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
-    exporteer: (formaat) => startExport(formaat),
-    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
-    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
-    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
-    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
+/* s66 — het opstarten met de vlag DASHBOARD_SESSIE (contract 2.17.0 §7g, §11).
+ *
+ * 1. De sleutels van de oude tabbladflow gaan weg.
+ * 2. #sessie=fout&reden=…  → een melding naast de loginknop.
+ * 3. #sessie=nieuw&r=…     → een token-POST, daarna naar r.
+ * 4. een daglink met markering → eerst een token-POST; de sessie wint alleen
+ *    bij dezelfde licentie, anders het daglinkpad, ongewijzigd.
+ * 5. alleen een markering  → een token-POST; bij 401 de lege staat.
+ * 6. niets                 → de lege staat, zonder één netwerkverzoek.
+ * De markering is een optimalisatie: zonder markering hervat de loginknop een
+ * levende sessie bij de site, zonder mail. */
+function luisterNaarSessieMarkering() {
+  window.addEventListener("storage", (e) => {
+    // Een ander tabblad logde uit (of de browser wiste de opslag): de markering
+    // is weg. Dan hier ook, zonder netwerk.
+    if (e.key !== SESSIE_LS_KEY && e.key !== null) return;
+    if (e.key === SESSIE_LS_KEY && e.newValue !== null) return;
+    if (e.key === null && leesSessieMarkering()) return;
+    if (!(huidigeBron && huidigeBron.sessie)) { vergeetSessieGeheugen(); return; }
+    sessieGestopt("Je bent uitgelogd", "Je bent in een ander tabblad uitgelogd. Log opnieuw in, of open je dashboard via de daglink in je dagstart.");
   });
-  wireNavigatie();
-  const uitRedirect = await verwerkOauthRedirect();
-  const bron = uitRedirect || restoreBron();
-  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
-  // keren; bij een gewone daglink staat de route al in de adresbalk.
-  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+}
+
+async function startMetSessie() {
+  vergeetOudeOauthOpslag();
+  bijSessieEinde((titel, tekst) => sessieGestopt(titel, tekst));
+  luisterNaarSessieMarkering();
+  const hash = window.location.hash;
+
+  const terug = parseSessieFragment(hash);
+  if (terug && terug.fout) {
+    schoonAdresbalk();
+    toonLegeStaat("Inloggen is niet gelukt", terug.tekst, { login: true });
+    return;
+  }
+  // Een #code=… van de oude flow (iemand logde in vlak voor de uitrol): nooit
+  // inwisselen, wel uit de adresbalk.
+  if (!terug && parseOauthRedirect(hash)) {
+    schoonAdresbalk();
+    toonLegeStaat("Log opnieuw in", "Inloggen werkt sinds kort anders. Klik opnieuw op inloggen.", { login: true });
+    return;
+  }
+
+  let sessie = null;
+  let naarRoute = null;
+  let sessieTekst = null;
+  if (terug && terug.nieuw) {
+    schoonAdresbalk();
+    naarRoute = terug.route;
+    toonLegeStaat("Je wordt ingelogd…", "", { login: false });
+    try {
+      sessie = sessieBron((await haalSessieToken()).access_token);
+    } catch (err) {
+      console.error(err);
+      toonLegeStaat("Inloggen is niet gelukt", err.message, { login: true });
+      return;
+    }
+  } else if (leesSessieMarkering()) {
+    try {
+      sessie = sessieBron((await haalSessieToken()).access_token);
+    } catch (err) {
+      sessie = null;
+      sessieTekst = err.message;
+    }
+    const vers = parseDaglinkFragment(hash);
+    if (sessie && vers) {
+      // b62: een daglink van dezelfde licentie wordt de terugval, de sessie
+      // wint. Een andere licentie: de daglink wint, ongewijzigd.
+      const lic = daglinkLicentie(vers.token);
+      if (lic && lic === sessieLicentie(sessie.token)) restoreDaglink();
+      else { sessie = null; vergeetSessieGeheugen(); }
+    }
+  }
+
+  const bron = sessie || restoreDaglink();
   if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
-  // f48: de kale link uit het slotbericht van de werkronde wees naar de
-  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
-  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
-  if (eindToestand) return;
+  if (sessieTekst) {
+    toonLegeStaat("Log in om je team te zien", sessieTekst + " Of open dit dashboard via de daglink in je dagstart.", { login: true });
+    return;
+  }
+  toonStartLeeg();
+}
+
+/* De lege staat bij het openen, als er geen bron is. */
+function toonStartLeeg() {
   // f53: de Hulp werkt zonder login — daar hoort geen inlogpoort voor.
   const deeplink = bedoeldeRoute(window.location.hash) && !/^#\/?$/.test(window.location.hash);
   if (!hulpDoel(window.location.hash) && deeplink && oauthMogelijk()) {
@@ -389,4 +504,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLegeStaat(oauthMogelijk() ? "Log in om je team te zien" : "Open je dashboard via de daglink in je dagstart",
     oauthMogelijk() ? "Of open dit dashboard via de daglink in je dagstart. Hieronder lees je hoe je team werkt." : "Vraag je Coördinator om een daglink. Hieronder lees je hoe je team werkt.",
     { login: true });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  restoreMinuten();
+  V2.start({
+    login: startLogin,
+    uitloggen,
+    uitloggenOveral: () => uitloggenOveral(),
+    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
+    exporteer: (formaat) => startExport(formaat),
+    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
+    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
+    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
+    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
+  });
+  wireNavigatie();
+  if (sessieFlowAan()) { await startMetSessie(); return; }
+  const uitRedirect = await verwerkOauthRedirect();
+  const bron = uitRedirect || restoreBron();
+  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
+  // keren; bij een gewone daglink staat de route al in de adresbalk.
+  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
+  // f48: de kale link uit het slotbericht van de werkronde wees naar de
+  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
+  if (naarRoute === "#/data/acties") naarRoute = "#/";
+  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
+  if (eindToestand) return;
+  toonStartLeeg();
 });
