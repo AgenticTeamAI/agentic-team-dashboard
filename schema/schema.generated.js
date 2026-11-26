@@ -2,20 +2,20 @@
 //
 // Gegenereerd door scripts/extract-schema.py uit
 // AgenticTeamAI/agent-architecture, core/agents.json.
-//   registryVersion : 1.92.0
+//   registryVersion : 1.93.0
 //   registry updated: 2026-09-30
-//   bron-commit     : 57f20ff59b97d1c7cbe8124204b54e7b24a6161d
-//   geextraheerd op : 2026-10-28T13:52:03Z
+//   bron-commit     : ed150b9755d04f3e264706f3a91504c522487750
+//   geextraheerd op : 2026-11-26T08:40:58Z
 //
 // Verandert de registry (nieuwe agent, gewijzigd datadomein, nieuwe module),
 // draai dit script dan opnieuw tegen een verse clone en commit het resultaat.
 // Typ deze structuur nooit met de hand over - dat is precies de tweede bron
 // van waarheid die de registry-koppeling (Stream B) moest voorkomen.
 window.AGENTIC_TEAM_SCHEMA = {
-  "registryVersion": "1.92.0",
+  "registryVersion": "1.93.0",
   "registryUpdated": "2026-09-30",
-  "sourceCommit": "57f20ff59b97d1c7cbe8124204b54e7b24a6161d",
-  "extractedAt": "2026-10-28T13:52:03Z",
+  "sourceCommit": "ed150b9755d04f3e264706f3a91504c522487750",
+  "extractedAt": "2026-11-26T08:40:58Z",
   "modules": {
     "core": {
       "naam": "Core",
@@ -243,6 +243,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Organisaties",
       "module": "core",
       "emoji": "🏢",
+      "rechtengroepen": [
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Naam",
@@ -339,6 +342,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Contactpersonen",
       "module": "core",
       "emoji": "👤",
+      "rechtengroepen": [
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Naam",
@@ -450,6 +456,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Interacties",
       "module": "sales",
       "emoji": "💬",
+      "rechtengroepen": [
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Onderwerp",
@@ -554,6 +563,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Sales Funnel",
       "module": "core",
       "emoji": "📊",
+      "rechtengroepen": [
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Deal Naam",
@@ -662,6 +674,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Projecten",
       "module": "delivery",
       "emoji": "📁",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Projectnaam",
@@ -763,6 +778,10 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Offertes",
       "module": "sales",
       "emoji": "📄",
+      "rechtengroepen": [
+        "financien",
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Offertenummer",
@@ -842,6 +861,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Product Catalogus",
       "module": "core",
       "emoji": "🧩",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Productnaam",
@@ -953,6 +975,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Content Kalender",
       "module": "visibility",
       "emoji": "📅",
+      "rechtengroepen": [
+        "content"
+      ],
       "velden": [
         {
           "naam": "Titel",
@@ -1154,6 +1179,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "systeem": true,
       "module": "core",
       "emoji": "💡",
+      "rechtengroepen": [
+        "werkgeheugen"
+      ],
       "velden": [
         {
           "naam": "Les",
@@ -1228,6 +1256,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "systeem": true,
       "module": "core",
       "emoji": "📋",
+      "rechtengroepen": [
+        "werkgeheugen"
+      ],
       "velden": [
         {
           "naam": "Onderdeel",
@@ -1262,6 +1293,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "systeem": true,
       "module": "core",
       "emoji": "📔",
+      "rechtengroepen": [
+        "werkgeheugen"
+      ],
       "velden": [
         {
           "naam": "Onderwerp",
@@ -1311,6 +1345,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Dagverslagen",
       "module": "core",
       "emoji": "📓",
+      "rechtengroepen": [
+        "werkgeheugen"
+      ],
       "velden": [
         {
           "naam": "Naam",
@@ -1352,6 +1389,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Delivery Rugzak",
       "module": "delivery",
       "emoji": "🎒",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Naam",
@@ -1418,6 +1458,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Tijdregistratie",
       "module": "backoffice",
       "emoji": "⏱️",
+      "rechtengroepen": [
+        "financien"
+      ],
       "velden": [
         {
           "naam": "Beschrijving",
@@ -1472,6 +1515,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Acties",
       "module": "core",
       "emoji": "✅",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Actie",
@@ -1618,6 +1664,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "systeem": true,
       "module": "core",
       "emoji": "📝",
+      "rechtengroepen": [
+        "werkgeheugen"
+      ],
       "velden": [
         {
           "naam": "Onderwerp",
@@ -1654,6 +1703,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Ritmetaken",
       "module": "core",
       "emoji": "🔁",
+      "rechtengroepen": [
+        "teaminrichting"
+      ],
       "velden": [
         {
           "naam": "Taak",
@@ -1734,6 +1786,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Klantsucces",
       "module": "delivery",
       "emoji": "💚",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Klantnaam",
@@ -1818,6 +1873,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Productbacklog",
       "module": "core",
       "emoji": "🗂️",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Item",
@@ -1864,6 +1922,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Besluiten",
       "module": "strategy",
       "emoji": "🌟",
+      "rechtengroepen": [
+        "strategie"
+      ],
       "velden": [
         {
           "naam": "Besluit",
@@ -1927,6 +1988,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Toolstack",
       "module": "backoffice",
       "emoji": "🖥️",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Tool",
@@ -2004,6 +2068,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Financieel Overzicht",
       "module": "backoffice",
       "emoji": "💶",
+      "rechtengroepen": [
+        "financien"
+      ],
       "velden": [
         {
           "naam": "Periode",
@@ -2053,6 +2120,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Contracten",
       "module": "backoffice",
       "emoji": "📜",
+      "rechtengroepen": [
+        "financien"
+      ],
       "velden": [
         {
           "naam": "Contractnaam",
@@ -2133,6 +2203,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "SEO Vraagonderzoek",
       "module": "visibility",
       "emoji": "🔍",
+      "rechtengroepen": [
+        "content"
+      ],
       "velden": [
         {
           "naam": "Vraag",
@@ -2194,6 +2267,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Vindbaarheid Audit",
       "module": "visibility",
       "emoji": "📶",
+      "rechtengroepen": [
+        "content"
+      ],
       "velden": [
         {
           "naam": "Pagina",
@@ -2271,6 +2347,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "GEO Metingen",
       "module": "visibility",
       "emoji": "🤖",
+      "rechtengroepen": [
+        "content"
+      ],
       "velden": [
         {
           "naam": "Vraag",
@@ -2318,6 +2397,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Pipeline Weekreview",
       "module": "growth",
       "emoji": "📈",
+      "rechtengroepen": [
+        "deals"
+      ],
       "velden": [
         {
           "naam": "Week",
@@ -2360,6 +2442,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Klantbewijs",
       "module": "core",
       "emoji": "🏅",
+      "rechtengroepen": [
+        "open"
+      ],
       "velden": [
         {
           "naam": "Titel",
@@ -2429,6 +2514,9 @@ window.AGENTIC_TEAM_SCHEMA = {
       "naam": "Autoriteit",
       "module": "visibility",
       "emoji": "📣",
+      "rechtengroepen": [
+        "content"
+      ],
       "velden": [
         {
           "naam": "Titel",

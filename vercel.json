@@ -7,7 +7,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'none'; script-src 'sha256-QgLGv7Dohbe7WxaXHutPq+Dh6vqmQbZ+JZhhbCbWuz8=' 'sha256-o5M//X4Yr8HYJPeOaCMUGhfU3WBG9ue0ivrzDR6fHN0='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src https://connector.agentic-team.ai https://*.azurecontainerapps.io https://www.agentic-team.ai; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+          "value": "default-src 'none'; script-src 'sha256-xrrehiK4Q0xw97DcpmdePVchktDI9dY4Q23v+ibrzo4=' 'sha256-o5M//X4Yr8HYJPeOaCMUGhfU3WBG9ue0ivrzDR6fHN0='; style-src 'unsafe-inline'; img-src 'self' data:; connect-src https://connector.agentic-team.ai https://*.azurecontainerapps.io https://www.agentic-team.ai; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         },
         {
           "key": "X-Content-Type-Options",
