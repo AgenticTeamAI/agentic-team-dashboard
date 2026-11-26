@@ -595,8 +595,9 @@ function afhandelKnoppen(rij, schema, nu) {
  * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
  * die tekst zou anders met het gezag van de eigenaar bij de specialist
  * belanden. De nieuwe actie verwijst dan alleen naar de bovenliggende actie,
- * met een neutrale tekst; de agent leest daar zelf de herkomst. Zonder
- * stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
+ * met een neutrale tekst; in een sessie leest de agent daar zelf de
+ * herkomst. Het werkmoment volgt die relatie niet (bekende grens, README).
+ * Zonder stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
 const OPVOLG_ZONDER_TITEL = ["medewerker", "viewer", "onbekend"];
 const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
 function opvolgZonderTitel(rij) {
