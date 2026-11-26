@@ -853,6 +853,20 @@ function renderTeamkanaal(sectieEl) {
   wireTeamkanaal(sectieEl);
 }
 
+/* De sectie die nu in beeld is. Beheer kan tijdens een aanvraag opnieuw
+ * getekend zijn (een toast die verloopt, laadTeam of laadModuleOverzicht die
+ * binnenkomt, heen en terug); dan hangt de sectie van de klik los en hoort het
+ * antwoord in de nieuwe. */
+function kanaalSectieNu(sectieEl) {
+  return sectieEl && sectieEl.isConnected ? sectieEl : document.getElementById("beheer-teamkanaal");
+}
+
+/* Geen ingelogde sessie meer: "Wie werkt er mee" en dit blok dicht, zoals f60.
+ * teamSluitZonderSessie wil de sectie van het teampaneel, niet die van het kanaal. */
+function kanaalSluitZonderSessie() {
+  teamSluitZonderSessie(document.getElementById("panel-team-namen"));
+}
+
 /* `waarde` is true (naar het kanaal), false (niet) of null (terug naar de standaard). */
 async function zetKanaal(sectieEl, slug, waarde) {
   if (kanaalBezig !== null || !teamkanaalZichtbaar()) return;
@@ -860,7 +874,7 @@ async function zetKanaal(sectieEl, slug, waarde) {
   if (!agent || (waarde !== true && waarde !== false && waarde !== null)) return;
   const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
   if (!bron || !bron.oauth || !bron.token) {
-    teamSluitZonderSessie(sectieEl);
+    kanaalSluitZonderSessie();
     return;
   }
   kanaalBezig = slug;
@@ -906,12 +920,14 @@ async function zetKanaal(sectieEl, slug, waarde) {
     await laadTeamkanaal(huidigeBron);
   }
   if (!teamSessieToken()) {
-    teamSluitZonderSessie(sectieEl);
+    kanaalSluitZonderSessie();
     return;
   }
   kanaalMelding = melding;
-  renderTeamkanaal(sectieEl);
-  const terug = teamKnopVoor(sectieEl, "data-kanaal-agent", slug);
+  const el = kanaalSectieNu(sectieEl);
+  if (!el) return; // Beheer is niet meer in beeld; de melding staat bij de volgende keer klaar
+  renderTeamkanaal(el);
+  const terug = teamKnopVoor(el, "data-kanaal-agent", slug);
   if (terug) terug.focus();
 }
 

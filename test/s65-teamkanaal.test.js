@@ -187,6 +187,23 @@ describe("s65 — de eigenaar ziet het blok Teamkanaal", () => {
     expect([...sectie().querySelectorAll("[data-kanaal-agent]")].every((k) => k.disabled)).toBe(true);
   });
 
+  it("zegt de instantie intussen dat je geen eigenaar meer bent, dan is het blok weg, ook vóór de instelling opnieuw geladen is", async () => {
+    await tekenBeheer(g, "eigenaar", kanaalAntwoord());
+    expect(sectie()).not.toBeNull();
+    // Een vernieuwd token, en de instantie geeft nu een andere rol (eigenaarswissel).
+    const oud = g.schrijfWerkruimte;
+    g.schrijfWerkruimte = async (b, methode, pad, payload) => (pad === "/dashboard/rollen"
+      ? { jij: { seat: EIG, rol: "beheerder" }, eigenaar: BEH, standaard: "medewerker", toewijsbaar: ["medewerker", "viewer"], rollen: [] }
+      : oud(b, methode, pad, payload));
+    g.huidigeBron = { ...g.huidigeBron, token: g.huidigeBron.token + "-vernieuwd" };
+    await g.laadRollen(g.huidigeBron);
+    // laadTeamkanaal is nog niet gedraaid: de instelling van de eigenaar staat nog in het geheugen.
+    expect(g.kanaalInfo).not.toBeNull();
+    g.V2.render();
+    expect(sectie()).toBeNull();
+    expect(document.getElementById("root").innerHTML).not.toContain("eamkanaal");
+  });
+
   it("naam en emoji uit het antwoord worden nooit html; een slug die geen slug is, valt weg", async () => {
     const a = kanaalAntwoord();
     a.agents[0].naam = '<img src=x onerror="alert(1)">';
@@ -358,6 +375,75 @@ describe("s65 — schakelen", () => {
     expect(foutTekst()).toBe("Dit token mag het dashboard lezen maar niet bewerken.");
     expect(schakelaar("jurist").getAttribute("aria-checked")).toBe("false");
     expect(kanaalVerzoeken(verzoeken).map((v) => v.methode)).toEqual(["GET", "PUT", "GET"]);
+  });
+
+  it("een hertekening tijdens de aanvraag: het antwoord komt in de sectie die je ziet, niet in de losgekoppelde", async () => {
+    let los;
+    const inst = instantie();
+    ({ verzoeken } = await tekenBeheer(g, "eigenaar", (m, p) => (m === "PUT" ? new Promise((r) => { los = () => r(inst(m, p)); }) : inst(m, p))));
+    const oud = sectie();
+    schakelaar("jurist").click();
+    await tick();
+    // Een toast die verloopt, laadTeam dat binnenkomt, of heen en terug: Beheer tekent opnieuw.
+    g.V2.render();
+    expect(sectie()).not.toBe(oud);
+    expect([...sectie().querySelectorAll("[data-kanaal-agent]")].every((k) => k.disabled)).toBe(true);
+    expect(melding()).toBe("Opslaan…");
+    los();
+    await tick();
+    expect(oud.isConnected).toBe(false);
+    expect([...sectie().querySelectorAll("[data-kanaal-agent]")].every((k) => !k.disabled)).toBe(true);
+    expect(schakelaar("jurist").getAttribute("aria-checked")).toBe("true");
+    expect(melding()).toBe("Jurist gaat nu naar het teamkanaal.");
+    expect(document.activeElement).toBe(schakelaar("jurist"));
+    // En de volgende klik doet weer iets.
+    schakelaar("researcher").click();
+    await tick();
+    expect(puts().map((p) => p.payload)).toEqual([{ agents: { jurist: true } }, { agents: { researcher: false } }]);
+    los();
+    await tick();
+    expect(schakelaar("researcher").getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("een hertekening tijdens een aanvraag die met 403 eindigt: de reden staat in de sectie die je ziet", async () => {
+    let los;
+    let rol = "eigenaar";
+    const inst = instantie();
+    ({ verzoeken } = await tekenBeheer(g, "eigenaar", (m, p) => (m === "PUT"
+      ? new Promise((_, nee) => { los = () => { rol = "beheerder"; nee(fout(403, "Alleen de eigenaar stelt in wat er naar het teamkanaal gaat.", "alleen_eigenaar")); }; })
+      : inst(m, p))));
+    const oud = g.schrijfWerkruimte;
+    g.schrijfWerkruimte = async (b, methode, pad, payload) => {
+      if (pad === "/dashboard/rollen" && rol === "beheerder") {
+        verzoeken.push({ methode, pad, token: b.token });
+        return { jij: { seat: EIG, rol: "beheerder" }, eigenaar: BEH, standaard: "medewerker", toewijsbaar: ["medewerker", "viewer"], rollen: [] };
+      }
+      return oud(b, methode, pad, payload);
+    };
+    schakelaar("jurist").click();
+    await tick();
+    g.V2.render();
+    los();
+    await tick(12);
+    expect(sectie().querySelectorAll("button").length).toBe(0);
+    expect(tekst(sectie())).toBe("Teamkanaal Alleen de eigenaar stelt in wat er naar het teamkanaal gaat.");
+  });
+
+  it("wisselt de sessie na een hertekening tijdens de aanvraag naar een daglink, dan gaan het blok en 'Wie werkt er mee' dicht", async () => {
+    let los;
+    const inst = instantie();
+    ({ verzoeken } = await tekenBeheer(g, "eigenaar", (m, p) => (m === "PUT" ? new Promise((r) => { los = () => r(inst(m, p)); }) : inst(m, p))));
+    schakelaar("jurist").click();
+    await tick();
+    g.V2.render();
+    const el = sectie();
+    g.huidigeBron = { token: "daglink-s65", instantieUrl: "https://connector.example" };
+    los();
+    await tick();
+    expect(el.isConnected).toBe(true);
+    expect(el.style.display).toBe("none");
+    expect(el.querySelector("[data-kanaal-agent]")).toBeNull();
+    expect(document.getElementById("panel-team-namen").style.display).toBe("none");
   });
 
   it("wisselt de sessie tijdens de aanvraag naar een daglink, dan gaat het blok dicht", async () => {
