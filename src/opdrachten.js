@@ -40,21 +40,51 @@ const OPDRACHT_VELDEN = [
 const OPDRACHT_ACTIE_MAX = 200;
 const OPDRACHT_TEKST_MAX = 4000;
 
-/* De sleutel van een item in het eigen systeem. Voor een pagina uit een
- * notitiesysteem het id van 32 tekens aan het eind van het pad (ook in de vorm
- * met streepjes); anders de url zelf. Geen url: geen sleutel, en dan ook geen
- * knoppen — zonder sleutel kan je team het item niet terugvinden. */
+/* Notitiesysteem-pagina's wonen op notion.so of notion.site (ook een
+ * werkruimte-subdomein daarvan): dezelfde regel als de instantie. */
+function isNotitieHost(host) {
+  const h = String(host || "").toLowerCase();
+  return h === "notion.so" || h.endsWith(".notion.so") || h === "notion.site" || h.endsWith(".notion.site");
+}
+const PAGINA_ID = /^[0-9a-f]{32}$/i;
+function paginaIdUit(segment) {
+  const kaal = String(segment || "").replace(/-/g, "");
+  if (PAGINA_ID.test(kaal)) return kaal.toLowerCase();
+  // titel-<id>: alleen als het id echt aan het eind staat, na een streepje.
+  const m = /-([0-9a-f]{32})$/i.exec(String(segment || ""));
+  return m ? m[1].toLowerCase() : null;
+}
+
+/* Het Extern ID van een item in het eigen systeem, zoals het naar de instantie
+ * gaat. Alleen bij een link naar een notitiesysteem het page-id van 32 tekens:
+ * eerst de parameter p (de vorm uit een databaseweergave,
+ * …/<database-id>?v=…&p=<page-id>, waar het pad het id van de database
+ * draagt en niet van de pagina), anders het laatste stuk van het pad. Bij elke
+ * andere host de url zelf, ook als die op 32 hex eindigt. Geen https-link:
+ * null, en dan ook geen knoppen. */
 function externIdVanUrl(url) {
   const u = String(url || "").trim();
   if (!/^https:\/\//i.test(u)) return null;
-  let pad = u;
-  try { pad = new URL(u).pathname; } catch (e) { return u; }
-  const laatste = pad.split("/").filter(Boolean).pop() || "";
-  const kaal = laatste.replace(/-/g, "");
-  const m = /([0-9a-f]{32})$/i.exec(kaal);
-  // Alleen als het id echt aan het eind staat (titel-<id> of het id met streepjes).
-  if (m && (/[0-9a-f]{32}$/i.test(laatste) || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(laatste))) return m[1].toLowerCase();
-  return u;
+  let p;
+  try { p = new URL(u); } catch (e) { return u; }
+  if (!isNotitieHost(p.hostname)) return u;
+  const uitQuery = paginaIdUit(p.searchParams.get("p"));
+  if (uitQuery) return uitQuery;
+  return paginaIdUit(p.pathname.split("/").filter(Boolean).pop()) || u;
+}
+
+/* De sleutel van een kaart in de DOM en in de bladen: de link zelf, los van
+ * het Extern ID. Een item krijgt alleen knoppen als het eenduidig is: precies
+ * één item in de dagstart met deze link, en geen ander item met hetzelfde
+ * Extern ID. Anders zou een klik op het ene item de titel en link van het
+ * andere doorgeven, en zou de stand van het een op het ander staan. */
+function doorgeefSleutel(it) { return it && it.url ? String(it.url).trim() : ""; }
+function uniekItem(items, sleutel) {
+  const s = String(sleutel || "").trim(); if (!s) return null;
+  const l = (items || []).filter(it => doorgeefSleutel(it) === s);
+  if (l.length !== 1) return null;
+  const id = externIdVanUrl(s); if (!id) return null;
+  return (items || []).some(it => it !== l[0] && it && it.url && externIdVanUrl(it.url) === id) ? null : l[0];
 }
 
 function opdrachtVeld(entry, naam) {
@@ -161,7 +191,7 @@ function opdrachtFoutTekst(e) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    OPDRACHT_HANDELINGEN, OPDRACHT_STATUSSEN, OPDRACHT_VELDEN, externIdVanUrl, opdrachtVoorItem, opdrachtStatus,
+    OPDRACHT_HANDELINGEN, OPDRACHT_STATUSSEN, OPDRACHT_VELDEN, externIdVanUrl, uniekItem, doorgeefSleutel, opdrachtVoorItem, opdrachtStatus,
     opdrachtBody, controleerOpdracht, opdrachtFoutTekst, opdrachtenLijst,
   };
 }

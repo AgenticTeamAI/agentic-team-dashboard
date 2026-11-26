@@ -248,8 +248,12 @@ Doorgegeven is.
   (`opdrachtFoutTekst`): een paar codes vertaalt het dashboard zelf, anders de
   `melding` van de instantie, behalve als daar een merknaam in staat.
 - **Sleutel.** Alleen een item met een https-link krijgt knoppen. Extern ID is
-  het page-id van 32 tekens aan het eind van het pad, anders de link zelf
-  (`externIdVanUrl`).
+  bij een link naar notion.so of notion.site het page-id van 32 tekens: eerst
+  de parameter `p` (de link uit een databaseweergave), anders het laatste stuk
+  van het pad. Bij elke andere host is het de link zelf (`externIdVanUrl`).
+  Kaart en blad dragen de link als sleutel, niet het Extern ID; een item dat
+  dezelfde link of hetzelfde Extern ID heeft als een ander item, krijgt geen
+  knoppen (`uniekItem`), zodat een klik nooit een ander item doorgeeft.
 - **Stand.** De opdrachten van de laatste 30 dagen komen mee met de bundel
   (`GET /dashboard/opdrachten?sinds=…`, alleen als het overzicht het domein met
   rijen noemt). Op de kaart staat "Doorgegeven — wordt bij het volgende

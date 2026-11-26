@@ -161,9 +161,10 @@ function renderSheet() {
   return "";
 }
 /* f61 — de bladen bij doorgeven. Ze dragen geen actie uit je werkruimte maar
- * de sleutel van het item uit je dagstart (sh.x); de opdracht zelf schrijft
- * doorgeven() hieronder. */
-function doorgeefItem(sleutel) { return (werkbakUitDagstart() || []).find(it => it && it.url && externIdVanUrl(it.url) === sleutel) || null; }
+ * de sleutel van het item uit je dagstart (sh.x: de link zelf); de opdracht
+ * zelf schrijft doorgeven() hieronder. Is het item niet eenduidig, dan null:
+ * dan geven we nooit de titel of link van een ander item door. */
+function doorgeefItem(sleutel) { return uniekItem(werkbakUitDagstart(), sleutel); }
 function specialistVanItem(it) { const s = it && slugVanNaam(it.specialist); return s && AGENTS[s] ? s : null; }
 function doorgeefVerwachting() {
   const kc = klaarCheck(); const naam = naamElders("acties");
@@ -645,7 +646,7 @@ async function doorgevenBinnen(it, handeling, opts, btn) {
   if (S.sheet === sheetVoor) S.sheet = null;
   const entry = res && res.entry; zetOpdracht(entry);
   toast(doorgeefMelding(handeling, { ag: opts.ag, datum: opts.datum }), { undo: entry && entry.entryId ? () => intrekken(entry.entryId) : null });
-  S.focusNa = `[data-xkaart="${cssEsc(externIdVanUrl(it.url))}"] [data-act]|.werkbak-kop h2`;
+  S.focusNa = `[data-xkaart="${cssEsc(doorgeefSleutel(it))}"] [data-act]|.werkbak-kop h2`;
   render();
 }
 async function nieuweOpdrachtElders(sh, wat, btn) {

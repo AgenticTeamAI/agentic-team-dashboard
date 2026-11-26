@@ -133,9 +133,40 @@ describe("f61 — het domein volgt het contract", () => {
     expect(g.externIdVanUrl(URL1)).toBe(ID1);
     expect(g.externIdVanUrl("https://www.notion.so/" + ID1.toUpperCase())).toBe(ID1);
     expect(g.externIdVanUrl("https://www.notion.so/ffg/1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d")).toBe(ID1);
+    expect(g.externIdVanUrl("https://www.notion.so/ffg/Offerte-nakijken-" + ID1 + "?pvs=4")).toBe(ID1);
+    expect(g.externIdVanUrl("https://ffg.notion.site/" + ID1)).toBe(ID1);
     expect(g.externIdVanUrl("https://crm.example/deal/42")).toBe("https://crm.example/deal/42");
     expect(g.externIdVanUrl("http://www.notion.so/" + ID1)).toBeNull();
     expect(g.externIdVanUrl(null)).toBeNull();
+  });
+
+  it("een link uit een databaseweergave: het page-id uit p, niet het database-id uit het pad", () => {
+    const DB = "99999999999999999999999999999999";
+    const peek = (p) => `https://www.notion.so/ffg/Acties-${DB}?v=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&p=${p}&pm=s`;
+    expect(g.externIdVanUrl(peek(ID1))).toBe(ID1);
+    expect(g.externIdVanUrl(peek("1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"))).toBe(ID1);
+    expect(g.externIdVanUrl(peek("0123456789abcdef0123456789abcdef"))).toBe("0123456789abcdef0123456789abcdef");
+    // Een p die geen page-id is: terug naar het pad.
+    expect(g.externIdVanUrl(`https://www.notion.so/ffg/Acties-${DB}?p=geen-id`)).toBe(DB);
+  });
+
+  it("een andere host met een staart van 32 hex: de url zelf, nooit een page-id", () => {
+    const vreemd = "https://andere-host.example/x-" + ID1;
+    expect(g.externIdVanUrl(vreemd)).toBe(vreemd);
+    expect(g.externIdVanUrl("https://notion.so.example/" + ID1)).toBe("https://notion.so.example/" + ID1);
+    expect(g.externIdVanUrl("https://crm.example/" + ID1)).toBe("https://crm.example/" + ID1);
+  });
+
+  it("alleen een eenduidig item: dezelfde link of hetzelfde Extern ID bij twee items is geen sleutel", () => {
+    const a = { nr: 1, url: URL1 }, b = { nr: 2, url: URL2 };
+    expect(g.uniekItem([a, b], URL1)).toBe(a);
+    expect(g.uniekItem([a, b], " " + URL1 + " ")).toBe(a);
+    expect(g.uniekItem([a, b], "https://www.notion.so/ffg/iets-anders")).toBeNull();
+    expect(g.uniekItem([a, { nr: 2, url: URL1 }], URL1)).toBeNull();
+    // Andere link, zelfde page-id (bv. met en zonder ?pvs=4): ook niet eenduidig.
+    expect(g.uniekItem([a, { nr: 2, url: URL1 + "?pvs=4" }], URL1)).toBeNull();
+    expect(g.uniekItem([a, { nr: 2, url: null }], URL1)).toBe(a);
+    expect(g.uniekItem(null, URL1)).toBeNull();
   });
 
   it("de body bevat alleen wat de handeling nodig heeft, nooit status of wie", () => {
@@ -287,6 +318,46 @@ describe("f61 — wie knoppen krijgt", () => {
     expect($("#root").textContent).not.toContain("Doorgegeven");
     // De poort voor acties zelf blijft dicht: die rijen woont elders.
     expect(g.magDomeinBewerken(ctxMet(), "acties").ok).toBe(false);
+  });
+});
+
+describe("f61 — twee items met dezelfde sleutel worden nooit door elkaar gehaald", () => {
+  const DB = "99999999999999999999999999999999";
+  const ID_B = "0123456789abcdef0123456789abcdef";
+  const peek = (p) => `https://www.notion.so/ffg/Acties-${DB}?v=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&p=${p}&pm=s`;
+
+  it("links uit een databaseweergave: elke kaart stuurt zijn eigen titel, link en page-id", async () => {
+    const items = [
+      { nr: 1, titel: "Offerte X versturen", soort: "check", specialist: DM, url: peek(ID1) },
+      { nr: 2, titel: "Blogpost Y", soort: "check", specialist: DM, url: peek(ID_B) },
+    ];
+    const spy = nepInstantie();
+    open(ctxMet({ items }));
+    expect(knoppen(1)).toEqual(["Goedkeuren", "Terug", "Open in je eigen systeem"]);
+    expect(knoppen(2)).toEqual(["Goedkeuren", "Terug", "Open in je eigen systeem"]);
+    kaart(2).querySelector('[data-h="Goedkeuren"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    expect(posts(spy)[0].body).toEqual({ handeling: "Goedkeuren", actie: "Blogpost Y", extern_id: ID_B, bron_link: peek(ID_B) });
+    await wacht(() => expect(kaart(2).querySelector("[data-opdracht-status]")).not.toBeNull());
+    // Kaart 1 houdt zijn eigen knoppen en draagt niet de stand van kaart 2.
+    expect(kaart(1).querySelector("[data-opdracht-status]")).toBeNull();
+    expect(knoppen(1)).toEqual(["Goedkeuren", "Terug", "Open in je eigen systeem"]);
+  });
+
+  it("twee items met precies dezelfde link: geen doorgeefknoppen, wel Open en Kopieer", () => {
+    const items = [
+      { nr: 1, titel: "Offerte X versturen", soort: "check", specialist: DM, url: URL1 },
+      { nr: 2, titel: "Blogpost Y", soort: "check", specialist: DM, url: URL1 },
+      { nr: 3, titel: "Factuur Smit nabellen", soort: "taak", specialist: null, url: URL3 },
+    ];
+    open(ctxMet({ items, opdrachten: [opdracht("o1", { Actie: "Offerte X versturen", Handeling: "Goedkeuren", Status: "Doorgegeven", "Extern ID": ID1 })] }));
+    expect(knoppen(1)).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    expect(knoppen(2)).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    expect(kaart(1).querySelector("[data-opdracht-status]")).toBeNull();
+    expect(knoppen(3)).toEqual(["Geef aan je team", "Later", "Open in je eigen systeem"]);
+    // Ook een blad dat (bv. uit een oude stand) zo'n sleutel draagt, geeft niets door.
+    g.V2._S.sheet = { type: "x-terug", x: URL1, tekst: "", datum: "" }; g.V2.render();
+    expect($(".scrim h3").textContent).toBe("Dit item is er niet (meer)");
   });
 });
 
@@ -493,7 +564,7 @@ describe("f61 — geen merknaam in beeld, en de hulp legt het uit", () => {
     open(ctx);
     expect(inBeeld()).not.toMatch(/Claude|Notion/);
     for (const type of ["x-terug", "x-nee", "x-later", "x-wie"]) {
-      g.V2._S.sheet = { type, x: ID1, tekst: "", datum: "" }; g.V2.render();
+      g.V2._S.sheet = { type, x: URL1, tekst: "", datum: "" }; g.V2.render();
       expect(inBeeld(), type).not.toMatch(/Claude|Notion/);
     }
     g.V2._S.sheet = { type: "opdracht", wat: "", ag: null, mens: null, wanneer: "geen" }; g.V2.render();

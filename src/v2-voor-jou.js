@@ -324,7 +324,11 @@ function renderVoorJouNotion() {
  * die nog niet verwerkt is, dan staat de stand er en geen tweede knop. */
 function doorgeefKaart(it, gegenereerd) {
   if (!doorgevenMogelijk() || !it || !it.url) return null;
-  const sleutel = externIdVanUrl(it.url); if (!sleutel) return null;
+  // De kaart en zijn knoppen dragen de link zelf als sleutel; een item dat niet
+  // eenduidig is (dezelfde link of hetzelfde Extern ID als een ander item)
+  // krijgt geen knoppen en geen stand, alleen Open en Kopieer.
+  if (!uniekItem(werkbakUitDagstart(), it.url)) return null;
+  const sleutel = doorgeefSleutel(it);
   const o = opdrachtVoorItem(CTX.bundle, it.url);
   const st = o ? opdrachtStatus(o) : null;
   const status = (t) => `<span class="imeta" data-opdracht-status><span class="pil ${st.k}" style="white-space:normal">${esc(t)}</span></span>`;
