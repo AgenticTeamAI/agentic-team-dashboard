@@ -23,7 +23,8 @@ function loginKnop(label, cls) { return kanInloggen() ? knop(esc(ingelogd() && !
 
 /* ---------- Kop, tabs, balken ---------- */
 function aantalVoorJou() {
-  if (toegang() === "notion") { const m = werkbakUitDagstart(); return m ? m.length : 0; }
+  // f62: alleen jouw eigen werkbak telt; de teambrede lijst is niet "voor jou".
+  if (toegang() === "notion") { const m = werkbakIsPersoonlijk() ? werkbakUitDagstart() : null; return m ? m.length : 0; }
   return aanJouZet().length;
 }
 function tabs() {
@@ -111,16 +112,25 @@ function renderBovenkaart() {
 }
 /* ---------- f62: Jouw dag ----------
  * De stand van jouw dagstart, bovenaan Voor jou. Alleen jouw dag: van je
- * collega's alleen tellingen, en de agenda alleen met tijd en titel (zo
- * schrijft de Coördinator hem al weg; links, adressen of inbelcodes kent het
- * contract niet). Met een daglink weet het dashboard niet wie je bent: dan
- * geen kaart, wel de vraag om in te loggen. */
+ * collega's alleen tellingen, en de agenda alleen met tijd en titel. Het
+ * contract kent geen links, adressen of inbelcodes, en wat er toch in een
+ * titel staat haalt saneerDagplan eruit (src/dagplan.js). Met een daglink
+ * weet het dashboard niet wie je bent: dan geen kaart, wel de vraag om in te
+ * loggen. */
+/* Een voornaam is genoeg zolang hij op de kaart maar bij één naam hoort; twee
+ * Marks heten voluit. */
+function korteNamen(namen) {
+  const norm = (x) => normAgentNaam(x).replace(/\s+/g, " "); const per = new Map();
+  for (const n of namen) { const v = norm(voornaam(n)); if (!per.has(v)) per.set(v, new Set()); per.get(v).add(norm(n)); }
+  return (n) => (per.get(norm(voornaam(n))) || new Set()).size > 1 ? n : voornaam(n);
+}
 function renderJouwDag() {
   if (!CTX) return "";
-  if (!ingelogd()) return (dagplanEntries() || []).length ? `<p class="klein stil jouwdag-login" data-jouwdag-login>Log in om je eigen dag te zien.</p>` : "";
+  if (!ingelogd()) return dagplannenAantal() ? `<p class="klein stil jouwdag-login" data-jouwdag-login>Log in om je eigen dag te zien.</p>` : "";
   const d = dagplanVanMij(); if (!d) return "";
   const p = d.plan; const g = p.gegenereerd_op ? dt(p.gegenereerd_op) : null; const datum = d.datum || p.datum;
   const stand = d.vandaag ? "stand van je dagstart" + (g ? " " + hhmm(g) : "") : (datum ? "van " + datumKort(datum) : "van een eerdere dag");
+  const kort = korteNamen([p.voor || d.persoon, ...p.collegas.map(c => c.naam), ...p.samen.flatMap(x => x.met)].filter(Boolean));
   const sec = (titel, html) => `<div class="jd-sectie"><h3 class="vakkop">${esc(titel)}</h3>${html}</div>`;
   const delen = [];
   if (p.acuut.length) delen.push(sec("Vandaag acuut", `<ul class="jd-lijst">${p.acuut.map(x => `<li><b>${esc(x.titel)}</b>${x.toelichting ? `<span class="stil">${esc(x.toelichting)}</span>` : ""}</li>`).join("")}</ul>`));
@@ -130,12 +140,12 @@ function renderJouwDag() {
   const tg = p.ter_goedkeuring;
   if (tg.totaal) {
     const laat = tg.items.filter(i => i.te_laat).length;
-    delen.push(sec("Ter goedkeuring", `<div class="tussen"><p><b>${esc(tg.totaal)}</b> ${tg.totaal === 1 ? "wacht" : "wachten"} op jou${laat ? `, waarvan <b>${esc(laat)}</b> te laat` : ""}.</p><button class="link" data-act="naar-werkbak">Naar je werkbak ${ic("chev", "klein")}</button></div>`));
+    delen.push(sec("Ter goedkeuring", `<div class="tussen"><p><b>${esc(tg.totaal)}</b> ${tg.totaal === 1 ? "wacht" : "wachten"} op jou volgens je dagstart${laat ? `, waarvan <b>${esc(laat)}</b> te laat` : ""}.</p><button class="link" data-act="naar-werkbak">Naar je werkbak ${ic("chev", "klein")}</button></div>`));
   }
   if (p.collegas.length || p.onverdeeld) {
-    delen.push(sec("Bij collega’s", `<div class="tellers jd-tellers">${p.collegas.map(c => `<div class="teller" title="${esc(c.naam)}"><b>${esc(c.wachtend)}</b><span>bij ${esc(voornaam(c.naam))}</span></div>`).join("")}${p.onverdeeld ? `<div class="teller"><b>${esc(p.onverdeeld)}</b><span>onverdeeld, voor iedereen</span></div>` : ""}</div>`));
+    delen.push(sec("Bij collega’s", `<div class="tellers jd-tellers">${p.collegas.map(c => `<div class="teller" title="${esc(c.naam)}"><b>${esc(c.wachtend)}</b><span>bij ${esc(kort(c.naam))}</span></div>`).join("")}${p.onverdeeld ? `<div class="teller"><b>${esc(p.onverdeeld)}</b><span>onverdeeld, voor iedereen</span></div>` : ""}</div>`));
   }
-  if (p.samen.length) delen.push(sec("Samen afstemmen", `<ul class="jd-lijst">${p.samen.map(x => `<li><b>${esc(x.titel)}</b>${x.met.length ? `<span class="stil">met ${esc(lijstZin(x.met.map(voornaam)))}</span>` : ""}</li>`).join("")}</ul>`));
+  if (p.samen.length) delen.push(sec("Samen afstemmen", `<ul class="jd-lijst">${p.samen.map(x => `<li><b>${esc(x.titel)}</b>${x.met.length ? `<span class="stil">met ${esc(lijstZin(x.met.map(kort)))}</span>` : ""}</li>`).join("")}</ul>`));
   if (p.later.length) delen.push(sec("Later deze week", `<ul class="jd-lijst">${p.later.map(x => `<li>${esc(x.titel)}</li>`).join("")}</ul>`));
   return `<section class="vak jouwdag" aria-label="Jouw dag" data-jouwdag><div class="tussen"><div class="kol" style="gap:2px"><h2 class="vakkop"><b>Jouw dag</b></h2><span class="klein ${d.vandaag ? "" : "stil"}" data-jouwdag-stand>${esc(stand)}</span></div>${hoe("jouw-dag")}</div>
     ${p.context ? `<p>${esc(p.context)}</p>` : ""}${delen.join("") || `<p class="stil">Je dagstart zette niets bijzonders voor je klaar.</p>`}</section>`;
@@ -259,7 +269,7 @@ function renderVoorJouNotion() {
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
   const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
-  const g = werkbakMoment();
+  const g = werkbakMoment(); const eigen = werkbakIsPersoonlijk();
   const verhaal = feed.length
     ? `<p class="zin">${esc(v.titel)} ${ags.length ? `${ags.length === 1 ? "was" : "waren"} <b>${telwoord(ags.length, "specialist", "specialisten")}</b> voor je aan het werk.` : "werkte je team voor je."}</p>${perAgent.length ? `<p class="detail">${perAgent.join(". ")}.</p>` : ""}
        <div class="tussen"><div class="chiprij">${ags.map(s => agChip(s, { alleen: true })).join("")}</div><button class="link" data-act="go" data-r="/team">Wat deden ze precies? ${ic("chev", "klein")}</button></div>`
@@ -274,9 +284,9 @@ function renderVoorJouNotion() {
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderJouwDag()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
     ${!blok ? `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
-    : `<section class="werkbak-kop" id="werkbak" tabindex="-1"><div class="tussen"><h2 class="vakkop"><b>Volgens je dagstart ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
-    <p class="klein stil">De nummers zijn dezelfde als in je dagstart. Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
-    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>`}`}
+    : `<section class="werkbak-kop" id="werkbak" tabindex="-1" data-werkbak="${eigen ? "jij" : "team"}"><div class="tussen"><h2 class="vakkop"><b>${eigen ? "Volgens je dagstart" : "Werkbak van je team"} ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
+    <p class="klein stil">${eigen ? "De nummers zijn dezelfde als in je dagstart." : `Alles wat bij je team op een mens wacht, niet alleen wat op jou wacht. ${ingelogd() ? "Na je eigen dagstart staat hier alleen het jouwe." : "Log in om alleen het jouwe te zien."}`} Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
+    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : eigen ? `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>` : `<section class="leeg"><h3>Niets in de werkbak van je team.</h3><p class="stil">Zodra een dagstart iets klaarzet, staat het hier.</p></section>`}`}
     ${renderOnderregels()}${privacyHtml()}</div>`;
 }
 

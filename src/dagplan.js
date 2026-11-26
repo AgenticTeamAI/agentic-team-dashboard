@@ -64,6 +64,25 @@ function dpTelling(v) {
   return n === null || n < 0 ? 0 : Math.min(DAGPLAN_MAX.telling, Math.round(n));
 }
 
+/* De titel van een afspraak, zonder wat besluit 6 nooit in beeld wil:
+ * vergaderlinks en andere urls, e-mailadressen en inbel- of pincodes. Het
+ * contract kent die niet, maar een agendatitel is vrije tekst ("Teams
+ * https://…", "Jan <jan@x.nl> en Tijmen", "PIN 123 456"), dus de consument
+ * schraapt ze er zelf uit. Blijft er niets zinnigs over, dan "Bezet". */
+function dpAgendaTitel(v) {
+  const t = dpTekst(v, 1000)
+    .replace(/\b(?:https?|ftp|mailto|tel|sip|sips|callto|msteams|zoommtg|facetime):\S*/gi, " ")
+    .replace(/\bwww\.\S+/gi, " ")
+    .replace(/[^\s@<>()[\]]+@[^\s@<>()[\]]+/g, " ")
+    .replace(/\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\/\S*/gi, " ")
+    .replace(/\b(?:pin|pincode|passcode|password|wachtwoord|toegangscode|inbelcode|vergadercode|code|id|meeting\s*id|vergadering-id)\s*[:#=]?\s*(?=[\w-]*\d)[\w-]+(?:[ .-]\d+)*#?/gi, " ")
+    .replace(/\+?\d[\d \-]*\d#?/g, (m) => (m.replace(/\D/g, "").length >= 6 && !/^(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}-\d{1,2}-\d{4})$/.test(m) ? " " : m))
+    .replace(/[<([{][\s,;:.\-]*[>)\]}]/g, " ")
+    .replace(/\s+/g, " ").trim()
+    .replace(/^[\s,;:|·\-–—]+|[\s,;:|·\-–—]+$/g, "");
+  return /[\p{L}\p{N}]/u.test(t) ? dpTekst(t, DAGPLAN_MAX.titel) : "Bezet";
+}
+
 function dpLijst(v, max) { return Array.isArray(v) ? v.slice(0, max).filter(dpIsObject) : []; }
 
 /* entry_id volgens de afspraak: "dagplan-" + de naam in kleine letters,
@@ -89,7 +108,7 @@ function saneerDagplan(raw, schema) {
     const slugs = new Set(((s && s.agents) || []).map(a => a && a.slug).filter(Boolean));
 
     const agenda = dpLijst(o.agenda, DAGPLAN_MAX.agenda)
-      .map(it => ({ start: dpTijd(it.start), eind: dpTijd(it.eind), titel: dpTekst(it.titel, DAGPLAN_MAX.titel) || "Bezet" }))
+      .map(it => ({ start: dpTijd(it.start), eind: dpTijd(it.eind), titel: dpAgendaTitel(it.titel) }))
       .filter(it => it.start)
       .sort((a, b) => a.start.localeCompare(b.start));
 

@@ -39,9 +39,7 @@ function zetFetch(gegenereerdOp, { logboek = 0, notities = 0 } = {}) {
       ].filter(d => d.aantal > 0 || d.domein === "acties") });
     }
     if (pad.startsWith("/dashboard/entries?domein=dashboard_metrics")) {
-      // f62: de loader leest alleen de entry "metrics" (geen terugval meer op
-      // de nieuwste entry van het domein); vroeger stond hier "m-1".
-      return antwoord({ entries: [{ entryId: "metrics", bijgewerkt: gegenereerdOp, data: {
+      return antwoord({ entries: [{ entryId: "m-1", bijgewerkt: gegenereerdOp, data: {
         Titel: "Dagcijfers",
         Inhoud: JSON.stringify({ versie: 1, gegenereerdOp, klant: "Testklant", adoptie: {}, domeinen: {} }),
       } }] });

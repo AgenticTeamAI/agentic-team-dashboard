@@ -83,10 +83,14 @@ function isNotion() {
 }
 function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
 /* De werkbak uit de dagstart, ook als er verdwaalde acties-rijen zijn. f62:
- * heeft jouw dagplan van vandaag items ter goedkeuring, dan zijn dát de items
- * (met dezelfde nummers als in je chat); anders het voor_jou-blok van metrics
- * v3, dat voor de hele licentie hetzelfde is. Badge en lijst tellen hiermee. */
-function werkbakUitDagplan() { const d = dagplanVanMij(); return d && d.vandaag && d.plan.ter_goedkeuring.items.length ? d : null; }
+ * heb je een dagplan van vandaag, dan zijn de items daaruit jouw werkbak (met
+ * dezelfde nummers als in je chat), ook als die lijst leeg is: dan wacht er
+ * volgens je dagstart niets op jou. Pas zonder dagplan van vandaag valt dit
+ * terug op het voor_jou-blok van metrics v3. Dat is de werkbak van het hele
+ * team (licentiebreed, genummerd 1 t/m N): die heet dan ook zo, telt niet als
+ * "voor jou" in de badge en claimt niet de nummers uit je chat. */
+function werkbakUitDagplan() { const d = dagplanVanMij(); return d && d.vandaag ? d : null; }
+function werkbakIsPersoonlijk() { return !!werkbakUitDagplan(); }
 function werkbakUitDagstart() {
   const d = werkbakUitDagplan(); if (d) return d.plan.ter_goedkeuring.items;
   const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null;
@@ -101,6 +105,12 @@ function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || 
 /* f62 — je dagplan (src/dagplan.js): het jouwe kiezen kan alleen als het
  * dashboard weet wie je bent (inloggen). Met een daglink dus nooit. */
 function dagplanEntries() { const d = CTX && CTX.bundle && CTX.bundle.dagplannen; return d && Array.isArray(d.entries) ? d.entries : null; }
+/* Hoeveel dagplannen er zijn. Met een daglink haalt de loader de plannen zelf
+ * niet op (alleen het aantal uit het overzicht), dus dan telt dat. */
+function dagplannenAantal() {
+  const d = CTX && CTX.bundle && CTX.bundle.dagplannen; if (!d) return 0;
+  return typeof d.aantal === "number" && d.aantal > 0 ? d.aantal : (Array.isArray(d.entries) ? d.entries.length : 0);
+}
 let DP = { entries: null, ik: null, dag: null, schema: null, plan: null };
 function dagplanVanMij() {
   const wie = jij(); const entries = dagplanEntries();
@@ -279,7 +289,7 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, actie: f.actie || "", tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
     .filter(f => f.tekst);
 }
 

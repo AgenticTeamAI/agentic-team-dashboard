@@ -457,11 +457,32 @@ const DAGPLAN_LIMIET = 50;
 async function haalDagplannen(bron) {
   try {
     const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=dagplannen&limiet=" + DAGPLAN_LIMIET);
-    return { entries: Array.isArray(body && body.entries) ? body.entries : [] };
+    const entries = Array.isArray(body && body.entries) ? body.entries : [];
+    return { entries, aantal: entries.length };
   } catch (e) {
     if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
     return null;
   }
+}
+/* Een daglink is een url die wordt doorgestuurd, en met een daglink toont het
+ * dashboard geen dagplan (het weet niet wie je bent). Dan halen we de plannen
+ * ook niet op: alleen het aantal uit het overzicht, voor de regel "Log in om
+ * je eigen dag te zien". */
+function dagplannenVoor(bron, overzicht) {
+  const d = (overzicht.domeinen || []).find(x => x && x.domein === "dagplannen");
+  if (!d) return Promise.resolve(null);
+  if (!bron || !bron.oauth) {
+    const n = Number(d.aantal);
+    return Promise.resolve({ entries: [], aantal: Number.isFinite(n) && n > 0 ? Math.round(n) : 0 });
+  }
+  return haalDagplannen(bron);
+}
+/* Inhoud die zich als dagplan aandient (type "dagplan"), ongeacht het domein. */
+function isDagplanEntry(e) {
+  const inhoud = e && e.data && e.data.Inhoud;
+  if (inhoud && typeof inhoud === "object") return inhoud.type === "dagplan";
+  if (typeof inhoud !== "string" || inhoud.indexOf("dagplan") === -1) return false;
+  try { const o = JSON.parse(inhoud); return !!o && o.type === "dagplan"; } catch (err) { return false; }
 }
 
 function isVanVandaag(isoTekst, vandaag) {
@@ -478,10 +499,12 @@ function isVanVandaag(isoTekst, vandaag) {
 async function haalMetricsEntry(bron, bundle) {
   const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
-  // Alleen de entry "metrics". Vroeger viel dit terug op de nieuwste entry
-  // van het domein; dan zou elke andere entry daar (een losse notitie, een
-  // verdwaald dagplan) als metricsbestand gelezen worden (f62).
-  const entry = entries.find(e => e && e.entryId === "metrics");
+  // De entry "metrics", anders de nieuwste (oudere producers gebruikten een
+  // andere id). f62: een dagplan dat per ongeluk in dit domein belandde, is
+  // geen metricsbestand en telt bij die terugval niet mee.
+  const entry = entries.find(e => e && e.entryId === "metrics")
+    || entries.filter(e => e && !isDagplanEntry(e))
+      .sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
   if (!entry) return null;
   let payload;
   try {
@@ -536,9 +559,7 @@ async function loadWerkruimteBundle(bron) {
     ? await haalTeamfeed(bron, new Date())
     : null;
   // f62: idem voor de dagplannen ("Jouw dag" op Voor jou).
-  bundle.dagplannen = (overzicht.domeinen || []).some(d => d && d.domein === "dagplannen")
-    ? await haalDagplannen(bron)
-    : null;
+  bundle.dagplannen = await dagplannenVoor(bron, overzicht);
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
   // domein dat volgens de bronkoppeling ergens ánders woont (notion,

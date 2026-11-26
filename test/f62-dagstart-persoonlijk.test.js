@@ -8,13 +8,16 @@
  *    een collega; met een daglink alleen "Log in om je eigen dag te zien";
  *  - de kaart "Jouw dag" escapet elke tekst;
  *  - op de Notion-route is de werkbak die uit jouw dagplan van vandaag (zelfde
- *    nummers als in de chat), anders het voor_jou-blok van metrics;
+ *    nummers als in de chat), ook als die leeg is; pas zonder plan van vandaag
+ *    het licentiebrede voor_jou-blok van metrics, als werkbak van het team en
+ *    zonder badge;
+ *  - agendatitels zonder links, adressen en inbelcodes;
  *  - de eigenaarsketen: actie > project > deal > organisatie (ook via de
  *    contactpersoon) > verantwoordelijke van de agent > onverdeeld;
- *  - de feed toont de actie ("Dagstart van Tijmen"), en het verhaal telt een
- *    dagstart niet als werk van je team;
- *  - de loader leest alleen de metrics-entry "metrics" en haalt dagplannen op
- *    via fetchWerkruimte als de instantie het domein kent. */
+ *  - het verhaal telt een dagstart niet als werk van je team;
+ *  - de loader leest de metrics-entry "metrics" (anders de nieuwste, maar
+ *    nooit een dagplan) en haalt dagplannen op via fetchWerkruimte als de
+ *    instantie het domein kent, alleen met een ingelogde sessie. */
 import { describe, expect, it, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import { laadAlles, stubOpslag } from "./helpers/v2.js";
 
@@ -152,6 +155,23 @@ describe("f62 — saneerDagplan: alleen het contract, begrensd, nooit een fout",
     expect(p.voor).toBe(""); expect(p.context).toBeNull(); expect(p.onverdeeld).toBe(0);
   });
 
+  it("agendatitels: geen links, adressen of inbelcodes, en niets over = Bezet", () => {
+    const titels = (lijst) => g.saneerDagplan(plan({ agenda: lijst.map((titel, i) => ({ start: "1" + i + ":00", titel })) }), g.AGENTIC_TEAM_SCHEMA).agenda.map(a => a.titel);
+    const uit = titels([
+      "Teams https://teams.microsoft.com/l/meetup-join/abc jan@x.nl code 123456#",
+      "Jan Jansen <jan@x.nl> en Tijmen",
+      "Overleg PIN 123 456",
+      "Demo (meeting ID: 845 1234 5678, passcode a1b2c3)",
+      "Zoom zoom.us/j/98765432",
+      "https://meet.google.com/abc-defg-hij",
+      "+31 20 123 4567",
+      "Afspraak www.voorbeeld.nl",
+      "Code review sprint 12, 10.00-11.00 op 2026-11-26",
+    ]);
+    expect(uit).toEqual(["Teams", "Jan Jansen en Tijmen", "Overleg", "Demo", "Zoom", "Bezet", "Bezet", "Afspraak", "Code review sprint 12, 10.00-11.00 op 2026-11-26"]);
+    expect(JSON.stringify(uit)).not.toMatch(/https?:|@|teams\.microsoft|zoom\.us|www\.|123 456|98765432|4567/);
+  });
+
   it("stuurtekens worden spaties; tekst blijft tekst", () => {
     const p = g.saneerDagplan(plan({ acuut: [{ titel: "regel\n\u0000twee drie" }] }), g.AGENTIC_TEAM_SCHEMA);
     expect(p.acuut[0].titel).toBe("regel twee drie");
@@ -221,6 +241,17 @@ describe("f62 — Jouw dag op Voor jou", () => {
     expect($("#werkbak")).not.toBeNull();
   });
 
+  it("twee collega's met dezelfde voornaam heten voluit; een unieke voornaam blijft kort", () => {
+    open(maakCtx({ dagplannen: [entry("Sanne Verbeek", plan({
+      collegas: [{ naam: "Mark de Groot", wachtend: 3 }, { naam: "Mark Jansen", wachtend: 2 }, { naam: "Piet Bos", wachtend: 1 }],
+      samen: [{ titel: "Planning", met: ["Mark Jansen", "Piet Bos"] }],
+    }))] }));
+    const kaart = $("[data-jouwdag]");
+    const tegels = [...kaart.querySelectorAll(".jd-tellers .teller span")].map(t => t.textContent);
+    expect(tegels).toEqual(["bij Mark de Groot", "bij Mark Jansen", "bij Piet", "onverdeeld, voor iedereen"]);
+    expect(kaart.textContent).toContain("met Mark Jansen en Piet");
+  });
+
   it("lege secties staan er niet; een plan van eerder zegt van wanneer", () => {
     open(maakCtx({ dagplannen: [entry("Sanne Verbeek", plan({ datum: "2026-11-24", acuut: [], agenda: [], agents_vandaag: [], later: [], collegas: [], onverdeeld: 0, samen: [], ter_goedkeuring: { totaal: 0, items: [] } }))] }));
     const kaart = $("[data-jouwdag]");
@@ -274,18 +305,32 @@ describe("f62 — Notion-route: de werkbak volgens jouw dagstart", () => {
     expect($(".tabbalk .badge").textContent).toBe("2");
     expect($('.item a[href="https://www.notion.so/a"]')).not.toBeNull();
   });
-  it("geen plan van vandaag, of zonder items: terug naar het voor_jou-blok van metrics", () => {
-    open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", plan({ datum: "2026-11-25" }))], metricsWerk: licentieBreed }));
-    expect($("#root").textContent).toContain("Iets van iedereen");
-    expect($(".tabbalk .badge").textContent).toBe("1");
+  it("jouw plan van vandaag zonder items: niets voor jou, nooit de lijst van het team", () => {
     open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", plan({ ter_goedkeuring: { totaal: 0, items: [] } }))], metricsWerk: licentieBreed }));
-    expect($("#root").textContent).toContain("Iets van iedereen");
-    // de kaart staat er wel
+    expect($("#root").textContent).not.toContain("Iets van iedereen");
+    expect($("#root").textContent).toContain("Volgens je dagstart 0");
+    expect($("#root").textContent).toContain("Niets voor jou in je dagstart.");
+    expect($(".tabbalk .badge")).toBeNull();
     expect($("[data-jouwdag]")).not.toBeNull();
   });
-  it("met een daglink: altijd het metrics-blok", () => {
+  it("geen plan van vandaag: het voor_jou-blok van metrics, als werkbak van het team en zonder badge", () => {
+    open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", plan({ datum: "2026-11-25" }))], metricsWerk: licentieBreed }));
+    const tekst = $("#root").textContent;
+    expect(tekst).toContain("Iets van iedereen");
+    expect(tekst).toContain("Werkbak van je team 1");
+    expect(tekst).not.toContain("Volgens je dagstart");
+    expect(tekst).not.toContain("De nummers zijn dezelfde als in je dagstart");
+    expect($('[data-werkbak="team"]')).not.toBeNull();
+    expect($(".tabbalk .badge")).toBeNull();
+    // Acties zegt dan ook niet dat er "volgens je dagstart" iets op je wacht
+    open(maakCtx({ notion: true, dagplannen: [entry("Sanne Verbeek", plan({ datum: "2026-11-25" }))], metricsWerk: licentieBreed }), "#/acties");
+    expect($("#root").textContent).not.toContain("Volgens je dagstart");
+  });
+  it("met een daglink: de werkbak van het team, met de vraag om in te loggen", () => {
     open(maakCtx({ schrijven: false, notion: true, dagplannen: [entry("Sanne Verbeek", plan())], metricsWerk: licentieBreed }));
     expect($("#root").textContent).toContain("Iets van iedereen");
+    expect($("#root").textContent).toContain("Log in om alleen het jouwe te zien.");
+    expect($(".tabbalk .badge")).toBeNull();
     expect($("[data-jouwdag-login]")).not.toBeNull();
   });
 });
@@ -382,12 +427,15 @@ describe("f62 — de feed: 'Dagstart van …' in beeld, maar geen werk van je te
     post("f1", "2026-11-26T08:15:00", { Soort: "afgerond", Agent: "orchestrator", Actie: "Dagstart van Sanne", Bericht: "Dagstart van Sanne Verbeek afgerond: 3 prioriteiten, 2 ter goedkeuring." }),
     post("f2", "2026-11-26T08:20:00", { Soort: "afgerond", Agent: "orchestrator", Actie: "Dagstart van Mark", Bericht: "Dagstart van Mark de Groot afgerond: 1 prioriteiten, 0 ter goedkeuring." }),
   ];
-  it("de actie staat vet als eerste regel van de post", () => {
-    const ctx = maakCtx({ teamfeed: feed() });
-    open(ctx, "#/team");
+  it("de post staat in de feed met alleen zijn bericht (meta, geen extra regel)", () => {
+    open(maakCtx({ teamfeed: feed() }), "#/team");
     const posts = $$(".post");
     expect(posts.length).toBe(2);
-    expect(posts.map(p => p.querySelector(".post-actie b").textContent)).toEqual(["Dagstart van Mark", "Dagstart van Sanne"]);
+    expect(posts.map(p => p.querySelector(".pb p").textContent)).toEqual([
+      "Dagstart van Mark de Groot afgerond: 1 prioriteiten, 0 ter goedkeuring.",
+      "Dagstart van Sanne Verbeek afgerond: 3 prioriteiten, 2 ter goedkeuring.",
+    ]);
+    expect(posts.every(p => p.querySelectorAll(".pb p").length === 1)).toBe(true);
   });
   it("het verhaal telt de dagstart niet als werk van je team", () => {
     // Zonder acties: alles wat het verhaal noemt, komt dan uit de feed.
@@ -401,8 +449,9 @@ describe("f62 — de feed: 'Dagstart van …' in beeld, maar geen werk van je te
 });
 
 /* ── de loader ─────────────────────────────────────────────────────── */
-describe("f62 — loader: alleen de entry 'metrics', en de dagplannen via fetchWerkruimte", () => {
-  const BRON = { soort: "daglink", instantieUrl: "https://instantie.test", token: "t" };
+describe("f62 — loader: de metrics-entry nooit een dagplan, en de dagplannen alleen ingelogd", () => {
+  const BRON = { soort: "oauth", oauth: true, instantieUrl: "https://instantie.test", token: "t" };
+  const DAGLINK = { soort: "daglink", instantieUrl: "https://instantie.test", token: "t" };
   function zetFetch({ domeinen, metrics }) {
     const gevraagd = [];
     const antwoord = (body) => ({ ok: true, status: 200, json: async () => body, headers: new Map() });
@@ -418,13 +467,27 @@ describe("f62 — loader: alleen de entry 'metrics', en de dagplannen via fetchW
   }
   const metricsInhoud = () => JSON.stringify({ versie: 1, gegenereerd_op: new Date().toISOString(), domeinen: {} });
 
-  it("een andere entry in dashboard_metrics is geen metricsbestand", async () => {
+  it("zonder entry 'metrics' de nieuwste, zoals altijd", async () => {
     zetFetch({ domeinen: [{ domein: "dashboard_metrics", aantal: 1 }], metrics: [{ entryId: "iets-anders", bijgewerkt: new Date().toISOString(), data: { Inhoud: metricsInhoud() } }] });
     const b = await g.loadWerkruimteBundle(BRON);
+    expect(b.kind).toBe("metrics");
+  });
+  it("een verdwaald dagplan in dashboard_metrics is nooit het metricsbestand", async () => {
+    const nu = new Date().toISOString();
+    zetFetch({ domeinen: [{ domein: "dashboard_metrics", aantal: 1 }], metrics: [{ entryId: "dagplan-sanne-verbeek", bijgewerkt: nu, data: { Inhoud: JSON.stringify(plan()) } }] });
+    let b = await g.loadWerkruimteBundle(BRON);
     expect(b.kind).toBe("rows");
     expect(b.metricsRaw).toBeUndefined();
+    vi.restoreAllMocks();
+    // naast een gewone entry: die wint, ook als het dagplan nieuwer is
+    zetFetch({ domeinen: [{ domein: "dashboard_metrics", aantal: 2 }], metrics: [
+      { entryId: "dagplan-sanne-verbeek", bijgewerkt: "2030-01-01T00:00:00Z", data: { Inhoud: JSON.stringify(plan()) } },
+      { entryId: "m-1", bijgewerkt: nu, data: { Inhoud: metricsInhoud() } },
+    ] });
+    b = await g.loadWerkruimteBundle(BRON);
+    expect(b.kind).toBe("metrics");
   });
-  it("de entry 'metrics' wel", async () => {
+  it("de entry 'metrics' wint", async () => {
     zetFetch({ domeinen: [{ domein: "dashboard_metrics", aantal: 1 }], metrics: [{ entryId: "iets-anders", bijgewerkt: "2030-01-01", data: { Inhoud: "{}" } }, { entryId: "metrics", bijgewerkt: new Date().toISOString(), data: { Inhoud: metricsInhoud() } }] });
     const b = await g.loadWerkruimteBundle(BRON);
     expect(b.kind).toBe("metrics");
@@ -440,6 +503,12 @@ describe("f62 — loader: alleen de entry 'metrics', en de dagplannen via fetchW
     expect(gevraagd.filter(p => p.includes("dagplannen"))).toEqual(["/dashboard/entries?domein=dagplannen&limiet=50"]);
     expect(b.dagplannen.entries).toHaveLength(1);
     expect(b.domains.dagplannen).toBeUndefined();
+  });
+  it("met een daglink worden de dagplannen niet opgehaald, alleen geteld", async () => {
+    const gevraagd = zetFetch({ domeinen: [{ domein: "dagplannen", aantal: 3 }], metrics: [] });
+    const b = await g.loadWerkruimteBundle(DAGLINK);
+    expect(gevraagd.some(p => p.includes("dagplannen"))).toBe(false);
+    expect(b.dagplannen).toEqual({ entries: [], aantal: 3 });
   });
   it("het schema kent dagplannen als werkruimte-domein", () => {
     expect(g.AGENTIC_TEAM_SCHEMA.werkruimteDomeinen).toContain("dagplannen");

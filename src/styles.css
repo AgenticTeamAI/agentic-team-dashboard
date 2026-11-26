@@ -276,7 +276,6 @@ button.knoppil{cursor:pointer;min-height:40px}
 .jd-taak{overflow-wrap:anywhere;min-width:0}
 .jouwdag .post{padding:6px 0}
 .jouwdag-login{padding:0 2px}
-.post-actie{font-size:14.5px}
 
 /* Werkbak */
 .werkbak-kop{display:flex;flex-direction:column;gap:10px}
