@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-xrrehiK4Q0xw97DcpmdePVchktDI9dY4Q23v+ibrzo4=' 'sha256-o5M//X4Yr8HYJPeOaCMUGhfU3WBG9ue0ivrzDR6fHN0='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-xrrehiK4Q0xw97DcpmdePVchktDI9dY4Q23v+ibrzo4=' 'sha256-U3cnICc6k7dlmJONQ5TpAsd5BJGFTnc4kLCQPNvxcDc='">
 
 
 
@@ -12512,7 +12512,7 @@ function hulpSecties(ctx) {
     ["werkt-niet", "Het werkt niet zoals je verwacht", () => `
       <dl class="hulp-vragen">
         <dt>Mijn team deed vannacht niets.</dt><dd>Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in Claude niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</dd>
-        <dt>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</dt><dd>Die zetten wij per team aan. Mail <span class="hulp-adres">support@agentic-team.ai</span>, dan regelen we het.</dd>
+        <dt>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</dt><dd>Je vaste taken gaan open zodra je eerste gesprek met de Gids en je welkomstpakket klaar zijn: typ <i>Hoe gebruik ik mijn team?</i> in je AI-assistent. Staan die er al en zegt je team het toch? Mail <span class="hulp-adres">support@agentic-team.ai</span>, dan zoeken we het uit.</dd>
         <dt>Ik kan niet op de knoppen drukken.</dt><dd>Je kijkt met je daglink: die is alleen om te lezen. Log in met je e-mailadres; je komt terug waar je was.</dd>
         <dt>Een actie staat bij een collega.</dt><dd>Onder Acties staat ‘Bij collega's’. Wil je hem zelf doen, kies dan ‘Zet bij mij’.</dd>
         <dt>Mijn team reageert niet in Claude, of ik zie geen tools meer.</dt><dd>Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw in Claude (Instellingen › Connectors).</dd>
@@ -14376,6 +14376,18 @@ function wanneerSpoor(d) {
   return wanneer(d);
 }
 function bijHetVolgende() { const l = laatsteWerkmoment(); return "bij het volgende werkmoment" + (l ? " (laatst " + wanneerSpoor(l) + ")" : ""); }
+/* Team laat zien wat je team zelfstandig deed: de feed van de werkrondes, de
+ * vaste taken en het resultaat. Zonder werkronde staat daar niets, en in de
+ * bootcamp komt die pas in fase 4 ("AI als systeem"). Tot dan is het dashboard
+ * je actielijst (Voor jou, Acties, Gegevens) en blijft de Team-tab weg.
+ * Bewijs dat de werkronde loopt: een vaste taak die aan staat, of een
+ * "werkronde gestart" in de teamfeed. Alleen de feed is te mager: een ronde
+ * zonder geclaimde acties post geen rondestart (werkronde.md, stap 2). De
+ * adressen onder #/team blijven werken; alleen het menu en de rode
+ * aansporing op Voor jou wachten tot het zover is. */
+function werkrondeLoopt() {
+  return S.data.taken.some(t => t.actief) || S.data.feed.some(f => f.soort === "rondestart");
+}
 const KC_LABEL = { start: "Zo regel je het in 2 minuten", vaker: "Laat je team vaker werken", ronde: "Loop ze één voor één door", login: "Inloggen" };
 let kcCache = null;
 function klaarCheck() {
@@ -14441,7 +14453,9 @@ function aantalVoorJou() {
 }
 function tabs() {
   const n = CTX ? aantalVoorJou() : 0;
-  return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]];
+  const team = !CTX || werkrondeLoopt();
+  return [["voorjou", "/", "Voor jou", "inbox", n], ["acties", "/acties", "Acties", "lijst", 0], ["team", "/team", "Team", "team", 0], ["gegevens", "/gegevens", "Gegevens", "map", 0]]
+    .filter(([k]) => k !== "team" || team);
 }
 /* Licht of donker: standaard de systeeminstelling. De knop in de kop wisselt;
  * een keuze die afwijkt van het systeem onthoudt de browser (THEMA_KEY, in de
@@ -14506,7 +14520,9 @@ function renderBovenkaart() {
     return `<section class="bovenkaart" aria-label="Werkt je team nog vanzelf?"><div class="tussen"><h3>Werkt je team nog vanzelf?</h3><button class="ikknop" data-act="dismiss" data-k="stil" aria-label="Sluiten">${ic("sluit")}</button></div>
       <p>${esc(r.tekst)}</p><div class="rijtje"><button class="knop" data-act="go" data-r="/team/klaar">Is je team klaar?</button>${hoe("vanzelf-werken")}</div></section>`;
   }
-  if (kc.stil && !S.ui.dismissed.stil) {
+  // Zonder werkronde is "je team werkt nog niet vanzelf" geen alarm maar de
+  // afgesproken stand (vaste taken komen pas in fase 4): dan geen rode kaart.
+  if (kc.stil && !S.ui.dismissed.stil && werkrondeLoopt()) {
     const r = kc.regels.find(x => (x.id === "aan" || x.id === "werkt") && (x.k === "nee" || x.k === "let")) || { tekst: "" };
     const geenTaken = !S.data.taken.length && toegang() !== "notion";
     return `<section class="bovenkaart stil-rood" aria-label="Je team staat stil"><div class="tussen"><h3>${geenTaken ? "Je team werkt nog niet vanzelf" : "Je team staat stil"}</h3></div>
@@ -14564,9 +14580,11 @@ function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
   const opdrachtKnop = isDesk() && kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Opdracht geven</button>` : "";
   if (!n) {
-    const tekst = kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
+    const loopt = werkrondeLoopt();
+    const tekst = !loopt ? "Vraag je team iets in je AI-assistent. Wat het voor je klaarzet, staat daarna hier."
+      : kc.stil ? "Je team werkt nu niet vanzelf, dus er komt ook niets nieuws bij tot dat geregeld is." : "Je team werkt verder bij het volgende werkmoment. Daarna staat hier wat het deed.";
     return `<section class="leeg" aria-label="Voor jou"><h3>Niets meer voor jou.</h3><p class="stil">${tekst}</p>
-    <div class="rijtje">${kc.stil ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
+    <div class="rijtje">${kc.stil && loopt ? `<button class="knop prim" data-act="go" data-r="/team/klaar">Is je team klaar?</button>` : ""}${kanSchrijven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Geef je team een opdracht</button>` : ""}${hoe("voor-jou")}</div></section>`;
   }
   const oudste = l.reduce((a, b) => sindsVan(a) < sindsVan(b) ? a : b); const dagen = dagenTussen(sindsVan(oudste), NU);
   const min = Math.max(1, Math.round(n * 0.75));
@@ -15555,7 +15573,7 @@ function hulpSecties() {
     ["werkt-niet", "Het werkt niet zoals je verwacht", () => `
       <div class="kol" style="gap:10px">
       <div><b>Mijn team deed vannacht niets.</b><p class="stil">Kijk bij ‘Is je team klaar?’. Meestal staat het werkmoment in je AI-assistent niet (meer) aan, bijvoorbeeld na opnieuw koppelen of op een andere computer.</p></div>
-      <div><b>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</b><p class="stil">Die zetten wij per team aan. Mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>, dan regelen we het.</p></div>
+      <div><b>Mijn team zegt dat de werkronde voor mijn licentie nog niet aanstaat.</b><p class="stil">Je vaste taken gaan open zodra je eerste gesprek met de Gids en je welkomstpakket klaar zijn: typ <i>Hoe gebruik ik mijn team?</i> in je AI-assistent. Staan die er al en zegt je team het toch? Mail <span class="mono" style="user-select:all">support@agentic-team.ai</span>, dan zoeken we het uit.</p></div>
       <div><b>Ik kan niet op de knoppen drukken.</b><p class="stil">Je kijkt met je daglink: die is alleen om te lezen. Log in met je e-mailadres; je komt terug waar je was.</p></div>
       <div><b>Een actie staat bij een collega.</b><p class="stil">Onder Acties staat ‘Bij collega's’. Open het item en kies bij Alle gegevens op wiens naam het staat.</p></div>
       <div><b>Mijn team reageert niet in mijn AI-assistent, of ik zie geen tools meer.</b><p class="stil">Begin een nieuw gesprek. Helpt dat niet, koppel je team dan opnieuw bij de koppelingen (connectors) van je AI-assistent.</p></div>

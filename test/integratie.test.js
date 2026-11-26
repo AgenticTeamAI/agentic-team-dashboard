@@ -181,7 +181,9 @@ describe("dashboard.html — zonder daglink", () => {
 
 describe("werkruimte-route — rijen", () => {
   it("opent op Voor jou, met de vier tabs, en het token is weg uit de adresbalk", async () => {
-    const d = await open();
+    const inhoud = domeinenUitTestdata();
+    inhoud.teamfeed = teamfeedEntries();
+    const d = await open({ domeinen: inhoud });
     await d.geladen();
     expect(d.gevraagd[0]).toBe("/dashboard/overzicht");
     expect(d.tabs()).toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
@@ -192,6 +194,16 @@ describe("werkruimte-route — rijen", () => {
     expect(d.q(".verhaal")).not.toBeNull();
     expect(d.q(".werkbak-kop, .leeg")).not.toBeNull();
     expect(d.tekst()).toMatch(/Mockbedrijf BV/);
+    expect(d.fouten).toEqual([]);
+  });
+
+  it("zonder werkronde (geen vaste taak aan, geen rondestart in de feed): geen Team-tab, wel bereikbaar via het adres", async () => {
+    const d = await open();
+    await d.geladen();
+    expect(d.tabs()).toEqual(["Voor jou", "Acties", "Gegevens"]);
+    expect(d.tekst()).not.toMatch(/Je team werkt nog niet vanzelf/);
+    await d.naar("#/team/klaar");
+    expect(d.tekst()).toMatch(/Is je team klaar\?/);
     expect(d.fouten).toEqual([]);
   });
 
@@ -224,8 +236,11 @@ describe("werkruimte-route — rijen", () => {
     const d = await open({ domeinen: {} });
     await d.geladen();
     expect(d.heeftTabs()).toBe(true);
-    // nog geen vaste taken: dan is dát het eerste wat je hoort te zien
-    expect(d.tekst()).toMatch(/Je team werkt nog niet vanzelf/);
+    // nog geen vaste taken en geen werkronde: dat is de afgesproken stand tot
+    // fase 4, dus geen rode kaart en geen Team-tab, wel de welkomstkaart
+    expect(d.tabs()).toEqual(["Voor jou", "Acties", "Gegevens"]);
+    expect(d.tekst()).not.toMatch(/Je team werkt nog niet vanzelf/);
+    expect(d.tekst()).toMatch(/Welkom bij je team/);
     await d.naar("#/team/resultaat");
     expect(d.tekst()).toMatch(/Nog geen resultaat/);
     await d.naar("#/acties");

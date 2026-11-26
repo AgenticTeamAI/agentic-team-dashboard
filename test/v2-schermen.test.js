@@ -102,8 +102,15 @@ function open(ctx, hash = "") {
 }
 
 describe("v2 — de kop en de vier tabs", () => {
-  it("vier tabs, en de badge bij Voor jou is precies het aantal aan jou", () => {
+  it("zonder werkronde geen Team-tab; een vaste taak die uit staat telt niet", () => {
     open(maakCtx());
+    expect($$(".tabbalk .ttab").map(t => t.textContent.replace(/\d+/g, "").trim())).toEqual(["Voor jou", "Acties", "Gegevens"]);
+    open(maakCtx({ ritmetaken: [rij("v1", { Taak: "Facturen nalopen", Agent: "Administratie", Ritme: "wekelijks-vr", Actief: false, Volgorde: 1 })] }));
+    expect($$(".tabbalk .ttab").map(t => t.textContent.replace(/\d+/g, "").trim())).toEqual(["Voor jou", "Acties", "Gegevens"]);
+  });
+
+  it("vier tabs, en de badge bij Voor jou is precies het aantal aan jou", () => {
+    open(maakCtx({ ritmetaken: [rij("v1", { Taak: "Openstaande acties oppakken", Agent: "Management Assistent", Ritme: "dagelijks", Actief: true, "Laatst gedraaid": "2026-09-29T02:10:00", Volgorde: 1 })] }));
     expect($$(".tabbalk .ttab").map(t => t.textContent.replace(/\d+/g, "").trim())).toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
     expect($(".tabbalk .badge").textContent).toBe(String(g.V2._aanJouZet().length));
     expect($(".akop .merk").textContent).toContain("Verbeek Advies");
