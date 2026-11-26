@@ -131,7 +131,7 @@ function itemVraagHtml(f, rij, ctx) {
       <select data-vraag-specialist>${opties.map(a => `<option value="${esc(a)}"${a === standaard ? " selected" : ""}>${esc(a)}</option>`).join("")}</select></label>`);
   }
   if (vraag.tekst) {
-    const voorstel = f === "opvolgen" ? `Pak de volgende stap op: ${detailTitel(ctx.schema.datadomeinen.acties, rij)}` : "";
+    const voorstel = f === "opvolgen" ? opvolgVoorstel(rij, detailTitel(ctx.schema.datadomeinen.acties, rij)) : "";
     delen.push(`<label class="bedien-veld blad-vraag-tekst"><span>${esc(vraag.label)}</span>
       <textarea data-vraag-tekst rows="3" placeholder="${esc(vraag.plaats || "")}">${esc(voorstel)}</textarea></label>`);
   }

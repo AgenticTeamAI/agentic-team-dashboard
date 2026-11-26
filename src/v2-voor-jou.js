@@ -414,4 +414,4 @@ function opvolgAgentVan(a) {
   if (ag && ag !== "pipeline-manager" && sp.includes(ag)) return ag;
   return sp.includes("outreach-specialist") ? "outreach-specialist" : (sp[0] || "management-assistent");
 }
-function opvolgZinVan(a) { return "Pak de volgende stap op: " + a.titel; }
+function opvolgZinVan(a) { return opvolgVoorstel(a.rij, a.titel); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-rainizZ2755oKlr6jkJbRQ0B5SF99kH82H7mhTgcugQ='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-fayYZEnRZXSWD3+LqwPW3oNewqHiz/wgFTIORMB1pNk='">
 
 
 
@@ -3511,7 +3511,8 @@ if (typeof module !== "undefined") {
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
  *   https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
- * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
+ * Het token is kortlevend (standaard 24 uur, in een afgeschermd team korter;
+ * zie daglinkGeldigheid) en kan alleen lezen; het staat in het
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
@@ -4193,11 +4194,39 @@ function daglinkDuurTekst(seconden) {
  * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
  * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
 const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
-function daglinkGeldigTekst(token) {
+/* De duur zelf ("24 uur", "4 uur"), of null bij een waarde langer dan een
+ * week. Eén rekensom voor de melding en de Hulp. */
+function daglinkGeldigDuur(token) {
   const s = daglinkGeldigheid(token);
-  if (s === null) return DAGLINK_GELDIG_STANDAARD;
-  if (s > 7 * 24 * 3600) return "Een daglink is maar een beperkte tijd geldig.";
-  return "Daglinks zijn " + daglinkDuurTekst(s) + " geldig.";
+  if (s === null) return "24 uur";
+  if (s > 7 * 24 * 3600) return null;
+  return daglinkDuurTekst(s);
+}
+function daglinkGeldigTekst(token) {
+  if (daglinkGeldigheid(token) === null) return DAGLINK_GELDIG_STANDAARD;
+  const duur = daglinkGeldigDuur(token);
+  return duur ? "Daglinks zijn " + duur + " geldig." : "Een daglink is maar een beperkte tijd geldig.";
+}
+/* s64 nafix (besluit 26-11) — de Hulp en de woordenlijst zeiden vast "24
+ * uur". Kijk je met een daglink, dan staat er de duur van die link, met
+ * dezelfde rekensom als de melding hierboven (een link van 24 uur, of een
+ * zonder `iat`, geeft dus precies de tekst van vóór s64). Zonder daglink
+ * (ingelogd, of de lege staat) weet het dashboard niet hoe lang een link van
+ * dit team geldig is: dan een neutrale zin. `bron` mag null zijn. */
+function daglinkVanBron(bron) {
+  return bron && !bron.oauth && typeof bron.token === "string" && bron.token ? bron.token : null;
+}
+/* Voor de cel "Hoe lang" in de tabel Daglink of inloggen. */
+function daglinkHulpDuur(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "Standaard 24 uur, in een afgeschermd team korter";
+  return daglinkGeldigDuur(token) || "Een beperkte tijd";
+}
+/* Voor de woordenlijst: "de link …, <dit>". */
+function daglinkHulpWoord(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "standaard 24 uur geldig, in een afgeschermd team korter";
+  return (daglinkGeldigDuur(token) || "een beperkte tijd") + " geldig";
 }
 
 /* Welke bron gebruikt deze pagina?
@@ -4231,7 +4260,7 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }
 
@@ -6216,15 +6245,34 @@ function afhandelKnoppen(rij, schema, nu) {
   }
 }
 
+/* s64 nafix (besluit 26-11) — schreef een medewerker of viewer de bronrij,
+ * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
+ * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
+ * die tekst zou anders met het gezag van de eigenaar bij de specialist
+ * belanden. De nieuwe actie verwijst dan alleen naar de bovenliggende actie,
+ * met een neutrale tekst; de agent leest daar zelf de herkomst. Zonder
+ * stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
+const OPVOLG_ZONDER_TITEL = ["medewerker", "viewer", "onbekend"];
+const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+function opvolgZonderTitel(rij) {
+  const door = rij && rij.__stempels ? rij.__stempels.door : undefined;
+  return OPVOLG_ZONDER_TITEL.indexOf(door) !== -1;
+}
+/* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
+function opvolgVoorstel(rij, titel) {
+  return opvolgZonderTitel(rij) ? OPVOLG_NEUTRAAL : "Pak de volgende stap op: " + titel;
+}
+
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Bij een
+ * bronrij van een lagere rol alleen het verband met het origineel. */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
     Status: VJ_OPEN, Type: "Taak", Eigenaar: c.specialist, Agent: c.specialist,
     Toelichting: c.tekst, "Bovenliggende actie": rij.__entryId,
   };
-  for (const veld of ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
+  for (const veld of opvolgZonderTitel(rij) ? [] : ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
     const w = getField(rij, veld);
     if (w && (typeof w !== "object" || w.id)) data[veld] = w;
   }
@@ -6237,7 +6285,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }
@@ -10731,7 +10779,7 @@ function itemVraagHtml(f, rij, ctx) {
       <select data-vraag-specialist>${opties.map(a => `<option value="${esc(a)}"${a === standaard ? " selected" : ""}>${esc(a)}</option>`).join("")}</select></label>`);
   }
   if (vraag.tekst) {
-    const voorstel = f === "opvolgen" ? `Pak de volgende stap op: ${detailTitel(ctx.schema.datadomeinen.acties, rij)}` : "";
+    const voorstel = f === "opvolgen" ? opvolgVoorstel(rij, detailTitel(ctx.schema.datadomeinen.acties, rij)) : "";
     delen.push(`<label class="bedien-veld blad-vraag-tekst"><span>${esc(vraag.label)}</span>
       <textarea data-vraag-tekst rows="3" placeholder="${esc(vraag.plaats || "")}">${esc(voorstel)}</textarea></label>`);
   }
@@ -12470,7 +12518,7 @@ function hulpSecties(ctx) {
     ["daglink", "Daglink of inloggen?", () => `
       <table class="hulp-tabel"><thead><tr><th></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
         <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-        <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+        <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(ctx && ctx.bron))}</td><td>Tot je dit tabblad sluit</td></tr>
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
@@ -12507,7 +12555,7 @@ function hulpSecties(ctx) {
       <dl class="hulp-woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in Claude</dd><dt>Vaste taak</dt><dd>ritmetaak</dd>
       <dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd>
       <dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd>
-      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(ctx && ctx.bron))}</dd></dl>`],
   ];
 }
 
@@ -15361,7 +15409,7 @@ function opvolgAgentVan(a) {
   if (ag && ag !== "pipeline-manager" && sp.includes(ag)) return ag;
   return sp.includes("outreach-specialist") ? "outreach-specialist" : (sp[0] || "management-assistent");
 }
-function opvolgZinVan(a) { return "Pak de volgende stap op: " + a.titel; }
+function opvolgZinVan(a) { return opvolgVoorstel(a.rij, a.titel); }
 
 
 /* Dashboard v2 — Acties (wie is aan zet?), Team (wat ze deden, één
@@ -16082,7 +16130,7 @@ function hulpSecties() {
     ["daglink", "Daglink of inloggen?", () => `
       <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
        <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-       <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+       <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(bron()))}</td><td>Tot je dit tabblad sluit</td></tr>
        <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
        <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
        <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
@@ -16118,7 +16166,7 @@ function hulpSecties() {
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
     ["woorden", "Woorden die je team gebruikt", () => `
-      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(bron()))}</dd></dl>`],
   ];
 }
 function htmlTekst(h) { return String(h).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase(); }
