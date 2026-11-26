@@ -74,7 +74,12 @@ function renderBalk() {
   if (tg === "notion") {
     const w = (CTX && CTX.metricsWerk) || {}; const g = w.gegenereerdOp ? dt(w.gegenereerdOp) : null;
     const naam = naamElders("acties");
-    return `<div class="balk notion"><div><b>Je acties${takenElders() ? " en vaste taken" : ""} staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. Afhandelen doe je in ${esc(naam)}, of vraag het je team.</div></div>`;
+    // f61: kan deze werkruimte opdrachten aannemen, dan handel je hier af en
+    // verwerkt je team het in je eigen systeem. Anders: zoals het was.
+    const afhandelen = !doorgevenMogelijk() ? `Afhandelen doe je in ${esc(naam)}, of vraag het je team.`
+      : kanDoorgeven() ? `Afhandelen kan hier: wat je doorgeeft, verwerkt je team bij het volgende werkmoment in ${esc(naam)}.`
+        : ingelogd() ? "Je sessie mag alleen lezen. Log opnieuw in om hier af te handelen." : "Log in om hier af te handelen; je team verwerkt het dan bij het volgende werkmoment.";
+    return `<div class="balk notion"><div><b>Je acties${takenElders() ? " en vaste taken" : ""} staan in ${esc(naam)}.</b> Hier zie je wat je team deed${g ? ` en wat je dagstart ${esc(wanneer(g))} samenvatte` : ""}. ${afhandelen}</div>${doorgevenMogelijk() && !kanDoorgeven() && kanInloggen() ? `<div class="rijtje">${loginKnop(ingelogd() ? "" : "Inloggen om af te handelen")}</div>` : ""}</div>`;
   }
   return "";
 }
@@ -290,17 +295,74 @@ function renderVoorJouNotion() {
   const kaart = (it) => {
     const slug = slugVanNaam(it.specialist);
     const sinds = it.sinds ? dagenTussen(it.sinds, NU) : null;
-    return `<article class="item"><div class="nr" aria-hidden="true">${esc(it.nr)}</div><div class="item-open" style="cursor:default"><span class="ititel"><span class="sr">Nummer ${esc(it.nr)}: </span>${esc(it.titel)}${it.te_laat ? ' <span class="pil laat">te laat</span>' : ""}</span>
-      <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span></div>
-      <div class="iknoppen">${it.url ? `<a class="knop" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button></div></article>`;
+    const door = doorgeefKaart(it, g);
+    return `<article class="item"${door ? ` data-xkaart="${esc(door.sleutel)}"` : ""}><div class="nr" aria-hidden="true">${esc(it.nr)}</div><div class="item-open" style="cursor:default"><span class="ititel"><span class="sr">Nummer ${esc(it.nr)}: </span>${esc(it.titel)}${it.te_laat ? ' <span class="pil laat">te laat</span>' : ""}</span>
+      <span class="imeta"><span class="soort">${esc(SOORT_LABEL[it.soort] || "")}</span>${slug ? agChip(slug, { kort: true }) : ""}${sinds ? `<span class="mono">${telwoord(sinds, "dag", "dagen")}</span>` : ""}${it.deadline ? `<span>voor ${esc(datumKort(it.deadline))}</span>` : ""}</span>${door && door.status ? door.status : ""}</div>
+      <div class="iknoppen">${door ? door.knoppen : ""}${it.url ? `<a class="knop${door ? " stil" : ""}" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}${door && (door.knoppen || door.status) ? "" : `<button class="knop" data-act="kopieer-tekst" data-t="${esc(vraagVoorTeam(it))}">${ic("kopieer", "klein")}Kopieer voor je team</button>`}</div></article>`;
   };
+  const doorKop = !doorgevenMogelijk() ? "Afhandelen doe je in je eigen systeem, of vraag het je team."
+    : kanDoorgeven() ? "Wat je hier afhandelt, verwerkt je team bij het volgende werkmoment in je eigen systeem."
+      : "Afhandelen kan hier zodra je bent ingelogd.";
+  // Zoals bij een werkruimte-klant: in de kop alleen op een groot scherm (op een
+  // telefoon staat de knop Opdracht onderaan), bij een lege lijst altijd.
+  const opdrachtKnop = kanDoorgeven() ? `<button class="knop teamvol" data-act="sheet" data-type="opdracht">${ic("plus", "klein")}Opdracht geven</button>` : "";
+  const kopKnop = isDesk() ? opdrachtKnop : "";
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}${renderJouwDag()}${renderBovenkaart()}
     <section class="vak verhaal"><div class="tussen"><h2 class="vakkop">${esc(v.titel)}</h2>${hoe("in-een-minuut")}</div>${verhaal}</section>
     ${!blok ? `<section class="leeg" id="werkbak" tabindex="-1" aria-label="Voor jou"><h3>Je dagstart stuurt je lijst nog niet mee</h3><p class="stil">Wat op jou wacht, staat nu nog alleen in je eigen systeem. Zodra je dagstart de openstaande items meestuurt, staan ze hier, genummerd zoals in je dagstart.</p><div class="rijtje">${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div></section>`
-    : `<section class="werkbak-kop" id="werkbak" tabindex="-1" data-werkbak="${eigen ? "jij" : "team"}"><div class="tussen"><h2 class="vakkop"><b>${eigen ? "Volgens je dagstart" : "Werkbak van je team"} ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${hoe("eigen-systeem", "Waarom staat dit niet hier?")}</div>
-    <p class="klein stil">${eigen ? "De nummers zijn dezelfde als in je dagstart." : `Alles wat bij je team op een mens wacht, niet alleen wat op jou wacht. ${ingelogd() ? "Na je eigen dagstart staat hier alleen het jouwe." : "Log in om alleen het jouwe te zien."}`} Afhandelen doe je in je eigen systeem, of vraag het je team.</p></section>
-    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : eigen ? `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p></section>` : `<section class="leeg"><h3>Niets in de werkbak van je team.</h3><p class="stil">Zodra een dagstart iets klaarzet, staat het hier.</p></section>`}`}
-    ${renderOnderregels()}${privacyHtml()}</div>`;
+    : `<section class="werkbak-kop" id="werkbak" tabindex="-1" data-werkbak="${eigen ? "jij" : "team"}"><div class="tussen"><h2 class="vakkop"><b>${eigen ? "Volgens je dagstart" : "Werkbak van je team"} ${items.length}</b>${g ? " · " + esc(wanneer(g)) : ""}</h2>${kopKnop ? `<div class="rijtje">${hoe("eigen-systeem", "Hoe werkt dit?")}${kopKnop}</div>` : hoe("eigen-systeem", kanDoorgeven() ? "Hoe werkt dit?" : "Waarom staat dit niet hier?")}</div>
+    <p class="klein stil">${eigen ? "De nummers zijn dezelfde als in je dagstart." : `Alles wat bij je team op een mens wacht, niet alleen wat op jou wacht. ${ingelogd() ? "Na je eigen dagstart staat hier alleen het jouwe." : "Log in om alleen het jouwe te zien."}`} ${doorKop}</p></section>
+    ${items.length ? `<div class="stapel">${items.map(kaart).join("")}</div>` : eigen ? `<section class="leeg"><h3>Niets voor jou in je dagstart.</h3><p class="stil">Zodra je dagstart iets voor je klaarzet, staat het hier.</p>${opdrachtKnop ? `<div class="rijtje">${opdrachtKnop}</div>` : ""}</section>` : `<section class="leeg"><h3>Niets in de werkbak van je team.</h3><p class="stil">Zodra een dagstart iets klaarzet, staat het hier.</p>${opdrachtKnop ? `<div class="rijtje">${opdrachtKnop}</div>` : ""}</section>`}`}
+    ${!blok && opdrachtKnop ? `<div class="rijtje">${opdrachtKnop}</div>` : ""}${renderDoorgegeven()}${renderOnderregels()}${privacyHtml()}</div>`;
+}
+
+/* ---------- f61: doorgeven aan je team (acties in je eigen systeem) ----------
+ * De knoppen per soort volgen die van een werkruimte-klant: een check keur je
+ * goed of stuur je terug, op een voorstel zeg je ja of nee, de rest geef je aan
+ * je team of zet je op later. Alleen bij een item met een link die bij je
+ * systeem past (doorgeefbaarItem): zonder link kan je team het in je eigen
+ * systeem niet terugvinden, en een vreemde link weigert de instantie. Ligt er al een opdracht
+ * die nog niet verwerkt is, dan staat de stand er en geen tweede knop. */
+function doorgeefKaart(it, gegenereerd) {
+  if (!doorgeefbaarItem(it)) return null;
+  // De kaart en zijn knoppen dragen de link zelf als sleutel; een item dat niet
+  // eenduidig is (dezelfde link of hetzelfde Extern ID als een ander item)
+  // krijgt geen knoppen en geen stand, alleen Open en Kopieer.
+  if (!uniekItem(werkbakUitDagstart(), it.url)) return null;
+  const sleutel = doorgeefSleutel(it);
+  const o = opdrachtVoorItem(CTX.bundle, it.url);
+  const st = o ? opdrachtStatus(o) : null;
+  const status = (t) => `<span class="imeta" data-opdracht-status><span class="pil ${st.k}" style="white-space:normal">${esc(t)}</span></span>`;
+  // Uitgevoerd na de dagstart: dit item is al afgehandeld, alleen je lijst loopt
+  // achter. Uitgevoerd vóór de dagstart en toch weer in de lijst (bv. Later die
+  // verstreek): dan is het een nieuwe beurt, met knoppen.
+  const moment = o ? dt(o.bijgewerkt || o.aangemaakt) : null;
+  const naDagstart = !gegenereerd || !moment || moment >= gegenereerd;
+  if (o && opdrachtIsOpen(o)) {
+    const trek = opdrachtVeld(o, "Status") === "Doorgegeven" && kanDoorgeven() ? knop("Ongedaan maken", "x-intrek", `data-o="${esc(o.entryId)}" data-id="${esc(sleutel)}"`, "stil") : "";
+    return { sleutel, status: status(st.tekst), knoppen: trek };
+  }
+  if (o && opdrachtVeld(o, "Status") === "Uitgevoerd" && naDagstart) return { sleutel, status: status(st.tekst), knoppen: "" };
+  const mislukt = o && opdrachtVeld(o, "Status") === "Mislukt" ? status(st.tekst) : "";
+  if (!kanDoorgeven()) return mislukt ? { sleutel, status: mislukt, knoppen: "" } : null;
+  const x = `data-x="${esc(sleutel)}" data-id="${esc(sleutel)}"`;
+  let k = "";
+  if (it.soort === "check") k = knop("Goedkeuren", "x-doe", `data-h="Goedkeuren" ${x}`, "prim") + knop(ic("terug", "klein") + "Terug", "x-sheet", `data-type="x-terug" ${x}`, "team");
+  else if (it.soort === "voorstel") k = knop("Ja, doe maar", "x-doe", `data-h="Ja" ${x}`, "prim") + knop("Nee, niet doen", "x-sheet", `data-type="x-nee" ${x}`);
+  else k = knop("Geef aan je team", "x-sheet", `data-type="x-wie" ${x}`, "team") + knop("Later", "x-sheet", `data-type="x-later" ${x}`);
+  return { sleutel, status: mislukt, knoppen: k };
+}
+/* Wat je de laatste dertig dagen doorgaf, ook als het item intussen uit je
+ * dagstart is verdwenen. Ingetrokken opdrachten laten we weg. */
+function renderDoorgegeven() {
+  if (!doorgevenMogelijk()) return "";
+  const l = opdrachtenVanBundel().filter(o => opdrachtVeld(o, "Status") !== "Ingetrokken").slice(0, 10);
+  if (!l.length) return "";
+  const open = l.filter(opdrachtIsOpen).length;
+  return `<section class="vak" aria-labelledby="doorgegeven-kop" data-doorgegeven><div class="tussen"><h2 class="vakkop" id="doorgegeven-kop"><b>Doorgegeven aan je team</b>${open ? ` · ${open} nog te verwerken` : ""}</h2>${hoe("eigen-systeem")}</div>
+    <ul class="kol" style="list-style:none;margin:0;padding:0;gap:6px">${l.map(o => { const st = opdrachtStatus(o); const h = opdrachtVeld(o, "Handeling");
+      return `<li class="tussen" style="gap:10px;border-bottom:1px solid var(--line);padding:6px 0"><span>${esc(opdrachtVeld(o, "Actie") || "(zonder titel)")} <span class="stil klein">· ${esc(OPDRACHT_WAT[h] || h)}${o.aangemaakt ? " · " + esc(wanneer(o.aangemaakt)) : ""}</span></span>
+        <span class="rijtje" style="gap:6px"><span class="pil ${st.k}" style="white-space:normal">${esc(st.tekst)}</span>${opdrachtVeld(o, "Status") === "Doorgegeven" && kanDoorgeven() ? knop("Ongedaan maken", "x-intrek", `data-o="${esc(o.entryId)}"`, "stil") : ""}</span></li>`; }).join("")}</ul></section>`;
 }
 
 /* ---------- Item-blad ---------- */

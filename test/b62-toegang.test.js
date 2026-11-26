@@ -71,10 +71,15 @@ describe("b62 — schrijven naast een metricsbestand", () => {
   });
 
   it("wat in Notion woont blijft lezen, met de reden erbij", () => {
-    const ctx = { schema: g.AGENTIC_TEAM_SCHEMA, bundle: metricsBundel({ acties: "notion" }), kanSchrijven: true };
-    const m = g.magDomeinBewerken(ctx, "acties");
-    expect(m.ok).toBe(false);
-    expect(m.reden).toContain("je eigen systeem");
+    // f61: ook als de werkruimte opdrachten aanneemt. Doorgeven schrijft een
+    // opdracht in dashboard_opdrachten (eigen route, eigen poort kanDoorgeven);
+    // de actierij zelf blijft voor het dashboard alleen-lezen.
+    for (const opdrachten of [undefined, { entries: [] }]) {
+      const ctx = { schema: g.AGENTIC_TEAM_SCHEMA, bundle: { ...metricsBundel({ acties: "notion" }), opdrachten }, kanSchrijven: true };
+      const m = g.magDomeinBewerken(ctx, "acties");
+      expect(m.ok).toBe(false);
+      expect(m.reden).toContain("je eigen systeem");
+    }
   });
 
   it("de daglink blijft alleen-lezen", () => {
@@ -102,6 +107,26 @@ describe("b62 — de balk bovenaan (dashboard v2)", () => {
   it("acties in Notion: eerlijk zeggen waar je afhandelt", () => {
     const root = toon(ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" }));
     expect(root.querySelector(".balk.notion").textContent).toContain("Je acties staan in je eigen systeem");
+    expect(root.querySelector(".balk.notion").textContent).toContain("Afhandelen doe je in je eigen systeem");
+  });
+
+  it("f61: kent je werkruimte doorgeven, dan zegt de balk dat afhandelen hier kan", () => {
+    const ctx = ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" });
+    ctx.bundle.opdrachten = { entries: [] };
+    // f61/B3: alleen bij de productdagstart (een voor_jou-blok in je metrics).
+    ctx.metricsWerk = { voorJou: [] };
+    const balk = toon(ctx).querySelector(".balk.notion");
+    expect(balk.textContent).toContain("Je acties staan in je eigen systeem");
+    expect(balk.textContent).toContain("Afhandelen kan hier");
+    expect(balk.textContent).not.toContain("Afhandelen doe je in");
+  });
+
+  it("f61: zonder voor_jou-blok in je dagstart blijft de balk zoals hij was, ook als je werkruimte doorgeven kent", () => {
+    const ctx = ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" });
+    ctx.bundle.opdrachten = { entries: [] };
+    const balk = toon(ctx).querySelector(".balk.notion");
+    expect(balk.textContent).toContain("Afhandelen doe je in je eigen systeem");
+    expect(balk.textContent).not.toContain("Afhandelen kan hier");
   });
 
   it("ingelogd met je werkruimte: geen balk", () => {

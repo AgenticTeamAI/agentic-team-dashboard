@@ -5,7 +5,8 @@
  * de rol van de schrijver; /dashboard/entries geeft die als meta-veld
  * `geschreven_door` naast het entryId (werkruimte-PR #259). Wat hier vastligt:
  *  - zonder dat veld is elk scherm byte voor byte de render van main
- *    (test/fixtures/s64-herkomst-main.json, opgenomen op main vóór s64);
+ *    (test/fixtures/s64-herkomst-main.json, opgenomen op main vóór s64; f61
+ *    voegde er alleen de privacy-alinea over doorgeven aan toe, na i87);
  *  - met eigenaar/beheerder/medewerker/viewer staat er een rustig label
  *    "door <Rol>", en wie dat label weghaalt, houdt precies main over;
  *  - "sleutel" en alles wat de instantie niet hoort te sturen, geven geen

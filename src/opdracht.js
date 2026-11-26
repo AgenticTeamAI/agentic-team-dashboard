@@ -74,6 +74,25 @@ function opdrachtData({ wat, uitleg, wie, deadline, hoortBij, ik, nu }) {
   return data;
 }
 
+/* f61 — de elders-tak: staan je acties in je eigen systeem, dan schrijft het
+ * dashboard geen actie maar een opdracht (Handeling Nieuw, src/opdrachten.js).
+ * Het volgende werkmoment maakt daar de actie zoals opdrachtData hierboven:
+ * titel = Actie, Toelichting = Tekst, Status Open, Eigenaar en Agent =
+ * Specialist, Aangemaakt door = wie hem gaf (zet de instantie), Deadline =
+ * Datum. Pas een ronde later pakt je team hem op, onder de gewone kaders. */
+function opdrachtVoorBron({ wat, uitleg, specialist, deadline }) {
+  const tekst = String(wat || "").trim();
+  const eersteRegel = tekst.split("\n")[0].trim();
+  const max = typeof OPDRACHT_ACTIE_MAX === "number" ? OPDRACHT_ACTIE_MAX : 200;
+  const titel = eersteRegel.length > Math.min(OPDRACHT_TITEL_MAX, max) ? eersteRegel.slice(0, Math.min(OPDRACHT_TITEL_MAX, max) - 1) + "…" : eersteRegel;
+  const body = { handeling: "Nieuw", actie: titel.charAt(0).toUpperCase() + titel.slice(1) };
+  const volledig = [tekst, String(uitleg || "").trim()].filter(Boolean).join("\n\n");
+  if (volledig) body.tekst = volledig;
+  if (specialist) body.specialist = specialist;
+  if (deadline) body.datum = deadline;
+  return body;
+}
+
 /* De regel onder "wie": wat er nu gaat gebeuren — eerlijk, ook als het blijft liggen. */
 function opdrachtVerwachting(ctx, wie) {
   if (wie.mens) {
@@ -241,5 +260,5 @@ function wireOpdracht(el, ctx, doel) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { renderOpdracht, opdrachtData, opdrachtDoel, opdrachtVerwachting, beschikbareSpecialisten, opdrachtCollegas, opdrachtKnopHtml, startOpdracht };
+  module.exports = { renderOpdracht, opdrachtData, opdrachtVoorBron, opdrachtDoel, opdrachtVerwachting, beschikbareSpecialisten, opdrachtCollegas, opdrachtKnopHtml, startOpdracht };
 }

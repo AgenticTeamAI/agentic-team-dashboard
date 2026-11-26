@@ -248,10 +248,18 @@ describe("f50 — het formulier", () => {
     expect(g.opdrachtKnopHtml(ctxMet({ schrijven: false }))).toBe("");
   });
 
-  it("acties in je eigen systeem: geen formulier, wel de zin voor je team", () => {
+  it("acties in je eigen systeem: geen actieformulier, wel de zin voor je team", () => {
     const el = open(ctxMet({ acties: metSpecialisten(), systeemPerDomein: { acties: "notion" } }));
     expect(el.querySelector("[data-opdracht]")).toBeNull();
     expect(el.textContent).toContain("je eigen systeem");
+  });
+
+  it("f61: de elders-tak schrijft geen actie maar een opdracht (Handeling Nieuw) voor het werkmoment", () => {
+    // Het v2-opdrachtblad gebruikt dit bij een werkruimte die doorgeven kent
+    // (test/f61-opdrachten.test.js); de velden volgen opdrachtData hierboven.
+    const b = g.opdrachtVoorBron({ wat: "bel De Vries", uitleg: "", specialist: DM, deadline: "2026-10-02" });
+    expect(b).toEqual({ handeling: "Nieuw", actie: "Bel De Vries", tekst: "bel De Vries", specialist: DM, datum: "2026-10-02" });
+    expect(Object.keys(b)).not.toContain("Status");
   });
 });
 

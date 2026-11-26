@@ -243,6 +243,7 @@ async function fetchWerkruimte(bron, pad) {
     // Vernieuwen helpt niet — de grant zelf klopt niet.
     const err = new Error("Deze licentie geeft geen toegang tot het dashboard.");
     err.oauthVerlopen = true;
+    err.status = 403; // f61: een aanvullende ophaler kan een 403 dan zelf opvangen
     throw err;
   }
   if (!res.ok || body === null) {
@@ -295,6 +296,9 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
   if (!res.ok) {
     const err = new Error((body && body.fout) || ("Je werkruimte gaf een onverwacht antwoord (status " + res.status + ")."));
     err.status = res.status;
+    // f61: een 409 van de opdrachtroute draagt meer dan een tekst (bv. het entryId
+    // van de opdracht die er al ligt).
+    err.body = body;
     throw err;
   }
   return body;
@@ -458,6 +462,10 @@ const GEHEUGEN_DOMEINEN = ["logboek", "bedrijfscontext", "notities"];
 const TEAMFEED_DOMEIN = "teamfeed";
 const TEAMFEED_DAGEN = 30;
 const TEAMFEED_LIMIET = 500;
+// f61: opdrachten die je vanuit het dashboard doorgaf, voor acties in je eigen
+// systeem (opslag=werkruimte, zie src/opdrachten.js). Nooit werkdata.
+const OPDRACHTEN_DOMEIN = "dashboard_opdrachten";
+const OPDRACHTEN_DAGEN = 30;
 
 /* f22: de teamfeed (domein `teamfeed`, opslag=werkruimte) is nooit een
  * rows-domein en telt niet mee in de voorrangsbeslissing; hij hoort bij
@@ -514,6 +522,22 @@ function isDagplanEntry(e) {
   if (typeof inhoud !== "string" || inhoud.indexOf("dagplan") === -1) return false;
   try { const o = JSON.parse(inhoud); return !!o && o.type === "dagplan"; } catch (err) { return false; }
 }
+/* f61: de opdrachten van de laatste dertig dagen, via de eigen route van de
+ * instantie (GET /dashboard/opdrachten, nieuwste eerst, hooguit 100). Net als
+ * de teamfeed: geen rows-domein en geen werkdata. Een instantie die de route
+ * nog niet kent (404 domein_onbekend) of hem nu niet geeft: stil null, dan
+ * zijn er gewoon geen doorgeefknoppen. Alleen een verlopen sessie of daglink
+ * gaat door, want die geldt voor het hele dashboard. */
+async function haalOpdrachten(bron, vandaag) {
+  const sinds = feedDagKey(dagVanIndex(kalenderDag(vandaag) - OPDRACHTEN_DAGEN));
+  try {
+    const body = await fetchWerkruimte(bron, "/dashboard/opdrachten?sinds=" + sinds);
+    return { entries: Array.isArray(body.entries) ? body.entries : [], opgehaaldOp: vandaag.toISOString() };
+  } catch (e) {
+    if (e && (e.daglinkVerlopen || (e.oauthVerlopen && e.status !== 403))) throw e;
+    return null;
+  }
+}
 
 function isVanVandaag(isoTekst, vandaag) {
   const dt = isoTekst ? new Date(isoTekst) : null;
@@ -556,7 +580,10 @@ async function haalMetricsEntry(bron, bundle) {
  * voor een artefact dat tegen een nieuwere registry praat. */
 function werkruimteDomeinen(schema) {
   const uitSchema = schema.werkruimteDomeinen || [];
-  return uitSchema.concat([METRICS_DOMEIN, "dagplannen"].filter(d => uitSchema.indexOf(d) === -1));
+  // f61: dashboard_opdrachten ook als het gebakken schema hem nog niet kent
+  // (de code landt vóór de registry-sync). Anders telt één opdrachtrij als
+  // werkdata en verdringt hij een metricsbestand van gisteren.
+  return uitSchema.concat([METRICS_DOMEIN, "dagplannen", OPDRACHTEN_DOMEIN].filter(d => uitSchema.indexOf(d) === -1));
 }
 
 async function loadWerkruimteBundle(bron) {
@@ -590,6 +617,14 @@ async function loadWerkruimteBundle(bron) {
     : null;
   // f62: idem voor de dagplannen ("Jouw dag" op Voor jou).
   bundle.dagplannen = await dagplannenVoor(bron, overzicht);
+
+  // f61: de opdrachten alleen als de instantie het domein kent; zonder rijen
+  // (aantal 0) hoeft er niets opgehaald te worden. null = deze instantie kent
+  // doorgeven nog niet, en dan verandert er in het dashboard niets.
+  const opdr = (overzicht.domeinen || []).find(d => d && d.domein === OPDRACHTEN_DOMEIN);
+  bundle.opdrachten = !opdr ? null
+    : opdr.aantal === 0 ? { entries: [], opgehaaldOp: new Date().toISOString() }
+      : await haalOpdrachten(bron, new Date());
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
   // domein dat volgens de bronkoppeling ergens ánders woont (notion,
@@ -798,7 +833,7 @@ if (typeof module !== "undefined") {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
-    emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
+    emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties, haalOpdrachten, werkruimteDomeinen,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
     downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };

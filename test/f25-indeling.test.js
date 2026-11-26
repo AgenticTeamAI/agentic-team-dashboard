@@ -219,13 +219,26 @@ describe("privacybelofte — de goedgekeurde formulering, in de UI zelf", () => 
     // als er één alinea wegvalt.
     const alineas = lees("PRIVACY_UITKLAP_ALINEAS");
     // i87: vijf sinds de alinea over de openstaande items uit een eigen bron (f54);
-    // zes sinds de alinea over feedback geven (dashboard v2, 1-10-2026).
-    expect(alineas.length).toBe(6);
+    // zes sinds de alinea over feedback geven (dashboard v2, 1-10-2026);
+    // zeven sinds de alinea over doorgeven aan je team (f61, juristtoets 26-11-2026).
+    expect(alineas.length).toBe(7);
     for (const alinea of alineas) expect(c.textContent).toContain(alinea);
     // de volledige tekst moet hier staan, niet achter een tweede klik of op
     // een andere pagina — een <details> op dezelfde tab voldoet daaraan
     expect(c.querySelector("details > summary")).not.toBeNull();
     expect(c.querySelector("a")).toBeNull();
+  });
+
+  it("f61: de alinea over doorgeven staat er woordelijk, met minstens 30 dagen en zonder detectiebelofte", () => {
+    const alinea = lees("PRIVACY_UITKLAP_ALINEAS").find(t => t.startsWith("Ben je ingelogd, dan kun je zo'n item"));
+    expect(alinea).toBeTruthy();
+    expect(alinea).toContain("via ons doorgeefluik");
+    expect(alinea).toContain("ook met een daglink");
+    expect(alinea).toContain("minstens 30 dagen");
+    expect(alinea).not.toMatch(/tot 30 dagen/);
+    expect(alinea).not.toMatch(/bijzondere|gecontroleerd|detect/i);
+    const i = lees("PRIVACY_UITKLAP_ALINEAS").indexOf(alinea);
+    expect(lees("PRIVACY_UITKLAP_ALINEAS")[i - 1]).toMatch(/^Staan je acties en vaste taken in je eigen bron/);
   });
 
   it("de tekst claimt niet dat er niets naar agentic-team.ai gaat", () => {
