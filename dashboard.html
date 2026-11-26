@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-p7uxCrwdG9OaYn3UTazi05goT6OcJqGlQr63ad8R9UE=' 'sha256-zo5RLggrmSw3JCJl1sprAwxnx243WGNljHnCKPjxn9k='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-p7uxCrwdG9OaYn3UTazi05goT6OcJqGlQr63ad8R9UE=' 'sha256-CQzg/0+aqk9x+RdPVPDgFR8lk6nQMIhDx2qlzDG3TJY='">
 
 
 
@@ -3396,6 +3396,46 @@ const PRIVACY_UITKLAP_ALINEAS = [
 
 const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
 
+/* CONCEPT — juridische ronde s66, niet vastgesteld.
+ *
+ * s66 stap 1 (besluit Tijmen 26-11-2026): met de build-vlag DASHBOARD_SESSIE
+ * blijf je ingelogd via een functioneel cookie op agentic-team.ai, en staat
+ * het inlogtoken alleen nog in het geheugen van de pagina. Daardoor worden
+ * twee alinea's hierboven onwaar: de inlogalinea ("wisselt je browser een
+ * inlogcode om") en de opslagalinea ("je inlogtoken … voor de duur van dit
+ * tabblad", "kort een technische controlecode"). Met de vlag vervangen deze
+ * twee concepten die alinea's; zonder de vlag verandert er niets, en
+ * PRIVACY_UITKLAP zelf blijft de goedgekeurde tekst.
+ *
+ * Dit is GEEN vastgestelde tekst. Hij gaat naar de jurist (aparte ronde, zie
+ * de PR van s66) en mag pas met de vlag naar productie als die ronde hem heeft
+ * vastgesteld. Valt er daarbij een zin met "alleen", "geen" of "nooit" om, dan
+ * hoort die ook in test/geen-telemetrie.test.js. */
+const PRIVACY_UITKLAP_SESSIE_CONCEPT = Object.freeze({
+  markering: "CONCEPT — juridische ronde s66, niet vastgesteld",
+  /* Vervangt PRIVACY_UITKLAP_ALINEAS[4] (de inlogalinea). */
+  inloggen: "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. " +
+    "Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan zet agentic-team.ai een functioneel cookie in je browser dat je ingelogd houdt: tot 14 dagen na je laatste gebruik, 7 dagen als je licentie afscherming heeft, en hooguit 30 dagen na het inloggen. " +
+    "Daarmee haalt je browser bij agentic-team.ai een inlogtoken dat een uur geldig is en alleen in het geheugen van deze pagina staat. Ben je eerder ingelogd, dan gebeurt dat vanzelf als je het dashboard opent, en daarna bij je eerstvolgende verzoek als het token verlopen is. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. " +
+    "Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. " +
+    "Je werkruimte telt daarnaast per dag hoe vaak het dashboard opent via een daglink en hoe vaak via een sessie, zonder vast te leggen wie het opende, en bewaart die telling 35 dagen; wij lezen die telling per licentie. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. " +
+    "Dat bekijken we per licentie en niet per persoon. Je kunt uitloggen in deze browser, of op al je apparaten tegelijk. Wordt je rol in het team gewijzigd, dan stopt je sessie en log je opnieuw in.",
+  /* Vervangt PRIVACY_UITKLAP_ALINEAS[5] (de opslagalinea). */
+  opslag: "In je browser bewaren we de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Je inlogtoken staat alleen in het geheugen van deze pagina: sluit of herlaad je de pagina, dan is het weg. " +
+    "Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, een markering dat je bent ingelogd met de datum waarop je sessie uiterlijk afloopt, en een kopie van de naam waaronder je werkt. " +
+    "Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de eigenaar van je licentie (het aankoopadres) hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee. " +
+    "In de markering staat geen token, licentie of naam. Het cookie dat je ingelogd houdt, staat bij agentic-team.ai; deze pagina kan het niet lezen.",
+});
+
+/* De alinea's die het dashboard toont: met de vlag DASHBOARD_SESSIE het
+ * concept op de plek van de inlog- en de opslagalinea, anders precies
+ * PRIVACY_UITKLAP_ALINEAS. */
+function privacyAlineas() {
+  const sessie = typeof sessieFlowAan === "function" && sessieFlowAan();
+  if (!sessie) return PRIVACY_UITKLAP_ALINEAS;
+  return PRIVACY_UITKLAP_ALINEAS.map((a, i) => (i === 4 ? PRIVACY_UITKLAP_SESSIE_CONCEPT.inloggen : i === 5 ? PRIVACY_UITKLAP_SESSIE_CONCEPT.opslag : a));
+}
+
 /* Dezelfde belofte, in de lege staat (nog geen daglink geladen). Bewust
  * dezelfde strekking en dezelfde grens als hierboven — twee varianten van
  * één belofte is op zichzelf al een risico. */
@@ -3409,7 +3449,7 @@ const PRIVACY_FEED =
   "Deze feed leest uit je eigen werkruimte via de daglink. De berichten gaan niet naar onze website- of licentieserver en worden niet door ons bewaard.";
 
 if (typeof module !== "undefined") {
-  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
+  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_UITKLAP_SESSIE_CONCEPT, privacyAlineas, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
 }
 
 
@@ -3738,6 +3778,7 @@ let oauthVernieuwingKlaar = false;
 function resetOauthVernieuwing() {
   oauthVernieuwing = null;
   oauthVernieuwingKlaar = false;
+  sessieVernieuwing = null;
 }
 
 function eenmaligVernieuwen() {
@@ -3750,10 +3791,82 @@ function eenmaligVernieuwen() {
   return oauthVernieuwing;
 }
 
-async function fetchWerkruimte(bron, pad) {
-  let res = await doeVerzoek(bron, pad);
+/* s66 — een verzoek met een token van de dashboardsessie (bron.sessie).
+ *
+ * Anders dan de oude tabbladflow is een sessietoken elk uur opnieuw te halen:
+ * de site roteert het vervangingstoken in het cookie bij elk gebruik. De regel
+ * blijft "per verzoek hooguit één vernieuwing, nooit een lus":
+ *  - een 401 met {sessie: "beeindigd"} (de instantie zette een sessiegrens:
+ *    rolwijziging, uitloggen overal) wordt nooit vernieuwd — vernieuwen geeft
+ *    een token met hetzelfde inlogmoment, dat de instantie ook weigert. Dan
+ *    uitloggen bij de site en de lege staat;
+ *  - een andere 401: één POST naar de sessie-token-route, gedeeld door alle
+ *    verzoeken die met hetzelfde token een 401 kregen, en daarna één nieuwe
+ *    poging;
+ *  - is het token volgens expires_in (bijna) verlopen, dan eerst vernieuwen.
+ * `eenmalig` (uitloggen overal): geen vernieuwing en geen tweede poging. */
+let sessieVernieuwing = null; // {voor: token, belofte}
 
-  if (res.status === 401 && bron.oauth) {
+function sessieLaadFout(fout) {
+  const err = new Error((fout && fout.message) || "Je sessie is verlopen. Log opnieuw in met je licentie.");
+  const soort = fout && fout.soort;
+  // Een storing of een netwerkfout is geen verlopen sessie: dan blijft wat je
+  // zag staan, met een melding.
+  if (soort !== "storing" && soort !== "netwerk") err.oauthVerlopen = true;
+  if (soort === "ander_account") { err.sessieEinde = true; err.sessieAnderAccount = true; }
+  return err;
+}
+
+function vernieuwSessieVoor(bron, gebruikt) {
+  // Een ander verzoek heeft al vernieuwd: dan het nieuwe token gebruiken.
+  if (bron.token !== gebruikt) return Promise.resolve(bron.token);
+  if (!sessieVernieuwing || sessieVernieuwing.voor !== gebruikt) {
+    const belofte = haalSessieToken().then(
+      (t) => { if (bron.token === gebruikt) bron.token = t.access_token; return bron.token; },
+      (fout) => { throw sessieLaadFout(fout); },
+    );
+    sessieVernieuwing = { voor: gebruikt, belofte };
+  }
+  return sessieVernieuwing.belofte;
+}
+
+async function isSessieBeeindigd(res) {
+  if (!res || res.status !== 401 || typeof res.clone !== "function") return false;
+  try {
+    const body = await res.clone().json();
+    return !!body && body.sessie === "beeindigd";
+  } catch (e) {
+    return false;
+  }
+}
+
+function sessieBeeindigdFout() {
+  void sessieIsBeeindigd();
+  const err = new Error(SESSIE_BEEINDIGD_TEKST);
+  err.oauthVerlopen = true;
+  err.sessieEinde = true;
+  err.sessieBeeindigd = true;
+  return err;
+}
+
+async function metSessie(bron, doe) {
+  if (!bron.eenmalig && sessieTokenBijnaVerlopen(bron.token)) await vernieuwSessieVoor(bron, bron.token);
+  const gebruikt = bron.token;
+  let res = await doe();
+  // `eenmalig` hoort bij uitloggen overal, dat zelf al uitlogt: geen tweede
+  // afhandeling van een 401 hier.
+  if (res.status !== 401 || bron.eenmalig) return res;
+  if (await isSessieBeeindigd(res)) throw sessieBeeindigdFout();
+  await vernieuwSessieVoor(bron, gebruikt);
+  res = await doe();
+  if (await isSessieBeeindigd(res)) throw sessieBeeindigdFout();
+  return res;
+}
+
+async function fetchWerkruimte(bron, pad) {
+  let res = bron.sessie ? await metSessie(bron, () => doeVerzoek(bron, pad)) : await doeVerzoek(bron, pad);
+
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       // Het bron-object is gedeeld met alle lopende verzoeken: het nieuwe
@@ -3813,8 +3926,8 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
       tl.klaar();
     }
   };
-  let res = await doe();
-  if (res.status === 401 && bron.oauth) {
+  let res = bron.sessie ? await metSessie(bron, doe) : await doe();
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       bron.token = nieuw.access_token;
@@ -3855,8 +3968,9 @@ async function schrijfWerkruimte(bron, methode, pad, payload) {
  * uit serverinvoer letterlijk in `a.download` zetten.
  */
 async function downloadExport(bron, formaat) {
-  let res = await doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
-  if (res.status === 401 && bron.oauth) {
+  const doe = () => doeVerzoek(bron, "/dashboard/export?formaat=" + encodeURIComponent(formaat));
+  let res = bron.sessie ? await metSessie(bron, doe) : await doe();
+  if (res.status === 401 && bron.oauth && !bron.sessie) {
     const nieuw = await eenmaligVernieuwen();
     if (nieuw && nieuw.access_token) {
       bron.token = nieuw.access_token;
@@ -4372,6 +4486,7 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties, haalOpdrachten, werkruimteDomeinen,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
+    tokenPayloadDeel, metSessie, isSessieBeeindigd,
     downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }
@@ -4414,6 +4529,12 @@ if (typeof module !== "undefined") {
 
 const OAUTH_AUTORISATIE_URL = "https://www.agentic-team.ai/oauth/authorize";
 const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token";
+/* s66: de routes van de dashboardsessie op de site (de BFF, contract 2.17.0
+ * §7g). Alleen in gebruik met de build-vlag DASHBOARD_SESSIE; zie onderaan. */
+const SESSIE_INLOG_URL = "https://www.agentic-team.ai/api/dashboard/sessie/inloggen";
+const SESSIE_TOKEN_URL = "https://www.agentic-team.ai/api/dashboard/sessie/token";
+const SESSIE_UITLOG_URL = "https://www.agentic-team.ai/api/dashboard/sessie/uitloggen";
+const SESSIE_UITLOG_OVERAL_URL = "https://www.agentic-team.ai/api/dashboard/sessie/uitloggen-overal";
 const OAUTH_CLIENT_ID = "https://www.agentic-team.ai/oauth/clients/dashboard";
 /* Losse link (dashboard v2): onder een pad op dezelfde origin keert de login
  * terug naar dat pad. build.py zet het pad als meta; zonder meta is het "/".
@@ -4679,24 +4800,87 @@ async function voltooiOauthLogin(redirect) {
   return antwoord;
 }
 
-/* ── De token-aanvraag: de enige call naar agentic-team.ai ─────────────── */
+/* ── De POST naar agentic-team.ai: één fetch-plek voor vier bestemmingen ── */
+
+/* s66: de vier POST-bestemmingen op ons eigen domein, op naam. De oude
+ * token-uitwisseling (`token`) en de drie routes van de dashboardsessie
+ * (`sessie`, `uitloggen`, `overal`, zie hieronder). Eén fetch-plek houdt de
+ * inventaris in test/geen-telemetrie.test.js op precies vier, en deze tabel
+ * is de exacte allowlist: een vijfde bestemming hoort hier een regel te
+ * kosten. */
+const SITE_POST_URLS = Object.freeze({
+  token: OAUTH_TOKEN_URL,
+  sessie: SESSIE_TOKEN_URL,
+  uitloggen: SESSIE_UITLOG_URL,
+  overal: SESSIE_UITLOG_OVERAL_URL,
+});
+
+/* Een 503 van de sessie-token-route (een rotatie die nog onderweg is, of een
+ * storing) is één herhaling waard, na min(Retry-After, 2) seconden. Nooit een
+ * lus, en nooit bij de andere bestemmingen. */
+const SESSIE_HERHAAL_MAX_MS = 2000;
+
+function herhaalNaMs(res) {
+  let kop = null;
+  try { kop = res && res.headers && typeof res.headers.get === "function" ? res.headers.get("Retry-After") : null; } catch (e) { kop = null; }
+  const s = kop === null || kop === "" ? NaN : Number(kop);
+  return Number.isFinite(s) && s >= 0 ? Math.min(s * 1000, SESSIE_HERHAAL_MAX_MS) : SESSIE_HERHAAL_MAX_MS;
+}
+
+function wachtMs(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 /**
- * POST naar /api/oauth/token, `application/x-www-form-urlencoded` (RFC 6749
- * §4.1.3 — nooit JSON). Er gaat geen enkel bedrijfsgegeven mee: alleen de
- * code of het refresh-token, de verifier en de client-identificatie.
+ * De enige fetch naar agentic-team.ai buiten modulesFetch. Levert de Response
+ * en gooit alleen bij een netwerkfout.
+ *
+ * - `token`: de oude token-uitwisseling, `application/x-www-form-urlencoded`
+ *   (RFC 6749 §4.1.3, nooit JSON), zonder cookies. Er gaat geen enkel
+ *   bedrijfsgegeven mee: alleen de code of het refresh-token, de verifier en
+ *   de client-identificatie.
+ * - de drie sessiebestemmingen (s66): een simple request zonder body en
+ *   zonder eigen headers, mét cookies (credentials "include") zodat het
+ *   httpOnly-cookie op www meegaat. Alleen met de vlag; dit is de enige plek
+ *   in het hele artefact die cookies meestuurt (test/geen-telemetrie.test.js
+ *   telt hem).
  */
-async function tokenAanvraag(velden) {
-  const body = new URLSearchParams();
-  for (const [k, v] of Object.entries(velden)) if (v != null) body.set(k, String(v));
-
-  let res;
-  try {
-    res = await fetch(OAUTH_TOKEN_URL, {
+async function sitePost(doel, velden) {
+  if (!Object.prototype.hasOwnProperty.call(SITE_POST_URLS, doel)) throw new OauthFout("Onbekende bestemming.");
+  const metCookie = doel !== "token";
+  // Zonder de vlag gaat er nooit een verzoek mét cookies weg, ook niet als
+  // iemand deze functie verkeerd aanroept.
+  if (metCookie && !sessieAan()) throw new OauthFout("De dashboardsessie staat niet aan.");
+  let opties;
+  if (metCookie) {
+    opties = { method: "POST", credentials: "include" };
+  } else {
+    const body = new URLSearchParams();
+    for (const [k, v] of Object.entries(velden || {})) if (v != null) body.set(k, String(v));
+    opties = {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),
-    });
+    };
+  }
+  for (let poging = 1; ; poging++) {
+    const res = await fetch(SITE_POST_URLS[doel], opties);
+    if (doel === "sessie" && res.status === 503 && poging === 1) {
+      await wachtMs(herhaalNaMs(res));
+      continue;
+    }
+    return res;
+  }
+}
+
+/**
+ * POST naar /api/oauth/token (via sitePost). Gooit OauthFout met een leesbare
+ * Nederlandse tekst; de aanroeper toont die naast de loginknop.
+ */
+async function tokenAanvraag(velden) {
+  let res;
+  try {
+    res = await sitePost("token", velden);
   } catch (e) {
     throw new OauthFout("agentic-team.ai is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
   }
@@ -4749,6 +4933,331 @@ function oauthBron(sessie) {
   return { token: sessie.access_token, instantieUrl: CONNECTOR_ORIGIN, oauth: true };
 }
 
+/* ── s66 stap 1: de dashboardsessie (BFF op www, contract 2.17.0 §7g) ─────
+ *
+ * Besluit Tijmen 26-11-2026: met de build-vlag DASHBOARD_SESSIE blijft de
+ * gebruiker ingelogd, ook als het tabblad dicht gaat. Het vervangingstoken
+ * (refresh token) staat NIET in deze pagina maar in een httpOnly-cookie op
+ * www.agentic-team.ai, gezet door de site (de BFF). Deze pagina ziet het nooit
+ * en kan het dus ook niet lekken. Wat ze wél krijgt is een access-token van
+ * een uur, en dat leeft alleen in een modulevariabele: nooit in sessionStorage
+ * of localStorage.
+ *
+ * - Inloggen is een top-level navigatie naar SESSIE_INLOG_URL. Geen PKCE en
+ *   geen browseropslag hier: de site maakt de verifier, wisselt de code in op
+ *   haar eigen server en zet het cookie. Heeft de browser al een levende
+ *   sessie, dan stuurt de site meteen terug, zonder mail.
+ * - De site stuurt terug met #sessie=nieuw&r=<route> of #sessie=fout&reden=…
+ *   (nooit een token in de URL); daarna haalt deze pagina met één POST naar
+ *   SITE_POST_URLS.sessie een access-token.
+ * - Lokaal staat alleen de markering SESSIE_LS_KEY = {"tot": <ISO>}, zonder
+ *   token, seat of licentie. Ze is een optimalisatie: met markering vraagt de
+ *   pagina bij het openen zelf een token, zonder markering doet de lege staat
+ *   niets (en hervat de loginknop een levende sessie zonder mail).
+ * - Identiteitspin: het eerste sessietoken van dit tabblad legt licentie en
+ *   seat vast. Eén cookie per browser betekent dat een ander tabblad met een
+ *   ander account kan inloggen; een token voor een andere identiteit wordt
+ *   hier nooit gebruikt.
+ *
+ * De oude flow hierboven blijft bestaan als terugrolpad. Zonder de vlag
+ * verandert er niets. */
+const SESSIE_LS_KEY = "agentic-team-dashboard:sessie";
+
+const SESSIE_ANDER_ACCOUNT_TEKST = "Je bent in een ander tabblad met een ander account ingelogd. Laad de pagina opnieuw.";
+const SESSIE_BEEINDIGD_TEKST = "Je sessie is beëindigd (je rol is gewijzigd of je bent overal uitgelogd). Log opnieuw in.";
+const SESSIE_VERLOPEN_TEKST = "Je sessie is verlopen. Log opnieuw in met je licentie.";
+const SESSIE_STORING_TEKST = "Inloggen kan nu even niet — er is een storing aan onze kant. Probeer het zo opnieuw.";
+
+/* De redenen die de site in #sessie=fout&reden=… meegeeft (contract §7g b).
+ * De tekst komt uit deze tabel, nooit uit de URL. */
+const SESSIE_FOUT_TEKST = Object.freeze({
+  andere_poging: "Deze inlogpoging hoort niet bij deze browser, of hij is verlopen. Klik opnieuw op inloggen.",
+  afgebroken: "Je hebt het inloggen afgebroken. Probeer het opnieuw.",
+  geweigerd: "Inloggen is niet gelukt: de inlogcode werd niet geaccepteerd. Klik opnieuw op inloggen.",
+  storing: SESSIE_STORING_TEKST,
+});
+const SESSIE_FOUT_ONBEKEND = "Inloggen is niet gelukt. Klik opnieuw op inloggen, of gebruik de daglink van je Coördinator.";
+
+/* De build-vlag als meta-tag, zoals at-oauth (build.py --sessie). */
+function sessieAan() {
+  try {
+    return document.querySelector('meta[name="at-sessie"][content="1"]') !== null;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* De nieuwe flow loopt alleen met de vlag én waar inloggen kan (de at-oauth-
+ * vlag en een http(s)-pagina). Via file:// blijft het nul netwerkaanroepen. */
+function sessieFlowAan() {
+  return sessieAan() && oauthMogelijk();
+}
+
+/* ── geheugen en markering ─────────────────────────────────────────────── */
+
+let sessieToegang = null; // het access-token: alleen hier, nooit in opslag
+let sessieVerlooptOp = 0; // ms; uit expires_in
+let sessiePin = null; // {lic, seat} van het eerste sessietoken in dit tabblad
+
+/** {lic, seat} uit de payload van een access-token, of null. Alleen lezen om
+ *  te vergelijken: de router en de instantie toetsen de handtekening. */
+function sessieIdentiteit(token) {
+  const p = tokenPayloadDeel(token, 1);
+  if (!p || typeof p.lic !== "string" || !p.lic || typeof p.seat !== "string" || !p.seat) return null;
+  return { lic: p.lic, seat: p.seat };
+}
+
+function sessiePinVan() {
+  return sessiePin ? { lic: sessiePin.lic, seat: sessiePin.seat } : null;
+}
+
+function vergeetSessieGeheugen() {
+  sessieToegang = null;
+  sessieVerlooptOp = 0;
+}
+
+function sessieTokenBijnaVerlopen(token) {
+  return !!token && token === sessieToegang && Date.now() >= sessieVerlooptOp - 60 * 1000;
+}
+
+/** De markering, alleen als ze geldig is en nog niet verstreken; anders weg. */
+function leesSessieMarkering() {
+  try {
+    const raw = localStorage.getItem(SESSIE_LS_KEY);
+    if (!raw) return null;
+    let m = null;
+    try { m = JSON.parse(raw); } catch (e) { m = null; }
+    const tot = m && typeof m.tot === "string" ? Date.parse(m.tot) : NaN;
+    if (Number.isFinite(tot) && tot > Date.now()) return { tot: m.tot };
+    localStorage.removeItem(SESSIE_LS_KEY);
+  } catch (e) { /* privémodus */ }
+  return null;
+}
+
+/** Alleen {"tot": <ISO>}: geen token, geen seat, geen licentie. */
+function zetSessieMarkering(tot) {
+  if (typeof tot !== "string" || !Number.isFinite(Date.parse(tot))) return;
+  try { localStorage.setItem(SESSIE_LS_KEY, JSON.stringify({ tot: new Date(Date.parse(tot)).toISOString() })); } catch (e) { /* privémodus */ }
+}
+
+function vergeetSessieMarkering() {
+  try { localStorage.removeItem(SESSIE_LS_KEY); } catch (e) { /* zie boven */ }
+}
+
+/* Met de vlag horen de sleutels van de oude tabbladflow er niet meer: een
+ * achtergebleven refresh-token in sessionStorage is precies wat s66 weghaalt.
+ * Geen omwisselroute: die zou een gestolen tabbladtoken tot een sessie van 30
+ * dagen maken. De gebruiker logt één keer opnieuw in. */
+function vergeetOudeOauthOpslag() {
+  vergeetOauthSessie();
+  vergeetPkce();
+}
+
+/* ── wie het einde van een sessie afhandelt (app.js) ──────────────────── */
+
+let sessieEindeHandler = null;
+function bijSessieEinde(fn) {
+  sessieEindeHandler = typeof fn === "function" ? fn : null;
+}
+function meldSessieEinde(titel, tekst) {
+  if (sessieEindeHandler) {
+    try { sessieEindeHandler(titel, tekst); } catch (e) { /* de melding mag het verzoek niet breken */ }
+  }
+}
+
+/* Uitloggen bij de site loopt soms nog terwijl de lege staat al staat (na een
+ * 401 'beeindigd'). Inloggen wacht daarop: anders hervat /inloggen het cookie
+ * dat we net wilden weggooien. */
+let sessieAfsluiten = null;
+function wachtOpSessieAfsluiten() {
+  return sessieAfsluiten ? sessieAfsluiten.catch(() => {}) : Promise.resolve();
+}
+function houdInloggenTegen(belofte) {
+  const p = Promise.resolve(belofte).catch(() => {});
+  sessieAfsluiten = p;
+  p.then(() => { if (sessieAfsluiten === p) sessieAfsluiten = null; });
+  return p;
+}
+
+/* ── de fragmenten waarmee de site terugstuurt ─────────────────────────── */
+
+/**
+ * #sessie=nieuw&r=<route>  → {nieuw: true, route}
+ * #sessie=fout&reden=<r>   → {fout: true, reden, tekst}
+ * Alles anders: null. De route geldt alleen als hij op "#/" begint, met de
+ * tekens die de site ook toelaat.
+ */
+function parseSessieFragment(hash) {
+  const h = String(hash || "");
+  if (!h || h.startsWith("#/")) return null;
+  let p;
+  try { p = new URLSearchParams(h.replace(/^#/, "")); } catch (e) { return null; }
+  const soort = p.get("sessie");
+  if (soort === "nieuw") {
+    const r = p.get("r") || "";
+    return { nieuw: true, route: /^#\/[A-Za-z0-9/_.~%-]{0,200}$/.test(r) ? r : null };
+  }
+  if (soort === "fout") {
+    const reden = p.get("reden");
+    const bekend = typeof reden === "string" && Object.prototype.hasOwnProperty.call(SESSIE_FOUT_TEKST, reden);
+    return { fout: true, reden: bekend ? reden : null, tekst: bekend ? SESSIE_FOUT_TEKST[reden] : SESSIE_FOUT_ONBEKEND };
+  }
+  return null;
+}
+
+/* ── inloggen: een navigatie, geen fetch ───────────────────────────────── */
+
+function sessieInlogUrl(hash) {
+  return SESSIE_INLOG_URL + "?terug=" + dashboardBasis() + "&route=" + encodeURIComponent(bedoeldeRoute(hash) || "");
+}
+
+async function startSessieLogin() {
+  await wachtOpSessieAfsluiten();
+  window.location.href = sessieInlogUrl(window.location.hash);
+}
+
+/* ── het token ophalen ─────────────────────────────────────────────────── */
+
+class SessieFout extends OauthFout {
+  constructor(soort, tekst) {
+    super(tekst);
+    this.soort = soort;
+  }
+}
+
+/**
+ * Eén POST naar de sessie-token-route (bij een 503 binnen sitePost één keer
+ * herhaald). Levert {access_token, sessie_tot}; het token staat daarna in het
+ * geheugen. Alleen access_token, expires_in en sessie_tot worden gelezen;
+ * al het andere in het antwoord wordt genegeerd en nergens bewaard (de site
+ * stuurt nooit een vervangingstoken mee).
+ *
+ * - 401: geen of geen geldige sessie meer. De markering gaat weg.
+ * - 503 (ook na de herhaling): storing. De markering blijft.
+ * - Een token voor een andere licentie of seat dan de pin van dit tabblad:
+ *   niet gebruikt, geheugen leeg, en het einde gemeld (lege staat).
+ */
+async function haalSessieToken() {
+  let res;
+  try {
+    res = await sitePost("sessie");
+  } catch (e) {
+    throw new SessieFout("netwerk", "agentic-team.ai is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.");
+  }
+  let payload = null;
+  try { payload = await res.json(); } catch (e) { /* geen JSON — hieronder afgevangen */ }
+  if (res.status === 401) {
+    vergeetSessieMarkering();
+    vergeetSessieGeheugen();
+    throw new SessieFout("verlopen", SESSIE_VERLOPEN_TEKST);
+  }
+  if (res.status === 503) throw new SessieFout("storing", SESSIE_STORING_TEKST);
+  const token = res.ok && payload && typeof payload.access_token === "string" ? payload.access_token : "";
+  const id = token ? sessieIdentiteit(token) : null;
+  if (!id) throw new SessieFout("onverwacht", SESSIE_FOUT_ONBEKEND);
+  if (sessiePin && (id.lic !== sessiePin.lic || id.seat !== sessiePin.seat)) {
+    vergeetSessieGeheugen();
+    meldSessieEinde("Ander account", SESSIE_ANDER_ACCOUNT_TEKST);
+    throw new SessieFout("ander_account", SESSIE_ANDER_ACCOUNT_TEKST);
+  }
+  if (!sessiePin) sessiePin = id;
+  sessieToegang = token;
+  const exp = Number(payload.expires_in);
+  sessieVerlooptOp = Date.now() + (Number.isFinite(exp) && exp > 0 ? Math.min(exp, 3600) : 3600) * 1000;
+  zetSessieMarkering(payload.sessie_tot);
+  return { access_token: token, sessie_tot: typeof payload.sessie_tot === "string" ? payload.sessie_tot : null };
+}
+
+/** De bronvorm voor de loader: als een OAuth-sessie, met `sessie: true`. */
+function sessieBron(token) {
+  return { token, instantieUrl: CONNECTOR_ORIGIN, oauth: true, sessie: true };
+}
+
+/* ── uitloggen ─────────────────────────────────────────────────────────── */
+
+/** POST uitloggen bij de site (idempotent), daarna markering en geheugen weg.
+ *  Gooit nooit: uitloggen in dit tabblad lukt altijd. */
+function sessieUitloggen() {
+  vergeetSessieMarkering();
+  vergeetSessieGeheugen();
+  const p = sitePost("uitloggen").then((res) => res.ok, () => false);
+  houdInloggenTegen(p);
+  return p;
+}
+
+/* Na een 401 met {sessie: "beeindigd"} van de instantie: één keer uitloggen
+ * bij de site (ook als er meer verzoeken tegelijk die 401 kregen), en het
+ * einde melden. */
+let sessieBeeindigdBezig = null;
+function sessieIsBeeindigd() {
+  if (!sessieBeeindigdBezig) {
+    sessieBeeindigdBezig = sessieUitloggen().finally(() => { sessieBeeindigdBezig = null; });
+    meldSessieEinde("Je sessie is beëindigd", SESSIE_BEEINDIGD_TEKST);
+  }
+  return sessieBeeindigdBezig;
+}
+
+/**
+ * Uitloggen op alle apparaten, in deze volgorde (contract §7g):
+ *  1. een vers token (c); wijkt de identiteit af van de pin, dan afbreken;
+ *  2. POST /dashboard/sessies/intrekken {} naar de eigen instantie met dát
+ *     token, via schrijfWerkruimte (geen nieuwe fetch-plek). Een fout is niet
+ *     fataal: dan stoppen open tabbladen elders uiterlijk binnen een uur;
+ *  3. POST uitloggen-overal bij de site (e);
+ *  4. markering en geheugen weg.
+ * Inloggen wacht tot dit klaar is. Levert {gelukt, instantie, tekst}.
+ */
+async function sessieUitloggenOveral() {
+  const werk = (async () => {
+    const pin = sessiePinVan();
+    let vers;
+    try {
+      vers = await haalSessieToken();
+    } catch (e) {
+      if (e && e.soort === "ander_account") return { gelukt: false, afgebroken: true, tekst: SESSIE_ANDER_ACCOUNT_TEKST };
+      if (e && e.soort === "verlopen") {
+        return { gelukt: false, tekst: "Je sessie in deze browser was al verlopen. Log opnieuw in en probeer het nog eens om ook op je andere apparaten uit te loggen." };
+      }
+      return { gelukt: false, afgebroken: true, behoud: true, tekst: (e && e.message) || SESSIE_STORING_TEKST };
+    }
+    // haalSessieToken toetst de pin al; dit is de tweede, expliciete grendel
+    // vóór het enige verzoek dat met dit token wegging.
+    const id = sessieIdentiteit(vers.access_token);
+    if (!id || (pin && (id.lic !== pin.lic || id.seat !== pin.seat))) {
+      vergeetSessieGeheugen();
+      return { gelukt: false, afgebroken: true, tekst: SESSIE_ANDER_ACCOUNT_TEKST };
+    }
+    let instantie = false;
+    try {
+      // `eenmalig`: geen vernieuwing en geen tweede poging bij een 401.
+      await schrijfWerkruimte({ token: vers.access_token, instantieUrl: CONNECTOR_ORIGIN, oauth: true, sessie: true, eenmalig: true },
+        "POST", "/dashboard/sessies/intrekken", {});
+      instantie = true;
+    } catch (e) {
+      instantie = false;
+    }
+    let site = false;
+    try {
+      const res = await sitePost("overal");
+      site = res.ok;
+    } catch (e) {
+      site = false;
+    }
+    vergeetSessieMarkering();
+    vergeetSessieGeheugen();
+    if (!site) {
+      return { gelukt: false, instantie, tekst: "Uitloggen op je andere apparaten is niet gelukt door een storing. In dit tabblad ben je uitgelogd. Probeer het zo opnieuw." };
+    }
+    return {
+      gelukt: true,
+      instantie,
+      tekst: "Je bent op alle apparaten uitgelogd." + (instantie ? "" : " Open tabbladen elders stoppen uiterlijk binnen een uur."),
+    };
+  })();
+  houdInloggenTegen(werk);
+  return werk;
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     OAUTH_AUTORISATIE_URL, OAUTH_TOKEN_URL, OAUTH_CLIENT_ID, OAUTH_REDIRECT_URI,
@@ -4757,6 +5266,13 @@ if (typeof module !== "undefined") {
     bouwAutorisatieUrl, parseOauthRedirect, bedoeldeRoute, neemBedoeldeRoute, startOauthLogin, voltooiOauthLogin,
     tokenAanvraag, vernieuwOauthSessie, oauthBron, OauthFout,
     bewaarOauthSessie, leesOauthSessie, vergeetOauthSessie, bewaarPkce, leesPkce, vergeetPkce,
+    SITE_POST_URLS, sitePost, herhaalNaMs, SESSIE_HERHAAL_MAX_MS,
+    SESSIE_INLOG_URL, SESSIE_TOKEN_URL, SESSIE_UITLOG_URL, SESSIE_UITLOG_OVERAL_URL, SESSIE_LS_KEY,
+    SESSIE_ANDER_ACCOUNT_TEKST, SESSIE_BEEINDIGD_TEKST, SESSIE_FOUT_TEKST,
+    sessieAan, sessieFlowAan, sessieIdentiteit, sessiePinVan, vergeetSessieGeheugen, sessieTokenBijnaVerlopen,
+    leesSessieMarkering, zetSessieMarkering, vergeetSessieMarkering, vergeetOudeOauthOpslag,
+    bijSessieEinde, wachtOpSessieAfsluiten, parseSessieFragment, sessieInlogUrl, startSessieLogin,
+    SessieFout, haalSessieToken, sessieBron, sessieUitloggen, sessieIsBeeindigd, sessieUitloggenOveral,
   };
 }
 
@@ -14585,12 +15101,14 @@ async function verwijderTeamlid(sectieEl, seat) {
   renderTeamPanel(sectieEl); // tekent de knoppen uitgeschakeld
   teamMeld(sectieEl, "Verwijderen…");
   let gelukt = false;
+  let sessieVoetnoot = false;
   try {
     const uit = await modulesFetch("/api/dashboard/team/verwijderen", { seat }, token);
     if (uit && uit.status === 200 && uit.body && Array.isArray(uit.body.team)) {
       teamLijst = uit.body.team;
       if (teamBevestigSeat === seat) teamBevestigSeat = null;
       gelukt = true;
+      sessieVoetnoot = !(await trekSessiesInVan(seat));
     } else {
       teamFout(sectieEl, teamFoutTekst(uit, "Verwijderen lukte niet. Probeer het zo opnieuw."));
     }
@@ -14609,12 +15127,34 @@ async function verwijderTeamlid(sectieEl, seat) {
   // een vaste plek in plaats van <body>: na succes het adresveld bovenaan, na
   // een fout de veilige keuze in de bevestiging die openblijft.
   if (gelukt) {
-    teamMeld(sectieEl, `${adres} is verwijderd en kan niet meer inloggen.`);
+    teamMeld(sectieEl, `${adres} is verwijderd en kan niet meer inloggen.` + (sessieVoetnoot ? " " + TEAM_SESSIE_VOETNOOT : ""));
     const veld = sectieEl.querySelector("[data-team-uitnodig-adres]");
     if (veld) veld.focus();
   } else {
     const annuleer = teamKnopVoor(sectieEl, "data-team-verwijder-nee", seat);
     if (annuleer) annuleer.focus();
+  }
+}
+
+/* s66 — na een geslaagde verwijdering ook de open dashboardsessies van die
+ * persoon stoppen, via de eigen instantie (POST /dashboard/sessies/intrekken
+ * {seat}, contract 2.17.0 §7g). De site trok de koppeling al in, dus een
+ * volgende vernieuwing faalt sowieso; dit zet een sessiegrens zodat een
+ * access-token dat al onderweg is meteen stopt, ook bij een lid met de
+ * standaardrol. Alleen met de vlag DASHBOARD_SESSIE en een sessie.
+ *
+ * Een 403, 404 of 503 (of geen verbinding) is geen fout van de verwijdering:
+ * dan stopt een open sessie uiterlijk als haar token verloopt, binnen een uur.
+ * Geeft true bij een 200 (geen voetnoot), anders false. */
+const TEAM_SESSIE_VOETNOOT = "Een open sessie van deze persoon stopt uiterlijk binnen een uur.";
+async function trekSessiesInVan(seat) {
+  const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
+  if (typeof sessieFlowAan !== "function" || !sessieFlowAan() || !bron || !bron.sessie) return true;
+  try {
+    await schrijfWerkruimte(bron, "POST", "/dashboard/sessies/intrekken", { seat });
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -15339,6 +15879,9 @@ function ingelogd() { return !!(bron() && bron().oauth); }
 function magSchrijven(domein) { return !!(CTX && magDomeinBewerken(CTX, domein).ok); }
 function kanSchrijven() { return magSchrijven("acties"); }
 function kanInloggen() { return typeof oauthMogelijk === "function" && oauthMogelijk(); }
+/* s66: uitloggen op alle apparaten kan alleen met de vlag én een sessie (niet
+ * met de oude tabbladlogin en niet met een daglink). */
+function kanOveralUitloggen() { return typeof sessieFlowAan === "function" && sessieFlowAan() && !!(bron() && bron().sessie); }
 /* Werkdata in Notion (of een ander systeem), per domein. De acties-ervaring
  * (Voor jou, Acties) gaat alleen op "Notion" als de ACTIES elders wonen, of
  * als er op de metricsroute geen acties-rijen zijn. Wonen alleen de vaste
@@ -16027,7 +16570,7 @@ function renderOnderregels() {
 /* De privacybelofte, woordelijk uit teksten.js (juridisch getoetst), met de
  * volledige tekst direct uitklapbaar op dezelfde plek — niet op een andere pagina. */
 function privacyHtml() {
-  return `<details class="privacy uitklap kaal" ${det("privacy")}><summary>${ic("slot", "klein")}<span style="flex:1">${esc(PRIVACY_REGEL)}</span>${ic("chev", "klein")}</summary><div class="binnen">${PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")}</div></details>`;
+  return `<details class="privacy uitklap kaal" ${det("privacy")}><summary>${ic("slot", "klein")}<span style="flex:1">${esc(PRIVACY_REGEL)}</span>${ic("chev", "klein")}</summary><div class="binnen">${privacyAlineas().map(a => `<p>${esc(a)}</p>`).join("")}</div></details>`;
 }
 function renderVoorJou() {
   if (toegang() === "notion") return renderVoorJouNotion();
@@ -17081,7 +17624,7 @@ function hulpSecties() {
       <p class="klein stil">Wat je doorgeeft, staat minstens dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
     : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
-    ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
+    ["privacy", "Wat ziet dit dashboard?", () => privacyAlineas().map(a => `<p>${esc(a)}</p>`).join("")],
     ["woorden", "Woorden die je team gebruikt", () => `
       <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(bron()))}</dd></dl>`],
   ];
@@ -17238,7 +17781,12 @@ function renderSheet() {
       ${toegang() === "notion" ? "" : `<button class="regel" data-act="export" data-v="markdown"><span class="rl"><b>Exporteren</b><span>Je hele werkruimte als bestand (Markdown)</span></span>${ic("chev")}</button>`}
       <button class="regel" data-act="sh-naar" data-type="naam"><span class="rl"><b>Je naam</b><span>${jij() ? esc(jij()) : "Nog niet ingevuld"}</span></span>${ic("chev")}</button>
       <button class="regel" data-act="sh-naar" data-type="feedback"><span class="rl"><b>Feedback geven</b><span>Wat werkt niet, wat mis je?</span></span>${ic("chev")}</button>
-      <button class="regel" data-act="uitloggen"><span class="rl"><b>Uitloggen</b><span>${toegang() === "notion" ? "Je werkdata blijft in je eigen systeem" : "Met een daglink kijk je daarna nog mee"}</span></span>${ic("chev")}</button></div>`);
+      <button class="regel" data-act="uitloggen"><span class="rl"><b>Uitloggen</b><span>${toegang() === "notion" ? "Je werkdata blijft in je eigen systeem" : "Met een daglink kijk je daarna nog mee"}</span></span>${ic("chev")}</button>${kanOveralUitloggen() ? `
+      <button class="regel" data-act="sh-naar" data-type="overal"><span class="rl"><b>Uitloggen op alle apparaten</b><span>Ook op je telefoon en andere computers</span></span>${ic("chev")}</button>` : ""}</div>`);
+    // s66: de bevestiging vóór uitloggen op alle apparaten. Business (afscherming)
+    // weet het dashboard niet van elk teamlid, dus de daglinkzin is voorwaardelijk.
+    case "overal": return wrap("Uitloggen op alle apparaten?", `<p>Je wordt uitgelogd in deze browser en op al je andere apparaten. Open tabbladen elders stoppen meteen, of uiterlijk binnen een uur.</p>
+      <p class="klein stil">Heeft je licentie afscherming (Business), dan vervallen ook de daglinks die voor jou zijn gemaakt. De koppeling met je AI-assistent blijft gewoon werken.</p>${fout}<div class="rijtje">${knop("Uitloggen op alle apparaten", "uitloggen-overal", "", "gevaar")}${annuleer}</div>`);
     case "opdracht": {
       if (!kanSchrijven() && kanDoorgeven()) return renderOpdrachtElders(sh, wrap, fout);
       const kan = kanSchrijven(); const top = specialistenVoor("opdracht").slice(0, 3);
@@ -18053,6 +18601,7 @@ function opKlik(e) {
     case "feedback-kopieer": if (!S.sheet) return; kopieerNaar(feedbackTekst(S.sheet.tekst)); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
+    case "uitloggen-overal": S.sheet = null; render(); if (V2_HAKEN.uitloggenOveral && kanOveralUitloggen()) V2_HAKEN.uitloggenOveral(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
     case "thema": wisselThema(); render(); return;
     case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
@@ -18154,7 +18703,7 @@ function opLos(e) {
 }
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
-const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
+const V2_HAKEN = { login: null, uitloggen: null, uitloggenOveral: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;
@@ -18470,9 +19019,8 @@ async function startExport(formaat) {
   }
 }
 
-/* Uitloggen: de sessie weg. Staat er nog een daglink in dit tabblad, dan kijk
- * je daarmee verder mee; anders terug naar het begin. */
-function uitloggen() {
+/* Alles van de ingelogde sessie in dit tabblad weg, zonder netwerk. */
+function wisIngelogdeStaat() {
   vergeetOauthSessie();
   resetOauthVernieuwing();
   naamBijLadenGedaan = null;
@@ -18485,12 +19033,58 @@ function uitloggen() {
   void laadTeam(null);
   void laadRollen(null);
   void laadTeamkanaal(null);
+}
+
+/* Uitloggen: de sessie weg. Staat er nog een daglink in dit tabblad, dan kijk
+ * je daarmee verder mee; anders terug naar het begin. */
+function uitloggen() {
+  // s66: met de vlag eerst uitloggen bij de site (het cookie weg), dan pas
+  // de lege staat. Inloggen wacht daar ook op (wachtOpSessieAfsluiten).
+  if (sessieFlowAan()) void sessieUitloggen();
+  wisIngelogdeStaat();
   const daglink = restoreDaglink();
   if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
 }
 
+/* s66: de sessie stopt buiten dit tabblad om — een 401 'beeindigd' van de
+ * instantie, een token van een ander account, of de markering die in een
+ * ander tabblad verdween. Zonder netwerk: geheugen leeg, de lege staat. */
+function sessieGestopt(titel, tekst) {
+  vergeetSessieGeheugen();
+  wisIngelogdeStaat();
+  toonLegeStaat(titel, tekst, { login: true });
+}
+
+/* s66: uitloggen op alle apparaten (zie sessieUitloggenOveral). Eén keer
+ * tegelijk; inloggen kan pas weer als het antwoord van de instantie er is. */
+let overalBezig = false;
+async function uitloggenOveral() {
+  if (overalBezig || !sessieFlowAan()) return;
+  overalBezig = true;
+  V2.meld("Bezig met uitloggen op alle apparaten…");
+  let uit;
+  try {
+    uit = await sessieUitloggenOveral();
+  } finally {
+    overalBezig = false;
+  }
+  // Een storing bij het ophalen van het verse token: er is niets veranderd.
+  if (uit.behoud) { V2.meld(uit.tekst, { fout: true }); return; }
+  // Een ander account: sessieGestopt heeft de lege staat al gezet.
+  if (uit.afgebroken) return;
+  sessieGestopt("Je bent uitgelogd", uit.tekst);
+}
+
 function startLogin() {
+  if (sessieFlowAan()) {
+    if (overalBezig) return;
+    startSessieLogin().catch((err) => {
+      console.error(err);
+      meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
+    });
+    return;
+  }
   startOauthLogin().catch((err) => {
     console.error(err);
     meld((err && err.message) || "Inloggen kon niet starten.", { fout: true });
@@ -18548,10 +19142,18 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
       return false;
     }
     currentBundle = null;
+    // s66: een sessie die buiten dit tabblad om stopte, heeft de lege staat
+    // met haar eigen melding al gezet (sessieGestopt).
+    if (err.sessieEinde) {
+      huidigeBron = null;
+      toonLegeStaat(err.sessieAnderAccount ? "Ander account" : "Je sessie is beëindigd", err.message, { login: true });
+      return;
+    }
     if (err.oauthVerlopen) {
       // De sessie is op; opnieuw inloggen is de enige uitweg, dus staat de
       // knop er meteen bij in plaats van een doodlopende melding.
       vergeetOauthSessie();
+      if (bron && bron.sessie) vergeetSessieGeheugen();
       resetOauthVernieuwing();
       toonLegeStaat("Kon je werkruimte niet laden", err.message, { login: true });
       return;
@@ -18588,31 +19190,93 @@ async function verwerkOauthRedirect() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  restoreMinuten();
-  V2.start({
-    login: startLogin,
-    uitloggen,
-    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
-    exporteer: (formaat) => startExport(formaat),
-    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
-    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
-    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
-    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
+/* s66 — het opstarten met de vlag DASHBOARD_SESSIE (contract 2.17.0 §7g, §11).
+ *
+ * 1. De sleutels van de oude tabbladflow gaan weg.
+ * 2. #sessie=fout&reden=…  → een melding naast de loginknop.
+ * 3. #sessie=nieuw&r=…     → een token-POST, daarna naar r.
+ * 4. een daglink met markering → eerst een token-POST; de sessie wint alleen
+ *    bij dezelfde licentie, anders het daglinkpad, ongewijzigd.
+ * 5. alleen een markering  → een token-POST; bij 401 de lege staat.
+ * 6. niets                 → de lege staat, zonder één netwerkverzoek.
+ * De markering is een optimalisatie: zonder markering hervat de loginknop een
+ * levende sessie bij de site, zonder mail. */
+function luisterNaarSessieMarkering() {
+  window.addEventListener("storage", (e) => {
+    // Een ander tabblad logde uit (of de browser wiste de opslag): de markering
+    // is weg. Dan hier ook, zonder netwerk.
+    if (e.key !== SESSIE_LS_KEY && e.key !== null) return;
+    if (e.key === SESSIE_LS_KEY && e.newValue !== null) return;
+    if (e.key === null && leesSessieMarkering()) return;
+    if (!(huidigeBron && huidigeBron.sessie)) { vergeetSessieGeheugen(); return; }
+    sessieGestopt("Je bent uitgelogd", "Je bent in een ander tabblad uitgelogd. Log opnieuw in, of open je dashboard via de daglink in je dagstart.");
   });
-  wireNavigatie();
-  const uitRedirect = await verwerkOauthRedirect();
-  const bron = uitRedirect || restoreBron();
-  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
-  // keren; bij een gewone daglink staat de route al in de adresbalk.
-  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+}
+
+async function startMetSessie() {
+  vergeetOudeOauthOpslag();
+  bijSessieEinde((titel, tekst) => sessieGestopt(titel, tekst));
+  luisterNaarSessieMarkering();
+  const hash = window.location.hash;
+
+  const terug = parseSessieFragment(hash);
+  if (terug && terug.fout) {
+    schoonAdresbalk();
+    toonLegeStaat("Inloggen is niet gelukt", terug.tekst, { login: true });
+    return;
+  }
+  // Een #code=… van de oude flow (iemand logde in vlak voor de uitrol): nooit
+  // inwisselen, wel uit de adresbalk.
+  if (!terug && parseOauthRedirect(hash)) {
+    schoonAdresbalk();
+    toonLegeStaat("Log opnieuw in", "Inloggen werkt sinds kort anders. Klik opnieuw op inloggen.", { login: true });
+    return;
+  }
+
+  let sessie = null;
+  let naarRoute = null;
+  let sessieTekst = null;
+  if (terug && terug.nieuw) {
+    schoonAdresbalk();
+    naarRoute = terug.route;
+    toonLegeStaat("Je wordt ingelogd…", "", { login: false });
+    try {
+      sessie = sessieBron((await haalSessieToken()).access_token);
+    } catch (err) {
+      console.error(err);
+      toonLegeStaat("Inloggen is niet gelukt", err.message, { login: true });
+      return;
+    }
+  } else if (leesSessieMarkering()) {
+    try {
+      sessie = sessieBron((await haalSessieToken()).access_token);
+    } catch (err) {
+      sessie = null;
+      sessieTekst = err.message;
+    }
+    const vers = parseDaglinkFragment(hash);
+    if (sessie && vers) {
+      // b62: een daglink van dezelfde licentie wordt de terugval, de sessie
+      // wint. Een andere licentie: de daglink wint, ongewijzigd.
+      const lic = daglinkLicentie(vers.token);
+      if (lic && lic === sessieLicentie(sessie.token)) restoreDaglink();
+      else { sessie = null; vergeetSessieGeheugen(); }
+    }
+  }
+
+  const bron = sessie || restoreDaglink();
   if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
-  // f48: de kale link uit het slotbericht van de werkronde wees naar de
-  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
   if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
-  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
-  if (eindToestand) return;
+  if (sessieTekst) {
+    toonLegeStaat("Log in om je team te zien", sessieTekst + " Of open dit dashboard via de daglink in je dagstart.", { login: true });
+    return;
+  }
+  toonStartLeeg();
+}
+
+/* De lege staat bij het openen, als er geen bron is. */
+function toonStartLeeg() {
   // f53: de Hulp werkt zonder login — daar hoort geen inlogpoort voor.
   const deeplink = bedoeldeRoute(window.location.hash) && !/^#\/?$/.test(window.location.hash);
   if (!hulpDoel(window.location.hash) && deeplink && oauthMogelijk()) {
@@ -18632,6 +19296,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   toonLegeStaat(oauthMogelijk() ? "Log in om je team te zien" : "Open je dashboard via de daglink in je dagstart",
     oauthMogelijk() ? "Of open dit dashboard via de daglink in je dagstart. Hieronder lees je hoe je team werkt." : "Vraag je Coördinator om een daglink. Hieronder lees je hoe je team werkt.",
     { login: true });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  restoreMinuten();
+  V2.start({
+    login: startLogin,
+    uitloggen,
+    uitloggenOveral: () => uitloggenOveral(),
+    ververs: () => (huidigeBron ? laadWerkruimte(huidigeBron, { behoudRoute: true }) : Promise.resolve(false)),
+    exporteer: (formaat) => startExport(formaat),
+    // De rekenhulp op Resultaat: hoeveel minuten scheelt één stuk werk je?
+    minuten: (v) => { if (v > 0) { currentMinutenPerActie = v; rememberMinuten(v); if (currentBundle) renderAll(); } },
+    // Feedback geven (ingelogd): via de vaste site-aanroep, met je inlogtoken.
+    feedback: (data) => modulesFetch("/api/dashboard/feedback", data),
+  });
+  wireNavigatie();
+  if (sessieFlowAan()) { await startMetSessie(); return; }
+  const uitRedirect = await verwerkOauthRedirect();
+  const bron = uitRedirect || restoreBron();
+  // Alleen ná een geslaagde login is er een bedoelde route om naar terug te
+  // keren; bij een gewone daglink staat de route al in de adresbalk.
+  let naarRoute = uitRedirect ? neemBedoeldeRoute() : null;
+  if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
+  // f48: de kale link uit het slotbericht van de werkronde wees naar de
+  // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
+  if (naarRoute === "#/data/acties") naarRoute = "#/";
+  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
+  if (eindToestand) return;
+  toonStartLeeg();
 });
 
 </script>
