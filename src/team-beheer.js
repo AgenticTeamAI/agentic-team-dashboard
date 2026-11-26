@@ -5,17 +5,18 @@
  * opnieuw, en bij meerdere mensen op één licentie kon niemand corrigeren dat
  * dezelfde persoon in drie spellingen in dezelfde kolom stond. Sinds i77 hoort
  * de naam bij de seat en staat hij bij de licentie; dit paneel is de plek waar
- * de beheerder hem ziet en rechtzet.
+ * de eigenaar (het aankoopadres) hem ziet en rechtzet.
  *
  * Dat is geen cosmetiek: `Eigenaar` is een gedeelde kolom in de werkdata, en het
  * statuscontract van de werkronde leunt erop ("Wacht op review is altijd een
  * mens"). Drie spellingen van één persoon maken filters, de dagstart en de
  * correctievrij-meting onbetrouwbaar.
  *
- * Daarnaast nodigt de beheerder hier mensen uit en haalt hij ze weg. De site doet
- * het echte werk — de uitnodigingsmail met weigerlink (art. 14 AVG) en het
- * afsluiten van sessies — via dezelfde code als de MCP-tools; dit paneel stuurt
- * alleen een adres of een seat en toont wat terugkomt.
+ * Daarnaast nodigt de eigenaar (het aankoopadres) hier mensen uit en haalt hij
+ * ze weg. De site doet het echte werk — de uitnodigingsmail met weigerlink
+ * (art. 14 AVG) en het afsluiten van sessies — via dezelfde code als de
+ * MCP-tools; dit paneel stuurt alleen een adres of een seat en toont wat
+ * terugkomt.
  *
  * Alle site-verkeer loopt door modulesFetch — de enige aanroepplek naar het
  * eigen domein. Zo blijft de telemetrie-inventaris op precies vier fetches.
@@ -312,8 +313,8 @@ function teamSluitZonderSessie(sectieEl) {
 /* Kan de site uitnodigen en verwijderen? Een site van vóór die routes zet geen
  * `eigenaar` op de rijen; dan tonen we alleen de namen, zoals voorheen, in
  * plaats van knoppen die op een 404 stuklopen. Een lege lijst zegt niets over
- * de site — en juist dan wil de beheerder iemand kunnen uitnodigen (het
- * aankoopadres zelf staat er meestal niet op). */
+ * de site — en juist dan wil de eigenaar (het aankoopadres) iemand kunnen
+ * uitnodigen (dat adres zelf staat er meestal niet op). */
 function teamBeheerMogelijk() {
   return Array.isArray(teamLijst)
     && (teamLijst.length === 0 || teamLijst.some((r) => r && typeof r.eigenaar === "boolean"));

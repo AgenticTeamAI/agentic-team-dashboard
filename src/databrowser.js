@@ -393,8 +393,8 @@ function bedienHtml(ctx, key, domein, rij) {
 
 /* b61: "Wie pakt het op?" — mensen en specialisten in één lijst. De mensen
  * zijn wie er nu al eigenaar is in dit domein (geen aparte ledenlijst: die is
- * er alleen voor de beheerder), plus jij. Wat er nu staat, staat altijd in de
- * lijst, ook als het nergens anders voorkomt. */
+ * er alleen voor de eigenaar, het aankoopadres), plus jij. Wat er nu staat,
+ * staat altijd in de lijst, ook als het nergens anders voorkomt. */
 function wieKiezerHtml(ctx, key, rij, ikNaam, agenten) {
   const nu = dataCelTekst(getField(rij, "Eigenaar"));
   const nuSpecialist = specialistVan(ctx, nu);
