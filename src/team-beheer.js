@@ -67,27 +67,29 @@ let rolBezigSeat = null; // seat waarvan de rolwijziging nu onderweg is
 
 const ROL_LABEL = { eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" };
 const SEAT_VORM = /^[0-9a-f]{64}$/;
+/* Eigen sleutels alleen: `"constructor" in ROL_LABEL` is ook waar. */
+const isRol = (r) => typeof r === "string" && Object.prototype.hasOwnProperty.call(ROL_LABEL, r);
 
 /* Alleen wat we kennen komt binnen: een onbekende rol of een rij zonder seat
  * valt weg in plaats van als tekst in een knop of selector te belanden. */
 function saneerRollen(b) {
   if (!b || typeof b !== "object" || !b.jij || typeof b.jij !== "object") return null;
   const jij = b.jij;
-  if (typeof jij.seat !== "string" || !SEAT_VORM.test(jij.seat) || !(jij.rol in ROL_LABEL)) return null;
+  if (typeof jij.seat !== "string" || !SEAT_VORM.test(jij.seat) || !(isRol(jij.rol))) return null;
   const uit = { jij: { seat: jij.seat, rol: jij.rol }, beheer: false };
   // De lijst krijgen alleen eigenaar en beheerder (§2b); zonder lijst geen beheer.
   if (!Array.isArray(b.rollen) || typeof b.eigenaar !== "string" || !SEAT_VORM.test(b.eigenaar)) return uit;
   const toewijsbaar = Array.isArray(b.toewijsbaar)
-    ? b.toewijsbaar.filter((r) => r in ROL_LABEL && r !== "eigenaar")
+    ? b.toewijsbaar.filter((r) => isRol(r) && r !== "eigenaar")
     : [];
-  const standaard = b.standaard in ROL_LABEL && b.standaard !== "eigenaar" ? b.standaard : null;
+  const standaard = isRol(b.standaard) && b.standaard !== "eigenaar" ? b.standaard : null;
   if (!toewijsbaar.length || !standaard) return uit;
   uit.beheer = true;
   uit.eigenaar = b.eigenaar;
   uit.standaard = standaard;
   uit.toewijsbaar = toewijsbaar;
   uit.rollen = b.rollen
-    .filter((r) => r && typeof r.seat === "string" && SEAT_VORM.test(r.seat) && r.rol in ROL_LABEL && r.rol !== "eigenaar")
+    .filter((r) => r && typeof r.seat === "string" && SEAT_VORM.test(r.seat) && isRol(r.rol) && r.rol !== "eigenaar")
     .map((r) => ({ seat: r.seat, rol: r.rol }));
   return uit;
 }
@@ -184,7 +186,7 @@ async function wijzigRol(sectieEl, seat, rol) {
   let fout = null;
   try {
     const uit = await schrijfWerkruimte(bron, "PUT", "/dashboard/rollen", { seat, rol });
-    if (uit && uit.seat === seat && uit.rol in ROL_LABEL && rollenInfo && rollenInfo.beheer) {
+    if (uit && uit.seat === seat && isRol(uit.rol) && rollenInfo && rollenInfo.beheer) {
       rollenInfo.rollen = rollenInfo.rollen.filter((r) => r.seat !== seat).concat([{ seat, rol: uit.rol }]);
       rolVoorstelSeat = null;
       gelukt = true;

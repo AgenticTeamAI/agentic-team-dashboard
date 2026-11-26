@@ -102,7 +102,7 @@ describe("zonder rollenregister: byte-gelijk aan vóór f60", () => {
 
   it("een antwoord dat geen rollenantwoord is, telt als geen register", async () => {
     const voor = (await paneel()).innerHTML;
-    for (const raar of [null, {}, { jij: { seat: "kort", rol: "eigenaar" } }, { jij: { seat: EIG, rol: "koning" } }, "tekst"]) {
+    for (const raar of [null, {}, { jij: { seat: "kort", rol: "eigenaar" } }, { jij: { seat: EIG, rol: "koning" } }, { jij: { seat: EIG, rol: "constructor" } }, { jij: { seat: EIG, rol: "__proto__" } }, "tekst"]) {
       g._resetTeam();
       expect((await paneel({ rollen: raar })).innerHTML).toBe(voor);
     }
