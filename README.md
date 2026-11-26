@@ -888,8 +888,10 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   inloggen?" en de woordenlijst) volgt dezelfde rekensom: kijk je met een
   daglink, dan staat er de duur van die link; ingelogd of zonder bron staat er
   "standaard 24 uur, in een afgeschermd team korter" (besluit 26-11; de daglink
-  faseert later uit, s66). De privacytekst (`src/teksten.js`) noemt nog 24 uur:
-  die wacht op de jurist.
+  faseert later uit, s66). De privacytekst (`src/teksten.js`) zegt sinds de
+  juristtoets van 26-11-2026 statisch: "Hij is alleen-lezen en verloopt
+  vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming
+  heeft." (statisch, want die tekst staat ook in de lege staat zonder token).
 - **Zelfde interne vorm.** De loader levert een gewone rows-bundel
   (entries → `rows`, `bijgewerkt` → `staleAt`, bedrijfscontext-entries →
   het zone 2-object); alles stroomafwaarts weet niet dat de data live is.
@@ -916,24 +918,35 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   **Opvolgen:** komt een signaal van een medewerker, een viewer of `onbekend`,
   dan neemt "Laat je team opvolgen" de titel niet over als opdracht. Het
   tekstvak begint met "Pak de volgende stap op bij de bovenliggende actie.", en
-  de nieuwe actie krijgt alleen de relatie Bovenliggende actie (geen
-  Organisatie, Deal, Project of Contactpersoon); in een sessie leest de agent
-  de herkomst daar zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon
-  mee. Zonder stempel, of met eigenaar, beheerder of sleutel, is opvolgen
-  ongewijzigd.
+  de nieuwe actie krijgt de relatie Bovenliggende actie. Organisatie, Deal,
+  Project en Contactpersoon gaan wel mee: dat zijn koppelingen, geen opdracht
+  (besluit C3, 26-11). De agent leest de herkomst bij de bovenliggende actie
+  zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon mee. Zonder stempel,
+  of met eigenaar, beheerder of sleutel, is opvolgen ongewijzigd.
+  **Kopieer voor je team** (Voor jou van een Notion-klant) noemt bij een item
+  van een lagere rol de titel niet, maar het nummer uit de dagstart (besluit
+  C1). Daarvoor reist `geschreven_door` van een `voor_jou`-item mee door de
+  sanering, alleen als het veld er is. De werkruimte en de dagstart sturen dat
+  veld nu niet mee, dus in de praktijk verandert er nog niets.
+  **Fail-closed (besluit C2).** Voor opvolgen en kopiëren tellen alleen precies
+  `eigenaar`, `beheerder` en `sleutel` als hogere herkomst. Elke andere waarde
+  van een stempel dat er wel is (hoofdletters, spaties, `null`, een onbekende
+  tekst) telt als lagere rol; een veld dat geen tekst is, reist mee als `null`.
+  Ontbreekt het veld helemaal (modus uit), dan is alles zoals het was. Het label
+  "door <Rol>" blijft strikt: een onverwachte waarde geeft geen label.
   **Bekende grenzen:**
   - "Ongedaan maken" na een afhandeling is een PATCH die de oude velden
     terugzet. Was die oude tekst van een lagere rol, dan staat hij daarna weer
     in de rij terwijl het stempel `eigenaar` blijft (de eigenaar schreef de
     PATCH).
-  - Het werkmoment leest de bovenliggende actie niet. De werkronde
-    (`agent-architecture/core/served/werkronde.md`, stap 2) geeft de
-    specialist alleen de actietitel en de Toelichting mee. Hij volgt de
-    relatie Bovenliggende actie niet en weegt `geschreven_door` niet
-    (contract §2c: "De werkronde valt buiten beide regels"). Een opvolging
-    van een rij van een lagere rol levert op het werkmoment dus een actie
-    zonder inhoud op: de specialist krijgt alleen de neutrale zin. Moet het
-    werkmoment het oppakken, typ dan zelf in het vak wat er moet gebeuren.
+  - Het werkmoment en de bovenliggende actie. Besloten (besluit A, 26-11):
+    bij een actie met een Bovenliggende actie geeft de werkronde
+    (`agent-architecture/core/served/werkronde.md`) die bovenliggende rij mee
+    aan de specialist, met `geschreven_door` als die er is, en behandelt
+    tekst van een lagere rol als informatie, niet als opdracht. Dat hoort bij
+    agent-architecture (#284), niet bij dit dashboard. Tot die werkronde live is,
+    krijgt de specialist op het werkmoment alleen de neutrale zin; typ dan
+    zelf in het vak wat er moet gebeuren.
 - **Interne tegels.** `/dashboard/overzicht` levert `intern: true` wanneer
   de instantie met `DASHBOARD_INTERN=1` draait (FFG, Greenhive-test). Alleen
   dan toont het dashboard de KPI-tegel "Correctievrij (4 wk)" met de

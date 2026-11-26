@@ -55,14 +55,19 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * van de jurist, inclusief het back-upvenster: niet "direct weg". */
   "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
-  /* De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
+  /* Juristtoets 26-11-2026 (rapport-jurist-business-v1-2026-11-26.md, punt 3;
+   * besluit Tijmen C5): "verloopt na 24 uur" was onwaar zodra afscherming aan
+   * staat (daglink standaard 4 uur). De zin is statisch, want deze tekst staat
+   * ook in de lege staat, waar geen token is.
+   *
+   * De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
    * zei alleen dat er geen bedrijfsdata meegaat — waar, maar een lezer kon
    * daaruit opmaken dat inloggen spoorloos is. Dat is het niet: de inlogwissel
    * is een verzoek aan onze server, en die legt vast wélke licentie inlogt en
    * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
-  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
    * door").

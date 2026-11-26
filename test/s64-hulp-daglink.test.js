@@ -14,8 +14,9 @@
  *  - inlogsessie en lege staat: main, met op precies twee plekken de neutrale
  *    zin. Dat is de bewuste tekstwijziging van deze nafix, voor iedereen die
  *    ingelogd is, ook met de modus uit.
- * De privacytekst (src/teksten.js, "verloopt na 24 uur") blijft staan: die
- * wacht op de jurist. */
+ * De privacytekst (src/teksten.js) is sinds besluit C5 (26-11-2026) de zin
+ * van de jurist; de opname is daarvoor opnieuw gemaakt op main d8e0731 met
+ * alleen die tekstwijziging (en "De eigenaar (het aankoopadres)"). */
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -99,7 +100,22 @@ describe("s64 — zonder daglink: een neutrale zin (bewuste tekstwijziging)", ()
     expect(g.daglinkHulpWoord(lang)).toBe("een beperkte tijd geldig");
   });
 
-  it("de privacytekst blijft wat hij was (wacht op de jurist)", () => {
-    for (const naam of Object.keys(MAIN.v2)) expect(NUW.v2[naam]).toContain("Hij is alleen-lezen en verloopt na 24 uur.");
+  /* Besluit C5 (26-11-2026, juristtoets rapport-jurist-business-v1-2026-11-26.md,
+   * punt 3): de privacytekst noemt nu beide duren, statisch (ook in de lege
+   * staat). De opname is opnieuw gemaakt op main d8e0731 met alleen die
+   * tekstwijziging; de oude zin staat nergens meer. */
+  it("de privacytekst zegt de zin van de jurist (C5), de oude zin staat er niet meer", () => {
+    for (const naam of Object.keys(MAIN.v2)) {
+      expect(NUW.v2[naam]).toContain("Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft.");
+      expect(NUW.v2[naam]).not.toContain("verloopt na 24 uur");
+    }
+  });
+
+  it("C5: wie collega's uitnodigt is de eigenaar (het aankoopadres), niet 'de beheerder' (botst met de rol Beheerder)", () => {
+    for (const naam of Object.keys(MAIN.v2)) {
+      expect(NUW.v2[naam]).toContain("<th scope=\"row\">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td>");
+      expect(NUW.v2[naam]).not.toContain("<td>De beheerder</td>");
+    }
+    for (const naam of Object.keys(MAIN.v1)) expect(NUW.v1[naam].daglink).toContain("<td>De eigenaar (het aankoopadres)</td>");
   });
 });
