@@ -385,8 +385,13 @@ function rijVanEntry(e) {
   // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
   // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
   // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
-  // dan is de rij precies zoals vóór s64.
-  if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
+  // dan is de rij precies zoals vóór s64. Besluit C2 (26-11, avond):
+  // staat het veld er wel maar is het geen tekst (null, een getal, een
+  // object), dan reist het mee als null. Het label toont dan niets, en
+  // opvolgen behandelt het als een lagere rol (fail-closed).
+  if (e && Object.prototype.hasOwnProperty.call(e, "geschreven_door")) {
+    stempels.door = typeof e.geschreven_door === "string" ? e.geschreven_door : null;
+  }
   return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
 }
 

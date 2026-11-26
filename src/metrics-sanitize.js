@@ -138,6 +138,12 @@ function saneerVoorJouBlok(v, ctx) {
       sinds: saneerDatumOfNull(it.sinds, ctx, `voor_jou.items.${i}.sinds`),
       deadline: saneerDatumOfNull(it.deadline, ctx, `voor_jou.items.${i}.deadline`),
       url: saneerHttpsUrl(it.url),
+      // s64, besluit C1 en C2 (26-11, avond): draagt een item de rol van wie
+      // de bronrij schreef, dan reist die mee (een tekst, anders null), zodat
+      // "Kopieer voor je team" bij een lagere rol de titel weglaat. Zonder het
+      // veld staat de sleutel er niet: dan is het item precies als vóór s64.
+      ...(Object.prototype.hasOwnProperty.call(it, "geschreven_door")
+        ? { geschreven_door: typeof it.geschreven_door === "string" ? it.geschreven_door.slice(0, 40) : null } : {}),
     });
   }
   return { items };

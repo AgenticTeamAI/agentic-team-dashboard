@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-VAIJH6VdJM88HZpyUkv0sNQp5u/eylgGy6wPbzUBKwg='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-Bk2KVMrUmNToLVyKRnGKtqU7jC+hqlrKwv0IkomjVcQ='">
 
 
 
@@ -3329,14 +3329,19 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * van de jurist, inclusief het back-upvenster: niet "direct weg". */
   "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
-  /* De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
+  /* Juristtoets 26-11-2026 (rapport-jurist-business-v1-2026-11-26.md, punt 3;
+   * besluit Tijmen C5): "verloopt na 24 uur" was onwaar zodra afscherming aan
+   * staat (daglink standaard 4 uur). De zin is statisch, want deze tekst staat
+   * ook in de lege staat, waar geen token is.
+   *
+   * De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
    * zei alleen dat er geen bedrijfsdata meegaat — waar, maar een lezer kon
    * daaruit opmaken dat inloggen spoorloos is. Dat is het niet: de inlogwissel
    * is een verzoek aan onze server, en die legt vast wélke licentie inlogt en
    * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
-  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
    * door").
@@ -3891,8 +3896,13 @@ function rijVanEntry(e) {
   // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
   // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
   // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
-  // dan is de rij precies zoals vóór s64.
-  if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
+  // dan is de rij precies zoals vóór s64. Besluit C2 (26-11, avond):
+  // staat het veld er wel maar is het geen tekst (null, een getal, een
+  // object), dan reist het mee als null. Het label toont dan niets, en
+  // opvolgen behandelt het als een lagere rol (fail-closed).
+  if (e && Object.prototype.hasOwnProperty.call(e, "geschreven_door")) {
+    stempels.door = typeof e.geschreven_door === "string" ? e.geschreven_door : null;
+  }
   return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
 }
 
@@ -6246,15 +6256,29 @@ function afhandelKnoppen(rij, schema, nu) {
  * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
  * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
  * die tekst zou anders met het gezag van de eigenaar bij de specialist
- * belanden. De nieuwe actie verwijst dan alleen naar de bovenliggende actie,
- * met een neutrale tekst; in een sessie leest de agent daar zelf de
- * herkomst. Het werkmoment volgt die relatie niet (bekende grens, README).
- * Zonder stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
-const OPVOLG_ZONDER_TITEL = ["medewerker", "viewer", "onbekend"];
+ * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
+ * bovenliggende actie; de agent leest daar zelf de herkomst. Sinds besluit A
+ * (26-11, avond) doet het werkmoment dat ook: de werkronde geeft de
+ * bovenliggende rij met haar `geschreven_door` mee (agent-architecture,
+ * core/served/werkronde.md).
+ *
+ * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
+ * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van
+ * een stempel dat er wel is (hoofdletters, spaties, null, een onbekende
+ * tekst, een getal) telt als lagere rol. Ontbreekt het stempel helemaal
+ * (modus uit), of is het eigenaar, beheerder of sleutel, dan is alles
+ * precies als vóór s64. */
+const SCHRIJVER_HOGER = ["eigenaar", "beheerder", "sleutel"];
 const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+/* Draagt `houder` het stempel `sleutel` (een eigen sleutel, ook met waarde
+ * null), en is dat niet precies een van de drie hogere waarden? Ontbreekt
+ * het stempel, dan false: dat is de modus uit. */
+function stempelVanLagereRol(houder, sleutel) {
+  if (!houder || typeof houder !== "object" || !Object.prototype.hasOwnProperty.call(houder, sleutel)) return false;
+  return SCHRIJVER_HOGER.indexOf(houder[sleutel]) === -1;
+}
 function opvolgZonderTitel(rij) {
-  const door = rij && rij.__stempels ? rij.__stempels.door : undefined;
-  return OPVOLG_ZONDER_TITEL.indexOf(door) !== -1;
+  return stempelVanLagereRol(rij && rij.__stempels, "door");
 }
 /* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
 function opvolgVoorstel(rij, titel) {
@@ -6262,15 +6286,17 @@ function opvolgVoorstel(rij, titel) {
 }
 
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. Bij een
- * bronrij van een lagere rol alleen het verband met het origineel. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Besluit C3
+ * (26-11, avond): ook bij een bronrij van een lagere rol gaan Organisatie,
+ * Deal, Project en Contactpersoon mee. Dat zijn koppelingen, geen opdracht;
+ * alleen de titel en de tekst blijven weg (zie opvolgVoorstel). */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
     Status: VJ_OPEN, Type: "Taak", Eigenaar: c.specialist, Agent: c.specialist,
     Toelichting: c.tekst, "Bovenliggende actie": rij.__entryId,
   };
-  for (const veld of opvolgZonderTitel(rij) ? [] : ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
+  for (const veld of ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
     const w = getField(rij, veld);
     if (w && (typeof w !== "object" || w.id)) data[veld] = w;
   }
@@ -6283,7 +6309,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, opvolgVoorstel, opvolgZonderTitel, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, stempelVanLagereRol, SCHRIJVER_HOGER, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }
@@ -6429,6 +6455,12 @@ function saneerVoorJouBlok(v, ctx) {
       sinds: saneerDatumOfNull(it.sinds, ctx, `voor_jou.items.${i}.sinds`),
       deadline: saneerDatumOfNull(it.deadline, ctx, `voor_jou.items.${i}.deadline`),
       url: saneerHttpsUrl(it.url),
+      // s64, besluit C1 en C2 (26-11, avond): draagt een item de rol van wie
+      // de bronrij schreef, dan reist die mee (een tekst, anders null), zodat
+      // "Kopieer voor je team" bij een lagere rol de titel weglaat. Zonder het
+      // veld staat de sleutel er niet: dan is het item precies als vóór s64.
+      ...(Object.prototype.hasOwnProperty.call(it, "geschreven_door")
+        ? { geschreven_door: typeof it.geschreven_door === "string" ? it.geschreven_door.slice(0, 40) : null } : {}),
     });
   }
   return { items };
@@ -12520,7 +12552,7 @@ function hulpSecties(ctx) {
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
-        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table>
+        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td></tr></tbody></table>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="footnote">Kopieer een zin en plak hem in Claude.</p>
@@ -14946,7 +14978,20 @@ function renderVoorJou() {
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
+/* s64, besluit C1 (26-11, avond): komt het item van een medewerker, een
+ * viewer of `onbekend` (of draagt het een stempel dat niet precies eigenaar,
+ * beheerder of sleutel is: C2, fail-closed), dan noemt de gekopieerde vraag
+ * de titel niet, maar het nummer uit de dagstart. De eigenaar plakt die vraag
+ * als zijn eigen vraag; de agent leest het item dan zelf, met zijn herkomst.
+ * Zonder stempel (modus uit): precies de vraag van vóór s64. */
 function vraagVoorTeam(it) {
+  if (stempelVanLagereRol(it, "geschreven_door")) {
+    const n = Number.isInteger(it.nr) ? `nummer ${it.nr} uit mijn dagstart` : "dit item uit mijn dagstart";
+    if (it.soort === "check") return `Laat me ${n} zien, dan kijk ik het na.`;
+    if (it.soort === "voorstel") return `Laat me het voorstel ${n} zien.`;
+    if (it.soort === "signaal") return `Laat mijn team ${n} opvolgen.`;
+    return `Wat moet ik doen met ${n}?`;
+  }
   const t = it.titel || "dit item";
   if (it.soort === "check") return `Laat me ‘${t}’ zien, dan kijk ik het na.`;
   if (it.soort === "voorstel") return `Laat me het voorstel ‘${t}’ zien.`;
@@ -15867,7 +15912,7 @@ function hulpSecties() {
        <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
        <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
        <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
-       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table></div>
+       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td></tr></tbody></table></div>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="klein stil">Kopieer een zin en plak hem in je AI-assistent.</p>

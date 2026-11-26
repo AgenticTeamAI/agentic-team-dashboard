@@ -169,7 +169,7 @@ function hulpSecties(ctx) {
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
-        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table>
+        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td></tr></tbody></table>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="footnote">Kopieer een zin en plak hem in Claude.</p>

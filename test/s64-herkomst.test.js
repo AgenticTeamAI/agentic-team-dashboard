@@ -191,7 +191,9 @@ describe("s64 — de stempel in de rij en in de feed", () => {
     const e = { domein: "notities", entryId: "n1", data: { Notitie: "x" }, aangemaakt: "2026-11-26T08:00:00", bijgewerkt: "2026-11-26T08:00:00" };
     expect(g.rijVanEntry(e)).toStrictEqual({ Notitie: "x", __entryId: "n1", __stempels: { aangemaakt: e.aangemaakt, bijgewerkt: e.bijgewerkt } });
     expect(g.rijVanEntry({ ...e, geschreven_door: "viewer" }).__stempels).toStrictEqual({ aangemaakt: e.aangemaakt, bijgewerkt: e.bijgewerkt, door: "viewer" });
-    expect(g.rijVanEntry({ ...e, geschreven_door: 7 }).__stempels).not.toHaveProperty("door");
+    // Besluit C2 (26-11, avond): een aanwezig veld dat geen tekst is, reist mee als null (fail-closed bij opvolgen).
+    expect(g.rijVanEntry({ ...e, geschreven_door: 7 }).__stempels).toStrictEqual({ aangemaakt: e.aangemaakt, bijgewerkt: e.bijgewerkt, door: null });
+    expect(g.rijVanEntry({ ...e, geschreven_door: null }).__stempels.door).toBe(null);
     // Geen nieuw veld op de rij zelf: een schemaveld als "Geschreven door" leest de stempel nooit.
     expect(g.getField(g.rijVanEntry({ ...e, geschreven_door: "viewer" }), "Geschreven door")).toBeUndefined();
   });

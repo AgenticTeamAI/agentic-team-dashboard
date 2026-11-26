@@ -594,15 +594,29 @@ function afhandelKnoppen(rij, schema, nu) {
  * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
  * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
  * die tekst zou anders met het gezag van de eigenaar bij de specialist
- * belanden. De nieuwe actie verwijst dan alleen naar de bovenliggende actie,
- * met een neutrale tekst; in een sessie leest de agent daar zelf de
- * herkomst. Het werkmoment volgt die relatie niet (bekende grens, README).
- * Zonder stempel, of met eigenaar, beheerder of sleutel: precies als vóór s64. */
-const OPVOLG_ZONDER_TITEL = ["medewerker", "viewer", "onbekend"];
+ * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
+ * bovenliggende actie; de agent leest daar zelf de herkomst. Sinds besluit A
+ * (26-11, avond) doet het werkmoment dat ook: de werkronde geeft de
+ * bovenliggende rij met haar `geschreven_door` mee (agent-architecture,
+ * core/served/werkronde.md).
+ *
+ * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
+ * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van
+ * een stempel dat er wel is (hoofdletters, spaties, null, een onbekende
+ * tekst, een getal) telt als lagere rol. Ontbreekt het stempel helemaal
+ * (modus uit), of is het eigenaar, beheerder of sleutel, dan is alles
+ * precies als vóór s64. */
+const SCHRIJVER_HOGER = ["eigenaar", "beheerder", "sleutel"];
 const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+/* Draagt `houder` het stempel `sleutel` (een eigen sleutel, ook met waarde
+ * null), en is dat niet precies een van de drie hogere waarden? Ontbreekt
+ * het stempel, dan false: dat is de modus uit. */
+function stempelVanLagereRol(houder, sleutel) {
+  if (!houder || typeof houder !== "object" || !Object.prototype.hasOwnProperty.call(houder, sleutel)) return false;
+  return SCHRIJVER_HOGER.indexOf(houder[sleutel]) === -1;
+}
 function opvolgZonderTitel(rij) {
-  const door = rij && rij.__stempels ? rij.__stempels.door : undefined;
-  return OPVOLG_ZONDER_TITEL.indexOf(door) !== -1;
+  return stempelVanLagereRol(rij && rij.__stempels, "door");
 }
 /* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
 function opvolgVoorstel(rij, titel) {
@@ -610,15 +624,17 @@ function opvolgVoorstel(rij, titel) {
 }
 
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. Bij een
- * bronrij van een lagere rol alleen het verband met het origineel. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Besluit C3
+ * (26-11, avond): ook bij een bronrij van een lagere rol gaan Organisatie,
+ * Deal, Project en Contactpersoon mee. Dat zijn koppelingen, geen opdracht;
+ * alleen de titel en de tekst blijven weg (zie opvolgVoorstel). */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
     Status: VJ_OPEN, Type: "Taak", Eigenaar: c.specialist, Agent: c.specialist,
     Toelichting: c.tekst, "Bovenliggende actie": rij.__entryId,
   };
-  for (const veld of opvolgZonderTitel(rij) ? [] : ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
+  for (const veld of ["Organisatie", "Deal", "Project", "Contactpersoon"]) {
     const w = getField(rij, veld);
     if (w && (typeof w !== "object" || w.id)) data[veld] = w;
   }
@@ -631,7 +647,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, opvolgVoorstel, opvolgZonderTitel, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, stempelVanLagereRol, SCHRIJVER_HOGER, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }

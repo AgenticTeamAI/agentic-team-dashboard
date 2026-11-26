@@ -214,7 +214,20 @@ function renderVoorJou() {
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
+/* s64, besluit C1 (26-11, avond): komt het item van een medewerker, een
+ * viewer of `onbekend` (of draagt het een stempel dat niet precies eigenaar,
+ * beheerder of sleutel is: C2, fail-closed), dan noemt de gekopieerde vraag
+ * de titel niet, maar het nummer uit de dagstart. De eigenaar plakt die vraag
+ * als zijn eigen vraag; de agent leest het item dan zelf, met zijn herkomst.
+ * Zonder stempel (modus uit): precies de vraag van vóór s64. */
 function vraagVoorTeam(it) {
+  if (stempelVanLagereRol(it, "geschreven_door")) {
+    const n = Number.isInteger(it.nr) ? `nummer ${it.nr} uit mijn dagstart` : "dit item uit mijn dagstart";
+    if (it.soort === "check") return `Laat me ${n} zien, dan kijk ik het na.`;
+    if (it.soort === "voorstel") return `Laat me het voorstel ${n} zien.`;
+    if (it.soort === "signaal") return `Laat mijn team ${n} opvolgen.`;
+    return `Wat moet ik doen met ${n}?`;
+  }
   const t = it.titel || "dit item";
   if (it.soort === "check") return `Laat me ‘${t}’ zien, dan kijk ik het na.`;
   if (it.soort === "voorstel") return `Laat me het voorstel ‘${t}’ zien.`;
