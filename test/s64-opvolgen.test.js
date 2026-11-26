@@ -117,9 +117,10 @@ function maakCtx(door) {
   ctx.werkBij = vi.fn(() => true);
   return ctx;
 }
+let nepNu = null;
 function nepInstantie() {
   const json = (body) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (url, o = {}) => {
+  return nepNu = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, o = {}) => {
     const u = new URL(String(url));
     if (u.pathname === "/dashboard/entries" && o.method === "POST") {
       const b = JSON.parse(o.body);
@@ -140,7 +141,15 @@ beforeEach(() => {
   window.location.hash = "";
   g.V2._reset();
 });
-afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); window.location.hash = ""; });
+/* Breekt een test af vóór zijn eigen wacht op de toast, dan loopt zijn
+ * schrijfactie nog (het item staat bezig) en stoort die de volgende test. Wacht
+ * hem hier uit, tegen dezelfde nep-instantie: dan meldt een mislukte test
+ * alleen zichzelf. Bij een geslaagde test staat de toast er al. */
+afterEach(async () => {
+  if (nepNu && nepNu.mock.calls.length) await wacht(() => expect($("[data-toast]")).not.toBeNull());
+  nepNu = null;
+  vi.restoreAllMocks(); vi.useRealTimers(); window.location.hash = "";
+});
 
 function open(ctx, hash) {
   window.location.hash = hash;

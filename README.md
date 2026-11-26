@@ -893,13 +893,23 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   dan neemt "Laat je team opvolgen" de titel niet over als opdracht. Het
   tekstvak begint met "Pak de volgende stap op bij de bovenliggende actie.", en
   de nieuwe actie krijgt alleen de relatie Bovenliggende actie (geen
-  Organisatie, Deal, Project of Contactpersoon); de agent leest de herkomst
-  daar zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon mee. Zonder
-  stempel, of met eigenaar, beheerder of sleutel, is opvolgen ongewijzigd.
-  **Bekende grens:** "Ongedaan maken" na een afhandeling is een PATCH die de
-  oude velden terugzet. Was die oude tekst van een lagere rol, dan staat hij
-  daarna weer in de rij terwijl het stempel `eigenaar` blijft (de eigenaar
-  schreef de PATCH).
+  Organisatie, Deal, Project of Contactpersoon); in een sessie leest de agent
+  de herkomst daar zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon
+  mee. Zonder stempel, of met eigenaar, beheerder of sleutel, is opvolgen
+  ongewijzigd.
+  **Bekende grenzen:**
+  - "Ongedaan maken" na een afhandeling is een PATCH die de oude velden
+    terugzet. Was die oude tekst van een lagere rol, dan staat hij daarna weer
+    in de rij terwijl het stempel `eigenaar` blijft (de eigenaar schreef de
+    PATCH).
+  - Het werkmoment leest de bovenliggende actie niet. De werkronde
+    (`agent-architecture/core/served/werkronde.md`, stap 2) geeft de
+    specialist alleen de actietitel en de Toelichting mee. Hij volgt de
+    relatie Bovenliggende actie niet en weegt `geschreven_door` niet
+    (contract §2c: "De werkronde valt buiten beide regels"). Een opvolging
+    van een rij van een lagere rol levert op het werkmoment dus een actie
+    zonder inhoud op: de specialist krijgt alleen de neutrale zin. Moet het
+    werkmoment het oppakken, typ dan zelf in het vak wat er moet gebeuren.
 - **Interne tegels.** `/dashboard/overzicht` levert `intern: true` wanneer
   de instantie met `DASHBOARD_INTERN=1` draait (FFG, Greenhive-test). Alleen
   dan toont het dashboard de KPI-tegel "Correctievrij (4 wk)" met de
