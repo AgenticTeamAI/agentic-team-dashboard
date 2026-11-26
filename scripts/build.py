@@ -12,6 +12,7 @@ Gebruik:
     python3 scripts/build.py
     python3 scripts/build.py --noindex   # staging: meta robots noindex erbij
     python3 scripts/build.py --oauth     # p10: loginknop + tokenflow aan
+    python3 scripts/build.py --oauth --sessie   # s66: ingelogd blijven via het sessiecookie
 """
 import hashlib
 import base64
@@ -84,6 +85,18 @@ def main():
     # header van staging en productie niet uiteen kan lopen met de vlag.
     oauth = "--oauth" in sys.argv
 
+    # s66 stap 1 (besluit Tijmen 26-11-2026): DASHBOARD_SESSIE is, net als
+    # OAUTH_DASHBOARD, BUILD-TIME. Met de vlag blijft de gebruiker ingelogd via
+    # een httpOnly-cookie op www.agentic-team.ai (de BFF van de site); het
+    # access-token leeft alleen in het geheugen van de pagina. De vlag bouwt
+    # óp de loginflow: zonder --oauth is er geen loginknop en dus niets om
+    # vast te houden. Een build met alleen --sessie is een vergissing in de
+    # projectinstellingen, en die hoort hier te falen, niet stil inert te zijn.
+    # Terugrollen is opnieuw bouwen zonder de vlag.
+    sessie = "--sessie" in sys.argv
+    if sessie and not oauth:
+        raise SystemExit("FOUT: --sessie vraagt ook --oauth (DASHBOARD_SESSIE zonder OAUTH_DASHBOARD).")
+
     # Losse link (dashboard v2): hetzelfde artefact onder een pad op dezelfde
     # origin, bv. dashboard.agentic-team.ai/v2/. Zelfde origin = zelfde CORS op
     # de instanties en de router (die geven precies één origin toegang); alleen
@@ -136,7 +149,9 @@ def main():
         shell
         .replace("__CSP_META__", csp_meta)
         .replace("__ROBOTS_META__", '<meta name="robots" content="noindex">' if noindex else "")
-        .replace("__OAUTH_META__", '<meta name="at-oauth" content="1">' if oauth else "")
+        # s66: de sessiemeta reist in hetzelfde gat als de oauth-meta, direct
+        # erachter. Zonder --sessie is de uitvoer byte-gelijk aan vroeger.
+        .replace("__OAUTH_META__", ('<meta name="at-oauth" content="1">' if oauth else "") + ('<meta name="at-sessie" content="1">' if sessie else ""))
         .replace("__BASIS_META__", f'<meta name="at-basis" content="{basis}">' if basis != "/" else "")
         .replace("__STYLES__", styles)
         .replace("__SCHEMA__", schema_js)
@@ -147,7 +162,7 @@ def main():
 
     out_path = ROOT / "dashboard.html"
     out_path.write_text(out, encoding="utf-8")
-    vlaggen = "".join(f" — met {naam}" for naam, aan in (("noindex", noindex), ("oauth-login", oauth), (f"basis {basis}", basis != "/")) if aan)
+    vlaggen = "".join(f" — met {naam}" for naam, aan in (("noindex", noindex), ("oauth-login", oauth), ("dashboardsessie", sessie), (f"basis {basis}", basis != "/")) if aan)
     print(f"OK: {out_path} geschreven ({len(out)} bytes){vlaggen}.")
 
     # Dezelfde hashes in de header-CSP (vercel.json), zodat de meta-tag niet
