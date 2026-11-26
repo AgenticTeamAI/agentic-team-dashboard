@@ -19,7 +19,10 @@
  * alleen die tekstwijziging (en "De eigenaar (het aankoopadres)"). Besluit D2
  * (26-11-2026) maakte van "de beheerder van je licentie" in dezelfde tekst "de
  * eigenaar van je licentie (het aankoopadres)"; de opname is daarvoor nogmaals
- * gemaakt op main d8e0731, met alleen C5 en D2 erop. */
+ * gemaakt op main d8e0731, met alleen C5 en D2 erop. Na de merge van main
+ * 6706df4 (f62, #136) is de opname op dezelfde manier opnieuw gemaakt op
+ * 6706df4, met alleen C5 en D2 erop; dat is de huidige basis (zie `bron` en
+ * `herkomst` in de fixture). */
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
