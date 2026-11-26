@@ -403,7 +403,11 @@ describe("v2 — review 1-10: data en logica", () => {
     ctx.bundle.kind = "metrics"; ctx.bundle.systeemPerDomein = { acties: "notion" };
     ctx.metricsWerk = { voorJou: [{ nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: false, specialist: DM, sinds: "2026-09-28", deadline: null, url: null }], ritmetaken: null, gegenereerdOp: "2026-09-29T07:02:00" };
     open(ctx);
-    expect($(".tabbalk .badge").textContent).toBe("1");
+    // f62: zonder eigen dagplan van vandaag is dit de licentiebrede werkbak van
+    // het team; die staat er, maar telt niet als "voor jou" in de badge
+    // (vroeger: badge "1").
+    expect($(".tabbalk .badge")).toBeNull();
+    expect($("#root").textContent).toContain("Werkbak van je team 1");
     expect($("#root").textContent).toContain("Offerte nakijken");
     // de vaste taken komen hier ook uit de dagstart (geen rijen in de werkruimte)
     expect($(".balk.notion").textContent).toContain("Je acties en vaste taken staan in je eigen systeem");

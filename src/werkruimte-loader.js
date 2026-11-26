@@ -447,6 +447,44 @@ async function haalTeamfeed(bron, vandaag) {
   }
 }
 
+/* f62: de dagplannen (domein `dagplannen`, opslag=werkruimte, registry
+ * 1.94.0) — per mens één entry van zijn laatste dagstart. Net als de
+ * teamfeed: nooit een rows-domein, alleen ophalen als de instantie het domein
+ * kent, en fail-open (geen dagplan = geen kaart "Jouw dag"). De entries gaan
+ * ongelezen op de bundel; saneerDagplan (src/dagplan.js) leest ze pas bij het
+ * tekenen, en vertrouwt niets. */
+const DAGPLAN_LIMIET = 50;
+async function haalDagplannen(bron) {
+  try {
+    const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=dagplannen&limiet=" + DAGPLAN_LIMIET);
+    const entries = Array.isArray(body && body.entries) ? body.entries : [];
+    return { entries, aantal: entries.length };
+  } catch (e) {
+    if (e && (e.daglinkVerlopen || e.oauthVerlopen)) throw e;
+    return null;
+  }
+}
+/* Een daglink is een url die wordt doorgestuurd, en met een daglink toont het
+ * dashboard geen dagplan (het weet niet wie je bent). Dan halen we de plannen
+ * ook niet op: alleen het aantal uit het overzicht, voor de regel "Log in om
+ * je eigen dag te zien". */
+function dagplannenVoor(bron, overzicht) {
+  const d = (overzicht.domeinen || []).find(x => x && x.domein === "dagplannen");
+  if (!d) return Promise.resolve(null);
+  if (!bron || !bron.oauth) {
+    const n = Number(d.aantal);
+    return Promise.resolve({ entries: [], aantal: Number.isFinite(n) && n > 0 ? Math.round(n) : 0 });
+  }
+  return haalDagplannen(bron);
+}
+/* Inhoud die zich als dagplan aandient (type "dagplan"), ongeacht het domein. */
+function isDagplanEntry(e) {
+  const inhoud = e && e.data && e.data.Inhoud;
+  if (inhoud && typeof inhoud === "object") return inhoud.type === "dagplan";
+  if (typeof inhoud !== "string" || inhoud.indexOf("dagplan") === -1) return false;
+  try { const o = JSON.parse(inhoud); return !!o && o.type === "dagplan"; } catch (err) { return false; }
+}
+
 function isVanVandaag(isoTekst, vandaag) {
   const dt = isoTekst ? new Date(isoTekst) : null;
   if (!dt || isNaN(dt.getTime())) return false;
@@ -461,8 +499,12 @@ function isVanVandaag(isoTekst, vandaag) {
 async function haalMetricsEntry(bron, bundle) {
   const body = await fetchWerkruimte(bron, "/dashboard/entries?domein=" + METRICS_DOMEIN + "&limiet=10");
   const entries = body.entries || [];
-  const entry = entries.find(e => e.entryId === "metrics")
-    || entries.slice().sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
+  // De entry "metrics", anders de nieuwste (oudere producers gebruikten een
+  // andere id). f62: een dagplan dat per ongeluk in dit domein belandde, is
+  // geen metricsbestand en telt bij die terugval niet mee.
+  const entry = entries.find(e => e && e.entryId === "metrics")
+    || entries.filter(e => e && !isDagplanEntry(e))
+      .sort((a, b) => String(b.bijgewerkt).localeCompare(String(a.bijgewerkt)))[0];
   if (!entry) return null;
   let payload;
   try {
@@ -484,7 +526,7 @@ async function haalMetricsEntry(bron, bundle) {
  * voor een artefact dat tegen een nieuwere registry praat. */
 function werkruimteDomeinen(schema) {
   const uitSchema = schema.werkruimteDomeinen || [];
-  return uitSchema.indexOf(METRICS_DOMEIN) === -1 ? uitSchema.concat([METRICS_DOMEIN]) : uitSchema;
+  return uitSchema.concat([METRICS_DOMEIN, "dagplannen"].filter(d => uitSchema.indexOf(d) === -1));
 }
 
 async function loadWerkruimteBundle(bron) {
@@ -516,6 +558,8 @@ async function loadWerkruimteBundle(bron) {
   bundle.teamfeed = (overzicht.domeinen || []).some(d => d && d.domein === TEAMFEED_DOMEIN)
     ? await haalTeamfeed(bron, new Date())
     : null;
+  // f62: idem voor de dagplannen ("Jouw dag" op Voor jou).
+  bundle.dagplannen = await dagplannenVoor(bron, overzicht);
 
   // De bronkoppeling arbitreert wat "werkdata in de werkruimte" is: een
   // domein dat volgens de bronkoppeling ergens ánders woont (notion,

@@ -7,4 +7,5 @@
 const V2_PROD = Object.freeze({
   soortVan, hoortBijMens, vanMij, isTeLaat, sindsVan, aanJouZet, bijCollegas, bijTeam, kloptNiet,
   datumKeuzes, klaarCheck, taakStatus, weekTelling, werkmomentSporen, werkdagenNa, naamGelijk, isAgentNaam,
+  eigenaarVan, eigenaarIndex, isEigenaar,
 });

@@ -82,11 +82,45 @@ function isNotion() {
   return CTX.bundle && CTX.bundle.kind === "metrics" && !rows(CTX.bundle, "acties");
 }
 function takenElders() { return !!CTX && (woontElders("ritmetaken") || (CTX.bundle && CTX.bundle.kind === "metrics" && !dataRijenVan(CTX, "ritmetaken"))); }
-/* De werkbak uit de dagstart (metrics v3), ook als er verdwaalde acties-rijen zijn. */
-function werkbakUitDagstart() { const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null; }
+/* De werkbak uit de dagstart, ook als er verdwaalde acties-rijen zijn. f62:
+ * heb je een dagplan van vandaag, dan zijn de items daaruit jouw werkbak (met
+ * dezelfde nummers als in je chat), ook als die lijst leeg is: dan wacht er
+ * volgens je dagstart niets op jou. Pas zonder dagplan van vandaag valt dit
+ * terug op het voor_jou-blok van metrics v3. Dat is de werkbak van het hele
+ * team (licentiebreed, genummerd 1 t/m N): die heet dan ook zo, telt niet als
+ * "voor jou" in de badge en claimt niet de nummers uit je chat. */
+function werkbakUitDagplan() { const d = dagplanVanMij(); return d && d.vandaag ? d : null; }
+function werkbakIsPersoonlijk() { return !!werkbakUitDagplan(); }
+function werkbakUitDagstart() {
+  const d = werkbakUitDagplan(); if (d) return d.plan.ter_goedkeuring.items;
+  const w = CTX && CTX.metricsWerk; return w && Array.isArray(w.voorJou) ? w.voorJou : null;
+}
+function werkbakMoment() {
+  const d = werkbakUitDagplan(); const w = (CTX && CTX.metricsWerk) || {};
+  const g = d ? d.plan.gegenereerd_op : w.gegenereerdOp; return g ? dt(g) : null;
+}
 function naamElders(domein) { const b = CTX ? bronVan(CTX, domein) : null; return (b && b.toestand === "elders" && b.naam) || "je eigen systeem"; }
 function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; return ingelogd() ? "ingelogd" : "daglink"; }
 function jij() { return (ingelogd() && (mijnNaam(bron()) || S.naamGeheugen)) || ""; }
+/* f62 — je dagplan (src/dagplan.js): het jouwe kiezen kan alleen als het
+ * dashboard weet wie je bent (inloggen). Met een daglink dus nooit. */
+function dagplanEntries() { const d = CTX && CTX.bundle && CTX.bundle.dagplannen; return d && Array.isArray(d.entries) ? d.entries : null; }
+/* Hoeveel dagplannen er zijn. Met een daglink haalt de loader de plannen zelf
+ * niet op (alleen het aantal uit het overzicht), dus dan telt dat. */
+function dagplannenAantal() {
+  const d = CTX && CTX.bundle && CTX.bundle.dagplannen; if (!d) return 0;
+  return typeof d.aantal === "number" && d.aantal > 0 ? d.aantal : (Array.isArray(d.entries) ? d.entries.length : 0);
+}
+let DP = { entries: null, ik: null, dag: null, schema: null, plan: null };
+function dagplanVanMij() {
+  const wie = jij(); const entries = dagplanEntries();
+  if (!CTX || !wie || !entries || !entries.length) return null;
+  const dag = isoDag(NU);
+  if (DP.entries !== entries || DP.ik !== wie || DP.dag !== dag || DP.schema !== CTX.schema) {
+    DP = { entries, ik: wie, dag, schema: CTX.schema, plan: kiesDagplan(dagplannenUitEntries(entries, CTX.schema), wie, dag) };
+  }
+  return DP.plan;
+}
 function isBeheerder() { return (typeof moduleOverzichtBeschikbaar === "function" && moduleOverzichtBeschikbaar()) || (typeof teamBeheerMogelijk === "function" && teamBeheerMogelijk()); }
 function bedrijf() { return (CTX && CTX.bundle && CTX.bundle.klant) || ""; }
 
@@ -121,7 +155,8 @@ function slugVanNaam(n) {
   if (!n) return null;
   const k = String(n);
   if (SLUG_CACHE.has(k)) return SLUG_CACHE.get(k);
-  const slug = SLUG_INDEX.get(normAgentNaam(k)) || null;
+  // check_license levert weergavenamen als "<emoji> <naam>"; de emoji telt niet mee.
+  const slug = SLUG_INDEX.get(normAgentNaam(k)) || SLUG_INDEX.get(normAgentNaam(k.replace(/^[^\p{L}\p{N}]+/u, ""))) || null;
   SLUG_CACHE.set(k, slug);
   return slug;
 }
