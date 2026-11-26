@@ -380,8 +380,9 @@ function rijVanEntry(e) {
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
   const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
-  // s64: met AFSCHERMING=aan stempelt de instantie elke rij in het
-  // werkgeheugen met de rol van de schrijver, als meta-veld naast het entryId
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij die iemand
+  // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
+  // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
   // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
   // dan is de rij precies zoals vóór s64.
   if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
@@ -649,6 +650,37 @@ function sessieLicentie(token) {
   return p && typeof p.lic === "string" ? p.lic : null;
 }
 
+/* s64 — hoe lang een daglink geldig is, zoals de werkruimte hem uitgaf: het
+ * token draagt `exp` en `iat` (Unix-seconden, daglink.ts). Standaard 24 uur;
+ * bij Business (AFSCHERMING=aan) korter, standaard 4 uur. Alleen voor de
+ * tekst bij een verlopen link: niet gecontroleerd en nergens een beslissing.
+ * Geen bruikbare waarde (een link van vóór b32 zonder `iat`, of geen token):
+ * null. */
+function daglinkGeldigheid(token) {
+  const p = tokenPayloadDeel(token, 0);
+  if (!p || typeof p !== "object") return null;
+  const { exp, iat } = p;
+  return Number.isInteger(exp) && Number.isInteger(iat) && exp > iat ? exp - iat : null;
+}
+/* Dezelfde schrijfwijze als de werkruimte (duurTekst in mcp/server.ts):
+ * "4 uur", "24 uur", "90 minuten"; naar beneden, nooit langer dan het is. */
+function daglinkDuurTekst(seconden) {
+  if (seconden >= 3600 && seconden % 3600 === 0) return seconden / 3600 + " uur";
+  const minuten = Math.max(1, Math.floor(seconden / 60));
+  return minuten + " " + (minuten === 1 ? "minuut" : "minuten");
+}
+/* De zin achter "Deze dashboardlink is verlopen." Zonder gegevens de vaste
+ * zin van vóór s64; met een link van 24 uur levert de rekensom precies
+ * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
+ * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
+const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
+function daglinkGeldigTekst(token) {
+  const s = daglinkGeldigheid(token);
+  if (s === null) return DAGLINK_GELDIG_STANDAARD;
+  if (s > 7 * 24 * 3600) return "Een daglink is maar een beperkte tijd geldig.";
+  return "Daglinks zijn " + daglinkDuurTekst(s) + " geldig.";
+}
+
 /* Welke bron gebruikt deze pagina?
  * - Een verse daglink in het fragment is een expliciete actie van de
  *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
@@ -680,6 +712,6 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst,
   };
 }

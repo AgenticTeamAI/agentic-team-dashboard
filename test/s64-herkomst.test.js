@@ -117,6 +117,46 @@ describe("s64 — met geschreven_door: een rustig label 'door <Rol>'", () => {
       .toBe(`Follow-up Jansen geschreven (Outreach Specialist · door ${LABELTEKST[rolVan("f2")]}). Offerte Van Dam klaargezet (Dealmaker · door ${LABELTEKST[rolVan("f1")]}).`);
   });
 
+  // Besluit f (26-11): de stempel staat op elke rij die iemand schrijft, in elk
+  // datadomein. Dus ook acties, vaste taken en klantgegevens.
+  it("buiten het werkgeheugen: een actie in de lijst, op Voor jou en op het blad, en wat eraan hangt", () => {
+    const zelfde = () => "medewerker";
+    render(g, maakCtx(g, entries(g, zelfde)), "/acties");
+    const rij = [...document.querySelectorAll(".rij")].find((x) => x.textContent.includes("Offerte Van Dam"));
+    expect(rij.querySelector(".rmeta .door").textContent).toBe("door Medewerker");
+    render(g, maakCtx(g, entries(g, zelfde)), "/");
+    expect(document.querySelector(".item .imeta .door").textContent).toBe("door Medewerker");
+    render(g, maakCtx(g, entries(g, (id) => (id === "a2" ? "viewer" : "beheerder"))), "/acties/a1");
+    const blad = document.querySelector(".blad");
+    expect(blad.querySelector(":scope > .rijtje .door").textContent).toBe("door Beheerder");
+    const sub = [...blad.querySelectorAll(".rij")].find((x) => x.textContent.includes("Prijs nakijken"));
+    expect(sub.querySelector(".rmeta .door").textContent).toBe("door Viewer");
+  });
+
+  it("buiten het werkgeheugen: een vaste taak, een contactpersoon en een actie op de klantpagina", () => {
+    const door = (id) => ({ v1: "beheerder", c1: "viewer", a1: "medewerker" })[id];
+    render(g, maakCtx(g, entries(g, door)), "/team/vaste-taken");
+    const taak = [...document.querySelectorAll(".taak")].find((x) => x.textContent.includes("Openstaande acties oppakken"));
+    expect(taak.querySelector(".tregel .door").textContent).toBe("door Beheerder");
+    render(g, maakCtx(g, entries(g, door)), "/gegevens/organisaties/o1");
+    const lijstje = [...document.querySelectorAll(".lijstje > a")].find((x) => x.textContent.includes("Peter van Dam"));
+    expect(lijstje.querySelector(".klein.stil").textContent).toBe("Directeur · door Viewer");
+    const actie = [...document.querySelectorAll(".rij")].find((x) => x.textContent.includes("Offerte Van Dam"));
+    expect(actie.querySelector(".rmeta .door").textContent).toBe("door Medewerker");
+    render(g, maakCtx(g, entries(g, door)), "/gegevens/contactpersonen/c1");
+    expect(document.querySelector(".orgkop p.stil").textContent).toMatch(/ · door Viewer$/);
+  });
+
+  it("het archief van wat je team klaarzette", () => {
+    render(g, maakCtx(g, entries(g, () => "eigenaar")), "/acties");
+    document.querySelector('[data-act="av"][data-k="toon"][data-v="klaargezet"]').click();
+    const rij = [...document.querySelectorAll(".rij")].find((x) => x.textContent.includes("Offerte Van Dam"));
+    expect(rij.querySelector(".rmeta .door").textContent).toBe("door Eigenaar");
+    render(g, maakCtx(g, entries(g, () => "onbekend")), "/acties");
+    document.querySelector('[data-act="av"][data-k="toon"][data-v="klaargezet"]').click();
+    expect(document.querySelector("#root .door")).toBeNull();
+  });
+
   it("een waarde met html wordt nooit html, ook niet naast een echte rol", () => {
     const door = (id) => (id === "f2" ? "medewerker" : '<img src=x onerror="alert(1)">');
     const nu = tekenAlles(door);

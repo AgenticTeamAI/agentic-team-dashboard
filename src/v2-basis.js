@@ -230,7 +230,8 @@ function afgerondMoment(a) {
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
 /* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
- * schrijver stempelde (alleen met AFSCHERMING=aan). Zonder stempel, of met
+ * schrijver stempelde (alleen met AFSCHERMING=aan; elk datadomein, dus ook
+ * acties, vaste taken en klantgegevens). Zonder stempel, of met
  * "sleutel" of "onbekend", is er geen label en is de html precies die van
  * vóór s64. De tekst komt uit een vaste tabel (schrijverLabel), niet uit de
  * werkruimte. `voor` is het scheidingsteken als het label achter tekst staat. */

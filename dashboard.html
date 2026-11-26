@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-Hm004k3EcpqYFR//tVKD8bdQaemL1grsqoOGjucsDZU='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-mFKWjdFu/UZsveXdZ+kdicc8X+FrgUYxX8KhlLTCshE='">
 
 
 
@@ -3886,8 +3886,9 @@ function rijVanEntry(e) {
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
   const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
-  // s64: met AFSCHERMING=aan stempelt de instantie elke rij in het
-  // werkgeheugen met de rol van de schrijver, als meta-veld naast het entryId
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij die iemand
+  // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
+  // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
   // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
   // dan is de rij precies zoals vóór s64.
   if (e && typeof e.geschreven_door === "string") stempels.door = e.geschreven_door;
@@ -4155,6 +4156,37 @@ function sessieLicentie(token) {
   return p && typeof p.lic === "string" ? p.lic : null;
 }
 
+/* s64 — hoe lang een daglink geldig is, zoals de werkruimte hem uitgaf: het
+ * token draagt `exp` en `iat` (Unix-seconden, daglink.ts). Standaard 24 uur;
+ * bij Business (AFSCHERMING=aan) korter, standaard 4 uur. Alleen voor de
+ * tekst bij een verlopen link: niet gecontroleerd en nergens een beslissing.
+ * Geen bruikbare waarde (een link van vóór b32 zonder `iat`, of geen token):
+ * null. */
+function daglinkGeldigheid(token) {
+  const p = tokenPayloadDeel(token, 0);
+  if (!p || typeof p !== "object") return null;
+  const { exp, iat } = p;
+  return Number.isInteger(exp) && Number.isInteger(iat) && exp > iat ? exp - iat : null;
+}
+/* Dezelfde schrijfwijze als de werkruimte (duurTekst in mcp/server.ts):
+ * "4 uur", "24 uur", "90 minuten"; naar beneden, nooit langer dan het is. */
+function daglinkDuurTekst(seconden) {
+  if (seconden >= 3600 && seconden % 3600 === 0) return seconden / 3600 + " uur";
+  const minuten = Math.max(1, Math.floor(seconden / 60));
+  return minuten + " " + (minuten === 1 ? "minuut" : "minuten");
+}
+/* De zin achter "Deze dashboardlink is verlopen." Zonder gegevens de vaste
+ * zin van vóór s64; met een link van 24 uur levert de rekensom precies
+ * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
+ * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
+const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
+function daglinkGeldigTekst(token) {
+  const s = daglinkGeldigheid(token);
+  if (s === null) return DAGLINK_GELDIG_STANDAARD;
+  if (s > 7 * 24 * 3600) return "Een daglink is maar een beperkte tijd geldig.";
+  return "Daglinks zijn " + daglinkDuurTekst(s) + " geldig.";
+}
+
 /* Welke bron gebruikt deze pagina?
  * - Een verse daglink in het fragment is een expliciete actie van de
  *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
@@ -4186,7 +4218,7 @@ if (typeof module !== "undefined") {
     bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst,
   };
 }
 
@@ -14435,7 +14467,8 @@ function afgerondMoment(a) {
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
 /* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
- * schrijver stempelde (alleen met AFSCHERMING=aan). Zonder stempel, of met
+ * schrijver stempelde (alleen met AFSCHERMING=aan; elk datadomein, dus ook
+ * acties, vaste taken en klantgegevens). Zonder stempel, of met
  * "sleutel" of "onbekend", is er geen label en is de html precies die van
  * vóór s64. De tekst komt uit een vaste tabel (schrijverLabel), niet uit de
  * werkruimte. `voor` is het scheidingsteken als het label achter tekst staat. */
@@ -14782,13 +14815,13 @@ function itemKaart(a, gekozen) {
     <div class="nr" aria-hidden="true">${nummer(a)}</div>
     <button class="item-open" data-act="open" data-id="${esc(a.id)}" aria-label="Nummer ${nummer(a)}: ${esc(a.titel)}, ${esc(SOORT_LABEL[s].toLowerCase())}">
       <span class="ititel">${esc(a.titel)} ${isNieuw(a) ? '<span class="pil nieuw">NIEUW</span>' : ""}${laat}</span>
-      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}</span>
+      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}${doorHtml(doorVan(a.rij))}</span>
       ${werk}${opm.length ? `<span class="opmregel">${ic("plus", "klein")}${telwoord(opm.length, "opmerking", "opmerkingen")} van ${esc(voornaam(opm[opm.length - 1].van))}</span>` : ""}</button>
     <div class="iknoppen">${kaartKnoppen(a)}</div></article>`;
 }
 function compactItem(a, gekozen) {
   const s = soortVan(a);
-  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}</span></span>${ic("chev")}</button>`;
+  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}${doorHtml(doorVan(a.rij), " · ")}</span></span>${ic("chev")}</button>`;
 }
 function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
@@ -14955,7 +14988,7 @@ function renderBlad(a, plek) {
     <div class="blad-kop">${deskPaneel ? `<span class="pos">${pos}</span>` : `<button class="link" data-act="sluit-blad">${ic("links", "klein")} ${esc(terugLabelVan(terug))}</button><span class="pos">${pos}</span>`}
       <span class="rijtje">${pijlen ? `<button class="ikknop" data-act="stap" data-d="-1" aria-label="Vorige">${ic("links")}</button><button class="ikknop" data-act="stap" data-d="1" aria-label="Volgende">${ic("chev")}</button>` : ""}${deskPaneel ? "" : `<button class="ikknop" data-act="sluit-blad" aria-label="Sluiten">${ic("sluit")}</button>`}</span></div>
     <h2 class="titel" id="blad-titel" tabindex="-1">${esc(a.titel)}</h2>
-    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
+    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}${doorHtml(doorVan(a.rij))}</div>
     ${herk ? `<p class="herkomst">${herk}</p>` : ""}${opm1}
     ${a.hoort.length ? `<div class="hoortbij">Hoort bij: ${a.hoort.map(relatieKnop).join("")}</div>` : ""}
     ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3><span class="rijtje">${vlg.knop}${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</span></div>
@@ -14969,7 +15002,7 @@ function renderBlad(a, plek) {
         ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
-        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
+        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}${doorHtml(doorVan(x.rij))}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
         ${kanSchrijven() ? `<button class="knop" data-act="sheet" data-type="opdracht" data-onder="${esc(a.id)}">${ic("plus", "klein")}Kleinere opdracht</button>` : ""}</div></details>
       <details class="uitklap" ${det("u-" + a.id + "-veld")}><summary>Alle gegevens${ic("chev")}</summary><div class="binnen">${renderVelden(a)}</div></details>
     </div>
@@ -15098,12 +15131,12 @@ function rij(a) {
   const s = soortVan(a); const ag = werkAgent(a); const n = S.nummers[a.id] && hoortBijMens(a) && vanMij(a);
   const vorm = n ? `<span class="nr">${S.nummers[a.id]}</span>` : `<span class="vorm" aria-hidden="true">${vormVan(s)}</span>`;
   const wc = ag ? agChip(ag, { kort: true, bezig: a.status === "Bezig" }) : (a.eigenaar && !isAgentNaam(a.eigenaar) && !naamGelijk(a.eigenaar, jij()) ? mensChip(a.eigenaar) : "");
-  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span></span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
+  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
 }
 function bordKaart(a, baan) {
   const ag = werkAgent(a); const kan = kanSchrijven() && isDesk();
   return `<div class="bordkaart" ${kan ? `draggable="true" data-drag="${esc(a.id)}"` : ""}><div class="bk-top"><b>${S.nummers[a.id] && hoortBijMens(a) && vanMij(a) ? `<span class="mono" style="color:var(--jij-tekst)">${S.nummers[a.id]} · </span>` : ""}${esc(a.titel)}</b>${kan ? `<span class="grip" title="Sleep naar een andere baan">${ic("grip", "klein")}</span>` : ""}</div>
-    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span></div>
+    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</div>
     <div class="rijtje"><button class="hoe breedhoe" data-act="open" data-id="${esc(a.id)}">Open</button>${kanSchrijven() ? `<button class="hoe" data-act="sheet" data-type="verplaats" data-id="${esc(a.id)}" data-baan="${baan}">Verplaats</button>` : ""}</div></div>`;
 }
 const BAAN_INFO = { jij: ["●", "Jij", "jijb"], team: ["◐", "Je team", "teamb"], wacht: ["○", "Wacht", ""], af: ["✓", "Afgerond", ""] };
@@ -15166,7 +15199,7 @@ function renderArchief() {
   const z = S.ui.acties.zoek.trim().toLowerCase();
   const l = S.data.acties.filter(a => isAgentSlug(a.door)).filter(a => !z || zoekTekstVan(a).includes(z)).sort((a, b) => (dt(b.aangemaakt) || 0) - (dt(a.aangemaakt) || 0));
   return `<section class="kol" style="gap:8px"><p class="stil klein">Alles wat je team voor je klaarzette, ook wat al af is, met wat jij ermee deed.</p>
-    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span></span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
+    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
 }
 
 /* ---------- Team ---------- */
@@ -15265,7 +15298,7 @@ function taakRij(t) {
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
     <div class="kol" style="gap:5px"><span class="tnaam">${esc(t.naam)}</span><div class="tregel">${t.agent ? agChip(t.agent, { kort: true }) : ""}${ritmeSelect(t, !mag || !t.actief)}${["elk-uur", "elke-2-uur", "elke-4-uur"].includes(t.ritme) ? '<span class="klein">zo vaak als je team werkt</span>' : ""}</div>
-      <div class="tregel">${stTekst}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
+      <div class="tregel">${stTekst}${doorHtml(doorVan(t.rij))}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
       ${wat ? `<details class="uitklap kaal" ${det("taak-" + t.id)}><summary>Wat doet deze taak?${ic("chev", "klein")}</summary><div class="binnen"><p>${esc(wat)}</p><p class="klein stil">Wil je dat deze taak iets anders doet? Vraag het de Coördinator.</p></div></details>` : ""}</div></div>`;
 }
 function kopieerBlok(t) { return `<div class="kopieerblok"><code>${esc(t)}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(t)}">${ic("kopieer", "klein")}Kopieer</button></div>`; }
@@ -15565,7 +15598,7 @@ function veldRij(k, r, v) {
 function lijstjeRij(k, r) {
   const d = domeinVan(k); const meta = rijMeta(k, r);
   const waarde = k === "sales_funnel" && dealWaarde(r) ? `<span class="mono">${euro(dealWaarde(r))}</span>` : "";
-  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}</span>` : ""}</span>${waarde}</a>`;
+  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}${doorHtml(doorVan(r), " · ")}</span>` : doorHtml(doorVan(r), " · ")}</span>${waarde}</a>`;
 }
 /* i92 — Kwam je hier vanaf een andere pagina (een klantenkaart, een deal, een
  * actie), dan brengt Terug je daar weer heen. Zonder herkomst (direct
@@ -17126,7 +17159,8 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
     }
     if (err.daglinkVerlopen) {
       vergeetDaglink();
-      const extra = /verlopen/i.test(err.message) ? " Daglinks zijn 24 uur geldig." : "";
+      // s64: de geldigheid uit de link zelf (bij Business korter dan 24 uur).
+      const extra = /verlopen/i.test(err.message) ? " " + daglinkGeldigTekst(bron && bron.token) : "";
       toonLegeStaat("Deze daglink werkt niet meer", err.message + extra, { login: true });
       return;
     }

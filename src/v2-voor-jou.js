@@ -143,13 +143,13 @@ function itemKaart(a, gekozen) {
     <div class="nr" aria-hidden="true">${nummer(a)}</div>
     <button class="item-open" data-act="open" data-id="${esc(a.id)}" aria-label="Nummer ${nummer(a)}: ${esc(a.titel)}, ${esc(SOORT_LABEL[s].toLowerCase())}">
       <span class="ititel">${esc(a.titel)} ${isNieuw(a) ? '<span class="pil nieuw">NIEUW</span>' : ""}${laat}</span>
-      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}</span>
+      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}${doorHtml(doorVan(a.rij))}</span>
       ${werk}${opm.length ? `<span class="opmregel">${ic("plus", "klein")}${telwoord(opm.length, "opmerking", "opmerkingen")} van ${esc(voornaam(opm[opm.length - 1].van))}</span>` : ""}</button>
     <div class="iknoppen">${kaartKnoppen(a)}</div></article>`;
 }
 function compactItem(a, gekozen) {
   const s = soortVan(a);
-  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}</span></span>${ic("chev")}</button>`;
+  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}${doorHtml(doorVan(a.rij), " · ")}</span></span>${ic("chev")}</button>`;
 }
 function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
@@ -316,7 +316,7 @@ function renderBlad(a, plek) {
     <div class="blad-kop">${deskPaneel ? `<span class="pos">${pos}</span>` : `<button class="link" data-act="sluit-blad">${ic("links", "klein")} ${esc(terugLabelVan(terug))}</button><span class="pos">${pos}</span>`}
       <span class="rijtje">${pijlen ? `<button class="ikknop" data-act="stap" data-d="-1" aria-label="Vorige">${ic("links")}</button><button class="ikknop" data-act="stap" data-d="1" aria-label="Volgende">${ic("chev")}</button>` : ""}${deskPaneel ? "" : `<button class="ikknop" data-act="sluit-blad" aria-label="Sluiten">${ic("sluit")}</button>`}</span></div>
     <h2 class="titel" id="blad-titel" tabindex="-1">${esc(a.titel)}</h2>
-    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
+    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}${doorHtml(doorVan(a.rij))}</div>
     ${herk ? `<p class="herkomst">${herk}</p>` : ""}${opm1}
     ${a.hoort.length ? `<div class="hoortbij">Hoort bij: ${a.hoort.map(relatieKnop).join("")}</div>` : ""}
     ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3><span class="rijtje">${vlg.knop}${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</span></div>
@@ -330,7 +330,7 @@ function renderBlad(a, plek) {
         ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
-        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
+        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}${doorHtml(doorVan(x.rij))}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
         ${kanSchrijven() ? `<button class="knop" data-act="sheet" data-type="opdracht" data-onder="${esc(a.id)}">${ic("plus", "klein")}Kleinere opdracht</button>` : ""}</div></details>
       <details class="uitklap" ${det("u-" + a.id + "-veld")}><summary>Alle gegevens${ic("chev")}</summary><div class="binnen">${renderVelden(a)}</div></details>
     </div>

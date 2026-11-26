@@ -40,12 +40,12 @@ function rij(a) {
   const s = soortVan(a); const ag = werkAgent(a); const n = S.nummers[a.id] && hoortBijMens(a) && vanMij(a);
   const vorm = n ? `<span class="nr">${S.nummers[a.id]}</span>` : `<span class="vorm" aria-hidden="true">${vormVan(s)}</span>`;
   const wc = ag ? agChip(ag, { kort: true, bezig: a.status === "Bezig" }) : (a.eigenaar && !isAgentNaam(a.eigenaar) && !naamGelijk(a.eigenaar, jij()) ? mensChip(a.eigenaar) : "");
-  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span></span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
+  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
 }
 function bordKaart(a, baan) {
   const ag = werkAgent(a); const kan = kanSchrijven() && isDesk();
   return `<div class="bordkaart" ${kan ? `draggable="true" data-drag="${esc(a.id)}"` : ""}><div class="bk-top"><b>${S.nummers[a.id] && hoortBijMens(a) && vanMij(a) ? `<span class="mono" style="color:var(--jij-tekst)">${S.nummers[a.id]} · </span>` : ""}${esc(a.titel)}</b>${kan ? `<span class="grip" title="Sleep naar een andere baan">${ic("grip", "klein")}</span>` : ""}</div>
-    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span></div>
+    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</div>
     <div class="rijtje"><button class="hoe breedhoe" data-act="open" data-id="${esc(a.id)}">Open</button>${kanSchrijven() ? `<button class="hoe" data-act="sheet" data-type="verplaats" data-id="${esc(a.id)}" data-baan="${baan}">Verplaats</button>` : ""}</div></div>`;
 }
 const BAAN_INFO = { jij: ["●", "Jij", "jijb"], team: ["◐", "Je team", "teamb"], wacht: ["○", "Wacht", ""], af: ["✓", "Afgerond", ""] };
@@ -108,7 +108,7 @@ function renderArchief() {
   const z = S.ui.acties.zoek.trim().toLowerCase();
   const l = S.data.acties.filter(a => isAgentSlug(a.door)).filter(a => !z || zoekTekstVan(a).includes(z)).sort((a, b) => (dt(b.aangemaakt) || 0) - (dt(a.aangemaakt) || 0));
   return `<section class="kol" style="gap:8px"><p class="stil klein">Alles wat je team voor je klaarzette, ook wat al af is, met wat jij ermee deed.</p>
-    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span></span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
+    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
 }
 
 /* ---------- Team ---------- */
@@ -207,7 +207,7 @@ function taakRij(t) {
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
     <div class="kol" style="gap:5px"><span class="tnaam">${esc(t.naam)}</span><div class="tregel">${t.agent ? agChip(t.agent, { kort: true }) : ""}${ritmeSelect(t, !mag || !t.actief)}${["elk-uur", "elke-2-uur", "elke-4-uur"].includes(t.ritme) ? '<span class="klein">zo vaak als je team werkt</span>' : ""}</div>
-      <div class="tregel">${stTekst}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
+      <div class="tregel">${stTekst}${doorHtml(doorVan(t.rij))}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
       ${wat ? `<details class="uitklap kaal" ${det("taak-" + t.id)}><summary>Wat doet deze taak?${ic("chev", "klein")}</summary><div class="binnen"><p>${esc(wat)}</p><p class="klein stil">Wil je dat deze taak iets anders doet? Vraag het de Coördinator.</p></div></details>` : ""}</div></div>`;
 }
 function kopieerBlok(t) { return `<div class="kopieerblok"><code>${esc(t)}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(t)}">${ic("kopieer", "klein")}Kopieer</button></div>`; }

@@ -855,9 +855,11 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   agentic-team.ai zit er niet tussen, conform de harde grens van f15: klantdata
   komt niet op onze centrale servers. De instantie accepteert deze route alleen
   met CORS vanaf de dashboardpagina.
-- **Het token kan alleen lezen en verloopt na 24 uur.** Een verlopen link
-  geeft de melding "Vraag je Coördinator om een nieuwe"; er is geen
-  alternatieve ingang. Dit is bewust een minimale voorloper van OAuth
+- **Het token kan alleen lezen en verloopt na 24 uur** (bij Business, met
+  `AFSCHERMING=aan`, korter: standaard 4 uur). Een verlopen link geeft de
+  melding "Vraag je Coördinator om een nieuwe", met de geldigheid die het
+  dashboard uit `exp` en `iat` in het token leest (s64; zonder die velden de
+  vaste zin "Daglinks zijn 24 uur geldig."). Er is geen alternatieve ingang. Dit is bewust een minimale voorloper van OAuth
   (p10, GA-voorwaarde) — geen weggegooid werk.
 - **Zelfde interne vorm.** De loader levert een gewone rows-bundel
   (entries → `rows`, `bijgewerkt` → `staleAt`, bedrijfscontext-entries →

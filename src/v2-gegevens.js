@@ -146,7 +146,7 @@ function veldRij(k, r, v) {
 function lijstjeRij(k, r) {
   const d = domeinVan(k); const meta = rijMeta(k, r);
   const waarde = k === "sales_funnel" && dealWaarde(r) ? `<span class="mono">${euro(dealWaarde(r))}</span>` : "";
-  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}</span>` : ""}</span>${waarde}</a>`;
+  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}${doorHtml(doorVan(r), " · ")}</span>` : doorHtml(doorVan(r), " · ")}</span>${waarde}</a>`;
 }
 /* i92 — Kwam je hier vanaf een andere pagina (een klantenkaart, een deal, een
  * actie), dan brengt Terug je daar weer heen. Zonder herkomst (direct
