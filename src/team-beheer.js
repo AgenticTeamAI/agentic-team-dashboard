@@ -34,6 +34,183 @@ function _resetTeam() {
   teamVoorToken = null;
   teamBevestigSeat = null;
   teamBezigSeat = null;
+  rollenInfo = null;
+  rollenVoorToken = null;
+  rolVoorstelSeat = null;
+  rolBezigSeat = null;
+}
+
+/* f60 — rollen per teamlid (contract p10 §2b, het rollenregister van s57).
+ *
+ * De rollen staan niet op de site maar in de eigen werkruimte-instantie
+ * (`_systeem~rollen`), en daar handhaaft de instantie ze ook: wie wat mag zetten,
+ * beslist `Rollenregister.zet`, nooit dit paneel. Dit paneel leest
+ * `GET /dashboard/rollen`, toont per teamlid de rol en stuurt een wijziging als
+ * `PUT /dashboard/rollen` met `{seat, rol}` — pas na een zichtbare bevestiging
+ * (voorstel → bevestig, zoals bij verwijderen en bij modules).
+ *
+ * Wat het paneel niet doet: zelf rechten afleiden. Welke knop er staat, volgt
+ * dezelfde regels als de instantie (de eigenaar en jijzelf hebben geen knop, een
+ * beheerder krijgt geen knop bij een andere beheerder en kan geen beheerder
+ * aanwijzen), maar dat is alleen om geen knop te tonen die toch geweigerd wordt.
+ * De weigering van de instantie is wat telt, en die tekst tonen we letterlijk.
+ *
+ * Geen register (Obeya, een instantie zonder eigenaarbron, een image van vóór
+ * s57) of een daglink: dan antwoordt de instantie 404 of 403, blijft
+ * `rollenInfo` null, en is het paneel precies wat het was — geen kolom, geen
+ * regel. De rol-aanvraag loopt over schrijfWerkruimte: geen nieuwe fetch-plek
+ * (test/geen-telemetrie.test.js telt ze). */
+let rollenInfo = null; // {jij:{seat,rol}, beheer, eigenaar, standaard, toewijsbaar, rollen} of null
+let rollenVoorToken = null;
+let rolVoorstelSeat = null; // seat waarvan het rolvoorstel openstaat
+let rolBezigSeat = null; // seat waarvan de rolwijziging nu onderweg is
+
+const ROL_LABEL = { eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" };
+const SEAT_VORM = /^[0-9a-f]{64}$/;
+
+/* Alleen wat we kennen komt binnen: een onbekende rol of een rij zonder seat
+ * valt weg in plaats van als tekst in een knop of selector te belanden. */
+function saneerRollen(b) {
+  if (!b || typeof b !== "object" || !b.jij || typeof b.jij !== "object") return null;
+  const jij = b.jij;
+  if (typeof jij.seat !== "string" || !SEAT_VORM.test(jij.seat) || !(jij.rol in ROL_LABEL)) return null;
+  const uit = { jij: { seat: jij.seat, rol: jij.rol }, beheer: false };
+  // De lijst krijgen alleen eigenaar en beheerder (§2b); zonder lijst geen beheer.
+  if (!Array.isArray(b.rollen) || typeof b.eigenaar !== "string" || !SEAT_VORM.test(b.eigenaar)) return uit;
+  const toewijsbaar = Array.isArray(b.toewijsbaar)
+    ? b.toewijsbaar.filter((r) => r in ROL_LABEL && r !== "eigenaar")
+    : [];
+  const standaard = b.standaard in ROL_LABEL && b.standaard !== "eigenaar" ? b.standaard : null;
+  if (!toewijsbaar.length || !standaard) return uit;
+  uit.beheer = true;
+  uit.eigenaar = b.eigenaar;
+  uit.standaard = standaard;
+  uit.toewijsbaar = toewijsbaar;
+  uit.rollen = b.rollen
+    .filter((r) => r && typeof r.seat === "string" && SEAT_VORM.test(r.seat) && r.rol in ROL_LABEL && r.rol !== "eigenaar")
+    .map((r) => ({ seat: r.seat, rol: r.rol }));
+  return uit;
+}
+
+async function laadRollen(bron) {
+  // Daglink: geen persoon, dus geen rol (de instantie zegt 403). Zelfde poort
+  // als laadTeam; het daglink-token gaat hier dus ook niet de deur uit.
+  if (!bron || !bron.oauth || !bron.token || !bron.instantieUrl || typeof schrijfWerkruimte !== "function") {
+    rollenInfo = null;
+    rollenVoorToken = null;
+    rolVoorstelSeat = null;
+    return null;
+  }
+  if (rollenVoorToken === bron.token) return rollenInfo;
+  rollenVoorToken = bron.token;
+  try {
+    rollenInfo = saneerRollen(await schrijfWerkruimte(bron, "GET", "/dashboard/rollen"));
+  } catch (e) {
+    // 404 = geen register op deze instantie; 403/503 = nu geen rol te lezen.
+    // Afwezig is geen fout: het paneel blijft dan wat het was.
+    rollenInfo = null;
+  }
+  return rollenInfo;
+}
+
+function rollenBeheer() {
+  return !!(rollenInfo && rollenInfo.beheer);
+}
+
+/* De rol van een seat zoals de instantie hem ziet: het aankoopadres is altijd
+ * eigenaar, een seat zonder rij heeft de standaardrol. */
+function rolVanSeat(seat) {
+  if (!rollenBeheer()) return null;
+  if (seat === rollenInfo.eigenaar) return "eigenaar";
+  const rij = rollenInfo.rollen.find((r) => r.seat === seat);
+  return rij ? rij.rol : rollenInfo.standaard;
+}
+
+/* Welke rollen jij deze seat kunt geven (leeg = geen knop). Spiegelt de toetsen
+ * 3–6 van §2b; de instantie toetst ze zelf opnieuw. */
+function rolKeuzesVoor(seat) {
+  if (!rollenBeheer() || !SEAT_VORM.test(seat || "")) return [];
+  const ik = rollenInfo.jij;
+  if (ik.rol !== "eigenaar" && ik.rol !== "beheerder") return [];
+  if (seat === ik.seat || seat === rollenInfo.eigenaar) return [];
+  const huidig = rolVanSeat(seat);
+  if (ik.rol === "beheerder" && huidig === "beheerder") return [];
+  return rollenInfo.toewijsbaar.filter((r) => r !== huidig && !(ik.rol === "beheerder" && r === "beheerder"));
+}
+
+function rolCelHtml(r) {
+  const seat = r.seat;
+  if (r.eigenaar === true || seat === rollenInfo.eigenaar) {
+    return `<span title="Het aankoopadres van de licentie is altijd eigenaar.">${ROL_LABEL.eigenaar}</span>`;
+  }
+  const huidig = rolVanSeat(seat);
+  const label = ROL_LABEL[huidig] + (seat === rollenInfo.jij.seat ? " (jij)" : "");
+  const keuzes = rolKeuzesVoor(seat);
+  if (!keuzes.length) return esc(label);
+  const uit = rolBezigSeat !== null || teamBezigSeat !== null ? " disabled" : "";
+  if (rolVoorstelSeat === seat) {
+    return `<div class="team-bevestig" role="group" aria-label="Rol van ${esc(r.adres)} wijzigen">
+      <label class="bedien-veld"><span>Nieuwe rol voor ${esc(r.adres)}</span>
+        <select data-rol-keuze="${esc(seat)}"${uit}>${keuzes.map((k) => `<option value="${k}">${ROL_LABEL[k]}</option>`).join("")}</select></label>
+      <span>Nu: ${esc(ROL_LABEL[huidig])}. Bevestig om de rol te wijzigen.</span>
+      <button type="button" data-rol-bevestig="${esc(seat)}"${uit}>Bevestigen</button>
+      <button type="button" class="knop-secundair" data-rol-annuleer="${esc(seat)}"${uit}>Annuleren</button>
+    </div>`;
+  }
+  return `${esc(label)} <button type="button" class="knop-secundair" data-rol-wijzig="${esc(seat)}"
+      aria-label="Rol van ${esc(r.adres)} wijzigen"${uit}>Wijzigen</button>`;
+}
+
+/* Eén regel boven de lijst: wat ben jij hier. Leeg zonder register. */
+function rolRegelHtml() {
+  if (!rollenInfo) return "";
+  return `<p class="footnote" data-team-jouw-rol>Je rol: <strong>${ROL_LABEL[rollenInfo.jij.rol]}</strong>.</p>`;
+}
+
+async function wijzigRol(sectieEl, seat, rol) {
+  if (rolBezigSeat !== null || teamBezigSeat !== null) return;
+  if (!rolKeuzesVoor(seat).includes(rol)) return;
+  const bron = typeof huidigeBron === "undefined" ? null : huidigeBron;
+  if (!bron || !bron.oauth || !bron.token) {
+    teamSluitZonderSessie(sectieEl);
+    return;
+  }
+  const rij = (teamLijst || []).find((r) => r && r.seat === seat);
+  const wie = rij ? rij.adres : "Dit teamlid";
+  rolBezigSeat = seat;
+  renderTeamPanel(sectieEl); // knoppen uit tijdens de aanvraag
+  teamMeld(sectieEl, "Rol wijzigen…");
+  let gelukt = false;
+  let fout = null;
+  try {
+    const uit = await schrijfWerkruimte(bron, "PUT", "/dashboard/rollen", { seat, rol });
+    if (uit && uit.seat === seat && uit.rol in ROL_LABEL && rollenInfo && rollenInfo.beheer) {
+      rollenInfo.rollen = rollenInfo.rollen.filter((r) => r.seat !== seat).concat([{ seat, rol: uit.rol }]);
+      rolVoorstelSeat = null;
+      gelukt = true;
+    } else {
+      fout = "De rol is niet gewijzigd. Probeer het zo opnieuw.";
+    }
+  } catch (err) {
+    // De instantie zegt zelf waarom (eigen_rol, eigenaar_vast, alleen_eigenaar, …).
+    fout = (err && err.message) || "De rol is niet gewijzigd. Probeer het zo opnieuw.";
+  } finally {
+    rolBezigSeat = null;
+  }
+  if (!teamSessieToken()) {
+    teamSluitZonderSessie(sectieEl);
+    return;
+  }
+  renderTeamPanel(sectieEl);
+  if (gelukt) {
+    teamMeld(sectieEl, `${wie} heeft nu de rol ${ROL_LABEL[rol]}.`);
+    const terug = teamKnopVoor(sectieEl, "data-rol-wijzig", seat);
+    if (terug) terug.focus();
+  } else {
+    teamFout(sectieEl, fout);
+    const annuleer = teamKnopVoor(sectieEl, "data-rol-annuleer", seat);
+    if (annuleer) annuleer.focus();
+  }
 }
 
 async function laadTeam(bron) {
@@ -78,6 +255,9 @@ function teamSessieToken() {
 function teamSluitZonderSessie(sectieEl) {
   teamLijst = null;
   teamBevestigSeat = null;
+  rollenInfo = null;
+  rollenVoorToken = null;
+  rolVoorstelSeat = null;
   renderTeamPanel(sectieEl);
 }
 
@@ -104,7 +284,7 @@ function teamActieHtml(r) {
   // elementen: een hertekening tijdens de aanvraag (Ververs, periodekeuze) zou
   // anders een actieve "Ja, verwijderen" terugzetten en een tweede POST mogelijk
   // maken — waarvan de 404 dan het geslaagde verwijderen overschrijft.
-  const uit = teamBezigSeat !== null ? " disabled" : "";
+  const uit = teamBezigSeat !== null || rolBezigSeat !== null ? " disabled" : "";
   if (teamBevestigSeat === r.seat) {
     // Eerst de uitleg, dan de knoppen: zo staat "Ja, verwijderen" niet op de
     // plek waar net "Verwijderen" stond, en doet een dubbelklik niets onomkeerbaars.
@@ -125,6 +305,7 @@ function teamRijHtml(r, beheer) {
         data-team-seat="${esc(r.seat)}" aria-label="Weergavenaam van ${esc(r.adres)}"></td>
     <td class="footnote">${esc(r.adres)}</td>
     <td class="footnote">${wachtNog ? "uitgenodigd, nog niet ingelogd" : "actief"}</td>
+    ${rollenBeheer() ? `<td class="team-rol">${rolCelHtml(r)}</td>` : ""}
     ${beheer ? `<td class="team-actie">${teamActieHtml(r)}</td>` : ""}
   </tr>`;
 }
@@ -139,7 +320,7 @@ function teamTabelHtml(beheer) {
       te staan. Pas hem aan en klik ernaast om op te slaan.</p>
     <div class="tabel-scroll">
       <table class="detail-table team-tabel">
-        <thead><tr><th>Naam</th><th>E-mailadres</th><th>Status</th>${beheer ? "<th>Toegang</th>" : ""}</tr></thead>
+        <thead><tr><th>Naam</th><th>E-mailadres</th><th>Status</th>${rollenBeheer() ? "<th>Rol</th>" : ""}${beheer ? "<th>Toegang</th>" : ""}</tr></thead>
         <tbody>${teamLijst.map((r) => teamRijHtml(r, beheer)).join("")}</tbody>
       </table>
     </div>`;
@@ -185,7 +366,7 @@ function renderTeamPanel(sectieEl) {
       <p class="bewerk-fout team-melding" data-team-fout role="alert"></p>
       <div data-team-lijst></div>`;
   }
-  body.querySelector("[data-team-lijst]").innerHTML = teamTabelHtml(beheer);
+  body.querySelector("[data-team-lijst]").innerHTML = rolRegelHtml() + teamTabelHtml(beheer);
   wireTeamPanel(sectieEl);
 }
 
@@ -280,7 +461,7 @@ async function nodigTeamlidUit(sectieEl, form) {
 }
 
 async function verwijderTeamlid(sectieEl, seat) {
-  if (teamBezigSeat !== null) return;
+  if (teamBezigSeat !== null || rolBezigSeat !== null) return;
   const token = teamSessieToken();
   if (!token) {
     teamSluitZonderSessie(sectieEl);
@@ -383,13 +564,40 @@ function wireTeamPanel(sectieEl) {
     const doel = e.target;
     if (!doel || !doel.closest) return;
 
+    // f60: een rol wijzigen, ook in twee stappen. Eerst het voorstel (een keuze
+    // en een bevestigknop), pas bij Bevestigen een PUT naar de instantie.
+    const rolKnop = doel.closest("[data-rol-wijzig], [data-rol-annuleer], [data-rol-bevestig]");
+    if (rolKnop) {
+      if (rolBezigSeat !== null || teamBezigSeat !== null || rolKnop.disabled) return;
+      if (rolKnop.hasAttribute("data-rol-wijzig")) {
+        rolVoorstelSeat = rolKnop.getAttribute("data-rol-wijzig");
+        teamMeld(sectieEl, "");
+        renderTeamPanel(sectieEl);
+        const keuze = teamKnopVoor(sectieEl, "data-rol-keuze", rolVoorstelSeat);
+        if (keuze) keuze.focus();
+        return;
+      }
+      if (rolKnop.hasAttribute("data-rol-annuleer")) {
+        const seat = rolKnop.getAttribute("data-rol-annuleer");
+        rolVoorstelSeat = null;
+        renderTeamPanel(sectieEl);
+        const terug = teamKnopVoor(sectieEl, "data-rol-wijzig", seat);
+        if (terug) terug.focus();
+        return;
+      }
+      const seat = rolKnop.getAttribute("data-rol-bevestig");
+      const keuze = teamKnopVoor(sectieEl, "data-rol-keuze", seat);
+      if (keuze) void wijzigRol(sectieEl, seat, keuze.value);
+      return;
+    }
+
     // Stap 1: nog niets versturen, alleen de bevestiging openen. Focus op
     // Annuleren — de veilige keuze voor wie met Enter doorklikt.
     const vraag = doel.closest("[data-team-verwijder]");
     // Loopt er al een verwijdering, dan doen de knoppen niets — ook niet als
     // een klik een knop bereikt die net nog actief getekend stond.
     const verwijderKnop = vraag || doel.closest("[data-team-verwijder-nee], [data-team-verwijder-ja]");
-    if (verwijderKnop && (teamBezigSeat !== null || verwijderKnop.disabled)) return;
+    if (verwijderKnop && (teamBezigSeat !== null || rolBezigSeat !== null || verwijderKnop.disabled)) return;
     if (vraag) {
       teamBevestigSeat = vraag.getAttribute("data-team-verwijder");
       teamMeld(sectieEl, "");
