@@ -584,13 +584,16 @@ tr:last-child td{border-bottom:0}
 .beheer .modules-keuze{display:flex;gap:8px;align-items:center;min-height:40px}
 .beheer table{margin:8px 0}
 .beheer td{vertical-align:middle}
-.beheer button:not(.knop):not(.link):not(.ikknop){display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:6px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font-weight:650;font-size:14px}
+.beheer button:not(.knop):not(.link):not(.ikknop):not(.schakel){display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:6px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font-weight:650;font-size:14px}
 .beheer button.knop-gevaar,.beheer .team-verwijder{border-color:var(--rood);color:var(--rood)}
 .beheer input[type=email],.beheer input[type=text],.beheer textarea{max-width:420px}
 .beheer .team-uitnodigen{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .beheer .team-uitnodigen-rij{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .beheer .bewerk-fout{color:var(--rood);font-size:13.5px}
 .beheer .detail-link{color:var(--ink);font-weight:650}
+/* s65: het teamkanaal per agent, in dezelfde opbouw als de vaste taken (schakelaar links) */
+.beheer .kanaal-agents{margin-top:8px}
+.beheer .kanaal-agents .tregel .link{font-size:13px;font-weight:600;color:var(--muted)}
 @media (max-width:640px){
   .beheer .team-tabel thead{display:none}
   .beheer .team-tabel,.beheer .team-tabel tbody,.beheer .team-tabel tr,.beheer .team-tabel td{display:block;width:100%}

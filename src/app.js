@@ -181,7 +181,12 @@ function laadBeheer() {
   void laadModuleOverzicht(huidigeBron).then((overzicht) => { if (overzicht || hadModules) route(); });
   void laadTeam(huidigeBron).then((t) => { if (t) route(); });
   // f60: je rol en (eigenaar/beheerder) die van je team, uit de eigen instantie.
-  void laadRollen(huidigeBron).then((r) => { if (r) route(); });
+  void laadRollen(huidigeBron).then((r) => {
+    if (r) route();
+    // s65: daarna, en alleen als de instantie zei dat jij de eigenaar bent,
+    // wat er per agent naar het teamkanaal gaat.
+    return laadTeamkanaal(huidigeBron);
+  }).then((k) => { if (k) route(); });
 }
 
 function renderAll() {
@@ -236,6 +241,7 @@ function uitloggen() {
   void laadModuleOverzicht(null);
   void laadTeam(null);
   void laadRollen(null);
+  void laadTeamkanaal(null);
   const daglink = restoreDaglink();
   if (daglink) { laadWerkruimte(daglink, { behoudRoute: true }); return; }
   toonLegeStaat("Je bent uitgelogd", "Log opnieuw in, of open je dashboard via de daglink in je dagstart.", { login: true });
