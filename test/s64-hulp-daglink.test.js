@@ -16,7 +16,10 @@
  *    ingelogd is, ook met de modus uit.
  * De privacytekst (src/teksten.js) is sinds besluit C5 (26-11-2026) de zin
  * van de jurist; de opname is daarvoor opnieuw gemaakt op main d8e0731 met
- * alleen die tekstwijziging (en "De eigenaar (het aankoopadres)"). */
+ * alleen die tekstwijziging (en "De eigenaar (het aankoopadres)"). Besluit D2
+ * (26-11-2026) maakte van "de beheerder van je licentie" in dezelfde tekst "de
+ * eigenaar van je licentie (het aankoopadres)"; de opname is daarvoor nogmaals
+ * gemaakt op main d8e0731, met alleen C5 en D2 erop. */
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -117,5 +120,12 @@ describe("s64 — zonder daglink: een neutrale zin (bewuste tekstwijziging)", ()
       expect(NUW.v2[naam]).not.toContain("<td>De beheerder</td>");
     }
     for (const naam of Object.keys(MAIN.v1)) expect(NUW.v1[naam].daglink).toContain("<td>De eigenaar (het aankoopadres)</td>");
+  });
+
+  it("D2: wie je naam rechtzet is de eigenaar van je licentie (het aankoopadres), niet 'de beheerder van je licentie'", () => {
+    for (const naam of Object.keys(MAIN.v2)) {
+      expect(NUW.v2[naam]).toContain("kan de eigenaar van je licentie (het aankoopadres) hem rechtzetten.");
+      expect(NUW.v2[naam]).not.toContain("beheerder van je licentie");
+    }
   });
 });

@@ -57,8 +57,8 @@ function bewaarKopie(bron, naam) {
 
 function zetMijnNaam(bron, naam) {
   const schoon = bewaarKopie(bron, naam);
-  // Naar de server, zodat je andere apparaten hem ook kennen en de beheerder
-  // hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
+  // Naar de server, zodat je andere apparaten hem ook kennen en de eigenaar
+  // (het aankoopadres) hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
   // de volgende sessie het opnieuw — geen reden om de gebruiker op te houden.
   try {
     void modulesFetch("/api/dashboard/wie-ben-ik", { naam: schoon }, bron && bron.token)
@@ -108,7 +108,7 @@ function _resetNaamvoorstel() {
 /* Geeft {voorstel, gezet}.
  *
  * `gezet` betekent: iemand heeft deze naam gekózen — jij eerder in deze browser,
- * jij op een ander apparaat, of je beheerder. Alleen dán mag hij zonder vragen
+ * jij op een ander apparaat, of de eigenaar (het aankoopadres). Alleen dán mag hij zonder vragen
  * de werkdata in. Is hij false, dan is `voorstel` een afleiding uit je adres
  * (het deel vóór de @) en hoort hij alleen de prompt voor te vullen.
  *
@@ -133,7 +133,7 @@ function haalNaamvoorstel(bron) {
         const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
         if (ok && uit.body.gezet) {
           // De server heeft een gekozen naam; die wint, ook als deze browser
-          // iets anders onthield. Anders zou een correctie door de beheerder
+          // iets anders onthield. Anders zou een correctie door de eigenaar
           // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
           bewaarKopie(bron, voorstel);
           return { voorstel, gezet: true };

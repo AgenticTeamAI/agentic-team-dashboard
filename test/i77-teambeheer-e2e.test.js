@@ -114,7 +114,10 @@ describe("dashboard.html — teambeheer", () => {
     expect(siteCalls.length).toBe(voor);
     // En wie toch naar Beheer gaat, krijgt geen beheerpaneel met de daglink.
     w.location.hash = "#/beheer";
-    await tot(() => $("panel-team-namen") && /beheerder/.test($("panel-team-namen").textContent), "beheer zonder sessie");
+    // Besluit D2 (26-11-2026): de zin zegt "de eigenaar van je licentie (het
+    // aankoopadres)" in plaats van "de beheerder van je licentie"; deze
+    // wachtvoorwaarde zocht eerst op "beheerder" en volgt bewust de nieuwe tekst.
+    await tot(() => $("panel-team-namen") && /ziet alleen de eigenaar van je licentie \(het aankoopadres\)/.test($("panel-team-namen").textContent), "beheer zonder sessie");
     expect($("panel-team-namen").querySelector("[data-team-uitnodigen]")).toBeNull();
     expect(siteCalls.filter((c) => c.auth === "Bearer " + DAGLINK)).toEqual([]);
     expect(fouten).toEqual([]);

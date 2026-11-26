@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-Xi6dvNELSDMxrcb225LbVQKAAPHn87DySfF5envf/20='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-G4Jg26r8dVQOgcKoapKGTOHnt80OTvRi7RtikzNHmaE=' 'sha256-89naCc7Sv0Hh9R2SYdkqSMudfqROFWah/ejjRpwk3fg='">
 
 
 
@@ -3351,9 +3351,10 @@ const PRIVACY_UITKLAP_ALINEAS = [
    *
    * i77 verplaatste die naam van deze browser naar de licentie: hij hoort bij
    * je seat en staat versleuteld naast je e-mailadres in de uitnodigingenlijst,
-   * zodat een tweede apparaat hem kent en de beheerder hem kan rechtzetten. De
-   * browser houdt nog een kopie als terugval. Dat zijn twee bewaarplekken in
-   * plaats van één, en een opsomming die dat niet noemt is niet uitputtend meer
+   * zodat een tweede apparaat hem kent en de eigenaar (het aankoopadres) hem kan
+   * rechtzetten. De browser houdt nog een kopie als terugval. Dat zijn twee
+   * bewaarplekken in plaats van één, en een opsomming die dat niet noemt is
+   * niet uitputtend meer
    * — vandaar dat deze alinea beide noemt, plus dat de browser er één keer per
    * sessie om vraagt.
    *
@@ -3361,7 +3362,7 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * brief-jurist-dashboard-v2-delta.md): de themakeuze komt erbij, alleen als
    * die afwijkt van je systeeminstelling. Puur een weergavevoorkeur, blijft in
    * de browser. */
-  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de eigenaar van je licentie (het aankoopadres) hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
   /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
    * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
    * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
@@ -9959,8 +9960,8 @@ function bewaarKopie(bron, naam) {
 
 function zetMijnNaam(bron, naam) {
   const schoon = bewaarKopie(bron, naam);
-  // Naar de server, zodat je andere apparaten hem ook kennen en de beheerder
-  // hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
+  // Naar de server, zodat je andere apparaten hem ook kennen en de eigenaar
+  // (het aankoopadres) hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
   // de volgende sessie het opnieuw — geen reden om de gebruiker op te houden.
   try {
     void modulesFetch("/api/dashboard/wie-ben-ik", { naam: schoon }, bron && bron.token)
@@ -10010,7 +10011,7 @@ function _resetNaamvoorstel() {
 /* Geeft {voorstel, gezet}.
  *
  * `gezet` betekent: iemand heeft deze naam gekózen — jij eerder in deze browser,
- * jij op een ander apparaat, of je beheerder. Alleen dán mag hij zonder vragen
+ * jij op een ander apparaat, of de eigenaar (het aankoopadres). Alleen dán mag hij zonder vragen
  * de werkdata in. Is hij false, dan is `voorstel` een afleiding uit je adres
  * (het deel vóór de @) en hoort hij alleen de prompt voor te vullen.
  *
@@ -10035,7 +10036,7 @@ function haalNaamvoorstel(bron) {
         const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
         if (ok && uit.body.gezet) {
           // De server heeft een gekozen naam; die wint, ook als deze browser
-          // iets anders onthield. Anders zou een correctie door de beheerder
+          // iets anders onthield. Anders zou een correctie door de eigenaar
           // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
           bewaarKopie(bron, voorstel);
           return { voorstel, gezet: true };
@@ -15817,9 +15818,9 @@ function renderBeheer() {
 }
 function vulBeheer() {
   const m = document.getElementById("beheer-modules-body");
-  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de beheerder van je licentie.</p>`; }
+  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`; }
   const t = document.getElementById("panel-team-namen");
-  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de beheerder van je licentie.</p>`); }
+  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`); }
   const k = document.getElementById("beheer-teamkanaal");
   if (k) renderTeamkanaal(k);
 }
