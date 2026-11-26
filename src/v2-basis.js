@@ -105,13 +105,24 @@ function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; r
  * los van kanSchrijven(): die blijft dicht voor acties die elders wonen, want
  * zo'n rij kan het dashboard niet bijwerken. Doorgeven schrijft een opdracht in
  * je werkruimte; je team voert hem uit bij het volgende werkmoment.
- * - doorgevenMogelijk: de instantie kent het domein (bundle.opdrachten is er)
- *   en de bronkoppeling zegt dat je acties elders wonen — precies wanneer de
- *   instantie een opdracht aanneemt (anders 409 acties_in_werkruimte);
+ * - doorgevenMogelijk: de instantie kent het domein (bundle.opdrachten is er),
+ *   de bronkoppeling zegt dat je acties in notion of crm wonen — precies de
+ *   systemen waarvoor de instantie een opdracht aanneemt (anders 409
+ *   acties_in_werkruimte; werkboek en lokaal dus niet) — en je dagstart stuurt
+ *   een voor_jou-blok mee (metricsWerk.voorJou is een lijst). Zonder dat blok
+ *   draait de klant de productdagstart niet (bv. op eigen interne prompts), en
+ *   dan voert ook geen werkronde een opdracht uit: geen knoppen, geen Nieuw;
  * - kanDoorgeven: en je bent ingelogd met dashboard:schrijf. Een daglink nooit.
- * Of je rol het mag, beslist de instantie; een weigering tonen we als tekst. */
+ * Per item beslist doorgeefbaarItem() nog (bij notion alleen een link naar
+ * notion.so of notion.site). Of je rol het mag, beslist de instantie; een
+ * weigering tonen we als tekst. */
+const DOORGEEF_SYSTEMEN = ["notion", "crm"];
+function doorgeefSysteem() { const s = CTX ? bronVan(CTX, "acties").systeem : null; return s && DOORGEEF_SYSTEMEN.indexOf(s) !== -1 ? s : null; }
 function opdrachtenVanBundel() { return CTX && CTX.bundle && CTX.bundle.source === "werkruimte" ? opdrachtenLijst(CTX.bundle) : []; }
-function doorgevenMogelijk() { return !!(CTX && CTX.bundle && CTX.bundle.source === "werkruimte" && CTX.bundle.opdrachten && Array.isArray(CTX.bundle.opdrachten.entries) && woontElders("acties")); }
+function doorgevenMogelijk() { return !!(CTX && CTX.bundle && CTX.bundle.source === "werkruimte" && CTX.bundle.opdrachten && Array.isArray(CTX.bundle.opdrachten.entries) && woontElders("acties") && doorgeefSysteem() && werkbakUitDagstart()); }
+/* Mag dit item uit je dagstart knoppen krijgen? Een https-link die past bij het
+ * systeem waar je acties wonen (linkPastBijSysteem), anders alleen Open en Kopieer. */
+function doorgeefbaarItem(it) { return !!(it && it.url && doorgevenMogelijk() && linkPastBijSysteem(it.url, doorgeefSysteem())); }
 function kanDoorgeven() { return doorgevenMogelijk() && ingelogd() && !!CTX.kanSchrijven; }
 /* Ongedaan maken in een melding: een werkruimte-actie, of een opdracht intrekken. */
 function magOngedaan() { return kanSchrijven() || kanDoorgeven(); }

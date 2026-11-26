@@ -165,7 +165,7 @@ function hulpSecties() {
       <li><b>Tot dan</b> staat er ‘Doorgegeven’ bij het item, en kun je het nog ongedaan maken. Daarna zie je ‘Gedaan’, of ‘Niet gelukt’ met de reden, bijvoorbeeld als het item intussen al was afgehandeld.</li>
       <li><b>Een nieuwe opdracht</b> geef je met ‘Opdracht geven’. Je team zet hem bij het volgende werkmoment in je eigen systeem en pakt hem het werkmoment daarna op.</li>
       <li><b>In je eigen systeem doe je</b> de rest, zoals je vaste taken aanpassen. Of vraag het je team.</li></ul>
-      <p class="klein stil">Wat je doorgeeft, staat tot dertig dagen in je werkruimte, met je naam erbij, zodat je team weet van wie het komt.</p>`
+      <p class="klein stil">Wat je doorgeeft, staat tot dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
     : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],

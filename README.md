@@ -242,12 +242,20 @@ Doorgegeven is.
 
 - **Poort.** `kanDoorgeven()` (v2-basis.js) staat los van `kanSchrijven()`:
   ingelogd met `dashboard:schrijf`, een bundel uit de werkruimte, de instantie
-  kent het domein (`bundle.opdrachten` is er) en de acties wonen elders. Een
-  daglink krijgt een inlogregel, nooit knoppen. Rollen handhaaft de instantie;
+  kent het domein (`bundle.opdrachten` is er), de acties wonen in `notion` of
+  `crm` (de enige systemen waarvoor de instantie een opdracht aanneemt; bij
+  `werkboek` of `lokaal` antwoordt hij 409) en de dagstart stuurt een
+  `voor_jou`-blok mee (`metricsWerk.voorJou` is een lijst). Zonder dat blok
+  draait de klant de productdagstart niet (bv. FFG op de interne prompts), en
+  voert ook geen werkronde een opdracht uit: dan geen knoppen, geen
+  Opdracht geven en geen blok, alles zoals het was. Een daglink krijgt een
+  inlogregel, nooit knoppen. Rollen handhaaft de instantie;
   een weigering (`{ fout, melding }`) staat in gewone taal in beeld
   (`opdrachtFoutTekst`): een paar codes vertaalt het dashboard zelf, anders de
   `melding` van de instantie, behalve als daar een merknaam in staat.
-- **Sleutel.** Alleen een item met een https-link krijgt knoppen. Extern ID is
+- **Sleutel.** Alleen een item met een https-link krijgt knoppen, en bij
+  `notion` alleen een link naar notion.so of notion.site (ook een subdomein):
+  een andere link weigert de instantie (`linkPastBijSysteem`, `doorgeefbaarItem`). Extern ID is
   bij een link naar notion.so of notion.site het page-id van 32 tekens: eerst
   de parameter `p` (de link uit een databaseweergave), anders het laatste stuk
   van het pad. Bij elke andere host is het de link zelf (`externIdVanUrl`).
@@ -258,6 +266,11 @@ Doorgegeven is.
   het item uit de dagstart, dus broninhoud: alleen om de actie terug te vinden.
   Wat van de mens komt, is de Handeling met Specialist en Datum, en de Tekst
   die hij zelf typte.
+- **Naam.** Elke `POST /dashboard/opdrachten` draagt `naam`: de naam die je
+  zelf opgaf (`jij()`), zonder regeleinden, stuurtekens of haakjes en hooguit
+  60 tekens (`opdrachtNaam`). Is er geen naam, dan ontbreekt het veld. De
+  instantie zet Gegeven door op `<naam> (<rol>)` of alleen `<rol>`; de rol komt
+  altijd uit het token, nooit uit de body. Intrekken stuurt geen naam.
 - **Stand.** De opdrachten van de laatste 30 dagen komen mee met de bundel
   (`GET /dashboard/opdrachten?sinds=…`, alleen als het overzicht het domein met
   rijen noemt). Op de kaart staat "Doorgegeven — wordt bij het volgende

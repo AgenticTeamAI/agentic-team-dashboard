@@ -319,11 +319,12 @@ function renderVoorJouNotion() {
 /* ---------- f61: doorgeven aan je team (acties in je eigen systeem) ----------
  * De knoppen per soort volgen die van een werkruimte-klant: een check keur je
  * goed of stuur je terug, op een voorstel zeg je ja of nee, de rest geef je aan
- * je team of zet je op later. Alleen bij een item met een link: zonder link kan
- * je team het in je eigen systeem niet terugvinden. Ligt er al een opdracht
+ * je team of zet je op later. Alleen bij een item met een link die bij je
+ * systeem past (doorgeefbaarItem): zonder link kan je team het in je eigen
+ * systeem niet terugvinden, en een vreemde link weigert de instantie. Ligt er al een opdracht
  * die nog niet verwerkt is, dan staat de stand er en geen tweede knop. */
 function doorgeefKaart(it, gegenereerd) {
-  if (!doorgevenMogelijk() || !it || !it.url) return null;
+  if (!doorgeefbaarItem(it)) return null;
   // De kaart en zijn knoppen dragen de link zelf als sleutel; een item dat niet
   // eenduidig is (dezelfde link of hetzelfde Extern ID als een ander item)
   // krijgt geen knoppen en geen stand, alleen Open en Kopieer.

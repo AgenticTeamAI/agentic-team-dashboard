@@ -96,6 +96,7 @@ beforeEach(() => {
   document.body.innerHTML = '<div id="root"></div><div id="melding" hidden></div><div id="live"></div>';
   window.location.hash = "";
   g.V2._reset();
+  g.V2._S.naamGeheugen = ""; // je naam blijft anders hangen tussen de tests
 });
 afterEach(() => { vi.restoreAllMocks(); window.location.hash = ""; document.head.querySelectorAll('meta[name="at-oauth"]').forEach(m => m.remove()); });
 function open(ctx, hash = "") { window.location.hash = hash; g.V2.start({}); g.V2.toon(ctx); }
@@ -337,6 +338,143 @@ describe("f61 — wie knoppen krijgt", () => {
     expect($("#root").textContent).not.toContain("Doorgegeven");
     // De poort voor acties zelf blijft dicht: die rijen woont elders.
     expect(g.magDomeinBewerken(ctxMet(), "acties").ok).toBe(false);
+  });
+});
+
+describe("f61 — waar doorgeven kan: systeem, link en productdagstart (B3)", () => {
+  const CRM1 = "https://crm.example/deal/42";
+  const crmItems = () => [
+    { nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: false, specialist: DM, sinds: "2026-09-28", deadline: null, url: CRM1 },
+    { nr: 2, titel: "Factuur Smit nabellen", soort: "taak", te_laat: false, specialist: null, sinds: null, deadline: null, url: "https://crm.example/deal/43" },
+  ];
+  const zonderDoorgeven = () => {
+    expect($$('[data-act^="x-"]')).toEqual([]);
+    expect($('[data-type="opdracht"]')).toBeNull();
+    expect($("[data-doorgegeven]")).toBeNull();
+    expect($(".balk.notion").textContent).toContain("Afhandelen doe je in");
+    expect($(".balk.notion").textContent).not.toContain("Afhandelen kan hier");
+  };
+
+  it("(a) crm: knoppen en Nieuw; het Extern ID is de link zelf", async () => {
+    const spy = nepInstantie();
+    open(ctxMet({ acties: "crm", items: crmItems() }));
+    expect(knoppen(1)).toEqual(["Goedkeuren", "Terug", "Open in je eigen systeem"]);
+    expect(knoppen(2)).toEqual(["Geef aan je team", "Later", "Open in je eigen systeem"]);
+    expect($('.fab[data-type="opdracht"]')).not.toBeNull();
+    kaart(1).querySelector('[data-act="x-doe"][data-h="Goedkeuren"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    expect(posts(spy)[0].body).toEqual({ handeling: "Goedkeuren", actie: "Offerte nakijken", extern_id: CRM1, bron_link: CRM1 });
+  });
+
+  it("(a) werkboek, lokaal of een ander systeem: geen knoppen, geen Nieuw, geen blok — de instantie neemt ze toch niet aan", () => {
+    const o = [opdracht("o1", { Actie: "Offerte nakijken", Handeling: "Goedkeuren", Status: "Doorgegeven", "Extern ID": ID1 })];
+    for (const acties of ["werkboek", "lokaal", "hubspot"]) {
+      open(ctxMet({ acties, opdrachten: o }));
+      zonderDoorgeven();
+      expect(knoppen(1), acties).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    }
+  });
+
+  it("(b) notion: alleen knoppen bij een link naar notion.so of notion.site (ook een subdomein); een andere link alleen Open en Kopieer", () => {
+    const vreemd = "https://docs.example/offerte-" + ID1;
+    const items = [
+      { nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: false, specialist: DM, sinds: null, deadline: null, url: vreemd },
+      { nr: 2, titel: "15% korting De Vries?", soort: "voorstel", te_laat: false, specialist: DM, sinds: null, deadline: null, url: "https://ffg.notion.site/Korting-0123456789abcdef0123456789abcdef" },
+      { nr: 3, titel: "Factuur Smit nabellen", soort: "taak", te_laat: false, specialist: null, sinds: null, deadline: null, url: "https://notion.so/Factuur-fedcba9876543210fedcba9876543210" },
+      { nr: 4, titel: "Lijkt erop", soort: "taak", te_laat: false, specialist: null, sinds: null, deadline: null, url: "https://notion.so.example/x-" + ID1 },
+    ];
+    // Ook een opdracht die bij het vreemde item zou horen, geeft daar geen stand.
+    open(ctxMet({ items, opdrachten: [opdracht("o1", { Actie: "Offerte nakijken", Handeling: "Goedkeuren", Status: "Doorgegeven", "Bron (link)": vreemd })] }));
+    expect(knoppen(1)).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    expect(kaart(1).querySelector("[data-opdracht-status]")).toBeNull();
+    expect(knoppen(2)).toEqual(["Ja, doe maar", "Nee, niet doen", "Open in je eigen systeem"]);
+    expect(knoppen(3)).toEqual(["Geef aan je team", "Later", "Open in je eigen systeem"]);
+    expect(knoppen(4)).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    // Een blad voor het vreemde item opent niet als doorgeefblad.
+    g.V2._S.sheet = { type: "x-wie", x: vreemd, tekst: "", datum: "" }; g.V2.render();
+    expect($(".scrim").textContent).toContain("Dit item is er niet (meer)");
+    g.V2._S.sheet = null;
+  });
+
+  it("(b) de regel per systeem", () => {
+    expect(g.linkPastBijSysteem(URL1, "notion")).toBe(true);
+    expect(g.linkPastBijSysteem("https://ffg.notion.site/x-" + ID1, "notion")).toBe(true);
+    expect(g.linkPastBijSysteem("https://crm.example/deal/42", "notion")).toBe(false);
+    expect(g.linkPastBijSysteem("https://notion.so.example/" + ID1, "notion")).toBe(false);
+    expect(g.linkPastBijSysteem("https://crm.example/deal/42", "crm")).toBe(true);
+    expect(g.linkPastBijSysteem("http://crm.example/deal/42", "crm")).toBe(false);
+    expect(g.linkPastBijSysteem("", "crm")).toBe(false);
+  });
+
+  it("(c) FFG-achtig: notion zonder voor_jou-blok → geen knoppen, geen Nieuw, wel het bestaande gedrag", () => {
+    const o = [opdracht("o1", { Actie: "Offerte nakijken", Handeling: "Goedkeuren", Status: "Doorgegeven", "Extern ID": ID1 })];
+    open(ctxMet({ items: null, opdrachten: o }));
+    expect($$('[data-act^="x-"]')).toEqual([]);
+    expect($('[data-type="opdracht"]')).toBeNull();
+    expect($(".fab")).toBeNull();
+    expect($("[data-doorgegeven]")).toBeNull();
+    expect($(".balk.notion").textContent).toContain("Afhandelen doe je in");
+    expect($("#root").textContent).toContain("Je dagstart stuurt je lijst nog niet mee");
+    expect($("#root").textContent).not.toContain("Doorgegeven aan je team");
+    // Ook via de route #/opdracht geen opdrachtblad.
+    open(ctxMet({ items: null }), "#/opdracht");
+    expect($('.scrim [data-sh="wat"]')).toBeNull();
+    open(ctxMet({ items: null }), "#/hulp/eigen-systeem");
+    expect($("#h-eigen-systeem").textContent).toContain("In je eigen systeem doe je het afhandelen");
+    expect($("#h-eigen-systeem").textContent).not.toContain("Hier handel je af");
+  });
+
+  it("(c) met een voor_jou-blok, ook een leeg: wel Nieuw", () => {
+    open(ctxMet({ items: [] }));
+    expect($('[data-type="opdracht"]')).not.toBeNull();
+  });
+});
+
+describe("f61 — je naam gaat mee met een opdracht (B2)", () => {
+  it("de naam zoals de instantie hem aanneemt: geen regeleinden, stuurtekens of haakjes, hooguit 60 tekens", () => {
+    expect(g.opdrachtNaam("  Sanne Verbeek ")).toBe("Sanne Verbeek");
+    expect(g.opdrachtNaam("Sanne (Eigenaar)")).toBe("Sanne Eigenaar");
+    expect(g.opdrachtNaam("Sanne\nVerbeek\t[x]")).toBe("Sanne Verbeek x");
+    expect(g.opdrachtNaam("Sanne\u0007 Verbeek")).toBe("Sanne Verbeek");
+    expect(g.opdrachtNaam("a".repeat(80))).toHaveLength(60);
+    expect(g.opdrachtNaam("()")).toBe("");
+    expect(g.opdrachtNaam(null)).toBe("");
+  });
+
+  it("met een naam: elke opdracht draagt hem in 'naam'; intrekken niet", async () => {
+    const spy = nepInstantie();
+    open(ctxMet());
+    g.V2._S.naamGeheugen = " Sanne (Verbeek)\n "; g.V2.render();
+    kaart(1).querySelector('[data-act="x-doe"][data-h="Goedkeuren"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    expect(posts(spy)[0].body).toEqual({ handeling: "Goedkeuren", actie: "Offerte nakijken", extern_id: ID1, bron_link: URL1, naam: "Sanne Verbeek" });
+    await wacht(() => expect($('[data-toast] [data-act="undo"]')).not.toBeNull());
+    $('[data-toast] [data-act="undo"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(2));
+    expect(posts(spy)[1].body).toBeUndefined();
+    // Nieuw ook.
+    $('.fab[data-type="opdracht"]').click();
+    const wat = $("#sh-wat"); wat.value = "Zoek tien bedrijven"; wat.dispatchEvent(new Event("input", { bubbles: true }));
+    $('.scrim [data-act="sh-set"][data-k="ag"]').click();
+    $('.scrim [data-act="sh-ok"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(3));
+    expect(posts(spy)[2].body).toMatchObject({ handeling: "Nieuw", naam: "Sanne Verbeek" });
+  });
+
+  it("zonder naam: het veld ontbreekt (dan zet de instantie alleen je rol)", async () => {
+    const spy = nepInstantie();
+    open(ctxMet());
+    kaart(1).querySelector('[data-act="x-doe"][data-h="Goedkeuren"]').click();
+    await wacht(() => expect(posts(spy)).toHaveLength(1));
+    expect(Object.keys(posts(spy)[0].body)).not.toContain("naam");
+  });
+
+  it("de hulp zegt eerlijk wat erbij staat: naam en rol, of alleen je rol", () => {
+    open(ctxMet(), "#/hulp/eigen-systeem");
+    expect($("#h-eigen-systeem").textContent).toContain("met je rol erbij");
+    expect($("#h-eigen-systeem").textContent).not.toContain("met je naam erbij");
+    g.V2._S.naamGeheugen = "Sanne Verbeek"; g.V2.render();
+    expect($("#h-eigen-systeem").textContent).toContain("met je naam en rol erbij");
   });
 });
 

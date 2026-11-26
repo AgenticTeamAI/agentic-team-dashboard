@@ -164,7 +164,10 @@ function renderSheet() {
  * de sleutel van het item uit je dagstart (sh.x: de link zelf); de opdracht
  * zelf schrijft doorgeven() hieronder. Is het item niet eenduidig, dan null:
  * dan geven we nooit de titel of link van een ander item door. */
-function doorgeefItem(sleutel) { return uniekItem(werkbakUitDagstart(), sleutel); }
+function doorgeefItem(sleutel) { const it = uniekItem(werkbakUitDagstart(), sleutel); return doorgeefbaarItem(it) ? it : null; }
+/* f61/B2: je zelf opgegeven naam gaat mee; zonder naam geen veld, dan zet de
+ * instantie alleen je rol bij Gegeven door. */
+function metOpdrachtNaam(body) { const n = opdrachtNaam(jij()); if (n) body.naam = n; return body; }
 function specialistVanItem(it) { const s = it && slugVanNaam(it.specialist); return s && AGENTS[s] ? s : null; }
 function doorgeefVerwachting() {
   const kc = klaarCheck(); const naam = naamElders("acties");
@@ -634,7 +637,7 @@ async function doorgevenBinnen(it, handeling, opts, btn) {
   if (nee) { if (sheetVoor) sheetVoor.fout = nee; else toast(nee, { fout: true }); render(); return; }
   zetBezig(btn);
   let res;
-  try { res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", body); }
+  try { res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", metOpdrachtNaam(body)); }
   catch (e) {
     const f = opdrachtFout(e);
     if (S.sheet && S.sheet === sheetVoor) S.sheet.fout = f.message;
@@ -656,7 +659,7 @@ async function nieuweOpdrachtElders(sh, wat, btn) {
   if (nee) { sh.fout = nee; render(); return; }
   zetBezig(btn);
   try {
-    const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", body);
+    const res = await schrijfWerkruimte(CTX.bron, "POST", "/dashboard/opdrachten", metOpdrachtNaam(body));
     const entry = res && res.entry; zetOpdracht(entry);
     if (S.sheet === sh) S.sheet = null;
     toast(doorgeefMelding("Nieuw", { ag: sh.ag }), { undo: entry && entry.entryId ? () => intrekken(entry.entryId) : null });

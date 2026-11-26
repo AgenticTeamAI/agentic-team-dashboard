@@ -113,10 +113,20 @@ describe("b62 — de balk bovenaan (dashboard v2)", () => {
   it("f61: kent je werkruimte doorgeven, dan zegt de balk dat afhandelen hier kan", () => {
     const ctx = ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" });
     ctx.bundle.opdrachten = { entries: [] };
+    // f61/B3: alleen bij de productdagstart (een voor_jou-blok in je metrics).
+    ctx.metricsWerk = { voorJou: [] };
     const balk = toon(ctx).querySelector(".balk.notion");
     expect(balk.textContent).toContain("Je acties staan in je eigen systeem");
     expect(balk.textContent).toContain("Afhandelen kan hier");
     expect(balk.textContent).not.toContain("Afhandelen doe je in");
+  });
+
+  it("f61: zonder voor_jou-blok in je dagstart blijft de balk zoals hij was, ook als je werkruimte doorgeven kent", () => {
+    const ctx = ctxMet({ oauth: true, token: jwt("at_een") }, { acties: "notion" });
+    ctx.bundle.opdrachten = { entries: [] };
+    const balk = toon(ctx).querySelector(".balk.notion");
+    expect(balk.textContent).toContain("Afhandelen doe je in je eigen systeem");
+    expect(balk.textContent).not.toContain("Afhandelen kan hier");
   });
 
   it("ingelogd met je werkruimte: geen balk", () => {

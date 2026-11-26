@@ -81,6 +81,28 @@ function externIdVanUrl(url) {
   return paginaIdUit(p.pathname.split("/").filter(Boolean).pop()) || u;
 }
 
+/* Past de link van een item bij het systeem waar je acties wonen? Altijd een
+ * https-link; bij notion bovendien een pagina op notion.so of notion.site, want
+ * een andere link weigert de instantie (422 ongeldig). Bij crm elke https-link:
+ * daar is de link zelf het Extern ID. */
+function linkPastBijSysteem(url, systeem) {
+  const u = String(url || "").trim();
+  if (!/^https:\/\//i.test(u)) return false;
+  if (systeem !== "notion") return true;
+  try { return isNotitieHost(new URL(u).hostname); } catch (e) { return false; }
+}
+
+/* De naam die met een opdracht meegaat: de naam die je zelf opgaf (jij()).
+ * De instantie zet Gegeven door op '<naam> (<rol>)' en saneert zelf ook; hier
+ * dezelfde regels, zodat een naam nooit een weigering geeft: geen regeleinden
+ * of stuurtekens, geen haakjes (de rol tussen haakjes zet de instantie), hooguit
+ * 60 tekens. Leeg: dan gaat er geen naam mee en staat er alleen je rol. */
+const OPDRACHT_NAAM_MAX = 60;
+function opdrachtNaam(naam) {
+  const s = String(naam || "").replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ").replace(/[()[\]{}]/g, "").replace(/\s+/g, " ").trim();
+  return s.slice(0, OPDRACHT_NAAM_MAX).trim();
+}
+
 /* De sleutel van een kaart in de DOM en in de bladen: de link zelf, los van
  * het Extern ID. Een item krijgt alleen knoppen als het eenduidig is: precies
  * één item in de dagstart met deze link, en geen ander item met hetzelfde
@@ -200,6 +222,6 @@ function opdrachtFoutTekst(e) {
 if (typeof module !== "undefined") {
   module.exports = {
     OPDRACHT_HANDELINGEN, OPDRACHT_STATUSSEN, OPDRACHT_VELDEN, externIdVanUrl, uniekItem, doorgeefSleutel, opdrachtVoorItem, opdrachtStatus,
-    opdrachtBody, controleerOpdracht, opdrachtFoutTekst, opdrachtenLijst,
+    opdrachtBody, controleerOpdracht, opdrachtFoutTekst, opdrachtenLijst, linkPastBijSysteem, opdrachtNaam,
   };
 }
