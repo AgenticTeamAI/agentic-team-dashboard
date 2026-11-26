@@ -214,7 +214,10 @@ describe("dashboard.html (v2) — Beheer in het accountmenu", () => {
     expect(w.actieveModuleKeys()).toEqual(["core", "growth"]);
     expect(await account()).not.toContain("Beheer");
     await naarBeheer();
-    expect(q("#beheer-modules-body").textContent).toContain("ziet alleen de beheerder");
+    // Besluit D2 (26-11-2026): het aankoopadres heet in de tekst "de eigenaar
+    // (het aankoopadres)"; "beheerder" is alleen nog de rol. Deze verwachting
+    // zei eerst "ziet alleen de beheerder" en volgt bewust de nieuwe tekst.
+    expect(q("#beheer-modules-body").textContent).toContain("ziet alleen de eigenaar van je licentie (het aankoopadres)");
     // Niets over geld in de pagina — het teamlid kreeg het niet eens binnen.
     expect(q("#root").textContent).not.toMatch(/€/);
     expect(fouten).toEqual([]);

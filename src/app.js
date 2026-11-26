@@ -309,7 +309,8 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
     }
     if (err.daglinkVerlopen) {
       vergeetDaglink();
-      const extra = /verlopen/i.test(err.message) ? " Daglinks zijn 24 uur geldig." : "";
+      // s64: de geldigheid uit de link zelf (bij Business korter dan 24 uur).
+      const extra = /verlopen/i.test(err.message) ? " " + daglinkGeldigTekst(bron && bron.token) : "";
       toonLegeStaat("Deze daglink werkt niet meer", err.message + extra, { login: true });
       return;
     }

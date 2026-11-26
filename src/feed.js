@@ -57,6 +57,8 @@ function normaliseerFeed(entries, schema, agentLookup) {
       bericht,
       link: saneerHttpsUrl(getField(e.data, "Link")),
       openLus: false,
+      // s64: de rol van wie de regel schreef, alleen als de instantie hem meestuurt.
+      ...(typeof e.geschreven_door === "string" ? { door: e.geschreven_door } : {}),
     });
   }
   items.sort((a, b) => b.tijd.getTime() - a.tijd.getTime());

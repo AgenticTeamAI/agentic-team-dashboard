@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-n+QF9ShocbjL50V6j4Lty59rzjH14UtyGckknKBgnw0=' 'sha256-Kg3xHvwaHIceXxQ1ULnFBTm1dDV3Rt32oS2zBjtkPNw='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-n+QF9ShocbjL50V6j4Lty59rzjH14UtyGckknKBgnw0=' 'sha256-2fE/KKbWvt3wRBwjieM7otycd9DeorI96kYFSMy4MK0='">
 
 
 
@@ -374,6 +374,8 @@ dd.inline-edit input,dd.inline-edit select,dd.inline-edit textarea{flex:1 1 170p
 .balkregel .ic{vertical-align:-2px}
 .opm{display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--line);padding-bottom:8px}
 .opm small{color:var(--muted);font-size:12.5px}
+/* s64: wie een rij in het werkgeheugen schreef (alleen met afscherming aan); rustig, nooit een pil. */
+.door{color:var(--muted);font-size:12.5px;font-weight:400;white-space:nowrap}
 .opm p{white-space:pre-line}
 .leeglabel{font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px}
 .fout{color:var(--rood);font-size:13.5px;font-weight:650}
@@ -3341,23 +3343,29 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * van de jurist, inclusief het back-upvenster: niet "direct weg". */
   "Staan je acties en vaste taken in je eigen bron, zoals Notion, dan zet je Coördinator bij elke dagstart de openstaande items in je werkruimte: de titel (ingekort tot 120 tekens), de soort, de specialist, de data en een link naar de pagina in je bron. Bij vaste taken: de naam, het ritme en wanneer hij laatst draaide. Zo kan het dashboard ze tonen. De vorige versie wordt bij elke dagstart overschreven en verdwijnt daarna met het back-upvenster van zeven dagen.",
   "De pagina zelf wordt wel van dashboard.agentic-team.ai geladen, met de gebruikelijke technische gegevens die daarbij horen (zoals je IP-adres).",
-  /* De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
+  /* Juristtoets 26-11-2026 (rapport-jurist-business-v1-2026-11-26.md, punt 3;
+   * besluit Tijmen C5): "verloopt na 24 uur" was onwaar zodra afscherming aan
+   * staat (daglink standaard 4 uur). De zin is statisch, want deze tekst staat
+   * ook in de lege staat, waar geen token is.
+   *
+   * De slotzin van deze alinea is de correctie uit de B3-toets. De vorige versie
    * zei alleen dat er geen bedrijfsdata meegaat — waar, maar een lezer kon
    * daaruit opmaken dat inloggen spoorloos is. Dat is het niet: de inlogwissel
    * is een verzoek aan onze server, en die legt vast wélke licentie inlogt en
    * wanneer (registreerSeat in app/api/oauth/authorize/route.ts). Het
    * privacyblok op de site vertelt dat ook; zonder deze zin zouden twee eigen
    * teksten elkaar tegenspreken. */
-  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt na 24 uur. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
+  "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan wisselt je browser een inlogcode om bij agentic-team.ai voor een inlogtoken. Is je inlogtoken na een uur verlopen, dan vernieuwt je browser het bij je eerstvolgende verzoek op dezelfde manier. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. Dat bekijken we per licentie en niet per persoon.",
   /* f33: "blijvend alleen X en Y" is een uitputtende opsomming, en er kwam een
    * derde item bij: de naam waaronder je werkt (voor "Aan mij" en "Afgerond
    * door").
    *
    * i77 verplaatste die naam van deze browser naar de licentie: hij hoort bij
    * je seat en staat versleuteld naast je e-mailadres in de uitnodigingenlijst,
-   * zodat een tweede apparaat hem kent en de beheerder hem kan rechtzetten. De
-   * browser houdt nog een kopie als terugval. Dat zijn twee bewaarplekken in
-   * plaats van één, en een opsomming die dat niet noemt is niet uitputtend meer
+   * zodat een tweede apparaat hem kent en de eigenaar (het aankoopadres) hem kan
+   * rechtzetten. De browser houdt nog een kopie als terugval. Dat zijn twee
+   * bewaarplekken in plaats van één, en een opsomming die dat niet noemt is
+   * niet uitputtend meer
    * — vandaar dat deze alinea beide noemt, plus dat de browser er één keer per
    * sessie om vraagt.
    *
@@ -3365,7 +3373,7 @@ const PRIVACY_UITKLAP_ALINEAS = [
    * brief-jurist-dashboard-v2-delta.md): de themakeuze komt erbij, alleen als
    * die afwijkt van je systeeminstelling. Puur een weergavevoorkeur, blijft in
    * de browser. */
-  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de beheerder van je licentie hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
+  "In je browser bewaren we je inlogtoken, de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, en een kopie van de naam waaronder je werkt. Tijdens het inloggen bewaren we kort een technische controlecode; breek je het inloggen af, dan kan die blijven staan tot je opnieuw inlogt of je browsergegevens wist. Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de eigenaar van je licentie (het aankoopadres) hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee.",
   /* Dashboard v2 (1-10-2026, besluit Tijmen; ter toetsing bij de jurist, zie
    * brief-jurist-dashboard-v2-delta.md): de knop "Feedback geven". Alleen als
    * je bent ingelogd en alleen als je zelf op versturen drukt. De site zet het
@@ -3520,7 +3528,8 @@ if (typeof module !== "undefined") {
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
  *   https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
- * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
+ * Het token is kortlevend (standaard 24 uur, in een afgeschermd team korter;
+ * zie daglinkGeldigheid) en kan alleen lezen; het staat in het
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
@@ -3897,10 +3906,39 @@ function rijVanEntry(e) {
   // f46: de stempels van de instantie reizen mee onder één sleutel. Niet als
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
-  return Object.assign({}, e && e.data, {
-    __entryId: e && e.entryId,
-    __stempels: { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null },
-  });
+  const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij die iemand
+  // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
+  // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
+  // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
+  // dan is de rij precies zoals vóór s64. Besluit C2 (26-11, avond):
+  // staat het veld er wel maar is het geen tekst (null, een getal, een
+  // object), dan reist het mee als null. Het label toont dan niets, en
+  // opvolgen behandelt het als een lagere rol (fail-closed).
+  if (e && Object.prototype.hasOwnProperty.call(e, "geschreven_door")) {
+    stempels.door = typeof e.geschreven_door === "string" ? e.geschreven_door : null;
+  }
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
+}
+
+/* s64 — welke stempel krijgt een label "door …". Alleen de vier rollen van
+ * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) tonen we
+ * niet, net als alles wat de instantie niet hoort te sturen. De tekst komt uit
+ * deze tabel, nooit uit de waarde zelf. */
+const SCHRIJVER_ROL_LABEL = Object.freeze({ eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" });
+function schrijverLabel(waarde) {
+  return typeof waarde === "string" && Object.prototype.hasOwnProperty.call(SCHRIJVER_ROL_LABEL, waarde) ? SCHRIJVER_ROL_LABEL[waarde] : null;
+}
+/* s64 nafix (review #133) — de volledige labeltekst. "onbekend" (een rij van
+ * vóór de stempel, of een rij die iemand daarna bijwerkte terwijl er oude
+ * tekst bleef staan) krijgt "herkomst onbekend". Zonder label zag zo'n rij er
+ * hetzelfde uit als werk van de sleutel, en bleef het witwaspad naar
+ * "onbekend" (besluit d) open voor wie het dashboard leest. "onbekend" komt
+ * alleen met AFSCHERMING=aan, dus met de modus uit verandert er niets. */
+function herkomstTekst(waarde) {
+  if (waarde === "onbekend") return "herkomst onbekend";
+  const label = schrijverLabel(waarde);
+  return label ? "door " + label : null;
 }
 
 function maxBijgewerkt(entries) {
@@ -4198,6 +4236,65 @@ function sessieLicentie(token) {
   return p && typeof p.lic === "string" ? p.lic : null;
 }
 
+/* s64 — hoe lang een daglink geldig is, zoals de werkruimte hem uitgaf: het
+ * token draagt `exp` en `iat` (Unix-seconden, daglink.ts). Standaard 24 uur;
+ * bij Business (AFSCHERMING=aan) korter, standaard 4 uur. Alleen voor de
+ * tekst bij een verlopen link: niet gecontroleerd en nergens een beslissing.
+ * Geen bruikbare waarde (een link van vóór b32 zonder `iat`, of geen token):
+ * null. */
+function daglinkGeldigheid(token) {
+  const p = tokenPayloadDeel(token, 0);
+  if (!p || typeof p !== "object") return null;
+  const { exp, iat } = p;
+  return Number.isInteger(exp) && Number.isInteger(iat) && exp > iat ? exp - iat : null;
+}
+/* Dezelfde schrijfwijze als de werkruimte (duurTekst in mcp/server.ts):
+ * "4 uur", "24 uur", "90 minuten"; naar beneden, nooit langer dan het is. */
+function daglinkDuurTekst(seconden) {
+  if (seconden >= 3600 && seconden % 3600 === 0) return seconden / 3600 + " uur";
+  const minuten = Math.max(1, Math.floor(seconden / 60));
+  return minuten + " " + (minuten === 1 ? "minuut" : "minuten");
+}
+/* De zin achter "Deze dashboardlink is verlopen." Zonder gegevens de vaste
+ * zin van vóór s64; met een link van 24 uur levert de rekensom precies
+ * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
+ * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
+const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
+/* De duur zelf ("24 uur", "4 uur"), of null bij een waarde langer dan een
+ * week. Eén rekensom voor de melding en de Hulp. */
+function daglinkGeldigDuur(token) {
+  const s = daglinkGeldigheid(token);
+  if (s === null) return "24 uur";
+  if (s > 7 * 24 * 3600) return null;
+  return daglinkDuurTekst(s);
+}
+function daglinkGeldigTekst(token) {
+  if (daglinkGeldigheid(token) === null) return DAGLINK_GELDIG_STANDAARD;
+  const duur = daglinkGeldigDuur(token);
+  return duur ? "Daglinks zijn " + duur + " geldig." : "Een daglink is maar een beperkte tijd geldig.";
+}
+/* s64 nafix (besluit 26-11) — de Hulp en de woordenlijst zeiden vast "24
+ * uur". Kijk je met een daglink, dan staat er de duur van die link, met
+ * dezelfde rekensom als de melding hierboven (een link van 24 uur, of een
+ * zonder `iat`, geeft dus precies de tekst van vóór s64). Zonder daglink
+ * (ingelogd, of de lege staat) weet het dashboard niet hoe lang een link van
+ * dit team geldig is: dan een neutrale zin. `bron` mag null zijn. */
+function daglinkVanBron(bron) {
+  return bron && !bron.oauth && typeof bron.token === "string" && bron.token ? bron.token : null;
+}
+/* Voor de cel "Hoe lang" in de tabel Daglink of inloggen. */
+function daglinkHulpDuur(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "Standaard 24 uur, in een afgeschermd team korter";
+  return daglinkGeldigDuur(token) || "Een beperkte tijd";
+}
+/* Voor de woordenlijst: "de link …, <dit>". */
+function daglinkHulpWoord(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "standaard 24 uur geldig, in een afgeschermd team korter";
+  return (daglinkGeldigDuur(token) || "een beperkte tijd") + " geldig";
+}
+
 /* Welke bron gebruikt deze pagina?
  * - Een verse daglink in het fragment is een expliciete actie van de
  *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
@@ -4226,10 +4323,10 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }
 
@@ -6321,8 +6418,46 @@ function afhandelKnoppen(rij, schema, nu) {
   }
 }
 
+/* s64 nafix (besluit 26-11) — schreef een medewerker of viewer de bronrij,
+ * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
+ * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
+ * die tekst zou anders met het gezag van de eigenaar bij de specialist
+ * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
+ * bovenliggende actie; de agent leest daar in een sessie zelf de herkomst.
+ * Voor het werkmoment is besluit A (26-11, avond) genomen: de werkronde geeft
+ * de bovenliggende rij met haar `geschreven_door` mee. Dat hoort bij
+ * agent-architecture #284 (core/served/werkronde.md), niet bij dit dashboard.
+ * Tot die werkronde live is, krijgt de specialist op het werkmoment alleen
+ * de neutrale zin.
+ *
+ * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
+ * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van
+ * een stempel dat er wel is (hoofdletters, spaties, null, een onbekende
+ * tekst, een getal) telt als lagere rol. Ontbreekt het stempel helemaal
+ * (modus uit), of is het eigenaar, beheerder of sleutel, dan is alles
+ * precies als vóór s64. */
+const SCHRIJVER_HOGER = ["eigenaar", "beheerder", "sleutel"];
+const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+/* Draagt `houder` het stempel `sleutel` (een eigen sleutel, ook met waarde
+ * null), en is dat niet precies een van de drie hogere waarden? Ontbreekt
+ * het stempel, dan false: dat is de modus uit. */
+function stempelVanLagereRol(houder, sleutel) {
+  if (!houder || typeof houder !== "object" || !Object.prototype.hasOwnProperty.call(houder, sleutel)) return false;
+  return SCHRIJVER_HOGER.indexOf(houder[sleutel]) === -1;
+}
+function opvolgZonderTitel(rij) {
+  return stempelVanLagereRol(rij && rij.__stempels, "door");
+}
+/* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
+function opvolgVoorstel(rij, titel) {
+  return opvolgZonderTitel(rij) ? OPVOLG_NEUTRAAL : "Pak de volgende stap op: " + titel;
+}
+
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Besluit C3
+ * (26-11, avond): ook bij een bronrij van een lagere rol gaan Organisatie,
+ * Deal, Project en Contactpersoon mee. Dat zijn koppelingen, geen opdracht;
+ * alleen de titel en de tekst blijven weg (zie opvolgVoorstel). */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
@@ -6342,7 +6477,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, stempelVanLagereRol, SCHRIJVER_HOGER, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }
@@ -6488,6 +6623,12 @@ function saneerVoorJouBlok(v, ctx) {
       sinds: saneerDatumOfNull(it.sinds, ctx, `voor_jou.items.${i}.sinds`),
       deadline: saneerDatumOfNull(it.deadline, ctx, `voor_jou.items.${i}.deadline`),
       url: saneerHttpsUrl(it.url),
+      // s64, besluit C1 en C2 (26-11, avond): draagt een item de rol van wie
+      // de bronrij schreef, dan reist die mee (een tekst, anders null), zodat
+      // "Kopieer voor je team" bij een lagere rol de titel weglaat. Zonder het
+      // veld staat de sleutel er niet: dan is het item precies als vóór s64.
+      ...(Object.prototype.hasOwnProperty.call(it, "geschreven_door")
+        ? { geschreven_door: typeof it.geschreven_door === "string" ? it.geschreven_door.slice(0, 40) : null } : {}),
     });
   }
   return { items };
@@ -7777,6 +7918,8 @@ function normaliseerFeed(entries, schema, agentLookup) {
       bericht,
       link: saneerHttpsUrl(getField(e.data, "Link")),
       openLus: false,
+      // s64: de rol van wie de regel schreef, alleen als de instantie hem meestuurt.
+      ...(typeof e.geschreven_door === "string" ? { door: e.geschreven_door } : {}),
     });
   }
   items.sort((a, b) => b.tijd.getTime() - a.tijd.getTime());
@@ -9128,8 +9271,8 @@ function bedienHtml(ctx, key, domein, rij) {
 
 /* b61: "Wie pakt het op?" — mensen en specialisten in één lijst. De mensen
  * zijn wie er nu al eigenaar is in dit domein (geen aparte ledenlijst: die is
- * er alleen voor de beheerder), plus jij. Wat er nu staat, staat altijd in de
- * lijst, ook als het nergens anders voorkomt. */
+ * er alleen voor de eigenaar, het aankoopadres), plus jij. Wat er nu staat,
+ * staat altijd in de lijst, ook als het nergens anders voorkomt. */
 function wieKiezerHtml(ctx, key, rij, ikNaam, agenten) {
   const nu = dataCelTekst(getField(rij, "Eigenaar"));
   const nuSpecialist = specialistVan(ctx, nu);
@@ -10182,8 +10325,8 @@ function bewaarKopie(bron, naam) {
 
 function zetMijnNaam(bron, naam) {
   const schoon = bewaarKopie(bron, naam);
-  // Naar de server, zodat je andere apparaten hem ook kennen en de beheerder
-  // hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
+  // Naar de server, zodat je andere apparaten hem ook kennen en de eigenaar
+  // (het aankoopadres) hem kan zien. Mislukt dat, dan blijft de kopie hierboven staan en probeert
   // de volgende sessie het opnieuw — geen reden om de gebruiker op te houden.
   try {
     void modulesFetch("/api/dashboard/wie-ben-ik", { naam: schoon }, bron && bron.token)
@@ -10233,7 +10376,7 @@ function _resetNaamvoorstel() {
 /* Geeft {voorstel, gezet}.
  *
  * `gezet` betekent: iemand heeft deze naam gekózen — jij eerder in deze browser,
- * jij op een ander apparaat, of je beheerder. Alleen dán mag hij zonder vragen
+ * jij op een ander apparaat, of de eigenaar (het aankoopadres). Alleen dán mag hij zonder vragen
  * de werkdata in. Is hij false, dan is `voorstel` een afleiding uit je adres
  * (het deel vóór de @) en hoort hij alleen de prompt voor te vullen.
  *
@@ -10258,7 +10401,7 @@ function haalNaamvoorstel(bron) {
         const voorstel = ok && typeof uit.body.voorstel === "string" ? uit.body.voorstel : "";
         if (ok && uit.body.gezet) {
           // De server heeft een gekozen naam; die wint, ook als deze browser
-          // iets anders onthield. Anders zou een correctie door de beheerder
+          // iets anders onthield. Anders zou een correctie door de eigenaar
           // nooit aankomen — en dat is precies waarvoor het beheerpaneel er is.
           bewaarKopie(bron, voorstel);
           return { voorstel, gezet: true };
@@ -11037,7 +11180,7 @@ function itemVraagHtml(f, rij, ctx) {
       <select data-vraag-specialist>${opties.map(a => `<option value="${esc(a)}"${a === standaard ? " selected" : ""}>${esc(a)}</option>`).join("")}</select></label>`);
   }
   if (vraag.tekst) {
-    const voorstel = f === "opvolgen" ? `Pak de volgende stap op: ${detailTitel(ctx.schema.datadomeinen.acties, rij)}` : "";
+    const voorstel = f === "opvolgen" ? opvolgVoorstel(rij, detailTitel(ctx.schema.datadomeinen.acties, rij)) : "";
     delen.push(`<label class="bedien-veld blad-vraag-tekst"><span>${esc(vraag.label)}</span>
       <textarea data-vraag-tekst rows="3" placeholder="${esc(vraag.plaats || "")}">${esc(voorstel)}</textarea></label>`);
   }
@@ -12776,11 +12919,11 @@ function hulpSecties(ctx) {
     ["daglink", "Daglink of inloggen?", () => `
       <table class="hulp-tabel"><thead><tr><th></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
         <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-        <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+        <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(ctx && ctx.bron))}</td><td>Tot je dit tabblad sluit</td></tr>
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
-        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table>
+        <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td></tr></tbody></table>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="footnote">Kopieer een zin en plak hem in Claude.</p>
@@ -12813,7 +12956,7 @@ function hulpSecties(ctx) {
       <dl class="hulp-woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in Claude</dd><dt>Vaste taak</dt><dd>ritmetaak</dd>
       <dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd>
       <dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd>
-      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+      <dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(ctx && ctx.bron))}</dd></dl>`],
   ];
 }
 
@@ -13852,17 +13995,18 @@ function renderDetailModules(el) {
  * opnieuw, en bij meerdere mensen op één licentie kon niemand corrigeren dat
  * dezelfde persoon in drie spellingen in dezelfde kolom stond. Sinds i77 hoort
  * de naam bij de seat en staat hij bij de licentie; dit paneel is de plek waar
- * de beheerder hem ziet en rechtzet.
+ * de eigenaar (het aankoopadres) hem ziet en rechtzet.
  *
  * Dat is geen cosmetiek: `Eigenaar` is een gedeelde kolom in de werkdata, en het
  * statuscontract van de werkronde leunt erop ("Wacht op review is altijd een
  * mens"). Drie spellingen van één persoon maken filters, de dagstart en de
  * correctievrij-meting onbetrouwbaar.
  *
- * Daarnaast nodigt de beheerder hier mensen uit en haalt hij ze weg. De site doet
- * het echte werk — de uitnodigingsmail met weigerlink (art. 14 AVG) en het
- * afsluiten van sessies — via dezelfde code als de MCP-tools; dit paneel stuurt
- * alleen een adres of een seat en toont wat terugkomt.
+ * Daarnaast nodigt de eigenaar (het aankoopadres) hier mensen uit en haalt hij
+ * ze weg. De site doet het echte werk — de uitnodigingsmail met weigerlink
+ * (art. 14 AVG) en het afsluiten van sessies — via dezelfde code als de
+ * MCP-tools; dit paneel stuurt alleen een adres of een seat en toont wat
+ * terugkomt.
  *
  * Alle site-verkeer loopt door modulesFetch — de enige aanroepplek naar het
  * eigen domein. Zo blijft de telemetrie-inventaris op precies vier fetches.
@@ -14159,8 +14303,8 @@ function teamSluitZonderSessie(sectieEl) {
 /* Kan de site uitnodigen en verwijderen? Een site van vóór die routes zet geen
  * `eigenaar` op de rijen; dan tonen we alleen de namen, zoals voorheen, in
  * plaats van knoppen die op een 404 stuklopen. Een lege lijst zegt niets over
- * de site — en juist dan wil de beheerder iemand kunnen uitnodigen (het
- * aankoopadres zelf staat er meestal niet op). */
+ * de site — en juist dan wil de eigenaar (het aankoopadres) iemand kunnen
+ * uitnodigen (dat adres zelf staat er meestal niet op). */
 function teamBeheerMogelijk() {
   return Array.isArray(teamLijst)
     && (teamLijst.length === 0 || teamLijst.some((r) => r && typeof r.eigenaar === "boolean"));
@@ -14821,11 +14965,24 @@ function afgerondMoment(a) {
 }
 function werkAgent(a) { return isAgentSlug(a.agent) ? a.agent : (isAgentSlug(a.door) ? a.door : slugVanNaam(a.eigenaar)); }
 
+/* s64 — "door Medewerker" bij een rij die de instantie met de rol van de
+ * schrijver stempelde (alleen met AFSCHERMING=aan; elk datadomein, dus ook
+ * acties, vaste taken en klantgegevens), en "herkomst onbekend" bij
+ * "onbekend". Zonder stempel, of met "sleutel", is er geen label en is de
+ * html precies die van vóór s64. De tekst komt uit een vaste tabel
+ * (herkomstTekst), niet uit de werkruimte. `voor` is het scheidingsteken als
+ * het label achter tekst staat. */
+function doorVan(rij) { return rij && rij.__stempels ? rij.__stempels.door : undefined; }
+function doorHtml(waarde, voor = "") {
+  const tekst = typeof herkomstTekst === "function" ? herkomstTekst(waarde) : null;
+  return tekst ? `${voor}<span class="door">${esc(tekst)}</span>` : "";
+}
+
 function opmerkingenBij(id) {
   if (typeof notitiesBij !== "function") return [];
   return notitiesBij(CTX, "acties", id).map(n => ({
     id: n.__entryId, van: tekstVan(n, "Auteur") || "iemand", op: getField(n, "Datum") || (n.__stempels && n.__stempels.aangemaakt),
-    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"),
+    tekst: tekstVan(n, "Notitie") || tekstVan(n, "Onderwerp"), door: doorVan(n),
   })).reverse();
 }
 
@@ -14847,7 +15004,7 @@ function feedVan() {
   const feed = CTX.bundle && CTX.bundle.teamfeed;
   if (!feed || !Array.isArray(feed.entries)) return [];
   return normaliseerFeed(feed.entries, CTX.schema, CTX.agentLookup || buildAgentLookup())
-    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null }))
+    .map(f => ({ t: f.tijd, ag: f.agentSlug && AGENTS[f.agentSlug] ? f.agentSlug : null, naam: f.agentNaam, em: f.agentEmoji, soort: f.soort, tekst: f.bericht || f.actie || "", link: f.link || null, door: f.door }))
     .filter(f => f.tekst);
 }
 
@@ -15213,13 +15370,13 @@ function itemKaart(a, gekozen) {
     <div class="nr" aria-hidden="true">${nummer(a)}</div>
     <button class="item-open" data-act="open" data-id="${esc(a.id)}" aria-label="Nummer ${nummer(a)}: ${esc(a.titel)}, ${esc(SOORT_LABEL[s].toLowerCase())}">
       <span class="ititel">${esc(a.titel)} ${isNieuw(a) ? '<span class="pil nieuw">NIEUW</span>' : ""}${laat}</span>
-      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}</span>
+      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}${doorHtml(doorVan(a.rij))}</span>
       ${werk}${opm.length ? `<span class="opmregel">${ic("plus", "klein")}${telwoord(opm.length, "opmerking", "opmerkingen")} van ${esc(voornaam(opm[opm.length - 1].van))}</span>` : ""}</button>
     <div class="iknoppen">${kaartKnoppen(a)}</div></article>`;
 }
 function compactItem(a, gekozen) {
   const s = soortVan(a);
-  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}</span></span>${ic("chev")}</button>`;
+  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}${doorHtml(doorVan(a.rij), " · ")}</span></span>${ic("chev")}</button>`;
 }
 function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
@@ -15285,7 +15442,20 @@ function renderVoorJou() {
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
+/* s64, besluit C1 (26-11, avond): komt het item van een medewerker, een
+ * viewer of `onbekend` (of draagt het een stempel dat niet precies eigenaar,
+ * beheerder of sleutel is: C2, fail-closed), dan noemt de gekopieerde vraag
+ * de titel niet, maar het nummer uit de dagstart. De eigenaar plakt die vraag
+ * als zijn eigen vraag; de agent leest het item dan zelf, met zijn herkomst.
+ * Zonder stempel (modus uit): precies de vraag van vóór s64. */
 function vraagVoorTeam(it) {
+  if (stempelVanLagereRol(it, "geschreven_door")) {
+    const n = Number.isInteger(it.nr) ? `nummer ${it.nr} uit mijn dagstart` : "dit item uit mijn dagstart";
+    if (it.soort === "check") return `Laat me ${n} zien, dan kijk ik het na.`;
+    if (it.soort === "voorstel") return `Laat me het voorstel ${n} zien.`;
+    if (it.soort === "signaal") return `Laat mijn team ${n} opvolgen.`;
+    return `Wat moet ik doen met ${n}?`;
+  }
   const t = it.titel || "dit item";
   if (it.soort === "check") return `Laat me ‘${t}’ zien, dan kijk ik het na.`;
   if (it.soort === "voorstel") return `Laat me het voorstel ‘${t}’ zien.`;
@@ -15296,7 +15466,7 @@ function renderVoorJouNotion() {
   const v = verhaalData(); const feed = v.feed;
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
-  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
+  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
   const g = werkbakMoment(); const eigen = werkbakIsPersoonlijk();
   const verhaal = feed.length
@@ -15387,7 +15557,7 @@ function renderBlad(a, plek) {
     <div class="blad-kop">${deskPaneel ? `<span class="pos">${pos}</span>` : `<button class="link" data-act="sluit-blad">${ic("links", "klein")} ${esc(terugLabelVan(terug))}</button><span class="pos">${pos}</span>`}
       <span class="rijtje">${pijlen ? `<button class="ikknop" data-act="stap" data-d="-1" aria-label="Vorige">${ic("links")}</button><button class="ikknop" data-act="stap" data-d="1" aria-label="Volgende">${ic("chev")}</button>` : ""}${deskPaneel ? "" : `<button class="ikknop" data-act="sluit-blad" aria-label="Sluiten">${ic("sluit")}</button>`}</span></div>
     <h2 class="titel" id="blad-titel" tabindex="-1">${esc(a.titel)}</h2>
-    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
+    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}${doorHtml(doorVan(a.rij))}</div>
     ${herk ? `<p class="herkomst">${herk}</p>` : ""}${opm1}
     ${a.hoort.length ? `<div class="hoortbij">Hoort bij: ${a.hoort.map(relatieKnop).join("")}</div>` : ""}
     ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3><span class="rijtje">${vlg.knop}${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</span></div>
@@ -15398,10 +15568,10 @@ function renderBlad(a, plek) {
       ${a.opdracht ? `<details class="uitklap" ${det("u-" + a.id + "-opd")}><summary>De opdracht <span class="stil klein">(${a.opdracht.van ? "van " + esc(voornaam(a.opdracht.van)) + ", " : ""}${esc(datumKort(a.opdracht.op))})</span>${ic("chev")}</summary><div class="binnen"><p style="white-space:pre-line">${esc(a.opdracht.tekst)}</p></div></details>` : ""}
       ${magSchrijven("notities") || opm.length ? `<details class="uitklap" ${det("u-" + a.id + "-opm")}><summary>Opmerkingen (${opm.length})${ic("chev")}</summary><div class="binnen">
         <p class="leeglabel">${opmLabel}</p>
-        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}</small><p>${esc(o.tekst)}</p></div>`).join("")}
+        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
-        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
+        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}${doorHtml(doorVan(x.rij))}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
         ${kanSchrijven() ? `<button class="knop" data-act="sheet" data-type="opdracht" data-onder="${esc(a.id)}">${ic("plus", "klein")}Kleinere opdracht</button>` : ""}</div></details>
       <details class="uitklap" ${det("u-" + a.id + "-veld")}><summary>Alle gegevens${ic("chev")}</summary><div class="binnen">${renderVelden(a)}</div></details>
     </div>
@@ -15485,7 +15655,7 @@ function opvolgAgentVan(a) {
   if (ag && ag !== "pipeline-manager" && sp.includes(ag)) return ag;
   return sp.includes("outreach-specialist") ? "outreach-specialist" : (sp[0] || "management-assistent");
 }
-function opvolgZinVan(a) { return "Pak de volgende stap op: " + a.titel; }
+function opvolgZinVan(a) { return opvolgVoorstel(a.rij, a.titel); }
 
 
 /* Dashboard v2 — Acties (wie is aan zet?), Team (wat ze deden, één
@@ -15530,12 +15700,12 @@ function rij(a) {
   const s = soortVan(a); const ag = werkAgent(a); const n = S.nummers[a.id] && hoortBijMens(a) && vanMij(a);
   const vorm = n ? `<span class="nr">${S.nummers[a.id]}</span>` : `<span class="vorm" aria-hidden="true">${vormVan(s)}</span>`;
   const wc = ag ? agChip(ag, { kort: true, bezig: a.status === "Bezig" }) : (a.eigenaar && !isAgentNaam(a.eigenaar) && !naamGelijk(a.eigenaar, jij()) ? mensChip(a.eigenaar) : "");
-  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span></span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
+  return `<button class="rij" data-act="open" data-id="${esc(a.id)}">${vorm}<span class="ct"><b>${esc(a.titel)}</b><span class="rmeta">${s !== "team" && s !== "klaar" && s !== "wacht" ? `<span class="soort">${esc(soortRij(a))}</span>` : ""}${wc}<span class="${isTeLaat(a) ? "pil laat" : "mono"}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="pil status">${esc(a.status || "—")}</span></button>`;
 }
 function bordKaart(a, baan) {
   const ag = werkAgent(a); const kan = kanSchrijven() && isDesk();
   return `<div class="bordkaart" ${kan ? `draggable="true" data-drag="${esc(a.id)}"` : ""}><div class="bk-top"><b>${S.nummers[a.id] && hoortBijMens(a) && vanMij(a) ? `<span class="mono" style="color:var(--jij-tekst)">${S.nummers[a.id]} · </span>` : ""}${esc(a.titel)}</b>${kan ? `<span class="grip" title="Sleep naar een andere baan">${ic("grip", "klein")}</span>` : ""}</div>
-    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span></div>
+    <div class="bk-meta">${ag ? agChip(ag, { alleen: true, bezig: a.status === "Bezig" }) : ""}<span class="${isTeLaat(a) ? "pil laat" : ""}">${esc(rijAchter(a))}</span>${doorHtml(doorVan(a.rij))}</div>
     <div class="rijtje"><button class="hoe breedhoe" data-act="open" data-id="${esc(a.id)}">Open</button>${kanSchrijven() ? `<button class="hoe" data-act="sheet" data-type="verplaats" data-id="${esc(a.id)}" data-baan="${baan}">Verplaats</button>` : ""}</div></div>`;
 }
 const BAAN_INFO = { jij: ["●", "Jij", "jijb"], team: ["◐", "Je team", "teamb"], wacht: ["○", "Wacht", ""], af: ["✓", "Afgerond", ""] };
@@ -15598,7 +15768,7 @@ function renderArchief() {
   const z = S.ui.acties.zoek.trim().toLowerCase();
   const l = S.data.acties.filter(a => isAgentSlug(a.door)).filter(a => !z || zoekTekstVan(a).includes(z)).sort((a, b) => (dt(b.aangemaakt) || 0) - (dt(a.aangemaakt) || 0));
   return `<section class="kol" style="gap:8px"><p class="stil klein">Alles wat je team voor je klaarzette, ook wat al af is, met wat jij ermee deed.</p>
-    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span></span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
+    ${l.length ? l.map(a => `<button class="rij" data-act="open" data-id="${esc(a.id)}"><span class="vorm">${agChip(a.door, { alleen: true })}</span><span class="ct"><b>${esc(a.titel)}</b><span class="rmeta"><span class="mono">${esc(datumKort(a.aangemaakt))}</span><span>${esc(AGENTS[a.door].naam)}</span>${doorHtml(doorVan(a.rij))}</span></span><span class="uitkomst">${esc(uitkomstVan(a))}</span></button>`).join("") : `<p class="bordleeg">${S.ui.acties.zoek ? "Niets gevonden." : "Je team zette nog niets voor je klaar."}</p>`}</section>`;
 }
 
 /* ---------- Team ---------- */
@@ -15638,7 +15808,7 @@ function renderTeam() {
   let dag = null; let lijst = "";
   feed.forEach(x => {
     const l = dagLabel(x.t); if (l !== dag) { dag = l; lijst += `<div class="dagkop">${esc(l)}</div>`; }
-    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}</div><p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
+    lijst += `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><div class="rijtje">${x.ag ? agKnop(x.ag) : `<span class="ag"><span class="em" aria-hidden="true">${esc(x.em || "")}</span>${esc(x.naam || "")}</span>`}${doorHtml(x.door)}</div><p>${esc(x.tekst)}</p>${x.link ? `<a class="link" href="${esc(x.link)}" target="_blank" rel="noopener noreferrer">Bekijk ${ic("pijl-op", "klein")}</a>` : ""}</div></div>`;
   });
   const leden = teamLeden();
   const gebruikt = new Set([...S.data.feed.map(x => x.ag), ...S.data.acties.map(werkAgent), ...S.data.taken.filter(t => t.actief).map(t => t.agent)].filter(Boolean));
@@ -15675,7 +15845,7 @@ function renderAgent(slug) {
     ${wacht.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Wacht op jou (${wacht.length})</h2>${wacht.map(rij).join("")}</section>` : ""}
     ${onder.length ? `<section class="kol" style="gap:8px"><h2 class="vakkop">Onder handen (${onder.length})</h2>${onder.map(rij).join("")}</section>` : ""}
     ${taken.length ? `<section class="vak"><h2 class="vakkop">Vaste taken</h2>${taken.map(taakRij).join("")}</section>` : ""}
-    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}</span></div></div>`).join("")}</section>` : ""}</div>`;
+    ${feed.length ? `<section class="vak"><h2 class="vakkop">Wat ${esc(deNaam(slug))} deed</h2>${feed.map(x => `<div class="post"><span class="t">${hhmm(x.t)}</span><div class="pb"><p>${esc(x.tekst)}</p><span class="klein stil">${esc(dagLabel(x.t))}${doorHtml(x.door, " · ")}</span></div></div>`).join("")}</section>` : ""}</div>`;
 }
 
 /* ---------- Vaste taken ---------- */
@@ -15697,7 +15867,7 @@ function taakRij(t) {
   const wat = watDoetTaak(t);
   return `<div class="taak ${t.actief ? "" : "uit"}"><button class="schakel" role="switch" aria-checked="${t.actief}" aria-label="${esc(t.naam)}" data-act="taak-aan" data-id="${esc(t.id)}" ${mag ? "" : "disabled"}></button>
     <div class="kol" style="gap:5px"><span class="tnaam">${esc(t.naam)}</span><div class="tregel">${t.agent ? agChip(t.agent, { kort: true }) : ""}${ritmeSelect(t, !mag || !t.actief)}${["elk-uur", "elke-2-uur", "elke-4-uur"].includes(t.ritme) ? '<span class="klein">zo vaak als je team werkt</span>' : ""}</div>
-      <div class="tregel">${stTekst}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
+      <div class="tregel">${stTekst}${doorHtml(doorVan(t.rij))}${t.url ? `<a class="link" style="font-size:13px" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">Open in je eigen systeem ${ic("pijl-op", "klein")}</a>` : ""}</div>
       ${wat ? `<details class="uitklap kaal" ${det("taak-" + t.id)}><summary>Wat doet deze taak?${ic("chev", "klein")}</summary><div class="binnen"><p>${esc(wat)}</p><p class="klein stil">Wil je dat deze taak iets anders doet? Vraag het de Coördinator.</p></div></details>` : ""}</div></div>`;
 }
 function kopieerBlok(t) { return `<div class="kopieerblok"><code>${esc(t)}</code><button class="knop" data-act="kopieer-tekst" data-t="${esc(t)}">${ic("kopieer", "klein")}Kopieer</button></div>`; }
@@ -15843,9 +16013,9 @@ function renderBeheer() {
 }
 function vulBeheer() {
   const m = document.getElementById("beheer-modules-body");
-  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de beheerder van je licentie.</p>`; }
+  if (m) { if (moduleOverzichtBeschikbaar()) renderDetailModules(m); else m.innerHTML = `<p class="stil">Je moduleoverzicht ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`; }
   const t = document.getElementById("panel-team-namen");
-  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de beheerder van je licentie.</p>`); }
+  if (t) { renderTeamPanel(t); t.style.display = ""; if (!t.querySelector("#panel-team-namen-body").innerHTML.trim()) t.querySelector("#panel-team-namen-body").innerHTML = rolRegelHtml() + (rollenInfo ? `<p class="stil">Wie er meewerkt en welke rol iemand heeft, ziet op het dashboard alleen de eigenaar van je licentie.${rollenInfo.jij.rol === "beheerder" ? " Rollen wijzigen doet daarom de eigenaar." : ""}</p>` : `<p class="stil">Wie er meewerkt, ziet alleen de eigenaar van je licentie (het aankoopadres).</p>`); }
 }
 
 
@@ -15953,7 +16123,7 @@ function renderLijst(k) {
     const deals = k === "organisaties" ? dealsBij(id).filter(dealLoopt) : [];
     const som = deals.reduce((s, x) => s + dealWaarde(x), 0);
     return `<button class="regel orgrij" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(id))}"><span class="orglogo klein" aria-hidden="true">${esc(initialen(detailTitel(d, r)))}</span>
-      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}</span></span>
+      <span class="rl"><b>${esc(detailTitel(d, r))}</b><span>${esc(rijMeta(k, r))}${doorHtml(doorVan(r), rijMeta(k, r) ? " · " : "")}</span></span>
       <span class="rechts">${aanJou ? `<span class="pil jij">● ${aanJou} wacht op jou</span>` : ""}${deals.length ? `<span class="klein stil">${telwoord(deals.length, "deal", "deals")}${som ? " · " + euro(som) : ""}</span>` : ""}</span>${ic("chev")}</button>`;
   }).join("");
   return `<div class="inhoud">${renderBalk()}<button class="link" data-act="go" data-r="/gegevens">${ic("links", "klein")} Gegevens</button>
@@ -15997,7 +16167,7 @@ function veldRij(k, r, v) {
 function lijstjeRij(k, r) {
   const d = domeinVan(k); const meta = rijMeta(k, r);
   const waarde = k === "sales_funnel" && dealWaarde(r) ? `<span class="mono">${euro(dealWaarde(r))}</span>` : "";
-  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}</span>` : ""}</span>${waarde}</a>`;
+  return `<a href="#/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}" data-act="go" data-r="/gegevens/${k}/${esc(encodeURIComponent(r.__entryId))}"><span><b>${esc(detailTitel(d, r))}</b>${meta ? `<br><span class="klein stil">${esc(meta)}${doorHtml(doorVan(r), " · ")}</span>` : doorHtml(doorVan(r), " · ")}</span>${waarde}</a>`;
 }
 /* i92 — Kwam je hier vanaf een andere pagina (een klantenkaart, een deal, een
  * actie), dan brengt Terug je daar weer heen. Zonder herkomst (direct
@@ -16054,13 +16224,13 @@ function renderRijPagina2(k, id) {
       ${l.length ? `<div class="lijstje">${l.slice(0, 25).map(x => lijstjeRij(slug, x)).join("")}</div>${l.length > 25 ? `<p class="klein stil">… en nog ${l.length - 25}</p>` : ""}` : `<p class="bordleeg">Nog geen ${esc(domeinLabel(slug).toLowerCase())}.</p>`}
       ${slug === "interacties" ? '<p class="klein stil">Een gesprek komt erbij als je je team vertelt hoe het ging.</p>' : ""}</section>`).join("")
     + (notitieInfo ? `<section class="vak" style="display:flex;flex-direction:column;gap:6px"><div class="tussen"><h2 class="vakkop">Notities</h2>${magSchrijven("notities") ? `<button class="knop klein-knop" data-act="sheet" data-type="notitie" data-k="${esc(k)}" data-id="${esc(id)}">${ic("plus", "klein")}Notitie</button>` : ""}</div>
-      ${notities.map(n => `<div class="opm"><small>${esc([tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "))}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`).join("")}
+      ${notities.map(n => { const kop = [tekstVan(n, "Auteur"), datumKort(getField(n, "Datum"))].filter(Boolean).join(" · "); return `<div class="opm"><small>${esc(kop)}${doorHtml(doorVan(n), kop ? " · " : "")}</small>${tekstVan(n, "Onderwerp") ? `<b>${esc(tekstVan(n, "Onderwerp"))}</b>` : ""}<p>${esc(tekstVan(n, "Notitie"))}</p></div>`; }).join("")}
       ${!notities.length ? '<p class="bordleeg">Nog geen notities.</p>' : ""}<p class="klein stil">Notities zijn voor jou en je collega's.</p></section>` : "");
   const samen = `<div class="chiprij">${aanJou.length ? `<button class="pil jij knoppil" data-act="open" data-id="${esc(aanJou[0].id)}">● ${aanJou.length} wacht op jou</button>` : ""}${bijTeamL.length ? `<span class="pil team">◐ ${bijTeamL.length} bij je team</span>` : ""}${lopend.length ? `<span class="pil">${telwoord(lopend.length, "deal loopt", "deals lopen")}${lopend.reduce((s, x) => s + dealWaarde(x), 0) ? " · " + euro(lopend.reduce((s, x) => s + dealWaarde(x), 0)) : ""}</span>` : ""}${eig && !isAgentNaam(eig) ? mensChip(eig) : ""}</div>`;
   const slot = toegang() === "daglink" ? `<div class="slotregel">${ic("slot", "klein")}<span>Wijzigen kan na inloggen.</span>${kanInloggen() ? `<button class="knop klein-knop" data-act="login">Inloggen</button>` : ""}</div>`
     : !kan && magDomeinBewerken(CTX, k).reden ? `<div class="slotregel">${ic("slot", "klein")}<span>${esc(magDomeinBewerken(CTX, k).reden)}</span></div>` : "";
   return `<div class="inhoud">${renderBalk()}${terug}
-    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}</p></div>
+    <section class="orgkop"><span class="orglogo" aria-hidden="true">${esc(initialen(titel))}</span><div class="kol" style="gap:2px;flex:1;min-width:0"><h2 class="titel" id="rij-titel" tabindex="-1">${esc(titel)}</h2><p class="stil">${esc(rijMeta(k, r)) || esc(domeinEnkel(k))}${doorHtml(doorVan(r), " · ")}</p></div>
       ${kan ? `<button class="knop stil" data-act="sheet" data-type="rij-meer" data-k="${esc(k)}" data-id="${esc(id)}">${ic("meer", "klein")}Meer</button>` : ""}</section>
     ${samen}${slot}
     <div class="twee"><div class="kol">${links}</div><div class="kol">${rechts}</div></div></div>`;
@@ -16210,11 +16380,11 @@ function hulpSecties() {
     ["daglink", "Daglink of inloggen?", () => `
       <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
        <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-       <tr><th scope="row">Hoe lang</th><td>24 uur</td><td>Tot je dit tabblad sluit</td></tr>
+       <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(bron()))}</td><td>Tot je dit tabblad sluit</td></tr>
        <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
        <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
        <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
-       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De beheerder</td></tr></tbody></table></div>
+       <tr><th scope="row">Collega's uitnodigen</th><td>Nee</td><td>De eigenaar (het aankoopadres)</td></tr></tbody></table></div>
       <p>Je logt in met het e-mailadres waarop je bent uitgenodigd, of met Google of Microsoft. Na het inloggen kom je terug op de pagina waar je was.</p>`],
     ["zeggen", "Wat je tegen je team kunt zeggen", () => `
       <p class="klein stil">Kopieer een zin en plak hem in je AI-assistent.</p>
@@ -16246,7 +16416,7 @@ function hulpSecties() {
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`],
     ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
     ["woorden", "Woorden die je team gebruikt", () => `
-      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, 24 uur geldig</dd></dl>`],
+      <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(bron()))}</dd></dl>`],
   ];
 }
 function htmlTekst(h) { return String(h).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").toLowerCase(); }
@@ -17567,7 +17737,8 @@ async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = 
     }
     if (err.daglinkVerlopen) {
       vergeetDaglink();
-      const extra = /verlopen/i.test(err.message) ? " Daglinks zijn 24 uur geldig." : "";
+      // s64: de geldigheid uit de link zelf (bij Business korter dan 24 uur).
+      const extra = /verlopen/i.test(err.message) ? " " + daglinkGeldigTekst(bron && bron.token) : "";
       toonLegeStaat("Deze daglink werkt niet meer", err.message + extra, { login: true });
       return;
     }

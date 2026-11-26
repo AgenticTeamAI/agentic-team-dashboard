@@ -697,8 +697,46 @@ function afhandelKnoppen(rij, schema, nu) {
   }
 }
 
+/* s64 nafix (besluit 26-11) — schreef een medewerker of viewer de bronrij,
+ * of is de herkomst onbekend (stempel `geschreven_door`, alleen met
+ * AFSCHERMING=aan), dan neemt "opvolgen" de titel niet over als opdracht:
+ * die tekst zou anders met het gezag van de eigenaar bij de specialist
+ * belanden. De nieuwe actie verwijst dan met een neutrale tekst naar de
+ * bovenliggende actie; de agent leest daar in een sessie zelf de herkomst.
+ * Voor het werkmoment is besluit A (26-11, avond) genomen: de werkronde geeft
+ * de bovenliggende rij met haar `geschreven_door` mee. Dat hoort bij
+ * agent-architecture #284 (core/served/werkronde.md), niet bij dit dashboard.
+ * Tot die werkronde live is, krijgt de specialist op het werkmoment alleen
+ * de neutrale zin.
+ *
+ * Besluit C2 (26-11, avond): fail-closed. Alleen precies "eigenaar",
+ * "beheerder" en "sleutel" tellen als hogere herkomst. Elke andere waarde van
+ * een stempel dat er wel is (hoofdletters, spaties, null, een onbekende
+ * tekst, een getal) telt als lagere rol. Ontbreekt het stempel helemaal
+ * (modus uit), of is het eigenaar, beheerder of sleutel, dan is alles
+ * precies als vóór s64. */
+const SCHRIJVER_HOGER = ["eigenaar", "beheerder", "sleutel"];
+const OPVOLG_NEUTRAAL = "Pak de volgende stap op bij de bovenliggende actie.";
+/* Draagt `houder` het stempel `sleutel` (een eigen sleutel, ook met waarde
+ * null), en is dat niet precies een van de drie hogere waarden? Ontbreekt
+ * het stempel, dan false: dat is de modus uit. */
+function stempelVanLagereRol(houder, sleutel) {
+  if (!houder || typeof houder !== "object" || !Object.prototype.hasOwnProperty.call(houder, sleutel)) return false;
+  return SCHRIJVER_HOGER.indexOf(houder[sleutel]) === -1;
+}
+function opvolgZonderTitel(rij) {
+  return stempelVanLagereRol(rij && rij.__stempels, "door");
+}
+/* Het voorstel in het tekstvak (en de opdracht als je niets typt). */
+function opvolgVoorstel(rij, titel) {
+  return opvolgZonderTitel(rij) ? OPVOLG_NEUTRAAL : "Pak de volgende stap op: " + titel;
+}
+
 /* "Laat je team opvolgen": een subactie voor de specialist, met de
- * verbanden van het origineel, en het origineel zelf op Klaar. */
+ * verbanden van het origineel, en het origineel zelf op Klaar. Besluit C3
+ * (26-11, avond): ook bij een bronrij van een lagere rol gaan Organisatie,
+ * Deal, Project en Contactpersoon mee. Dat zijn koppelingen, geen opdracht;
+ * alleen de titel en de tekst blijven weg (zie opvolgVoorstel). */
 function opvolgActie(rij, c) {
   const data = {
     Actie: c.tekst.length > 120 ? c.tekst.slice(0, 117) + "…" : c.tekst,
@@ -718,7 +756,7 @@ if (typeof module !== "undefined") {
     bijCollegas, bijTeam, kloptNiet, SOORT_PER_STATUS, SOORT_LABEL, VJ_STILLE_BERG,
     BANEN, baanVan, banenVan,
     wachtInToekomst, agentWeergaveNaam, specialistVanRij, datumKeuzes, afhandelPatch, afhandelKnoppen,
-    opvolgActie, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
+    opvolgActie, opvolgVoorstel, opvolgZonderTitel, stempelVanLagereRol, SCHRIJVER_HOGER, OPVOLG_NEUTRAAL, vjIsoDag, vjDatumKort, AFHANDEL, AFHANDEL_VRAAGT, AFHANDEL_MET_NAAM, OPMERKING_KOP,
     toelichtingStukken, toelichtingInVolgorde, afsluitRegel,
   };
 }

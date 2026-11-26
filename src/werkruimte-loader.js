@@ -2,7 +2,8 @@
  *
  * De Coördinator geeft de klant bij de dagstart een prefilled URL:
  *   https://dashboard.agentic-team.ai#t=<token>&i=<instantie-url>
- * Het token is kortlevend (24 uur) en kan alleen lezen; het staat in het
+ * Het token is kortlevend (standaard 24 uur, in een afgeschermd team korter;
+ * zie daglinkGeldigheid) en kan alleen lezen; het staat in het
  * #fragment, dat browsers nooit naar een server meesturen, en leeft daarna
  * uitsluitend in sessionStorage. De browser praat rechtstreeks met de eigen
  * werkruimte-instantie van de klant — er komt geen agentic-team.ai-backend
@@ -379,10 +380,39 @@ function rijVanEntry(e) {
   // f46: de stempels van de instantie reizen mee onder één sleutel. Niet als
   // __aangemaakt/__bijgewerkt: getField() normaliseert sleutels, en dan zou
   // een schemaveld "Bijgewerkt" stil de stempel lezen.
-  return Object.assign({}, e && e.data, {
-    __entryId: e && e.entryId,
-    __stempels: { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null },
-  });
+  const stempels = { aangemaakt: (e && e.aangemaakt) || null, bijgewerkt: (e && e.bijgewerkt) || null };
+  // s64: met AFSCHERMING=aan stempelt de instantie elke rij die iemand
+  // schrijft, in elk datadomein, met de rol van de schrijver (besluit f van
+  // 26-11; eerst alleen het werkgeheugen), als meta-veld naast het entryId
+  // (geen datadomeinveld). Het reist mee bij de andere stempels; ontbreekt het,
+  // dan is de rij precies zoals vóór s64. Besluit C2 (26-11, avond):
+  // staat het veld er wel maar is het geen tekst (null, een getal, een
+  // object), dan reist het mee als null. Het label toont dan niets, en
+  // opvolgen behandelt het als een lagere rol (fail-closed).
+  if (e && Object.prototype.hasOwnProperty.call(e, "geschreven_door")) {
+    stempels.door = typeof e.geschreven_door === "string" ? e.geschreven_door : null;
+  }
+  return Object.assign({}, e && e.data, { __entryId: e && e.entryId, __stempels: stempels });
+}
+
+/* s64 — welke stempel krijgt een label "door …". Alleen de vier rollen van
+ * een mens in het team; "sleutel" (de licentiesleutel, geen persoon) tonen we
+ * niet, net als alles wat de instantie niet hoort te sturen. De tekst komt uit
+ * deze tabel, nooit uit de waarde zelf. */
+const SCHRIJVER_ROL_LABEL = Object.freeze({ eigenaar: "Eigenaar", beheerder: "Beheerder", medewerker: "Medewerker", viewer: "Viewer" });
+function schrijverLabel(waarde) {
+  return typeof waarde === "string" && Object.prototype.hasOwnProperty.call(SCHRIJVER_ROL_LABEL, waarde) ? SCHRIJVER_ROL_LABEL[waarde] : null;
+}
+/* s64 nafix (review #133) — de volledige labeltekst. "onbekend" (een rij van
+ * vóór de stempel, of een rij die iemand daarna bijwerkte terwijl er oude
+ * tekst bleef staan) krijgt "herkomst onbekend". Zonder label zag zo'n rij er
+ * hetzelfde uit als werk van de sleutel, en bleef het witwaspad naar
+ * "onbekend" (besluit d) open voor wie het dashboard leest. "onbekend" komt
+ * alleen met AFSCHERMING=aan, dus met de modus uit verandert er niets. */
+function herkomstTekst(waarde) {
+  if (waarde === "onbekend") return "herkomst onbekend";
+  const label = schrijverLabel(waarde);
+  return label ? "door " + label : null;
 }
 
 function maxBijgewerkt(entries) {
@@ -680,6 +710,65 @@ function sessieLicentie(token) {
   return p && typeof p.lic === "string" ? p.lic : null;
 }
 
+/* s64 — hoe lang een daglink geldig is, zoals de werkruimte hem uitgaf: het
+ * token draagt `exp` en `iat` (Unix-seconden, daglink.ts). Standaard 24 uur;
+ * bij Business (AFSCHERMING=aan) korter, standaard 4 uur. Alleen voor de
+ * tekst bij een verlopen link: niet gecontroleerd en nergens een beslissing.
+ * Geen bruikbare waarde (een link van vóór b32 zonder `iat`, of geen token):
+ * null. */
+function daglinkGeldigheid(token) {
+  const p = tokenPayloadDeel(token, 0);
+  if (!p || typeof p !== "object") return null;
+  const { exp, iat } = p;
+  return Number.isInteger(exp) && Number.isInteger(iat) && exp > iat ? exp - iat : null;
+}
+/* Dezelfde schrijfwijze als de werkruimte (duurTekst in mcp/server.ts):
+ * "4 uur", "24 uur", "90 minuten"; naar beneden, nooit langer dan het is. */
+function daglinkDuurTekst(seconden) {
+  if (seconden >= 3600 && seconden % 3600 === 0) return seconden / 3600 + " uur";
+  const minuten = Math.max(1, Math.floor(seconden / 60));
+  return minuten + " " + (minuten === 1 ? "minuut" : "minuten");
+}
+/* De zin achter "Deze dashboardlink is verlopen." Zonder gegevens de vaste
+ * zin van vóór s64; met een link van 24 uur levert de rekensom precies
+ * dezelfde zin op (zonder afscherming dus byte-gelijk). Een waarde langer dan
+ * een week is niet wat de werkruimte uitgeeft: dan een neutrale zin. */
+const DAGLINK_GELDIG_STANDAARD = "Daglinks zijn 24 uur geldig.";
+/* De duur zelf ("24 uur", "4 uur"), of null bij een waarde langer dan een
+ * week. Eén rekensom voor de melding en de Hulp. */
+function daglinkGeldigDuur(token) {
+  const s = daglinkGeldigheid(token);
+  if (s === null) return "24 uur";
+  if (s > 7 * 24 * 3600) return null;
+  return daglinkDuurTekst(s);
+}
+function daglinkGeldigTekst(token) {
+  if (daglinkGeldigheid(token) === null) return DAGLINK_GELDIG_STANDAARD;
+  const duur = daglinkGeldigDuur(token);
+  return duur ? "Daglinks zijn " + duur + " geldig." : "Een daglink is maar een beperkte tijd geldig.";
+}
+/* s64 nafix (besluit 26-11) — de Hulp en de woordenlijst zeiden vast "24
+ * uur". Kijk je met een daglink, dan staat er de duur van die link, met
+ * dezelfde rekensom als de melding hierboven (een link van 24 uur, of een
+ * zonder `iat`, geeft dus precies de tekst van vóór s64). Zonder daglink
+ * (ingelogd, of de lege staat) weet het dashboard niet hoe lang een link van
+ * dit team geldig is: dan een neutrale zin. `bron` mag null zijn. */
+function daglinkVanBron(bron) {
+  return bron && !bron.oauth && typeof bron.token === "string" && bron.token ? bron.token : null;
+}
+/* Voor de cel "Hoe lang" in de tabel Daglink of inloggen. */
+function daglinkHulpDuur(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "Standaard 24 uur, in een afgeschermd team korter";
+  return daglinkGeldigDuur(token) || "Een beperkte tijd";
+}
+/* Voor de woordenlijst: "de link …, <dit>". */
+function daglinkHulpWoord(bron) {
+  const token = daglinkVanBron(bron);
+  if (!token) return "standaard 24 uur geldig, in een afgeschermd team korter";
+  return (daglinkGeldigDuur(token) || "een beperkte tijd") + " geldig";
+}
+
 /* Welke bron gebruikt deze pagina?
  * - Een verse daglink in het fragment is een expliciete actie van de
  *   gebruiker en wint — behalve (b62) als er al een inlogsessie is voor
@@ -708,9 +797,9 @@ if (typeof module !== "undefined") {
   module.exports = {
     parseDaglinkFragment, hashLijktOpDaglink, loadWerkruimteBundle, restoreDaglink, vergeetDaglink, haalTeamfeed,
     tijdslimiet, isAfgebroken, VERZOEK_TIMEOUT_MS, VERZOEK_TIMEOUT_TEKST,
-    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, DAGLINK_SS_KEY,
+    bedrijfscontextUitEntries, maxBijgewerkt, rijVanEntry, schrijverLabel, herkomstTekst, DAGLINK_SS_KEY,
     emptyBundle, looksLikeMetricsPayload, metPlafond, saneerActivaties,
     fetchWerkruimte, schrijfWerkruimte, restoreBron, resetOauthVernieuwing, daglinkLicentie, sessieLicentie,
-    downloadExport, bestandsnaamUitHeader,
+    downloadExport, bestandsnaamUitHeader, daglinkGeldigheid, daglinkGeldigTekst, daglinkGeldigDuur, daglinkHulpDuur, daglinkHulpWoord,
   };
 }

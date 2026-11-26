@@ -184,13 +184,13 @@ function itemKaart(a, gekozen) {
     <div class="nr" aria-hidden="true">${nummer(a)}</div>
     <button class="item-open" data-act="open" data-id="${esc(a.id)}" aria-label="Nummer ${nummer(a)}: ${esc(a.titel)}, ${esc(SOORT_LABEL[s].toLowerCase())}">
       <span class="ititel">${esc(a.titel)} ${isNieuw(a) ? '<span class="pil nieuw">NIEUW</span>' : ""}${laat}</span>
-      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}</span>
+      <span class="imeta"><span class="soort">${SOORT_LABEL[s]}</span>${ag ? agChip(ag, { kort: true }) : ""}<span class="mono">${esc(sindsTekst(a))}</span>${hoort}${doorHtml(doorVan(a.rij))}</span>
       ${werk}${opm.length ? `<span class="opmregel">${ic("plus", "klein")}${telwoord(opm.length, "opmerking", "opmerkingen")} van ${esc(voornaam(opm[opm.length - 1].van))}</span>` : ""}</button>
     <div class="iknoppen">${kaartKnoppen(a)}</div></article>`;
 }
 function compactItem(a, gekozen) {
   const s = soortVan(a);
-  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}</span></span>${ic("chev")}</button>`;
+  return `<button class="compact ${gekozen ? "gekozen" : ""}" data-act="open" data-id="${esc(a.id)}" data-kaart="${esc(a.id)}" ${gekozen ? 'aria-current="true"' : ""}><span class="nr">${nummer(a)}</span><span class="ct"><b>${esc(a.titel)}</b><span>${SOORT_LABEL[s]}${isTeLaat(a) ? " · te laat" : ""} · ${esc(sindsTekst(a))}${doorHtml(doorVan(a.rij), " · ")}</span></span>${ic("chev")}</button>`;
 }
 function renderWerkbak(gekozenId) {
   const l = voorJouLijst(); const n = l.length; const kc = klaarCheck();
@@ -256,7 +256,20 @@ function renderVoorJou() {
     : `<div class="leeg"><h3>Alles afgehandeld</h3><p class="stil">Na het volgende werkmoment staat hier weer wat je team voor je klaarzette.</p>${S.sessie.afgehandeld.length ? `<p class="klein">Vandaag handelde je ${telwoord(S.sessie.afgehandeld.length, "ding", "dingen")} af.</p>` : ""}</div>`;
   return `<div class="inhoud">${renderBalk()}${waarschuwingenHtml()}<div class="twee"><div class="kol">${links}</div><div class="kol paneel-kolom" id="paneel-kolom">${rechts}</div></div></div>`;
 }
+/* s64, besluit C1 (26-11, avond): komt het item van een medewerker, een
+ * viewer of `onbekend` (of draagt het een stempel dat niet precies eigenaar,
+ * beheerder of sleutel is: C2, fail-closed), dan noemt de gekopieerde vraag
+ * de titel niet, maar het nummer uit de dagstart. De eigenaar plakt die vraag
+ * als zijn eigen vraag; de agent leest het item dan zelf, met zijn herkomst.
+ * Zonder stempel (modus uit): precies de vraag van vóór s64. */
 function vraagVoorTeam(it) {
+  if (stempelVanLagereRol(it, "geschreven_door")) {
+    const n = Number.isInteger(it.nr) ? `nummer ${it.nr} uit mijn dagstart` : "dit item uit mijn dagstart";
+    if (it.soort === "check") return `Laat me ${n} zien, dan kijk ik het na.`;
+    if (it.soort === "voorstel") return `Laat me het voorstel ${n} zien.`;
+    if (it.soort === "signaal") return `Laat mijn team ${n} opvolgen.`;
+    return `Wat moet ik doen met ${n}?`;
+  }
   const t = it.titel || "dit item";
   if (it.soort === "check") return `Laat me ‘${t}’ zien, dan kijk ik het na.`;
   if (it.soort === "voorstel") return `Laat me het voorstel ‘${t}’ zien.`;
@@ -267,7 +280,7 @@ function renderVoorJouNotion() {
   const v = verhaalData(); const feed = v.feed;
   const ags = [...new Set(feed.map(f => f.ag).filter(Boolean))];
   const posts = feed.filter(f => f.ag !== "quality-control" && f.ag !== "management-assistent").slice(0, 2);
-  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + ")</span>" : ""));
+  const perAgent = posts.map(f => esc(String(f.tekst).replace(/\.$/, "").slice(0, 160)) + (f.ag ? ' <span class="stil">(' + esc(AGENTS[f.ag].naam) + doorHtml(f.door, " · ") + ")</span>" : ""));
   const blok = werkbakUitDagstart(); const items = blok || [];
   const g = werkbakMoment(); const eigen = werkbakIsPersoonlijk();
   const verhaal = feed.length
@@ -358,7 +371,7 @@ function renderBlad(a, plek) {
     <div class="blad-kop">${deskPaneel ? `<span class="pos">${pos}</span>` : `<button class="link" data-act="sluit-blad">${ic("links", "klein")} ${esc(terugLabelVan(terug))}</button><span class="pos">${pos}</span>`}
       <span class="rijtje">${pijlen ? `<button class="ikknop" data-act="stap" data-d="-1" aria-label="Vorige">${ic("links")}</button><button class="ikknop" data-act="stap" data-d="1" aria-label="Volgende">${ic("chev")}</button>` : ""}${deskPaneel ? "" : `<button class="ikknop" data-act="sluit-blad" aria-label="Sluiten">${ic("sluit")}</button>`}</span></div>
     <h2 class="titel" id="blad-titel" tabindex="-1">${esc(a.titel)}</h2>
-    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}</div>
+    <div class="rijtje"><span class="soort ${s === "team" ? "teamk" : ""}">${SOORT_LABEL[s].toUpperCase()}</span><span class="beurt ${b.k}">${b.t}</span>${isTeLaat(a) ? `<span class="pil laat">${dagenTeLaat(a)} ${dagenTeLaat(a) === 1 ? "dag" : "dgn"} te laat</span>` : ""}${doorHtml(doorVan(a.rij))}</div>
     ${herk ? `<p class="herkomst">${herk}</p>` : ""}${opm1}
     ${a.hoort.length ? `<div class="hoortbij">Hoort bij: ${a.hoort.map(relatieKnop).join("")}</div>` : ""}
     ${werkTekst ? `<section class="papier" aria-label="${esc(werkKop)}"><div class="tussen"><h3 class="vakkop">${esc(werkKop)}</h3><span class="rijtje">${vlg.knop}${a.werk ? `<button class="knop klein-knop" data-act="kopieer" data-id="${esc(a.id)}">${ic("kopieer", "klein")}Kopieer alles</button>` : ""}</span></div>
@@ -369,10 +382,10 @@ function renderBlad(a, plek) {
       ${a.opdracht ? `<details class="uitklap" ${det("u-" + a.id + "-opd")}><summary>De opdracht <span class="stil klein">(${a.opdracht.van ? "van " + esc(voornaam(a.opdracht.van)) + ", " : ""}${esc(datumKort(a.opdracht.op))})</span>${ic("chev")}</summary><div class="binnen"><p style="white-space:pre-line">${esc(a.opdracht.tekst)}</p></div></details>` : ""}
       ${magSchrijven("notities") || opm.length ? `<details class="uitklap" ${det("u-" + a.id + "-opm")}><summary>Opmerkingen (${opm.length})${ic("chev")}</summary><div class="binnen">
         <p class="leeglabel">${opmLabel}</p>
-        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}</small><p>${esc(o.tekst)}</p></div>`).join("")}
+        ${opm.map(o => `<div class="opm"><small>${esc(o.van)} · ${esc(wanneer(o.op))}${doorHtml(o.door, " · ")}</small><p>${esc(o.tekst)}</p></div>`).join("")}
         ${magSchrijven("notities") ? `<button class="knop" data-act="sheet" data-type="opmerking" data-id="${esc(a.id)}">${ic("plus", "klein")}Opmerking</button>` : ""}</div></details>` : ""}
       <details class="uitklap" ${det("u-" + a.id + "-sub")}><summary>Wat hieraan hangt (${subs.length})${ic("chev")}</summary><div class="binnen">
-        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
+        ${subs.map(x => `<button class="rij" data-act="open" data-id="${esc(x.id)}"><span class="vorm" aria-hidden="true">${vormVan(soortVan(x))}</span><span class="ct"><b>${esc(x.titel)}</b><span class="rmeta">${esc(SOORT_LABEL[soortVan(x)])}${doorHtml(doorVan(x.rij))}</span></span>${ic("chev")}</button>`).join("") || '<p class="stil">Nog niets.</p>'}
         ${kanSchrijven() ? `<button class="knop" data-act="sheet" data-type="opdracht" data-onder="${esc(a.id)}">${ic("plus", "klein")}Kleinere opdracht</button>` : ""}</div></details>
       <details class="uitklap" ${det("u-" + a.id + "-veld")}><summary>Alle gegevens${ic("chev")}</summary><div class="binnen">${renderVelden(a)}</div></details>
     </div>
@@ -456,4 +469,4 @@ function opvolgAgentVan(a) {
   if (ag && ag !== "pipeline-manager" && sp.includes(ag)) return ag;
   return sp.includes("outreach-specialist") ? "outreach-specialist" : (sp[0] || "management-assistent");
 }
-function opvolgZinVan(a) { return "Pak de volgende stap op: " + a.titel; }
+function opvolgZinVan(a) { return opvolgVoorstel(a.rij, a.titel); }

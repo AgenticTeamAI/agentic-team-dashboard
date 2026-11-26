@@ -167,7 +167,7 @@ fetch-grenzen hieronder blijven gelijk.)
   wordt door dezelfde test op **zeven** sleutels vastgepind. Sinds i77 is de
   weergavenaam daarvan een terugvalkopie en niet meer de bron: die hoort bij je
   seat en staat versleuteld bij je licentie, zodat een tweede apparaat hem kent
-  en je beheerder hem kan rechtzetten.
+  en de eigenaar (het aankoopadres) hem kan rechtzetten.
 
 Wat de toets nadrukkelijk **niet** toestaat is een kale claim als "er gaat
 niets naar agentic-team.ai": de pagina zelf komt van
@@ -855,10 +855,19 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   agentic-team.ai zit er niet tussen, conform de harde grens van f15: klantdata
   komt niet op onze centrale servers. De instantie accepteert deze route alleen
   met CORS vanaf de dashboardpagina.
-- **Het token kan alleen lezen en verloopt na 24 uur.** Een verlopen link
-  geeft de melding "Vraag je Coördinator om een nieuwe"; er is geen
-  alternatieve ingang. Dit is bewust een minimale voorloper van OAuth
-  (p10, GA-voorwaarde) — geen weggegooid werk.
+- **Het token kan alleen lezen en verloopt na 24 uur** (bij Business, met
+  `AFSCHERMING=aan`, korter: standaard 4 uur). Een verlopen link geeft de
+  melding "Vraag je Coördinator om een nieuwe", met de geldigheid die het
+  dashboard uit `exp` en `iat` in het token leest (s64; zonder die velden de
+  vaste zin "Daglinks zijn 24 uur geldig."). Er is geen alternatieve ingang. Dit is bewust een minimale voorloper van OAuth
+  (p10, GA-voorwaarde) — geen weggegooid werk. De Hulp (tabel "Daglink of
+  inloggen?" en de woordenlijst) volgt dezelfde rekensom: kijk je met een
+  daglink, dan staat er de duur van die link; ingelogd of zonder bron staat er
+  "standaard 24 uur, in een afgeschermd team korter" (besluit 26-11; de daglink
+  faseert later uit, s66). De privacytekst (`src/teksten.js`) zegt sinds de
+  juristtoets van 26-11-2026 statisch: "Hij is alleen-lezen en verloopt
+  vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming
+  heeft." (statisch, want die tekst staat ook in de lege staat zonder token).
 - **Zelfde interne vorm.** De loader levert een gewone rows-bundel
   (entries → `rows`, `bijgewerkt` → `staleAt`, bedrijfscontext-entries →
   het zone 2-object); alles stroomafwaarts weet niet dat de data live is.
@@ -878,6 +887,42 @@ Wat `src/werkruimte-loader.js` daarmee doet, en waarom zo:
   Het domein zelf staat bewust níet in het dashboard-schema
   (`opslag: "werkruimte"`-filter in `extract-schema.py`) en wordt nooit
   als rows-domein getekend.
+- **Wie schreef een rij (s64).** Met `AFSCHERMING=aan` stempelt de instantie
+  elke rij met de rol van de schrijver (`geschreven_door`, meta-veld naast het
+  entryId). Het dashboard toont dat als "door <Rol>" of "herkomst onbekend";
+  zonder stempel, of met `sleutel`, is elk scherm byte voor byte wat het was.
+  **Opvolgen:** komt een signaal van een medewerker, een viewer of `onbekend`,
+  dan neemt "Laat je team opvolgen" de titel niet over als opdracht. Het
+  tekstvak begint met "Pak de volgende stap op bij de bovenliggende actie.", en
+  de nieuwe actie krijgt de relatie Bovenliggende actie. Organisatie, Deal,
+  Project en Contactpersoon gaan wel mee: dat zijn koppelingen, geen opdracht
+  (besluit C3, 26-11). De agent leest de herkomst bij de bovenliggende actie
+  zelf. Wat de eigenaar zelf in het vak typt, gaat gewoon mee. Zonder stempel,
+  of met eigenaar, beheerder of sleutel, is opvolgen ongewijzigd.
+  **Kopieer voor je team** (Voor jou van een Notion-klant) noemt bij een item
+  van een lagere rol de titel niet, maar het nummer uit de dagstart (besluit
+  C1). Daarvoor reist `geschreven_door` van een `voor_jou`-item mee door de
+  sanering, alleen als het veld er is. De werkruimte en de dagstart sturen dat
+  veld nu niet mee, dus in de praktijk verandert er nog niets.
+  **Fail-closed (besluit C2).** Voor opvolgen en kopiëren tellen alleen precies
+  `eigenaar`, `beheerder` en `sleutel` als hogere herkomst. Elke andere waarde
+  van een stempel dat er wel is (hoofdletters, spaties, `null`, een onbekende
+  tekst) telt als lagere rol; een veld dat geen tekst is, reist mee als `null`.
+  Ontbreekt het veld helemaal (modus uit), dan is alles zoals het was. Het label
+  "door <Rol>" blijft strikt: een onverwachte waarde geeft geen label.
+  **Bekende grenzen:**
+  - "Ongedaan maken" na een afhandeling is een PATCH die de oude velden
+    terugzet. Was die oude tekst van een lagere rol, dan staat hij daarna weer
+    in de rij terwijl het stempel `eigenaar` blijft (de eigenaar schreef de
+    PATCH).
+  - Het werkmoment en de bovenliggende actie. Besloten (besluit A, 26-11):
+    bij een actie met een Bovenliggende actie geeft de werkronde
+    (`agent-architecture/core/served/werkronde.md`) die bovenliggende rij mee
+    aan de specialist, met `geschreven_door` als die er is, en behandelt
+    tekst van een lagere rol als informatie, niet als opdracht. Dat hoort bij
+    agent-architecture (#284), niet bij dit dashboard. Tot die werkronde live is,
+    krijgt de specialist op het werkmoment alleen de neutrale zin; typ dan
+    zelf in het vak wat er moet gebeuren.
 - **Interne tegels.** `/dashboard/overzicht` levert `intern: true` wanneer
   de instantie met `DASHBOARD_INTERN=1` draait (FFG, Greenhive-test). Alleen
   dan toont het dashboard de KPI-tegel "Correctievrij (4 wk)" met de
