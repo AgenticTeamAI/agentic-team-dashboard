@@ -254,6 +254,10 @@ Doorgegeven is.
   Kaart en blad dragen de link als sleutel, niet het Extern ID; een item dat
   dezelfde link of hetzelfde Extern ID heeft als een ander item, krijgt geen
   knoppen (`uniekItem`), zodat een klik nooit een ander item doorgeeft.
+- **Broninhoud.** Actie, Extern ID en Bron (link) zijn een momentopname van
+  het item uit de dagstart, dus broninhoud: alleen om de actie terug te vinden.
+  Wat van de mens komt, is de Handeling met Specialist en Datum, en de Tekst
+  die hij zelf typte.
 - **Stand.** De opdrachten van de laatste 30 dagen komen mee met de bundel
   (`GET /dashboard/opdrachten?sinds=…`, alleen als het overzicht het domein met
   rijen noemt). Op de kaart staat "Doorgegeven — wordt bij het volgende

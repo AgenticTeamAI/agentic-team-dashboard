@@ -17,7 +17,15 @@
  *   POST /dashboard/opdrachten               {handeling, actie, extern_id?, bron_link?, tekst?, specialist?, datum?}
  *   POST /dashboard/opdrachten/<id>/intrekken
  * De server zet Status, "Gegeven door" (uit je login) en "Bronsysteem" zelf;
- * die stuurt het dashboard dus nooit mee. */
+ * die stuurt het dashboard dus nooit mee.
+ *
+ * Wat hier van de mens komt, is alleen de keuze: Handeling, Specialist en
+ * Datum (en bij Terugsturen, Nee en Nieuw de Tekst die hij zelf typte). Actie,
+ * Extern ID en Bron (link) zijn een momentopname van het item uit de dagstart,
+ * dus van broninhoud die een agent uit het eigen systeem overnam: ze dienen
+ * alleen om de actie terug te vinden en te vergelijken, nooit als instructie.
+ * De werkronde (core/served/werkronde.md in agent-architecture) moet ze zo
+ * lezen; het dashboard voegt er niets aan toe en kan het niet afdwingen. */
 
 const OPDRACHT_HANDELINGEN = ["Goedkeuren", "Ja", "Nee", "Terugsturen", "Doorzetten", "Later", "Nieuw"];
 const OPDRACHT_STATUSSEN = ["Doorgegeven", "In uitvoering", "Uitgevoerd", "Mislukt", "Ingetrokken"];
