@@ -106,6 +106,16 @@ const PRIVACY_UITKLAP = PRIVACY_UITKLAP_ALINEAS.join(" ");
 
 /* CONCEPT — juridische ronde s66, niet vastgesteld.
  *
+ * Juristronde 27-11-2026 (rapport-jurist-s66-dashboardsessie-2026-11-27.md):
+ * gelezen en gecorrigeerd, nog niet vastgesteld. Correcties: een sessie stopt
+ * alleen als je minder rechten krijgt of uit het team wordt verwijderd
+ * (besluit Tijmen 27-11, geen promotie); het cookie overleeft ook het sluiten
+ * van de browser; uitloggen op alle apparaten laat de koppeling met je
+ * AI-assistent staan; wij lezen alleen totalen over 28 dagen; de markering gaat
+ * weg bij uitloggen; en de cel in de Hulp. De markering hieronder blijft tot de
+ * vaststelling. Open bij Tijmen: de keuze "Ingelogd blijven" (rapport punt 1);
+ * kiest hij die, dan wijzigt de cookiezin mee.
+ *
  * s66 stap 1 (besluit Tijmen 26-11-2026): met de build-vlag DASHBOARD_SESSIE
  * blijf je ingelogd via een functioneel cookie op agentic-team.ai, en staat
  * het inlogtoken alleen nog in het geheugen van de pagina. Daardoor worden
@@ -123,17 +133,27 @@ const PRIVACY_UITKLAP_SESSIE_CONCEPT = Object.freeze({
   markering: "CONCEPT — juridische ronde s66, niet vastgesteld",
   /* Vervangt PRIVACY_UITKLAP_ALINEAS[4] (de inlogalinea). */
   inloggen: "Er zijn twee manieren om binnen te komen. Het daglink-token staat achter het #-teken en gaat daarom niet mee naar de server die deze pagina levert. Je browser stuurt hem daarna wel als sleutel mee met elk verzoek via ons doorgeefluik, dat hem alleen gebruikt om je werkruimte te vinden. " +
-    "Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan zet agentic-team.ai een functioneel cookie in je browser dat je ingelogd houdt: tot 14 dagen na je laatste gebruik, 7 dagen als je licentie afscherming heeft, en hooguit 30 dagen na het inloggen. " +
+    "Hij is alleen-lezen en verloopt vanzelf: standaard na 24 uur, en na 4 uur als je licentie afscherming heeft. Log je in met je licentie, dan zet agentic-team.ai een functioneel cookie in je browser dat je ingelogd houdt, ook als je de browser sluit: tot 14 dagen na je laatste gebruik, 7 dagen als je licentie afscherming heeft, en hooguit 30 dagen na het inloggen. " +
     "Daarmee haalt je browser bij agentic-team.ai een inlogtoken dat een uur geldig is en alleen in het geheugen van deze pagina staat. Ben je eerder ingelogd, dan gebeurt dat vanzelf als je het dashboard opent, en daarna bij je eerstvolgende verzoek als het token verlopen is. Daar gaat geen bedrijfsdata bij mee, in geen van beide richtingen. " +
     "Wel zien wij daarbij dat er met jouw licentie is ingelogd of vernieuwd, en wanneer. Wij tellen per licentie per dag hoe vaak dat gebeurt, en bewaren die telling 90 dagen. " +
-    "Je werkruimte telt daarnaast per dag hoe vaak het dashboard opent via een daglink en hoe vaak via een sessie, zonder vast te leggen wie het opende, en bewaart die telling 35 dagen; wij lezen die telling per licentie. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak het dashboard wordt gebruikt. " +
-    "Dat bekijken we per licentie en niet per persoon. Je kunt uitloggen in deze browser, of op al je apparaten tegelijk. Wordt je rol in het team gewijzigd, dan stopt je sessie en log je opnieuw in.",
+    "Je werkruimte telt daarnaast per dag hoe vaak het dashboard opent via een daglink en hoe vaak via een sessie, zonder vast te leggen wie het opende, en bewaart die telling 35 dagen; wij lezen daarvan alleen de totalen over de laatste 28 dagen, per licentie. We gebruiken dat voor het beheer van de plekken op je licentie en om te zien hoe vaak en hoe het dashboard wordt gebruikt. " +
+    "Dat bekijken we per licentie en niet per persoon. Je kunt uitloggen in deze browser, of op al je apparaten tegelijk; de koppeling met je AI-assistent blijft dan bestaan. Krijg je in je team minder rechten of word je uit het team verwijderd, dan stopt je sessie en log je opnieuw in.",
   /* Vervangt PRIVACY_UITKLAP_ALINEAS[5] (de opslagalinea). */
   opslag: "In je browser bewaren we de daglink en je gekozen filter voor de duur van dit tabblad — sluit je het tabblad, dan zijn ze weg. Je inlogtoken staat alleen in het geheugen van deze pagina: sluit of herlaad je de pagina, dan is het weg. " +
     "Blijvend bewaren we het moment van laatst laden, je minuten-per-actie-instelling, je keuze voor een licht of donker thema als die afwijkt van je systeeminstelling, een markering dat je bent ingelogd met de datum waarop je sessie uiterlijk afloopt, en een kopie van de naam waaronder je werkt. " +
     "Die naam bewaren we ook bij je licentie op agentic-team.ai, versleuteld naast het e-mailadres waarmee je inlogt: zo hoef je hem niet op elk apparaat opnieuw op te geven en kan de eigenaar van je licentie (het aankoopadres) hem rechtzetten. Je browser vraagt hem daarvoor hoogstens één keer per sessie op; daar gaat geen bedrijfsdata bij mee. " +
-    "In de markering staat geen token, licentie of naam. Het cookie dat je ingelogd houdt, staat bij agentic-team.ai; deze pagina kan het niet lezen.",
+    "In de markering staat geen token, licentie of naam; log je uit, dan wissen we haar. Het cookie dat je ingelogd houdt, staat bij agentic-team.ai; deze pagina kan het niet lezen.",
+  /* Vervangt in de Hulp ("Daglink of inloggen?", v1 en v2) de cel "Tot je dit
+   * tabblad sluit" in de kolom Inloggen. Juristronde 27-11-2026. */
+  hulpInlogDuur: "Tot je uitlogt: 14 dagen na je laatste gebruik (7 bij afscherming), hooguit 30 dagen",
 });
+
+/* De cel "Hoe lang" bij Inloggen in de Hulp: met de vlag DASHBOARD_SESSIE het
+ * concept, anders precies de tekst van main. */
+function hulpInlogDuur() {
+  const sessie = typeof sessieFlowAan === "function" && sessieFlowAan();
+  return sessie ? PRIVACY_UITKLAP_SESSIE_CONCEPT.hulpInlogDuur : "Tot je dit tabblad sluit";
+}
 
 /* De alinea's die het dashboard toont: met de vlag DASHBOARD_SESSIE het
  * concept op de plek van de inlog- en de opslagalinea, anders precies
@@ -157,5 +177,5 @@ const PRIVACY_FEED =
   "Deze feed leest uit je eigen werkruimte via de daglink. De berichten gaan niet naar onze website- of licentieserver en worden niet door ons bewaard.";
 
 if (typeof module !== "undefined") {
-  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_UITKLAP_SESSIE_CONCEPT, privacyAlineas, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
+  module.exports = { PRIVACY_REGEL, PRIVACY_UITKLAP, PRIVACY_UITKLAP_ALINEAS, PRIVACY_UITKLAP_SESSIE_CONCEPT, privacyAlineas, hulpInlogDuur, PRIVACY_LEGE_STAAT, PRIVACY_FEED };
 }

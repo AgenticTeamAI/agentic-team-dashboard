@@ -129,7 +129,7 @@ function hulpSecties() {
     ["daglink", "Daglink of inloggen?", () => `
       <div class="tabelwrap"><table><thead><tr><th scope="col"><span class="sr">Wat</span></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
        <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-       <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(bron()))}</td><td>Tot je dit tabblad sluit</td></tr>
+       <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(bron()))}</td><td>${esc(hulpInlogDuur())}</td></tr>
        <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
        <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
        <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
