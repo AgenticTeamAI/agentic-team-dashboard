@@ -660,8 +660,20 @@ function werkruimteDomeinen(schema) {
   return uitSchema.concat([METRICS_DOMEIN, "dagplannen", OPDRACHTEN_DOMEIN].filter(d => uitSchema.indexOf(d) === -1));
 }
 
-async function loadWerkruimteBundle(bron) {
-  const overzicht = await fetchWerkruimte(bron, "/dashboard/overzicht");
+/* s66 (besluit 27-11-2026): de instantie telt hoe vaak het dashboard opent via
+ * een daglink en hoe vaak via een sessie (werkruimte, dashboard-opens.ts). Een
+ * open is één overzicht met de markering `?open=1`. Die gaat alleen mee bij
+ * het eerste laden van een pagina (app.js zet `eersteOpen` op precies de twee
+ * opstartpaden), nooit bij Ververs, het herladen na een schrijfactie of de
+ * daglink-terugval na uitloggen: die keren lopen altijd ingelogd en zouden het
+ * aandeel daglink te laag maken. Het is geen nieuw verzoek en geen nieuwe
+ * bestemming: één vaste queryparameter op het overzicht dat toch al wegging,
+ * zonder id, tijdstip of inhoud. Een oudere instantie negeert hem. */
+const OVERZICHT_PAD = "/dashboard/overzicht";
+const OVERZICHT_EERSTE_OPEN_PAD = OVERZICHT_PAD + "?open=1";
+
+async function loadWerkruimteBundle(bron, { eersteOpen = false } = {}) {
+  const overzicht = await fetchWerkruimte(bron, eersteOpen === true ? OVERZICHT_EERSTE_OPEN_PAD : OVERZICHT_PAD);
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // f52: de bedrijfsnaam, voor de naam van het werkmoment in het stappenblad.

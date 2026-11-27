@@ -363,14 +363,18 @@ function toonLegeStaat(titel, tekst, { login = null, opnieuwUitloggen = false } 
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = {}) {
+/* `eersteOpen`: alleen het eerste laden van deze pagina (de twee opstartpaden
+ * hieronder) draagt de markering voor de opens-teller van de instantie (zie
+ * loadWerkruimteBundle). Ververs, herladen na een schrijfactie, een daglink
+ * op een open tabblad en de daglink-terugval na uitloggen laten hem weg. */
+async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null, eersteOpen = false } = {}) {
   huidigeBron = bron;
   if (!currentBundle || !behoudRoute) {
     currentBundle = null;
     toonLegeStaat("Je team wordt geladen…", "Live uit je werkruimte.", { login: false });
   }
   try {
-    const bundle = await loadWerkruimteBundle(bron);
+    const bundle = await loadWerkruimteBundle(bron, { eersteOpen });
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
     laadBeheer();
     return true;
@@ -509,7 +513,7 @@ async function startMetSessie() {
   const bron = sessie || restoreDaglink();
   if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
   if (naarRoute === "#/data/acties") naarRoute = "#/";
-  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  if (bron) { laadWerkruimte(bron, { naarRoute, eersteOpen: true }); return; }
   if (sessieTekst) {
     toonLegeStaat("Log in om je team te zien", sessieTekst + " Of open dit dashboard via de daglink in je dagstart.", { login: true });
     return;
@@ -564,7 +568,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // f48: de kale link uit het slotbericht van de werkronde wees naar de
   // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
-  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  if (bron) { laadWerkruimte(bron, { naarRoute, eersteOpen: true }); return; }
   // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
   if (eindToestand) return;
   toonStartLeeg();
