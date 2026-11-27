@@ -1165,7 +1165,21 @@ vlag doen, en waarom zo:
   uur. Heeft je licentie afscherming (Business), dan verlopen de daglinks die
   voor jou zijn gemaakt pas vanzelf.") → uitloggen-overal bij de site → markering en geheugen weg. Bij
   Business trekt de instantie ook je eigen daglinks in. De koppeling met je
-  AI-assistent blijft.
+  AI-assistent blijft. Falen de instantie én de site (besluit 27-11), dan is
+  het cookie misschien nog levend: dan dezelfde fout als bij een mislukt
+  gewoon uitloggen ("Uitloggen is niet gelukt", knop **Opnieuw uitloggen**,
+  geen loginknop), en de markering blijft. Faalt alleen de site, dan heeft de
+  instantie de sessies al beëindigd en blijft de melding "In dit tabblad ben je
+  uitgelogd".
+- **De markering `open=1`** (besluit 27-11). De instantie telt hoe vaak het
+  dashboard opent via een daglink en via een sessie (werkruimte,
+  `dashboard-opens.ts`), en telt alleen `GET /dashboard/overzicht?open=1`. Het
+  dashboard zet die markering bij precies het eerste laden van een pagina (de
+  twee opstartpaden in `app.js`, met en zonder de vlag), en nooit bij Ververs,
+  het herladen na een schrijfactie, een daglink op een al open tabblad of de
+  daglink-terugval na uitloggen. Geen nieuw verzoek, geen nieuwe bestemming en
+  geen nieuw gegeven: één vaste bit op het overzicht dat er al was (gepind in
+  `test/geen-telemetrie.test.js`).
 - **Teamlid verwijderen** (Beheer): na de geslaagde verwijdering bij de site
   ook `POST /dashboard/sessies/intrekken {seat}` op de instantie. Een 403, 404
   of 503 daarvan is geen fout van de verwijdering, wel een voetnoot dat een
@@ -1190,8 +1204,8 @@ met een ander account, dan nam dat het cookie over, en logt dit ook dát account
 uit: ongemak (opnieuw inloggen met mail), geen datalek.
 
 Getest in `test/s66-sessie-lege-staat.test.js`,
-`test/s66-sessie-geen-token-opslag.test.js`, `test/s66-sessie-flow.test.js`
-en `test/s66-sessie-teambeheer.test.js` (op het gebouwde artefact met de twee
+`test/s66-sessie-geen-token-opslag.test.js`, `test/s66-sessie-flow.test.js`,
+`test/s66-sessie-teambeheer.test.js` en `test/s66-opens-markering.test.js` (op het gebouwde artefact met de twee
 meta's erin geplakt, zoals `test/oauth-login.test.js`).
 
 ### Eén bron: deze repo heeft zijn eigen Vercel-project
