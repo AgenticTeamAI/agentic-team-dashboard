@@ -150,6 +150,22 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     expect(HTML).not.toMatch(/OAUTH_TOKEN_URL[^;]*bundle/);
   });
 
+  /* s66 (besluit 27-11-2026): bij het eerste laden van een pagina draagt het
+   * overzicht de markering `?open=1`, voor de opens-teller van de instantie
+   * (daglink tegenover sessie). Dat is geen nieuwe meting naar ons: geen
+   * nieuw verzoek, geen nieuwe fetch-plek, geen nieuwe bestemming (het is
+   * hetzelfde GET naar bron.instantieUrl dat er al was) en geen nieuw
+   * gegeven (één vaste bit, zonder id, tijdstip of inhoud). Wat er mee
+   * gebeurt, gebeurt in de eigen werkruimte van de klant. Deze pin houdt de
+   * markering op precies die ene, letterlijke vorm. */
+  it("de open-markering is één vaste queryparameter op het bestaande overzichtverzoek", () => {
+    // Eén letterlijke plek in de code (commentaar telt niet: alleen de string).
+    expect((HTML.match(/"\?open=1"/g) || []).length).toBe(1);
+    expect(HTML).toContain('const OVERZICHT_EERSTE_OPEN_PAD = OVERZICHT_PAD + "?open=1";');
+    expect(HTML).toContain('const OVERZICHT_PAD = "/dashboard/overzicht";');
+    expect(HTML).toContain("fetchWerkruimte(bron, eersteOpen === true ? OVERZICHT_EERSTE_OPEN_PAD : OVERZICHT_PAD)");
+  });
+
   it("de CSP laat alleen de eigen werkruimte-bestemmingen toe — connect-src exact", () => {
     expect(cspDirectief(CSP, "default-src")).toBe("'none'");
     expect(cspDirectief(CSP, "connect-src")).toBe(CONNECT_SRC);

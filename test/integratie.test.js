@@ -185,7 +185,9 @@ describe("werkruimte-route — rijen", () => {
     inhoud.teamfeed = teamfeedEntries();
     const d = await open({ domeinen: inhoud });
     await d.geladen();
-    expect(d.gevraagd[0]).toBe("/dashboard/overzicht");
+    // s66 (besluit 27-11): het eerste laden draagt de markering voor de
+    // opens-teller van de instantie, ook via een daglink en zonder de vlag.
+    expect(d.gevraagd[0]).toBe("/dashboard/overzicht?open=1");
     expect(d.tabs()).toEqual(["Voor jou", "Acties", "Team", "Gegevens"]);
     expect(d.actieveTab()).toMatch(/Voor jou/);
     expect(d.w.location.hash === "" || d.w.location.hash === "#/").toBe(true);
@@ -434,7 +436,9 @@ describe("Gegevens en navigatie in dashboard.html", () => {
     await d.geladen();
     await d.naar("#/acties");
     d.q('[data-act="ververs"]').click();
-    await d.tot(() => d.gevraagd.filter((p) => p === "/dashboard/overzicht").length === 2, "opnieuw opgehaald");
+    await d.tot(() => d.gevraagd.filter((p) => p.startsWith("/dashboard/overzicht")).length === 2, "opnieuw opgehaald");
+    // s66 (besluit 27-11): Ververs is geen open; alleen het eerste laden telt.
+    expect(d.gevraagd.filter((p) => p.startsWith("/dashboard/overzicht"))).toEqual(["/dashboard/overzicht?open=1", "/dashboard/overzicht"]);
     await d.tot(() => d.heeftTabs() && /Wie is aan zet\?/.test(d.tekst()), "nog steeds op Acties");
     expect(d.w.location.hash).toBe("#/acties");
     expect(d.fouten).toEqual([]);
