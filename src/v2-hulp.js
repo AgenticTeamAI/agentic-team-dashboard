@@ -169,7 +169,7 @@ function hulpSecties() {
       <p class="klein stil">Wat je doorgeeft, staat minstens dertig dagen in je werkruimte, ${ingelogd() && !jij() ? "met je rol erbij (vul je naam in bij je account, dan staat die er ook bij)" : "met je naam en rol erbij"}, zodat je team weet van wie het komt.</p>`
     : `<ul><li><b>Hier zie je</b> wat je team deed (uit je teamfeed) en wat je dagstart samenvatte, met per item een link naar je eigen systeem.</li>
       <li><b>In je eigen systeem doe je</b> het afhandelen, goedkeuren en je vaste taken aanpassen. Of vraag het je team.</li></ul>`}`],
-    ["privacy", "Wat ziet dit dashboard?", () => PRIVACY_UITKLAP_ALINEAS.map(a => `<p>${esc(a)}</p>`).join("")],
+    ["privacy", "Wat ziet dit dashboard?", () => privacyAlineas().map(a => `<p>${esc(a)}</p>`).join("")],
     ["woorden", "Woorden die je team gebruikt", () => `
       <dl class="woorden"><dt>Werkmoment</dt><dd>werkronde, of de geplande taak in je AI-assistent</dd><dt>Vaste taak</dt><dd>ritmetaak</dd><dt>Klaar om te checken</dt><dd>Wacht op review</dd><dt>Bij je team</dt><dd>Open of Bezig, met een specialist als eigenaar</dd><dt>Afgerond</dt><dd>Klaar</dd><dt>Specialist</dt><dd>agent</dd><dt>Dagstart</dt><dd>wat je team doet als je zegt ‘Start mijn dag’</dd><dt>Coördinator</dt><dd>de specialist die je dag plant en grote klussen regisseert</dd><dt>Daglink</dt><dd>de link naar dit dashboard in je dagstart, ${esc(daglinkHulpWoord(bron()))}</dd></dl>`],
   ];
@@ -188,7 +188,7 @@ function renderHulp() {
   const leeg = S.leeg;
   const kop = !CTX
     ? `<div class="balk ${leeg && leeg.fout ? "fout" : "geen"}" role="status"><div><b data-leeg-titel>${esc((leeg && leeg.titel) || "Open je dashboard via de link in je dagstart, of log in.")}</b>${leeg && leeg.tekst ? `<p style="margin-top:4px" data-leeg-tekst>${esc(leeg.tekst)}</p>` : ""}</div>
-      ${leeg && leeg.bezig ? "" : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator om een daglink.</span>`}</div>`}
+      ${leeg && leeg.bezig ? "" : leeg && leeg.opnieuwUitloggen ? `<div class="rijtje"><button class="knop prim" data-act="uitloggen">Opnieuw uitloggen</button></div>` : `<div class="rijtje">${kanInloggen() ? `<button class="knop prim" data-act="login">Inloggen</button><span class="klein stil">Met je e-mailadres, Google of Microsoft.</span>` : `<span class="klein stil">Vraag je Coördinator om een daglink.</span>`}</div>`}
       <p class="klein stil">${esc(PRIVACY_LEGE_STAAT)}</p></div>`
     : `<button class="link" data-act="go" data-r="${S.hist.length ? "__terug" : "/"}">${ic("links", "klein")} Terug</button>`;
   const versie = document.querySelector('meta[name="at-schema"]');

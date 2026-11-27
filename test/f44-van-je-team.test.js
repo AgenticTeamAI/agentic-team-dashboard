@@ -276,6 +276,9 @@ describe("deeplink achter de login", () => {
     const html = readFileSync(join(ROOT, "dashboard.html"), "utf8");
     const sleutels = [...new Set(html.match(/"agentic-team-dashboard:[a-z-]+"/g) || [])];
     // Acht sinds de themakeuze (dashboard v2, 1-10-2026; staat in de privacytekst).
-    expect(sleutels).toHaveLength(8);
+    // Negen sinds s66 (besluit 26-11-2026): de markering van de dashboardsessie
+    // (localStorage, alleen {"tot": …}, zonder token), in het concept van de
+    // privacytekst achter de vlag DASHBOARD_SESSIE.
+    expect(sleutels).toHaveLength(9);
   });
 });

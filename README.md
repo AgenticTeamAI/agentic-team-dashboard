@@ -160,13 +160,24 @@ fetch-grenzen hieronder blijven gelijk.)
   refresh-token, de PKCE-verifier en de client-identificatie. Hij gebeurt
   alleen als je zelf op "Inloggen met je licentie" klikt of een lopende sessie
   vernieuwt — nooit uit zichzelf, en nooit in de lege staat.
+  **Met de vlag `DASHBOARD_SESSIE`** (s66, zie §Ingelogd blijven) loopt de
+  token-call via het sessiecookie op www: een POST zonder body naar
+  `/api/dashboard/sessie/token`, die een access-token van een uur teruggeeft.
+  Dan geldt: bij het openen alleen als je eerder bent ingelogd (de markering),
+  nooit in de lege staat. Dezelfde ene fetch-plek (`sitePost`) kent precies
+  vier vaste bestemmingen (`SITE_POST_URLS`: de oude token-POST en de drie
+  sessie-POST's), en alleen die drie sessie-POST's sturen cookies mee
+  (`credentials: "include"`). De test pint de tabel, de ene fetch en de ene
+  plek met credentials exact.
 - **Vercel Web Analytics en Speed Insights staan uit** op zowel
   `agentic-team-dashboard` als `at-dashboard-staging`, en horen uit te
   blijven. Die zijn in het Vercel-dashboard aan te zetten **zonder
   codewijziging**; de hash-only `script-src` blokkeert het script dan wel,
   maar dat is een vangrail, niet de afspraak.
 - Wat er wél lokaal in de browser wordt bewaard staat in de uitklaptekst en
-  wordt door dezelfde test op **zeven** sleutels vastgepind. Sinds i77 is de
+  wordt door dezelfde test op **negen** sleutels vastgepind (sinds s66 de
+  markering `agentic-team-dashboard:sessie`, alleen `{"tot": …}`, met de vlag
+  `DASHBOARD_SESSIE`). Sinds i77 is de
   weergavenaam daarvan een terugvalkopie en niet meer de bron: die hoort bij je
   seat en staat versleuteld bij je licentie, zodat een tweede apparaat hem kent
   en de eigenaar (het aankoopadres) hem kan rechtzetten.
@@ -599,6 +610,7 @@ elke PR en push naar main:
 ```bash
 python3 scripts/build.py            # dashboard.html opnieuw genereren uit src/ + schema/
 python3 scripts/build.py --oauth    # idem, met de loginknop aan (Vercel: OAUTH_DASHBOARD)
+python3 scripts/build.py --oauth --sessie  # idem, ingelogd blijven via het sessiecookie (Vercel: DASHBOARD_SESSIE; s66)
 python3 scripts/build.py --noindex  # idem, met <meta name="robots" content="noindex"> (staging)
 python3 scripts/generate-testdata.py          # testdata/data/ (fixture) opnieuw genereren
 python3 scripts/generate-testdata-metrics.py  # testdata/notion-metrics/ (fixture) opnieuw genereren
@@ -1046,6 +1058,9 @@ Wat `src/oauth-client.js` doet, en waarom zo:
 - **Tokens staan in `sessionStorage`, niet in `localStorage`.** Tabblad dicht =
   weg, dezelfde eigenschap als de daglink. Een dashboard dat op een gedeelde
   laptop maandenlang ingelogd blijft is geen dashboard maar een lek.
+  (Met de vlag `DASHBOARD_SESSIE` geldt dit niet meer: dan blijf je ingelogd
+  via een httpOnly-cookie op www en staat er geen token in de browseropslag,
+  zie §Ingelogd blijven hieronder.)
 - **Eén refreshpoging, gedeeld.** Krijgt een verzoek aan de router een 401, dan
   vernieuwt de loader het token één keer en doet het verzoek opnieuw. Lukt dat
   niet, dan valt de pagina terug op de lege staat mét de loginknop en een
@@ -1075,6 +1090,123 @@ route end-to-end op het gebouwde `dashboard.html` in jsdom). Het
 dashboard-token uit de gedeelde contractfixture
 (`test/fixtures/oauth-fixture.json`) dient daarbij als realistisch
 access-token.
+
+### Ingelogd blijven: de dashboardsessie (s66 stap 1, met de vlag `DASHBOARD_SESSIE`)
+
+Besluit Tijmen 26-11-2026. **Met de vlag `DASHBOARD_SESSIE`** blijf je
+ingelogd, ook als je het tabblad sluit: 14 dagen na je laatste gebruik, 7 met
+afscherming, hooguit 30 dagen na het inloggen. De site bepaalt die termijnen;
+dit dashboard kent ze niet en rekent er niet mee. Zonder de vlag gedraagt het
+artefact zich exact zoals hierboven, en de daglink blijft ongewijzigd bestaan.
+
+Het vervangingstoken (refresh token) staat **niet** in deze pagina, maar in een
+httpOnly-, Secure-cookie op `www.agentic-team.ai`, gezet door een serverfunctie
+van de site (de BFF, contract 2.17.0 §7g, site-branch
+`s66-dashboardsessie-bff`). "Het dashboard bevat geen data" blijft waar: er komt
+hier geen serverfunctie en geen rewrite bij.
+
+| | met de vlag |
+|---|---|
+| inloggen | top-level navigatie naar `https://www.agentic-team.ai/api/dashboard/sessie/inloggen?terug=/&route=…` (`terug` is `/` of `/v2/`); geen PKCE en geen opslag hier |
+| terug | `#sessie=nieuw&r=<route>` of `#sessie=fout&reden=andere_poging\|afgebroken\|geweigerd\|storing`; nooit een token in de URL |
+| token | `POST /api/dashboard/sessie/token`, zonder body, met cookies → `{access_token, expires_in, sessie_tot}` |
+| uitloggen | `POST /api/dashboard/sessie/uitloggen`, idempotent; bij een fout één herhaling, en pas bij een 2xx "Je bent uitgelogd" |
+| overal uitloggen | eerst een vers token, dan `POST /dashboard/sessies/intrekken {}` op de eigen instantie, dan `POST /api/dashboard/sessie/uitloggen-overal` |
+| access-token | alleen in een modulevariabele (`sessieToegang`), nooit in `sessionStorage` of `localStorage` |
+| lokaal | alleen de markering `agentic-team-dashboard:sessie` = `{"tot": "<ISO>"}`, zonder token, seat of licentie |
+
+Wat `src/oauth-client.js`, `src/werkruimte-loader.js` en `src/app.js` met de
+vlag doen, en waarom zo:
+
+- **Bij het openen.** De sleutels van de oude tabbladflow
+  (`agentic-team-dashboard:oauth`, `:oauth-pkce`) gaan weg; een oude
+  tabbladsessie logt dus één keer opnieuw in. Daarna: een `#sessie=fout`
+  geeft een melding naast de loginknop; `#sessie=nieuw` doet een token-POST
+  en gaat naar de route; een daglink mét markering doet eerst een token-POST,
+  en de sessie wint alleen bij dezelfde licentie (anders het daglinkpad,
+  ongewijzigd); alleen een markering doet een token-POST (bij 401 gaat de
+  markering weg); **zonder markering en zonder fragment gaat er geen enkel
+  verzoek weg.** De markering is een optimalisatie: zonder markering (Safari
+  wist haar na 7 dagen) hervat de loginknop een levende sessie bij de site,
+  zonder mail.
+- **Vernieuwen.** Bij een verlopen token (`expires_in`) of een 401 van de
+  instantie: één token-POST, gedeeld door de gelijktijdige verzoeken, en per
+  verzoek één nieuwe poging. Een 503 van de token-route krijgt één herhaling na
+  min(`Retry-After`, 2) s, daarna de storingsmelding. Nooit een lus. In de
+  praktijk is dat **altijd 2 s**: `Retry-After` is cross-origin alleen leesbaar
+  als de site hem in `Access-Control-Expose-Headers` zet, en dat doet ze (nog)
+  niet. Komt die header er, dan geldt vanzelf min(`Retry-After`, 2).
+- **Uitloggen.** Het geheugen gaat meteen leeg; dan `POST uitloggen` bij de
+  site. Lukt dat niet (geen 2xx of geen verbinding), dan één herhaling na
+  dezelfde wachttijd. Lukt het ook dan niet, dan heeft de site het cookie
+  laten staan (bij een storing doet ze dat bewust), en zou de volgende die op
+  Inloggen klikt zonder mail binnen zijn. Het dashboard zegt dan **niet** "Je
+  bent uitgelogd", maar "Uitloggen is niet gelukt", met "Uitloggen bij
+  agentic-team.ai is niet gelukt; je kunt in deze browser nog ingelogd raken.
+  Probeer het opnieuw." en een knop **Opnieuw uitloggen**. De markering blijft
+  dan staan, zodat de andere tabbladen kloppen.
+- **401 `{sessie: "beeindigd"}`.** De instantie zette een sessiegrens
+  (rolwijziging, uitloggen overal, teamlid verwijderd). Vernieuwen helpt dan
+  niet: het dashboard logt uit bij de site, wist markering en geheugen en zegt
+  "Je sessie is beëindigd (je rol is gewijzigd of je bent overal uitgelogd).
+  Log opnieuw in." Inloggen wacht tot dat uitloggen klaar is, anders hervat de
+  site het cookie dat net weg moest.
+- **De identiteitspin.** Er is één cookie per browser, dus een ander tabblad
+  kan met een ander account inloggen. Het eerste sessietoken van een tabblad
+  legt licentie en seat vast; een later token met een andere licentie of seat
+  wordt niet gebruikt: geheugen leeg, de lege staat, en "Je bent in een ander
+  tabblad met een ander account ingelogd. Laad de pagina opnieuw." Met dat
+  token gaat geen enkel verzoek weg.
+- **Uitloggen in een ander tabblad.** Verdwijnt de markering (het
+  `storage`-event), dan gaat dit tabblad naar de lege staat, zonder netwerk.
+- **Uitloggen op alle apparaten** (accountmenu, met bevestiging, alleen met
+  een sessie): vers token → intrekken op de instantie met dát token (een fout
+  is niet fataal: dan "Open tabbladen elders stoppen uiterlijk binnen een
+  uur. Heeft je licentie afscherming (Business), dan verlopen de daglinks die
+  voor jou zijn gemaakt pas vanzelf.") → uitloggen-overal bij de site → markering en geheugen weg. Bij
+  Business trekt de instantie ook je eigen daglinks in. De koppeling met je
+  AI-assistent blijft. Falen de instantie én de site (besluit 27-11), dan is
+  het cookie misschien nog levend: dan dezelfde fout als bij een mislukt
+  gewoon uitloggen ("Uitloggen is niet gelukt", knop **Opnieuw uitloggen**,
+  geen loginknop), en de markering blijft. Faalt alleen de site, dan heeft de
+  instantie de sessies al beëindigd en blijft de melding "In dit tabblad ben je
+  uitgelogd".
+- **De markering `open=1`** (besluit 27-11). De instantie telt hoe vaak het
+  dashboard opent via een daglink en via een sessie (werkruimte,
+  `dashboard-opens.ts`), en telt alleen `GET /dashboard/overzicht?open=1`. Het
+  dashboard zet die markering bij precies het eerste laden van een pagina (de
+  twee opstartpaden in `app.js`, met en zonder de vlag), en nooit bij Ververs,
+  het herladen na een schrijfactie, een daglink op een al open tabblad of de
+  daglink-terugval na uitloggen. Geen nieuw verzoek, geen nieuwe bestemming en
+  geen nieuw gegeven: één vaste bit op het overzicht dat er al was (gepind in
+  `test/geen-telemetrie.test.js`).
+- **Teamlid verwijderen** (Beheer): na de geslaagde verwijdering bij de site
+  ook `POST /dashboard/sessies/intrekken {seat}` op de instantie. Een 403, 404
+  of 503 daarvan is geen fout van de verwijdering, wel een voetnoot dat een
+  open sessie van die persoon uiterlijk binnen een uur stopt.
+- **De privacytekst** staat met de vlag als concept in
+  `PRIVACY_UITKLAP_SESSIE_CONCEPT` (`src/teksten.js`), gemarkeerd "CONCEPT —
+  juridische ronde s66, niet vastgesteld". Hij vervangt met de vlag de inlog-
+  en de opslagalinea; `PRIVACY_UITKLAP` zelf is ongewijzigd. Productie met de
+  vlag pas na de juridische ronde.
+- **Nooit via `file://`**, ook met de vlag. En `--sessie` werkt alleen samen
+  met `--oauth`: zonder faalt `build.py`.
+
+Bekende randen (handmatig te toetsen op een staging onder `agentic-team.ai`;
+`*.vercel.app` staat op de Public Suffix List en is dus cross-site, daar werkt
+het cookie niet): Safari kapt cookies uit een subresource-antwoord mogelijk af
+op 7 dagen; klokscheefheid tussen de site (`auth_time`) en de instantie (de
+grens) kan een herinlog binnen een paar seconden na uitloggen overal meteen
+opnieuw "beëindigd" geven. En na een 401 "beeindigd" logt het dashboard bij de
+site uit zonder de identiteitspin te toetsen (na "beeindigd" wordt bewust
+nooit meer een token gehaald). Logde een ander tabblad in het afgelopen uur in
+met een ander account, dan nam dat het cookie over, en logt dit ook dát account
+uit: ongemak (opnieuw inloggen met mail), geen datalek.
+
+Getest in `test/s66-sessie-lege-staat.test.js`,
+`test/s66-sessie-geen-token-opslag.test.js`, `test/s66-sessie-flow.test.js`,
+`test/s66-sessie-teambeheer.test.js` en `test/s66-opens-markering.test.js` (op het gebouwde artefact met de twee
+meta's erin geplakt, zoals `test/oauth-login.test.js`).
 
 ### Eén bron: deze repo heeft zijn eigen Vercel-project
 

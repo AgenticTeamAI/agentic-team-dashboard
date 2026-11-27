@@ -25,6 +25,17 @@ describe("vercel.json buildCommand", () => {
     expect(vercel.buildCommand.length).toBeLessThanOrEqual(LIMIET);
   });
 
+  /* s66 stap 1: de exacte keten. Elke vlag is een bewuste beslissing over
+   * wat er in het artefact belandt; een vlag erbij of eraf hoort hier een
+   * regel te kosten. DASHBOARD_SESSIE (s66) zet build.py --sessie aan: ingelogd
+   * blijven via het sessiecookie op www. build.py weigert --sessie zonder
+   * --oauth, dus op een project zonder OAUTH_DASHBOARD faalt de build. */
+  it("is exact de afgesproken keten, met de drie build-vlaggen", () => {
+    expect(vercel.buildCommand).toBe(
+      "python3 scripts/build.py ${DASHBOARD_NOINDEX:+--noindex} ${OAUTH_DASHBOARD:+--oauth} ${DASHBOARD_SESSIE:+--sessie} && python3 scripts/publiceer.py",
+    );
+  });
+
   it("roept alleen scripts aan die bestaan", () => {
     const scripts = [...vercel.buildCommand.matchAll(/scripts\/[\w.-]+\.py/g)].map((m) => m[0]);
     expect(scripts.length).toBeGreaterThan(0);

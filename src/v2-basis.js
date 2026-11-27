@@ -69,6 +69,9 @@ function ingelogd() { return !!(bron() && bron().oauth); }
 function magSchrijven(domein) { return !!(CTX && magDomeinBewerken(CTX, domein).ok); }
 function kanSchrijven() { return magSchrijven("acties"); }
 function kanInloggen() { return typeof oauthMogelijk === "function" && oauthMogelijk(); }
+/* s66: uitloggen op alle apparaten kan alleen met de vlag én een sessie (niet
+ * met de oude tabbladlogin en niet met een daglink). */
+function kanOveralUitloggen() { return typeof sessieFlowAan === "function" && sessieFlowAan() && !!(bron() && bron().sessie); }
 /* Werkdata in Notion (of een ander systeem), per domein. De acties-ervaring
  * (Voor jou, Acties) gaat alleen op "Notion" als de ACTIES elders wonen, of
  * als er op de metricsroute geen acties-rijen zijn. Wonen alleen de vaste

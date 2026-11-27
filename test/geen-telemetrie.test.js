@@ -97,21 +97,49 @@ describe("geen telemetrie — het gebouwde artefact", () => {
    * domein toe: modulesFetch — de enige route naar de modules-API (overzicht
    * lezen, wijzigen, opzeggen, wijzigingsverzoek), altijd tegen de vaste
    * origin-constante en nooit met bundel- of rij-inhoud in de body. Komt er
-   * een nieuwe bij, dan is dat hier een bewuste beslissing. */
+   * een nieuwe bij, dan is dat hier een bewuste beslissing.
+   *
+   * s66 (besluit 26-11-2026): de token-uitwisseling is dezelfde ene plek
+   * gebleven, maar veralgemeend tot sitePost. Hij kent precies vier vaste
+   * bestemmingen (SITE_POST_URLS): de oude token-POST en de drie routes van
+   * de dashboardsessie. Het aantal fetch-plekken blijft vier; wat hier
+   * bewust verandert, is de tekst van de aanroep (een opzoeking in de
+   * bevroren tabel in plaats van de constante), en die tabel staat hieronder
+   * exact vast. */
   it("doet precies vier netwerkaanroepen: lezen, schrijven, token-uitwisseling, modules-API", () => {
     const fetches = HTML.match(/\bfetch\s*\(/g) || [];
     expect(fetches.length).toBe(4);
     // lezen én schrijven: allebei alleen naar bron.instantieUrl
     expect((HTML.match(/fetch\(bron\.instantieUrl \+ pad/g) || []).length).toBe(2);
-    expect(HTML).toMatch(/fetch\(OAUTH_TOKEN_URL/);
+    expect((HTML.match(/fetch\(SITE_POST_URLS\[doel\], opties\)/g) || []).length).toBe(1);
+    expect(HTML).toContain(
+      "const SITE_POST_URLS = Object.freeze({\n" +
+      "  token: OAUTH_TOKEN_URL,\n" +
+      "  sessie: SESSIE_TOKEN_URL,\n" +
+      "  uitloggen: SESSIE_UITLOG_URL,\n" +
+      "  overal: SESSIE_UITLOG_OVERAL_URL,\n" +
+      "});",
+    );
+    // De tabel wordt nergens anders opgebouwd of aangevuld.
+    expect((HTML.match(/SITE_POST_URLS\s*=/g) || []).length).toBe(1);
     // f34: de ene eigen-domein-plek, tegen de vaste origin-constante.
     expect(HTML).toMatch(/fetch\(`\$\{MODULES_SITE_ORIGIN\}\$\{pad\}`/);
   });
 
   it("stuurt naar agentic-team.ai alleen het token-endpoint en de modules-API aan, en nooit iets uit de bundel", () => {
-    // De enige twee URL-constantes op ons eigen domein die gefetcht worden.
+    // De URL-constantes op ons eigen domein die gefetcht worden. s66: de drie
+    // sessieroutes erbij (plus de inlog-URL, die alleen een navigatie is).
     expect(HTML).toContain('const OAUTH_TOKEN_URL = "https://www.agentic-team.ai/api/oauth/token"');
+    expect(HTML).toContain('const SESSIE_TOKEN_URL = "https://www.agentic-team.ai/api/dashboard/sessie/token"');
+    expect(HTML).toContain('const SESSIE_UITLOG_URL = "https://www.agentic-team.ai/api/dashboard/sessie/uitloggen"');
+    expect(HTML).toContain('const SESSIE_UITLOG_OVERAL_URL = "https://www.agentic-team.ai/api/dashboard/sessie/uitloggen-overal"');
+    expect(HTML).toContain('const SESSIE_INLOG_URL = "https://www.agentic-team.ai/api/dashboard/sessie/inloggen"');
     expect(HTML).toContain('const MODULES_SITE_ORIGIN = "https://www.agentic-team.ai"');
+    // s66: cookies gaan alleen mee met de drie sessie-POST's, en die dragen
+    // geen body en geen eigen headers. Precies één plek met credentials.
+    const metCookies = HTML.match(/credentials\s*:[^,}]*/g) || [];
+    expect(metCookies).toEqual(['credentials: "include" ']);
+    expect(HTML).toContain('opties = { method: "POST", credentials: "include" };');
     // f34: ook de modules-aanroepen dragen nooit bundel- of rij-inhoud.
     expect(HTML).not.toMatch(/MODULES_SITE_ORIGIN[^;]*bundle/);
     expect(HTML).not.toMatch(/modulesFetch\([^)]*bundle/);
@@ -120,6 +148,22 @@ describe("geen telemetrie — het gebouwde artefact", () => {
     const velden = [...HTML.matchAll(/grant_type: "(authorization_code|refresh_token)"/g)];
     expect(velden).toHaveLength(2);
     expect(HTML).not.toMatch(/OAUTH_TOKEN_URL[^;]*bundle/);
+  });
+
+  /* s66 (besluit 27-11-2026): bij het eerste laden van een pagina draagt het
+   * overzicht de markering `?open=1`, voor de opens-teller van de instantie
+   * (daglink tegenover sessie). Dat is geen nieuwe meting naar ons: geen
+   * nieuw verzoek, geen nieuwe fetch-plek, geen nieuwe bestemming (het is
+   * hetzelfde GET naar bron.instantieUrl dat er al was) en geen nieuw
+   * gegeven (één vaste bit, zonder id, tijdstip of inhoud). Wat er mee
+   * gebeurt, gebeurt in de eigen werkruimte van de klant. Deze pin houdt de
+   * markering op precies die ene, letterlijke vorm. */
+  it("de open-markering is één vaste queryparameter op het bestaande overzichtverzoek", () => {
+    // Eén letterlijke plek in de code (commentaar telt niet: alleen de string).
+    expect((HTML.match(/"\?open=1"/g) || []).length).toBe(1);
+    expect(HTML).toContain('const OVERZICHT_EERSTE_OPEN_PAD = OVERZICHT_PAD + "?open=1";');
+    expect(HTML).toContain('const OVERZICHT_PAD = "/dashboard/overzicht";');
+    expect(HTML).toContain("fetchWerkruimte(bron, eersteOpen === true ? OVERZICHT_EERSTE_OPEN_PAD : OVERZICHT_PAD)");
   });
 
   it("de CSP laat alleen de eigen werkruimte-bestemmingen toe — connect-src exact", () => {
@@ -223,8 +267,12 @@ describe("geen telemetrie — het gebouwde artefact", () => {
       '"agentic-team-dashboard:naam"',           // f33: localStorage, de naam waaronder je werkt (per seat)
       '"agentic-team-dashboard:oauth"',          // sessionStorage, de OAuth-tokens (p10)
       '"agentic-team-dashboard:oauth-pkce"',     // sessionStorage, verifier + state tijdens de redirect
+      '"agentic-team-dashboard:sessie"',         // s66: localStorage, alleen {"tot": …}, nooit een token (achter de vlag)
       '"agentic-team-dashboard:thema"',          // v2: localStorage, licht/donker als het afwijkt van het systeem
     ]);
+    // s66: de markering wordt op één plek geschreven, en alleen met {tot}.
+    expect((HTML.match(/localStorage\.setItem\(SESSIE_LS_KEY/g) || []).length).toBe(1);
+    expect(HTML).toContain("localStorage.setItem(SESSIE_LS_KEY, JSON.stringify({ tot: new Date(Date.parse(tot)).toISOString() }))");
     // De twee p10-sleutels horen in sessionStorage, niet in localStorage:
     // tabblad dicht = weg, dezelfde eigenschap als de daglink. De
     // uitklaptekst noemt daarom nog steeds alleen de twee localStorage-items.

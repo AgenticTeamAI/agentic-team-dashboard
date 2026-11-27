@@ -120,7 +120,12 @@ function renderSheet() {
       ${toegang() === "notion" ? "" : `<button class="regel" data-act="export" data-v="markdown"><span class="rl"><b>Exporteren</b><span>Je hele werkruimte als bestand (Markdown)</span></span>${ic("chev")}</button>`}
       <button class="regel" data-act="sh-naar" data-type="naam"><span class="rl"><b>Je naam</b><span>${jij() ? esc(jij()) : "Nog niet ingevuld"}</span></span>${ic("chev")}</button>
       <button class="regel" data-act="sh-naar" data-type="feedback"><span class="rl"><b>Feedback geven</b><span>Wat werkt niet, wat mis je?</span></span>${ic("chev")}</button>
-      <button class="regel" data-act="uitloggen"><span class="rl"><b>Uitloggen</b><span>${toegang() === "notion" ? "Je werkdata blijft in je eigen systeem" : "Met een daglink kijk je daarna nog mee"}</span></span>${ic("chev")}</button></div>`);
+      <button class="regel" data-act="uitloggen"><span class="rl"><b>Uitloggen</b><span>${toegang() === "notion" ? "Je werkdata blijft in je eigen systeem" : "Met een daglink kijk je daarna nog mee"}</span></span>${ic("chev")}</button>${kanOveralUitloggen() ? `
+      <button class="regel" data-act="sh-naar" data-type="overal"><span class="rl"><b>Uitloggen op alle apparaten</b><span>Ook op je telefoon en andere computers</span></span>${ic("chev")}</button>` : ""}</div>`);
+    // s66: de bevestiging vóór uitloggen op alle apparaten. Business (afscherming)
+    // weet het dashboard niet van elk teamlid, dus de daglinkzin is voorwaardelijk.
+    case "overal": return wrap("Uitloggen op alle apparaten?", `<p>Je wordt uitgelogd in deze browser en op al je andere apparaten. Open tabbladen elders stoppen meteen, of uiterlijk binnen een uur.</p>
+      <p class="klein stil">Heeft je licentie afscherming (Business), dan vervallen ook de daglinks die voor jou zijn gemaakt. De koppeling met je AI-assistent blijft gewoon werken.</p>${fout}<div class="rijtje">${knop("Uitloggen op alle apparaten", "uitloggen-overal", "", "gevaar")}${annuleer}</div>`);
     case "opdracht": {
       if (!kanSchrijven() && kanDoorgeven()) return renderOpdrachtElders(sh, wrap, fout);
       const kan = kanSchrijven(); const top = specialistenVoor("opdracht").slice(0, 3);
@@ -935,6 +940,7 @@ function opKlik(e) {
     case "feedback-kopieer": if (!S.sheet) return; kopieerNaar(feedbackTekst(S.sheet.tekst)); return;
     case "login": if (V2_HAKEN.login) V2_HAKEN.login(); return;
     case "uitloggen": S.sheet = null; if (V2_HAKEN.uitloggen) V2_HAKEN.uitloggen(); return;
+    case "uitloggen-overal": S.sheet = null; render(); if (V2_HAKEN.uitloggenOveral && kanOveralUitloggen()) V2_HAKEN.uitloggenOveral(); return;
     case "export": S.sheet = null; render(); if (V2_HAKEN.exporteer) V2_HAKEN.exporteer(d.v || "markdown"); return;
     case "thema": wisselThema(); render(); return;
     case "ververs": if (V2_HAKEN.ververs) Promise.resolve(V2_HAKEN.ververs()).then((ok) => { if (ok) { toast("Ververst. De nummers zijn opnieuw geteld."); render(); } }); return;
@@ -1036,7 +1042,7 @@ function opLos(e) {
 }
 function opSleepEind() { S.drag = null; document.querySelectorAll(".over").forEach(x => x.classList.remove("over")); }
 
-const V2_HAKEN = { login: null, uitloggen: null, ververs: null, exporteer: null, minuten: null };
+const V2_HAKEN = { login: null, uitloggen: null, uitloggenOveral: null, ververs: null, exporteer: null, minuten: null };
 let v2Bedraad = false;
 function bedraad() {
   if (v2Bedraad) return; v2Bedraad = true;
