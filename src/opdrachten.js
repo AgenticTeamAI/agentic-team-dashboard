@@ -49,11 +49,14 @@ const OPDRACHT_VELDEN = [
 const OPDRACHT_ACTIE_MAX = 200;
 const OPDRACHT_TEKST_MAX = 4000;
 
-/* Notitiesysteem-pagina's wonen op notion.so of notion.site (ook een
- * werkruimte-subdomein daarvan): dezelfde regel als de instantie. */
+/* Notitiesysteem-pagina's wonen op notion.so, notion.site of notion.com (ook
+ * een subdomein daarvan): dezelfde regel als de instantie. notion.com sinds
+ * Notion paginalinks op app.notion.com uitgeeft; zo staan ze in
+ * de dagstart van FFG, en zonder deze host kreeg geen kaart knoppen. */
+const NOTITIE_HOSTS = ["notion.so", "notion.site", "notion.com"];
 function isNotitieHost(host) {
   const h = String(host || "").toLowerCase();
-  return h === "notion.so" || h.endsWith(".notion.so") || h === "notion.site" || h.endsWith(".notion.site");
+  return NOTITIE_HOSTS.some(d => h === d || h.endsWith("." + d));
 }
 const PAGINA_ID = /^[0-9a-f]{32}$/i;
 function paginaIdUit(segment) {
@@ -83,7 +86,7 @@ function externIdVanUrl(url) {
 }
 
 /* Past de link van een item bij het systeem waar je acties wonen? Altijd een
- * https-link; bij notion bovendien een pagina op notion.so of notion.site, want
+ * https-link; bij notion bovendien een pagina op notion.so, notion.site of notion.com, want
  * een andere link weigert de instantie (422 ongeldig). Bij crm elke https-link:
  * daar is de link zelf het Extern ID. */
 function linkPastBijSysteem(url, systeem) {
