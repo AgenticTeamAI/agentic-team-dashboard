@@ -165,7 +165,7 @@ function hulpSecties(ctx) {
     ["daglink", "Daglink of inloggen?", () => `
       <table class="hulp-tabel"><thead><tr><th></th><th scope="col">Daglink</th><th scope="col">Inloggen</th></tr></thead><tbody>
         <tr><th scope="row">Waar</th><td>De link in je dagstart</td><td>dashboard.agentic-team.ai</td></tr>
-        <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(ctx && ctx.bron))}</td><td>Tot je dit tabblad sluit</td></tr>
+        <tr><th scope="row">Hoe lang</th><td>${esc(daglinkHulpDuur(ctx && ctx.bron))}</td><td>${esc(hulpInlogDuur())}</td></tr>
         <tr><th scope="row">Kijken</th><td>Ja</td><td>Ja</td></tr>
         <tr><th scope="row">Afhandelen</th><td>Nee</td><td>Ja</td></tr>
         <tr><th scope="row">Vaste taken aanpassen</th><td>Nee</td><td>Ja</td></tr>
