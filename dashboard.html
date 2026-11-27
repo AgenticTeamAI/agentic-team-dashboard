@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-p7uxCrwdG9OaYn3UTazi05goT6OcJqGlQr63ad8R9UE=' 'sha256-0rCPmQRdqFYHmzpBmyNWlbE/odxuJTBiJIpZJ9lgIGQ='">
+<meta http-equiv="Content-Security-Policy" content="script-src 'sha256-p7uxCrwdG9OaYn3UTazi05goT6OcJqGlQr63ad8R9UE=' 'sha256-bo/qQHmPbZIi1mgMKfKAfVt1DCf7sI5/xOA58Ibf6b8='">
 
 
 
@@ -4237,8 +4237,20 @@ function werkruimteDomeinen(schema) {
   return uitSchema.concat([METRICS_DOMEIN, "dagplannen", OPDRACHTEN_DOMEIN].filter(d => uitSchema.indexOf(d) === -1));
 }
 
-async function loadWerkruimteBundle(bron) {
-  const overzicht = await fetchWerkruimte(bron, "/dashboard/overzicht");
+/* s66 (besluit 27-11-2026): de instantie telt hoe vaak het dashboard opent via
+ * een daglink en hoe vaak via een sessie (werkruimte, dashboard-opens.ts). Een
+ * open is één overzicht met de markering `?open=1`. Die gaat alleen mee bij
+ * het eerste laden van een pagina (app.js zet `eersteOpen` op precies de twee
+ * opstartpaden), nooit bij Ververs, het herladen na een schrijfactie of de
+ * daglink-terugval na uitloggen: die keren lopen altijd ingelogd en zouden het
+ * aandeel daglink te laag maken. Het is geen nieuw verzoek en geen nieuwe
+ * bestemming: één vaste queryparameter op het overzicht dat toch al wegging,
+ * zonder id, tijdstip of inhoud. Een oudere instantie negeert hem. */
+const OVERZICHT_PAD = "/dashboard/overzicht";
+const OVERZICHT_EERSTE_OPEN_PAD = OVERZICHT_PAD + "?open=1";
+
+async function loadWerkruimteBundle(bron, { eersteOpen = false } = {}) {
+  const overzicht = await fetchWerkruimte(bron, eersteOpen === true ? OVERZICHT_EERSTE_OPEN_PAD : OVERZICHT_PAD);
   const label = overzicht.klant ? "werkruimte van " + overzicht.klant : "je werkruimte";
   const bundle = emptyBundle("werkruimte", label);
   // f52: de bedrijfsnaam, voor de naam van het werkmoment in het stappenblad.
@@ -5250,7 +5262,9 @@ function sessieIsBeeindigd() {
  *     fataal: dan stoppen open tabbladen elders uiterlijk binnen een uur;
  *  3. POST uitloggen-overal bij de site (e);
  *  4. markering en geheugen weg.
- * Inloggen wacht tot dit klaar is. Levert {gelukt, instantie, tekst}.
+ * Inloggen wacht tot dit klaar is. Levert {gelukt, instantie, tekst}, en
+ * `mislukt: true` als zowel de instantie als de site faalde (dan blijft de
+ * markering staan, zie hieronder).
  */
 async function sessieUitloggenOveral() {
   const werk = (async () => {
@@ -5287,6 +5301,16 @@ async function sessieUitloggenOveral() {
       site = res.ok;
     } catch (e) {
       site = false;
+    }
+    if (!site && !instantie) {
+      // Besluit 27-11-2026: de site trok het cookie niet in en de instantie
+      // beëindigde de sessies niet. Dan is er in deze browser mogelijk nog een
+      // levende sessie, en zou "In dit tabblad ben je uitgelogd" liegen. Net
+      // als bij een mislukt gewoon uitloggen (sessieUitloggen): het geheugen
+      // weg, de markering blijft, en de aanroeper toont de fout met "Opnieuw
+      // uitloggen" in plaats van de loginknop.
+      vergeetSessieGeheugen();
+      return { gelukt: false, instantie, mislukt: true, tekst: SESSIE_UITLOG_MISLUKT_TEKST };
     }
     vergeetSessieMarkering();
     vergeetSessieGeheugen();
@@ -19150,6 +19174,15 @@ async function uitloggenOveral() {
   if (uit.behoud) { V2.meld(uit.tekst, { fout: true }); return; }
   // Een ander account: sessieGestopt heeft de lege staat al gezet.
   if (uit.afgebroken) return;
+  // Besluit 27-11-2026: faalden de site én de instantie, dan leeft het cookie
+  // misschien nog. Dezelfde fout als bij een mislukt gewoon uitloggen: geen
+  // loginknop (die zou het cookie zonder mail hervatten), wel "Opnieuw
+  // uitloggen"; de markering blijft (sessieUitloggenOveral).
+  if (uit.mislukt) {
+    wisIngelogdeStaat();
+    toonLegeStaat("Uitloggen is niet gelukt", SESSIE_UITLOG_MISLUKT_TEKST, { opnieuwUitloggen: true });
+    return;
+  }
   sessieGestopt("Je bent uitgelogd", uit.tekst);
 }
 
@@ -19204,14 +19237,18 @@ function toonLegeStaat(titel, tekst, { login = null, opnieuwUitloggen = false } 
  * een eventueel vernieuwd token. */
 let huidigeBron = null;
 
-async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null } = {}) {
+/* `eersteOpen`: alleen het eerste laden van deze pagina (de twee opstartpaden
+ * hieronder) draagt de markering voor de opens-teller van de instantie (zie
+ * loadWerkruimteBundle). Ververs, herladen na een schrijfactie, een daglink
+ * op een open tabblad en de daglink-terugval na uitloggen laten hem weg. */
+async function laadWerkruimte(bron, { behoudRoute = false, naarRoute = null, eersteOpen = false } = {}) {
   huidigeBron = bron;
   if (!currentBundle || !behoudRoute) {
     currentBundle = null;
     toonLegeStaat("Je team wordt geladen…", "Live uit je werkruimte.", { login: false });
   }
   try {
-    const bundle = await loadWerkruimteBundle(bron);
+    const bundle = await loadWerkruimteBundle(bron, { eersteOpen });
     await handleBundle(bundle, "werkruimte", bundle.sourceLabel, { behoudRoute, naarRoute });
     laadBeheer();
     return true;
@@ -19350,7 +19387,7 @@ async function startMetSessie() {
   const bron = sessie || restoreDaglink();
   if (!naarRoute && bron && bedoeldeRoute(window.location.hash)) naarRoute = window.location.hash;
   if (naarRoute === "#/data/acties") naarRoute = "#/";
-  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  if (bron) { laadWerkruimte(bron, { naarRoute, eersteOpen: true }); return; }
   if (sessieTekst) {
     toonLegeStaat("Log in om je team te zien", sessieTekst + " Of open dit dashboard via de daglink in je dagstart.", { login: true });
     return;
@@ -19405,7 +19442,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // f48: de kale link uit het slotbericht van de werkronde wees naar de
   // actietabel. Wat daar op je wachtte, staat nu in Voor jou.
   if (naarRoute === "#/data/acties") naarRoute = "#/";
-  if (bron) { laadWerkruimte(bron, { naarRoute }); return; }
+  if (bron) { laadWerkruimte(bron, { naarRoute, eersteOpen: true }); return; }
   // Een eindtoestand (een mislukte login bv.) blijft staan, met de Hulp eronder.
   if (eindToestand) return;
   toonStartLeeg();
