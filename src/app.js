@@ -309,6 +309,15 @@ async function uitloggenOveral() {
   if (uit.behoud) { V2.meld(uit.tekst, { fout: true }); return; }
   // Een ander account: sessieGestopt heeft de lege staat al gezet.
   if (uit.afgebroken) return;
+  // Besluit 27-11-2026: faalden de site én de instantie, dan leeft het cookie
+  // misschien nog. Dezelfde fout als bij een mislukt gewoon uitloggen: geen
+  // loginknop (die zou het cookie zonder mail hervatten), wel "Opnieuw
+  // uitloggen"; de markering blijft (sessieUitloggenOveral).
+  if (uit.mislukt) {
+    wisIngelogdeStaat();
+    toonLegeStaat("Uitloggen is niet gelukt", SESSIE_UITLOG_MISLUKT_TEKST, { opnieuwUitloggen: true });
+    return;
+  }
   sessieGestopt("Je bent uitgelogd", uit.tekst);
 }
 

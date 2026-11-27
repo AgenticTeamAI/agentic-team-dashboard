@@ -756,7 +756,9 @@ function sessieIsBeeindigd() {
  *     fataal: dan stoppen open tabbladen elders uiterlijk binnen een uur;
  *  3. POST uitloggen-overal bij de site (e);
  *  4. markering en geheugen weg.
- * Inloggen wacht tot dit klaar is. Levert {gelukt, instantie, tekst}.
+ * Inloggen wacht tot dit klaar is. Levert {gelukt, instantie, tekst}, en
+ * `mislukt: true` als zowel de instantie als de site faalde (dan blijft de
+ * markering staan, zie hieronder).
  */
 async function sessieUitloggenOveral() {
   const werk = (async () => {
@@ -793,6 +795,16 @@ async function sessieUitloggenOveral() {
       site = res.ok;
     } catch (e) {
       site = false;
+    }
+    if (!site && !instantie) {
+      // Besluit 27-11-2026: de site trok het cookie niet in en de instantie
+      // beëindigde de sessies niet. Dan is er in deze browser mogelijk nog een
+      // levende sessie, en zou "In dit tabblad ben je uitgelogd" liegen. Net
+      // als bij een mislukt gewoon uitloggen (sessieUitloggen): het geheugen
+      // weg, de markering blijft, en de aanroeper toont de fout met "Opnieuw
+      // uitloggen" in plaats van de loginknop.
+      vergeetSessieGeheugen();
+      return { gelukt: false, instantie, mislukt: true, tekst: SESSIE_UITLOG_MISLUKT_TEKST };
     }
     vergeetSessieMarkering();
     vergeetSessieGeheugen();
