@@ -117,7 +117,7 @@ function toegang() { if (!CTX) return "geen"; if (isNotion()) return "notion"; r
  *   dan voert ook geen werkronde een opdracht uit: geen knoppen, geen Nieuw;
  * - kanDoorgeven: en je bent ingelogd met dashboard:schrijf. Een daglink nooit.
  * Per item beslist doorgeefbaarItem() nog (bij notion alleen een link naar
- * notion.so of notion.site). Of je rol het mag, beslist de instantie; een
+ * notion.so, notion.site of notion.com). Of je rol het mag, beslist de instantie; een
  * weigering tonen we als tekst. */
 const DOORGEEF_SYSTEMEN = ["notion", "crm"];
 function doorgeefSysteem() { const s = CTX ? bronVan(CTX, "acties").systeem : null; return s && DOORGEEF_SYSTEMEN.indexOf(s) !== -1 ? s : null; }

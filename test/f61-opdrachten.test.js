@@ -136,6 +136,7 @@ describe("f61 — het domein volgt het contract", () => {
     expect(g.externIdVanUrl("https://www.notion.so/ffg/1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d")).toBe(ID1);
     expect(g.externIdVanUrl("https://www.notion.so/ffg/Offerte-nakijken-" + ID1 + "?pvs=4")).toBe(ID1);
     expect(g.externIdVanUrl("https://ffg.notion.site/" + ID1)).toBe(ID1);
+    expect(g.externIdVanUrl("https://app.notion.com/" + ID1)).toBe(ID1);
     expect(g.externIdVanUrl("https://crm.example/deal/42")).toBe("https://crm.example/deal/42");
     expect(g.externIdVanUrl("http://www.notion.so/" + ID1)).toBeNull();
     expect(g.externIdVanUrl(null)).toBeNull();
@@ -375,13 +376,15 @@ describe("f61 — waar doorgeven kan: systeem, link en productdagstart (B3)", ()
     }
   });
 
-  it("(b) notion: alleen knoppen bij een link naar notion.so of notion.site (ook een subdomein); een andere link alleen Open en Kopieer", () => {
+  it("(b) notion: alleen knoppen bij een link naar notion.so, notion.site of notion.com (ook een subdomein); een andere link alleen Open en Kopieer", () => {
     const vreemd = "https://docs.example/offerte-" + ID1;
     const items = [
       { nr: 1, titel: "Offerte nakijken", soort: "check", te_laat: false, specialist: DM, sinds: null, deadline: null, url: vreemd },
       { nr: 2, titel: "15% korting De Vries?", soort: "voorstel", te_laat: false, specialist: DM, sinds: null, deadline: null, url: "https://ffg.notion.site/Korting-0123456789abcdef0123456789abcdef" },
       { nr: 3, titel: "Factuur Smit nabellen", soort: "taak", te_laat: false, specialist: null, sinds: null, deadline: null, url: "https://notion.so/Factuur-fedcba9876543210fedcba9876543210" },
       { nr: 4, titel: "Lijkt erop", soort: "taak", te_laat: false, specialist: null, sinds: null, deadline: null, url: "https://notion.so.example/x-" + ID1 },
+      // Zoals Notion links nu uitgeeft (dagstart FFG, 27-11-2026).
+      { nr: 5, titel: "Omzetmodel-veld checken", soort: "check", te_laat: false, specialist: DM, sinds: null, deadline: null, url: "https://app.notion.com/3f3bf2694fe6817388a1d015e1003cde" },
     ];
     // Ook een opdracht die bij het vreemde item zou horen, geeft daar geen stand.
     open(ctxMet({ items, opdrachten: [opdracht("o1", { Actie: "Offerte nakijken", Handeling: "Goedkeuren", Status: "Doorgegeven", "Bron (link)": vreemd })] }));
@@ -390,6 +393,7 @@ describe("f61 — waar doorgeven kan: systeem, link en productdagstart (B3)", ()
     expect(knoppen(2)).toEqual(["Ja, doe maar", "Nee, niet doen", "Open in je eigen systeem"]);
     expect(knoppen(3)).toEqual(["Geef aan je team", "Later", "Open in je eigen systeem"]);
     expect(knoppen(4)).toEqual(["Open in je eigen systeem", "Kopieer voor je team"]);
+    expect(knoppen(5)).toEqual(["Goedkeuren", "Terug", "Open in je eigen systeem"]);
     // Een blad voor het vreemde item opent niet als doorgeefblad.
     g.V2._S.sheet = { type: "x-wie", x: vreemd, tekst: "", datum: "" }; g.V2.render();
     expect($(".scrim").textContent).toContain("Dit item is er niet (meer)");
@@ -401,6 +405,10 @@ describe("f61 — waar doorgeven kan: systeem, link en productdagstart (B3)", ()
     expect(g.linkPastBijSysteem("https://ffg.notion.site/x-" + ID1, "notion")).toBe(true);
     expect(g.linkPastBijSysteem("https://crm.example/deal/42", "notion")).toBe(false);
     expect(g.linkPastBijSysteem("https://notion.so.example/" + ID1, "notion")).toBe(false);
+    // De vorm die Notion nu uitgeeft (dagstart FFG, 27-11-2026), en twee hosts die er alleen op lijken.
+    expect(g.linkPastBijSysteem("https://app.notion.com/" + ID1, "notion")).toBe(true);
+    expect(g.linkPastBijSysteem("https://nepnotion.com/" + ID1, "notion")).toBe(false);
+    expect(g.linkPastBijSysteem("https://notion.com.example/" + ID1, "notion")).toBe(false);
     expect(g.linkPastBijSysteem("https://crm.example/deal/42", "crm")).toBe(true);
     expect(g.linkPastBijSysteem("http://crm.example/deal/42", "crm")).toBe(false);
     expect(g.linkPastBijSysteem("", "crm")).toBe(false);

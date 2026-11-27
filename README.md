@@ -265,9 +265,9 @@ Doorgegeven is.
   (`opdrachtFoutTekst`): een paar codes vertaalt het dashboard zelf, anders de
   `melding` van de instantie, behalve als daar een merknaam in staat.
 - **Sleutel.** Alleen een item met een https-link krijgt knoppen, en bij
-  `notion` alleen een link naar notion.so of notion.site (ook een subdomein):
+  `notion` alleen een link naar notion.so, notion.site of notion.com (ook een subdomein):
   een andere link weigert de instantie (`linkPastBijSysteem`, `doorgeefbaarItem`). Extern ID is
-  bij een link naar notion.so of notion.site het page-id van 32 tekens: eerst
+  bij een link naar notion.so, notion.site of notion.com het page-id van 32 tekens: eerst
   de parameter `p` (de link uit een databaseweergave), anders het laatste stuk
   van het pad. Bij elke andere host is het de link zelf (`externIdVanUrl`).
   Kaart en blad dragen de link als sleutel, niet het Extern ID; een item dat
